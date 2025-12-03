@@ -48,7 +48,7 @@ void EpubReaderScreen::onExit() {
 }
 
 void EpubReaderScreen::handleInput(const Input input) {
-  if (input.button == VOLUME_UP || input.button == VOLUME_DOWN) {
+  if (input.button == VOLUME_UP || input.button == VOLUME_DOWN || input.button == LEFT || input.button == RIGHT) {
     const bool skipChapter = input.pressTime > SKIP_CHAPTER_MS;
 
     // No current section, attempt to rerender the book
@@ -57,17 +57,17 @@ void EpubReaderScreen::handleInput(const Input input) {
       return;
     }
 
-    if (input.button == VOLUME_UP && skipChapter) {
+    if ((input.button == VOLUME_UP || input.button == LEFT) && skipChapter) {
       nextPageNumber = 0;
       currentSpineIndex--;
       delete section;
       section = nullptr;
-    } else if (input.button == VOLUME_DOWN && skipChapter) {
+    } else if ((input.button == VOLUME_DOWN || input.button == RIGHT) && skipChapter) {
       nextPageNumber = 0;
       currentSpineIndex++;
       delete section;
       section = nullptr;
-    } else if (input.button == VOLUME_UP) {
+    } else if (input.button == VOLUME_UP || input.button == LEFT) {
       if (section->currentPage > 0) {
         section->currentPage--;
       } else {
@@ -78,7 +78,7 @@ void EpubReaderScreen::handleInput(const Input input) {
         section = nullptr;
         xSemaphoreGive(sectionMutex);
       }
-    } else if (input.button == VOLUME_DOWN) {
+    } else if (input.button == VOLUME_DOWN || input.button == RIGHT) {
       if (section->currentPage < section->pageCount - 1) {
         section->currentPage++;
       } else {

@@ -46,10 +46,10 @@ void FileSelectionScreen::onExit() {
 }
 
 void FileSelectionScreen::handleInput(const Input input) {
-  if (input.button == VOLUME_DOWN) {
+  if (input.button == VOLUME_DOWN || input.button == RIGHT) {
     selectorIndex = (selectorIndex + 1) % files.size();
     updateRequired = true;
-  } else if (input.button == VOLUME_UP) {
+  } else if (input.button == VOLUME_UP || input.button == LEFT) {
     selectorIndex = (selectorIndex + files.size() - 1) % files.size();
     updateRequired = true;
   } else if (input.button == CONFIRM) {
