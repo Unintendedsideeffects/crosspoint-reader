@@ -41,6 +41,7 @@ void EpubReaderScreen::onEnter() {
 
 void EpubReaderScreen::onExit() {
   vTaskDelete(displayTaskHandle);
+  displayTaskHandle = nullptr;
   xSemaphoreTake(sectionMutex, portMAX_DELAY);
   vSemaphoreDelete(sectionMutex);
   sectionMutex = nullptr;
@@ -91,6 +92,8 @@ void EpubReaderScreen::handleInput(const Input input) {
     }
 
     updateRequired = true;
+  } else if (input.button == BACK) {
+    onGoHome();
   }
 }
 

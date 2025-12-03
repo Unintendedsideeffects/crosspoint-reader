@@ -6,8 +6,10 @@
 #include <SPI.h>
 
 #include "Battery.h"
+#include "CrossPointState.h"
 #include "Input.h"
 #include "screens/EpubReaderScreen.h"
+#include "screens/FileSelectionScreen.h"
 #include "screens/FullScreenMessageScreen.h"
 
 #define SPI_FQ 40000000
@@ -28,6 +30,7 @@ GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> display(GxEPD2
                                                                                                  EPD_RST, EPD_BUSY));
 auto renderer = new EpdRenderer(&display);
 Screen* currentScreen;
+CrossPointState* appState;
 
 // Power button timing
 // Time required to confirm boot from sleep
@@ -102,6 +105,21 @@ void setupSerial() {
   }
 }
 
+void onGoHome();
+void onSelectEpubFile(const std::string& path) {
+  enterNewScreen(new FullScreenMessageScreen(renderer, "Loading..."));
+
+  Epub* epub = loadEpub(path);
+  if (epub) {
+    appState->openEpubPath = path;
+    appState->saveToFile();
+    enterNewScreen(new EpubReaderScreen(renderer, epub, onGoHome));
+  } else {
+    enterNewScreen(new FullScreenMessageScreen(renderer, "Failed to load epub"));
+  }
+}
+void onGoHome() { enterNewScreen(new FileSelectionScreen(renderer, onSelectEpubFile)); }
+
 void setup() {
   setupInputPinModes();
 
@@ -127,37 +145,21 @@ void setup() {
   display.setTextColor(GxEPD_BLACK);
   Serial.println("Display initialized");
 
-  enterNewScreen(new FullScreenMessageScreen(renderer, "Loading...", true));
+  enterNewScreen(new FullScreenMessageScreen(renderer, "Booting...", true));
 
   // SD Card Initialization
   SD.begin(SD_SPI_CS, SPI, SPI_FQ);
 
-  // TODO: Add a file selection screen, for now just load the first file
-  File root = SD.open("/");
-  String filename;
-  while (true) {
-    filename = root.getNextFileName();
-    if (!filename) {
-      break;
-    }
-
-    if (filename.substring(filename.length() - 5) == ".epub") {
-      Serial.printf("Found epub: %s\n", filename.c_str());
-      break;
+  appState = CrossPointState::loadFromFile();
+  if (!appState->openEpubPath.empty()) {
+    Epub* epub = loadEpub(appState->openEpubPath);
+    if (epub) {
+      enterNewScreen(new EpubReaderScreen(renderer, epub, onGoHome));
+      return;
     }
   }
 
-  if (!filename) {
-    enterNewScreen(new FullScreenMessageScreen(renderer, "Could not find epub"));
-    return;
-  }
-
-  Epub* epub = loadEpub(std::string(filename.c_str()));
-  if (epub) {
-    enterNewScreen(new EpubReaderScreen(renderer, epub));
-  } else {
-    enterNewScreen(new FullScreenMessageScreen(renderer, "Failed to load epub"));
-  }
+  enterNewScreen(new FileSelectionScreen(renderer, onSelectEpubFile));
 }
 
 void loop() {

@@ -57,10 +57,10 @@ void EpdRenderer::drawText(const int x, const int y, const char* text, const boo
   getFontRenderer(bold, italic)->renderString(text, &xpos, &ypos, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
 }
 
-void EpdRenderer::drawSmallText(const int x, const int y, const char* text) const {
+void EpdRenderer::drawSmallText(const int x, const int y, const char* text, const uint16_t color) const {
   int ypos = y + smallFont->font->data->advanceY + marginTop;
   int xpos = x + marginLeft;
-  smallFont->renderString(text, &xpos, &ypos, GxEPD_BLACK);
+  smallFont->renderString(text, &xpos, &ypos, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
 }
 
 void EpdRenderer::drawTextBox(const int x, const int y, const std::string& text, const int width, const int height,

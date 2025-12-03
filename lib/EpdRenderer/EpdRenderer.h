@@ -26,7 +26,7 @@ class EpdRenderer {
   int getTextWidth(const char* text, bool bold = false, bool italic = false) const;
   int getSmallTextWidth(const char* text) const;
   void drawText(int x, int y, const char* text, bool bold = false, bool italic = false, uint16_t color = 1) const;
-  void drawSmallText(int x, int y, const char* text) const;
+  void drawSmallText(int x, int y, const char* text, uint16_t color = 1) const;
   void drawTextBox(int x, int y, const std::string& text, int width, int height, bool bold = false,
                    bool italic = false) const;
   void drawLine(int x1, int y1, int x2, int y2, uint16_t color) const;
