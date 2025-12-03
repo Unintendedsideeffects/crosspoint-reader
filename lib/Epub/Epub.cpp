@@ -369,9 +369,7 @@ int Epub::getSpineIndexForTocIndex(const int tocIndex) const {
 int Epub::getTocIndexForSpineIndex(const int spineIndex) const {
   // the toc entry should have an href that matches the spine item
   // so we can find the toc index by looking for the href
-  Serial.printf("Looking for %s\n", spine[spineIndex].second.c_str());
   for (int i = 0; i < toc.size(); i++) {
-    Serial.printf("Looking at %s\n", toc[i].href.c_str());
     if (toc[i].href == spine[spineIndex].second) {
       return i;
     }
