@@ -1,0 +1,182 @@
+#include <Arduino.h>
+#include <EpdRenderer.h>
+#include <Epub.h>
+#include <GxEPD2_BW.h>
+#include <SD.h>
+#include <SPI.h>
+
+#include "Battery.h"
+#include "Input.h"
+#include "screens/EpubReaderScreen.h"
+#include "screens/FullScreenMessageScreen.h"
+
+#define SPI_FQ 40000000
+// Display SPI pins (custom pins for XteinkX4, not hardware SPI defaults)
+#define EPD_SCLK 8   // SPI Clock
+#define EPD_MOSI 10  // SPI MOSI (Master Out Slave In)
+#define EPD_CS 21    // Chip Select
+#define EPD_DC 4     // Data/Command
+#define EPD_RST 5    // Reset
+#define EPD_BUSY 6   // Busy
+
+#define UART0_RXD 20  // Used for USB connection detection
+
+#define SD_SPI_CS 12
+#define SD_SPI_MISO 7
+
+GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> display(GxEPD2_426_GDEQ0426T82(EPD_CS, EPD_DC,
+                                                                                                 EPD_RST, EPD_BUSY));
+auto renderer = new EpdRenderer(&display);
+Screen* currentScreen;
+
+// Power button timing
+// Time required to confirm boot from sleep
+constexpr unsigned long POWER_BUTTON_WAKEUP_MS = 1500;
+// Time required to enter sleep mode
+constexpr unsigned long POWER_BUTTON_SLEEP_MS = 1000;
+
+Epub* loadEpub(const std::string& path) {
+  if (!SD.exists(path.c_str())) {
+    Serial.println("File does not exist");
+    return nullptr;
+  }
+
+  const auto epub = new Epub(path, "/.crosspoint");
+  if (epub->load()) {
+    return epub;
+  }
+
+  Serial.println("Failed to load epub");
+  free(epub);
+  return nullptr;
+}
+
+void enterNewScreen(Screen* screen) {
+  if (currentScreen) {
+    currentScreen->onExit();
+    delete currentScreen;
+  }
+  currentScreen = screen;
+  currentScreen->onEnter();
+}
+
+// Verify long press on wake-up from deep sleep
+void verifyWakeupLongPress() {
+  const auto input = getInput();
+
+  if (input.button == POWER && input.pressTime > POWER_BUTTON_WAKEUP_MS) {
+    // Button released too early. Returning to sleep.
+    // IMPORTANT: Re-arm the wakeup trigger before sleeping again
+    esp_deep_sleep_enable_gpio_wakeup(1ULL << BTN_GPIO3, ESP_GPIO_WAKEUP_GPIO_LOW);
+    esp_deep_sleep_start();
+  }
+}
+
+// Enter deep sleep mode
+void enterDeepSleep() {
+  enterNewScreen(new FullScreenMessageScreen(renderer, "Sleeping", true, false, true));
+
+  Serial.println("Power button released after a long press. Entering deep sleep.");
+  delay(2000);  // Allow Serial buffer to empty and display to update
+
+  // Enable Wakeup on LOW (button press)
+  esp_deep_sleep_enable_gpio_wakeup(1ULL << BTN_GPIO3, ESP_GPIO_WAKEUP_GPIO_LOW);
+
+  display.hibernate();
+
+  // Enter Deep Sleep
+  esp_deep_sleep_start();
+}
+
+void setupSerial() {
+  Serial.begin(115200);
+  // Wait for serial monitor
+  const unsigned long start = millis();
+  while (!Serial && (millis() - start) < 3000) {
+    delay(10);
+  }
+
+  if (Serial) {
+    // delay for monitor to start reading
+    delay(1000);
+  }
+}
+
+void setup() {
+  setupInputPinModes();
+
+  // Check if boot was triggered by the Power Button (Deep Sleep Wakeup)
+  // If triggered by RST pin or Battery insertion, this will be false, allowing
+  // normal boot.
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
+    verifyWakeupLongPress();
+  }
+
+  setupSerial();
+
+  // Initialize pins
+  pinMode(BAT_GPIO0, INPUT);
+
+  // Initialize SPI with custom pins
+  SPI.begin(EPD_SCLK, SD_SPI_MISO, EPD_MOSI, EPD_CS);
+
+  // Initialize display
+  const SPISettings spi_settings(SPI_FQ, MSBFIRST, SPI_MODE0);
+  display.init(115200, true, 2, false, SPI, spi_settings);
+  display.setRotation(3);  // 270 degrees
+  display.setTextColor(GxEPD_BLACK);
+  Serial.println("Display initialized");
+
+  enterNewScreen(new FullScreenMessageScreen(renderer, "Loading...", true));
+
+  // SD Card Initialization
+  SD.begin(SD_SPI_CS, SPI, SPI_FQ);
+
+  // TODO: Add a file selection screen, for now just load the first file
+  File root = SD.open("/");
+  String filename;
+  while (true) {
+    filename = root.getNextFileName();
+    if (!filename) {
+      break;
+    }
+
+    if (filename.substring(filename.length() - 5) == ".epub") {
+      Serial.printf("Found epub: %s\n", filename.c_str());
+      break;
+    }
+  }
+
+  if (!filename) {
+    enterNewScreen(new FullScreenMessageScreen(renderer, "Could not find epub"));
+    return;
+  }
+
+  Epub* epub = loadEpub(std::string(filename.c_str()));
+  if (epub) {
+    enterNewScreen(new EpubReaderScreen(renderer, epub));
+  } else {
+    enterNewScreen(new FullScreenMessageScreen(renderer, "Failed to load epub"));
+  }
+}
+
+void loop() {
+  delay(50);
+
+  const Input input = getInput();
+
+  if (input.button == NONE) {
+    return;
+  }
+
+  if (input.button == POWER && input.pressTime > POWER_BUTTON_SLEEP_MS) {
+    enterDeepSleep();
+    // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start
+    delay(1000);
+    return;
+  }
+
+  if (currentScreen) {
+    currentScreen->handleInput(input);
+  }
+}
