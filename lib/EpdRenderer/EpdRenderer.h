@@ -10,6 +10,7 @@ class EpdRenderer {
   XteinkDisplay* display;
   EpdFontRenderer<XteinkDisplay>* regularFontRenderer;
   EpdFontRenderer<XteinkDisplay>* smallFontRenderer;
+  EpdFontRenderer<XteinkDisplay>* uiFontRenderer;
   int marginTop;
   int marginBottom;
   int marginLeft;
@@ -20,8 +21,10 @@ class EpdRenderer {
   explicit EpdRenderer(XteinkDisplay* display);
   ~EpdRenderer() = default;
   int getTextWidth(const char* text, EpdFontStyle style = REGULAR) const;
+  int getUiTextWidth(const char* text, EpdFontStyle style = REGULAR) const;
   int getSmallTextWidth(const char* text, EpdFontStyle style = REGULAR) const;
   void drawText(int x, int y, const char* text, uint16_t color = 1, EpdFontStyle style = REGULAR) const;
+  void drawUiText(int x, int y, const char* text, uint16_t color = 1, EpdFontStyle style = REGULAR) const;
   void drawSmallText(int x, int y, const char* text, uint16_t color = 1, EpdFontStyle style = REGULAR) const;
   void drawTextBox(int x, int y, const std::string& text, int width, int height, EpdFontStyle style = REGULAR) const;
   void drawLine(int x1, int y1, int x2, int y2, uint16_t color = 1) const;

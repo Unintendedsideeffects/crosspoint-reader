@@ -41,10 +41,10 @@ void EpubReaderScreen::onEnter() {
 }
 
 void EpubReaderScreen::onExit() {
-  vTaskDelete(displayTaskHandle);
-  displayTaskHandle = nullptr;
   xSemaphoreTake(sectionMutex, portMAX_DELAY);
+  vTaskDelete(displayTaskHandle);
   vSemaphoreDelete(sectionMutex);
+  displayTaskHandle = nullptr;
   sectionMutex = nullptr;
 }
 

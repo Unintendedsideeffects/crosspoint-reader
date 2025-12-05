@@ -55,11 +55,14 @@ Epub* loadEpub(const std::string& path) {
   return nullptr;
 }
 
-void enterNewScreen(Screen* screen) {
+void exitScreen() {
   if (currentScreen) {
     currentScreen->onExit();
     delete currentScreen;
   }
+}
+
+void enterNewScreen(Screen* screen) {
   currentScreen = screen;
   currentScreen->onEnter();
 }
@@ -90,7 +93,8 @@ void waitForNoButton() {
 
 // Enter deep sleep mode
 void enterDeepSleep() {
-  enterNewScreen(new FullScreenMessageScreen(renderer, "Sleeping", BOLD, true));
+  exitScreen();
+  enterNewScreen(new FullScreenMessageScreen(renderer, "Sleeping", BOLD, true, false));
 
   Serial.println("Power button released after a long press. Entering deep sleep.");
   delay(1000);  // Allow Serial buffer to empty and display to update
@@ -106,18 +110,25 @@ void enterDeepSleep() {
 
 void onGoHome();
 void onSelectEpubFile(const std::string& path) {
+  exitScreen();
   enterNewScreen(new FullScreenMessageScreen(renderer, "Loading..."));
 
   Epub* epub = loadEpub(path);
   if (epub) {
     appState->openEpubPath = path;
     appState->saveToFile();
+    exitScreen();
     enterNewScreen(new EpubReaderScreen(renderer, epub, onGoHome));
   } else {
-    enterNewScreen(new FullScreenMessageScreen(renderer, "Failed to load epub"));
+    exitScreen();
+    enterNewScreen(new FullScreenMessageScreen(renderer, "Failed to load epub", REGULAR, false, false));
   }
 }
-void onGoHome() { enterNewScreen(new FileSelectionScreen(renderer, onSelectEpubFile)); }
+
+void onGoHome() {
+  exitScreen();
+  enterNewScreen(new FileSelectionScreen(renderer, onSelectEpubFile));
+}
 
 void setup() {
   setupInputPinModes();
@@ -138,6 +149,7 @@ void setup() {
   display.setTextColor(GxEPD_BLACK);
   Serial.println("Display initialized");
 
+  exitScreen();
   enterNewScreen(new BootLogoScreen(renderer));
 
   // SD Card Initialization
@@ -147,6 +159,7 @@ void setup() {
   if (!appState->openEpubPath.empty()) {
     Epub* epub = loadEpub(appState->openEpubPath);
     if (epub) {
+      exitScreen();
       enterNewScreen(new EpubReaderScreen(renderer, epub, onGoHome));
       // Ensure we're not still holding the power button before leaving setup
       waitForNoButton();
@@ -154,6 +167,7 @@ void setup() {
     }
   }
 
+  exitScreen();
   enterNewScreen(new FileSelectionScreen(renderer, onSelectEpubFile));
 
   // Ensure we're not still holding the power button before leaving setup

@@ -95,14 +95,14 @@ void FileSelectionScreen::render() const {
   renderer->drawText((pageWidth - titleWidth) / 2, 0, "CrossPoint Reader", 1, BOLD);
 
   if (files.empty()) {
-    renderer->drawSmallText(50, 50, "No EPUBs found");
+    renderer->drawUiText(10, 50, "No EPUBs found");
   } else {
     // Draw selection
-    renderer->fillRect(0, 50 + selectorIndex * 20 + 2, pageWidth - 1, 20);
+    renderer->fillRect(0, 50 + selectorIndex * 30 + 2, pageWidth - 1, 30);
 
     for (size_t i = 0; i < files.size(); i++) {
       const auto file = files[i];
-      renderer->drawSmallText(50, 50 + i * 20, file.c_str(), i == selectorIndex ? 0 : 1);
+      renderer->drawUiText(10, 50 + i * 30, file.c_str(), i == selectorIndex ? 0 : 1);
     }
   }
 

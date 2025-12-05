@@ -5,15 +5,18 @@
 #include "builtinFonts/bookerly_bold.h"
 #include "builtinFonts/bookerly_bold_italic.h"
 #include "builtinFonts/bookerly_italic.h"
+#include "builtinFonts/ubuntu_10.h"
+#include "builtinFonts/ubuntu_bold_10.h"
 
 EpdRenderer::EpdRenderer(XteinkDisplay* display) {
   const auto bookerlyFontFamily = new EpdFontFamily(new EpdFont(&bookerly), new EpdFont(&bookerly_bold),
                                                     new EpdFont(&bookerly_italic), new EpdFont(&bookerly_bold_italic));
-  const auto babyblueFontFamily = new EpdFontFamily(new EpdFont(&babyblue));
+  const auto ubuntuFontFamily = new EpdFontFamily(new EpdFont(&ubuntu_10), new EpdFont(&ubuntu_bold_10));
 
   this->display = display;
   this->regularFontRenderer = new EpdFontRenderer<XteinkDisplay>(bookerlyFontFamily, display);
-  this->smallFontRenderer = new EpdFontRenderer<XteinkDisplay>(babyblueFontFamily, display);
+  this->smallFontRenderer = new EpdFontRenderer<XteinkDisplay>(new EpdFontFamily(new EpdFont(&babyblue)), display);
+  this->uiFontRenderer = new EpdFontRenderer<XteinkDisplay>(ubuntuFontFamily, display);
 
   this->marginTop = 11;
   this->marginBottom = 30;
@@ -26,6 +29,14 @@ int EpdRenderer::getTextWidth(const char* text, const EpdFontStyle style) const 
   int w = 0, h = 0;
 
   regularFontRenderer->fontFamily->getTextDimensions(text, &w, &h, style);
+
+  return w;
+}
+
+int EpdRenderer::getUiTextWidth(const char* text, const EpdFontStyle style) const {
+  int w = 0, h = 0;
+
+  uiFontRenderer->fontFamily->getTextDimensions(text, &w, &h, style);
 
   return w;
 }
@@ -45,11 +56,18 @@ void EpdRenderer::drawText(const int x, const int y, const char* text, const uin
   regularFontRenderer->renderString(text, &xpos, &ypos, color > 0 ? GxEPD_BLACK : GxEPD_WHITE, style);
 }
 
+void EpdRenderer::drawUiText(const int x, const int y, const char* text, const uint16_t color,
+                             const EpdFontStyle style) const {
+  int ypos = y + uiFontRenderer->fontFamily->getData(style)->advanceY + marginTop;
+  int xpos = x + marginLeft;
+  uiFontRenderer->renderString(text, &xpos, &ypos, color > 0 ? GxEPD_BLACK : GxEPD_WHITE, style);
+}
+
 void EpdRenderer::drawSmallText(const int x, const int y, const char* text, const uint16_t color,
                                 const EpdFontStyle style) const {
   int ypos = y + smallFontRenderer->fontFamily->getData(style)->advanceY + marginTop;
   int xpos = x + marginLeft;
-  smallFontRenderer->renderString(text, &xpos, &ypos, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
+  smallFontRenderer->renderString(text, &xpos, &ypos, color > 0 ? GxEPD_BLACK : GxEPD_WHITE, style);
 }
 
 void EpdRenderer::drawTextBox(const int x, const int y, const std::string& text, const int width, const int height,
