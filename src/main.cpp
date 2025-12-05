@@ -8,6 +8,7 @@
 #include "Battery.h"
 #include "CrossPointState.h"
 #include "Input.h"
+#include "screens/BootLogoScreen.h"
 #include "screens/EpubReaderScreen.h"
 #include "screens/FileSelectionScreen.h"
 #include "screens/FullScreenMessageScreen.h"
@@ -137,7 +138,7 @@ void setup() {
   display.setTextColor(GxEPD_BLACK);
   Serial.println("Display initialized");
 
-  enterNewScreen(new FullScreenMessageScreen(renderer, "Booting...", BOLD));
+  enterNewScreen(new BootLogoScreen(renderer));
 
   // SD Card Initialization
   SD.begin(SD_SPI_CS, SPI, SPI_FQ);
