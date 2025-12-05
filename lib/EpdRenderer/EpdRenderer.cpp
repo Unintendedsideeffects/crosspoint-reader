@@ -118,7 +118,7 @@ void EpdRenderer::clearScreen(const bool black) const {
   display->fillScreen(black ? GxEPD_BLACK : GxEPD_WHITE);
 }
 
-void EpdRenderer::flushDisplay() const { display->display(true); }
+void EpdRenderer::flushDisplay(const bool partialUpdate) const { display->display(partialUpdate); }
 
 void EpdRenderer::flushArea(int x, int y, int width, int height) const {
   // TODO: Fix

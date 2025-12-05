@@ -33,7 +33,7 @@ class EpdRenderer {
   void drawRect(int x, int y, int width, int height, uint16_t color) const;
   void fillRect(int x, int y, int width, int height, uint16_t color) const;
   void clearScreen(bool black = false) const;
-  void flushDisplay() const;
+  void flushDisplay(bool partialUpdate = true) const;
   void flushArea(int x, int y, int width, int height) const;
 
   int getPageWidth() const;

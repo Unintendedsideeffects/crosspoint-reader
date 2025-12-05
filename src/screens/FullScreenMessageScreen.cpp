@@ -10,5 +10,6 @@ void FullScreenMessageScreen::onEnter() {
 
   renderer->clearScreen(invert);
   renderer->drawText(left, top, text.c_str(), bold, italic, invert ? 0 : 1);
-  renderer->flushDisplay();
+  // If inverted, do a full screen update to ensure no ghosting
+  renderer->flushDisplay(!invert);
 }
