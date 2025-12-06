@@ -2,6 +2,7 @@
 
 #include <EpdRenderer.h>
 #include <HardwareSerial.h>
+#include <expat.h>
 
 #include "Page.h"
 #include "htmlEntities.h"
@@ -51,8 +52,6 @@ void EpubHtmlParserSlim::startNewTextBlock(const BLOCK_STYLE style) {
   }
   currentTextBlock = new TextBlock(style);
 }
-
-#include <expat.h>
 
 void XMLCALL EpubHtmlParserSlim::startElement(void* userData, const XML_Char* name, const XML_Char** atts) {
   auto* self = static_cast<EpubHtmlParserSlim*>(userData);
@@ -154,11 +153,9 @@ void XMLCALL EpubHtmlParserSlim::endElement(void* userData, const XML_Char* name
     // We don't want to flush out content when closing inline tags like <span>.
     // Currently this also flushes out on closing <b> and <i> tags, but they are line tags so that shouldn't happen,
     // text styling needs to be overhauled to fix it.
-    const bool shouldBreakText = matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS) ||
-      matches(name, HEADER_TAGS, NUM_HEADER_TAGS) ||
-      matches(name, BOLD_TAGS, NUM_BOLD_TAGS) ||
-      matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS) ||
-        self->depth == 1;
+    const bool shouldBreakText =
+        matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS) || matches(name, HEADER_TAGS, NUM_HEADER_TAGS) ||
+        matches(name, BOLD_TAGS, NUM_BOLD_TAGS) || matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS) || self->depth == 1;
 
     if (shouldBreakText) {
       self->partWordBuffer[self->partWordBufferIndex] = '\0';

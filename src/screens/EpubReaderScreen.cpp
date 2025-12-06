@@ -5,7 +5,7 @@
 
 #include "Battery.h"
 
-constexpr int PAGES_PER_REFRESH = 10;
+constexpr int PAGES_PER_REFRESH = 20;
 constexpr unsigned long SKIP_CHAPTER_MS = 700;
 
 void EpubReaderScreen::taskTrampoline(void* param) {
