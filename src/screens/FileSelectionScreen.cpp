@@ -3,6 +3,14 @@
 #include <EpdRenderer.h>
 #include <SD.h>
 
+void caseInsensitiveSort(std::vector<std::string>& strs) {
+  std::sort(begin(strs), end(strs), [](const std::string& str1, const std::string& str2) {
+    return lexicographical_compare(
+        begin(str1), end(str1), begin(str2), end(str2),
+        [](const char& char1, const char& char2) { return tolower(char1) < tolower(char2); });
+  });
+}
+
 void FileSelectionScreen::taskTrampoline(void* param) {
   auto* self = static_cast<FileSelectionScreen*>(param);
   self->displayTaskLoop();
@@ -27,6 +35,7 @@ void FileSelectionScreen::loadFiles() {
     file.close();
   }
   root.close();
+  caseInsensitiveSort(files);
 }
 
 void FileSelectionScreen::onEnter() {
