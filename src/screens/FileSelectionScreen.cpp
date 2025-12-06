@@ -59,14 +59,13 @@ void FileSelectionScreen::onExit() {
   files.clear();
 }
 
-void FileSelectionScreen::handleInput(const Input input) {
-  if (input.button == VOLUME_DOWN || input.button == RIGHT) {
-    selectorIndex = (selectorIndex + 1) % files.size();
-    updateRequired = true;
-  } else if (input.button == VOLUME_UP || input.button == LEFT) {
-    selectorIndex = (selectorIndex + files.size() - 1) % files.size();
-    updateRequired = true;
-  } else if (input.button == CONFIRM) {
+void FileSelectionScreen::handleInput() {
+  const bool prevPressed =
+      inputManager.wasPressed(InputManager::BTN_UP) || inputManager.wasPressed(InputManager::BTN_LEFT);
+  const bool nextPressed =
+      inputManager.wasPressed(InputManager::BTN_DOWN) || inputManager.wasPressed(InputManager::BTN_RIGHT);
+
+  if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
     if (files.empty()) {
       return;
     }
@@ -79,10 +78,16 @@ void FileSelectionScreen::handleInput(const Input input) {
     } else {
       onSelect(basepath + files[selectorIndex]);
     }
-  } else if (input.button == BACK && basepath != "/") {
+  } else if (inputManager.wasPressed(InputManager::BTN_BACK) && basepath != "/") {
     basepath = basepath.substr(0, basepath.rfind('/'));
     if (basepath.empty()) basepath = "/";
     loadFiles();
+    updateRequired = true;
+  } else if (prevPressed) {
+    selectorIndex = (selectorIndex + files.size() - 1) % files.size();
+    updateRequired = true;
+  } else if (nextPressed) {
+    selectorIndex = (selectorIndex + 1) % files.size();
     updateRequired = true;
   }
 }
