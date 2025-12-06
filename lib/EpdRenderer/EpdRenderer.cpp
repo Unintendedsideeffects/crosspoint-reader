@@ -8,21 +8,30 @@
 #include "builtinFonts/ubuntu_10.h"
 #include "builtinFonts/ubuntu_bold_10.h"
 
-EpdRenderer::EpdRenderer(XteinkDisplay* display) {
-  const auto bookerlyFontFamily = new EpdFontFamily(new EpdFont(&bookerly), new EpdFont(&bookerly_bold),
-                                                    new EpdFont(&bookerly_italic), new EpdFont(&bookerly_bold_italic));
-  const auto ubuntuFontFamily = new EpdFontFamily(new EpdFont(&ubuntu_10), new EpdFont(&ubuntu_bold_10));
+EpdFont bookerlyFont(&bookerly);
+EpdFont bookerlyBoldFont(&bookerly_bold);
+EpdFont bookerlyItalicFont(&bookerly_italic);
+EpdFont bookerlyBoldItalicFont(&bookerly_bold_italic);
+EpdFontFamily bookerlyFontFamily(&bookerlyFont, &bookerlyBoldFont, &bookerlyItalicFont, &bookerlyBoldItalicFont);
 
-  this->display = display;
-  this->regularFontRenderer = new EpdFontRenderer<XteinkDisplay>(bookerlyFontFamily, display);
-  this->smallFontRenderer = new EpdFontRenderer<XteinkDisplay>(new EpdFontFamily(new EpdFont(&babyblue)), display);
-  this->uiFontRenderer = new EpdFontRenderer<XteinkDisplay>(ubuntuFontFamily, display);
+EpdFont smallFont(&babyblue);
+EpdFontFamily smallFontFamily(&smallFont);
 
-  this->marginTop = 11;
-  this->marginBottom = 30;
-  this->marginLeft = 10;
-  this->marginRight = 10;
-  this->lineCompression = 0.95f;
+EpdFont ubuntu10Font(&ubuntu_10);
+EpdFont ununtuBold10Font(&ubuntu_bold_10);
+EpdFontFamily ubuntuFontFamily(&ubuntu10Font, &ununtuBold10Font);
+
+EpdRenderer::EpdRenderer(XteinkDisplay& display)
+    : display(display), marginTop(11), marginBottom(30), marginLeft(10), marginRight(10), lineCompression(0.95f) {
+  this->regularFontRenderer = new EpdFontRenderer<XteinkDisplay>(&bookerlyFontFamily, display);
+  this->smallFontRenderer = new EpdFontRenderer<XteinkDisplay>(&smallFontFamily, display);
+  this->uiFontRenderer = new EpdFontRenderer<XteinkDisplay>(&ubuntuFontFamily, display);
+}
+
+EpdRenderer::~EpdRenderer() {
+  delete regularFontRenderer;
+  delete smallFontRenderer;
+  delete uiFontRenderer;
 }
 
 int EpdRenderer::getTextWidth(const char* text, const EpdFontStyle style) const {
@@ -107,24 +116,24 @@ void EpdRenderer::drawTextBox(const int x, const int y, const std::string& text,
 }
 
 void EpdRenderer::drawLine(int x1, int y1, int x2, int y2, uint16_t color) const {
-  display->drawLine(x1 + marginLeft, y1 + marginTop, x2 + marginLeft, y2 + marginTop,
-                    color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
+  display.drawLine(x1 + marginLeft, y1 + marginTop, x2 + marginLeft, y2 + marginTop,
+                   color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
 }
 
 void EpdRenderer::drawRect(const int x, const int y, const int width, const int height, const uint16_t color) const {
-  display->drawRect(x + marginLeft, y + marginTop, width, height, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
+  display.drawRect(x + marginLeft, y + marginTop, width, height, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
 }
 
 void EpdRenderer::fillRect(const int x, const int y, const int width, const int height, const uint16_t color) const {
-  display->fillRect(x + marginLeft, y + marginTop, width, height, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
+  display.fillRect(x + marginLeft, y + marginTop, width, height, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
 }
 
 void EpdRenderer::drawCircle(const int x, const int y, const int radius, const uint16_t color) const {
-  display->drawCircle(x + marginLeft, y + marginTop, radius, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
+  display.drawCircle(x + marginLeft, y + marginTop, radius, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
 }
 
 void EpdRenderer::fillCircle(const int x, const int y, const int radius, const uint16_t color) const {
-  display->fillCircle(x + marginLeft, y + marginTop, radius, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
+  display.fillCircle(x + marginLeft, y + marginTop, radius, color > 0 ? GxEPD_BLACK : GxEPD_WHITE);
 }
 
 void EpdRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, const int width, const int height,
@@ -134,23 +143,23 @@ void EpdRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, co
 
 void EpdRenderer::drawImageNoMargin(const uint8_t bitmap[], const int x, const int y, const int width, const int height,
                                     const bool invert, const bool mirrorY) const {
-  display->drawImage(bitmap, x, y, width, height, invert, mirrorY);
+  display.drawImage(bitmap, x, y, width, height, invert, mirrorY);
 }
 
 void EpdRenderer::clearScreen(const bool black) const {
   Serial.println("Clearing screen");
-  display->fillScreen(black ? GxEPD_BLACK : GxEPD_WHITE);
+  display.fillScreen(black ? GxEPD_BLACK : GxEPD_WHITE);
 }
 
-void EpdRenderer::flushDisplay(const bool partialUpdate) const { display->display(partialUpdate); }
+void EpdRenderer::flushDisplay(const bool partialUpdate) const { display.display(partialUpdate); }
 
 void EpdRenderer::flushArea(const int x, const int y, const int width, const int height) const {
-  display->displayWindow(x + marginLeft, y + marginTop, width, height);
+  display.displayWindow(x + marginLeft, y + marginTop, width, height);
 }
 
-int EpdRenderer::getPageWidth() const { return display->width() - marginLeft - marginRight; }
+int EpdRenderer::getPageWidth() const { return display.width() - marginLeft - marginRight; }
 
-int EpdRenderer::getPageHeight() const { return display->height() - marginTop - marginBottom; }
+int EpdRenderer::getPageHeight() const { return display.height() - marginTop - marginBottom; }
 
 int EpdRenderer::getSpaceWidth() const { return regularFontRenderer->fontFamily->getGlyph(' ', REGULAR)->advanceX; }
 

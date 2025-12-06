@@ -31,7 +31,7 @@
 GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> display(GxEPD2_426_GDEQ0426T82(EPD_CS, EPD_DC,
                                                                                                  EPD_RST, EPD_BUSY));
 InputManager inputManager;
-EpdRenderer renderer(&display);
+EpdRenderer renderer(display);
 Screen* currentScreen;
 CrossPointState appState;
 

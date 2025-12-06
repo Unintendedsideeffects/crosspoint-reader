@@ -7,7 +7,7 @@
 #define XteinkDisplay GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT>
 
 class EpdRenderer {
-  XteinkDisplay* display;
+  XteinkDisplay& display;
   EpdFontRenderer<XteinkDisplay>* regularFontRenderer;
   EpdFontRenderer<XteinkDisplay>* smallFontRenderer;
   EpdFontRenderer<XteinkDisplay>* uiFontRenderer;
@@ -18,8 +18,8 @@ class EpdRenderer {
   float lineCompression;
 
  public:
-  explicit EpdRenderer(XteinkDisplay* display);
-  ~EpdRenderer() = default;
+  explicit EpdRenderer(XteinkDisplay& display);
+  ~EpdRenderer();
   int getTextWidth(const char* text, EpdFontStyle style = REGULAR) const;
   int getUiTextWidth(const char* text, EpdFontStyle style = REGULAR) const;
   int getSmallTextWidth(const char* text, EpdFontStyle style = REGULAR) const;

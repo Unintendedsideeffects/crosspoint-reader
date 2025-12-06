@@ -2,8 +2,6 @@
 
 #include <Utf8.h>
 
-EpdFont::EpdFont(const EpdFontData* data) { this->data = data; }
-
 inline int min(const int a, const int b) { return a < b ? a : b; }
 inline int max(const int a, const int b) { return a < b ? b : a; }
 

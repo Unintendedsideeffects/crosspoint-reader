@@ -11,12 +11,12 @@ static tinfl_decompressor decomp;
 
 template <typename Renderable>
 class EpdFontRenderer {
-  Renderable* renderer;
+  Renderable& renderer;
   void renderChar(uint32_t cp, int* x, const int* y, uint16_t color, EpdFontStyle style = REGULAR);
 
  public:
   const EpdFontFamily* fontFamily;
-  explicit EpdFontRenderer(const EpdFontFamily* fontFamily, Renderable* renderer)
+  explicit EpdFontRenderer(const EpdFontFamily* fontFamily, Renderable& renderer)
       : fontFamily(fontFamily), renderer(renderer) {}
   ~EpdFontRenderer() = default;
   void renderString(const char* string, int* x, int* y, uint16_t color, EpdFontStyle style = REGULAR);
@@ -113,7 +113,7 @@ void EpdFontRenderer<Renderable>::renderChar(const uint32_t cp, int* x, const in
         }
 
         if (bm) {
-          renderer->drawPixel(xx, yy, color);
+          renderer.drawPixel(xx, yy, color);
         }
         byteComplete = !byteComplete;
         localX++;

@@ -74,8 +74,6 @@ void EpubReaderScreen::handleInput() {
     return;
   }
 
-  Serial.printf("Prev released: %d, Next released: %d\n", prevReleased, nextReleased);
-
   const bool skipChapter = inputManager.getHeldTime() > SKIP_CHAPTER_MS;
 
   if (skipChapter) {
