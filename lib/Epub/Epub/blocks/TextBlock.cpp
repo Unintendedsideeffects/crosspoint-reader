@@ -43,10 +43,10 @@ void TextBlock::addSpan(const std::string& span, const bool is_bold, const bool 
   }
 }
 
-std::list<TextBlock*> TextBlock::splitIntoLines(const EpdRenderer* renderer) {
+std::list<TextBlock*> TextBlock::splitIntoLines(const EpdRenderer& renderer) {
   const int totalWordCount = words.size();
-  const int pageWidth = renderer->getPageWidth();
-  const int spaceWidth = renderer->getSpaceWidth();
+  const int pageWidth = renderer.getPageWidth();
+  const int spaceWidth = renderer.getSpaceWidth();
 
   words.shrink_to_fit();
   wordStyles.shrink_to_fit();
@@ -66,7 +66,7 @@ std::list<TextBlock*> TextBlock::splitIntoLines(const EpdRenderer* renderer) {
     } else if (wordStyles[i] & ITALIC_SPAN) {
       fontStyle = ITALIC;
     }
-    const int width = renderer->getTextWidth(words[i].c_str(), fontStyle);
+    const int width = renderer.getTextWidth(words[i].c_str(), fontStyle);
     wordWidths[i] = width;
   }
 
@@ -187,7 +187,7 @@ std::list<TextBlock*> TextBlock::splitIntoLines(const EpdRenderer* renderer) {
   return lines;
 }
 
-void TextBlock::render(const EpdRenderer* renderer, const int x, const int y) const {
+void TextBlock::render(const EpdRenderer& renderer, const int x, const int y) const {
   for (int i = 0; i < words.size(); i++) {
     // get the style
     const uint8_t wordStyle = wordStyles[i];
@@ -203,7 +203,7 @@ void TextBlock::render(const EpdRenderer* renderer, const int x, const int y) co
     } else if (wordStyles[i] & ITALIC_SPAN) {
       fontStyle = ITALIC;
     }
-    renderer->drawText(x + wordXpos[i], y, words[i].c_str(), 1, fontStyle);
+    renderer.drawText(x + wordXpos[i], y, words[i].c_str(), 1, fontStyle);
   }
 }
 

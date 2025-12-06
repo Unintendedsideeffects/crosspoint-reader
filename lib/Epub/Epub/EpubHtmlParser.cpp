@@ -146,8 +146,8 @@ void EpubHtmlParser::makePages() {
     currentPage = new Page();
   }
 
-  const int lineHeight = renderer->getLineHeight();
-  const int pageHeight = renderer->getPageHeight();
+  const int lineHeight = renderer.getLineHeight();
+  const int pageHeight = renderer.getPageHeight();
 
   // Long running task, make sure to let other things happen
   vTaskDelay(1);

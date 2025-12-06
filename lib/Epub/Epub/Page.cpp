@@ -3,7 +3,7 @@
 #include <HardwareSerial.h>
 #include <Serialization.h>
 
-void PageLine::render(EpdRenderer* renderer) { block->render(renderer, 0, yPos); }
+void PageLine::render(EpdRenderer& renderer) { block->render(renderer, 0, yPos); }
 
 void PageLine::serialize(std::ostream& os) {
   serialization::writePod(os, yPos);
@@ -20,7 +20,7 @@ PageLine* PageLine::deserialize(std::istream& is) {
   return new PageLine(tb, yPos);
 }
 
-void Page::render(EpdRenderer* renderer) const {
+void Page::render(EpdRenderer& renderer) const {
   const auto start = millis();
   for (const auto element : elements) {
     element->render(renderer);

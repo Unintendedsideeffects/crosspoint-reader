@@ -10,7 +10,7 @@ class EpdRenderer;
 
 class EpubHtmlParser final : public tinyxml2::XMLVisitor {
   const char* filepath;
-  EpdRenderer* renderer;
+  EpdRenderer& renderer;
   std::function<void(Page*)> completePageFn;
 
   bool insideBoldTag = false;
@@ -27,7 +27,7 @@ class EpubHtmlParser final : public tinyxml2::XMLVisitor {
   bool VisitExit(const tinyxml2::XMLElement& element) override;
   // xml parser callbacks
  public:
-  explicit EpubHtmlParser(const char* filepath, EpdRenderer* renderer, const std::function<void(Page*)>& completePageFn)
+  explicit EpubHtmlParser(const char* filepath, EpdRenderer& renderer, const std::function<void(Page*)>& completePageFn)
       : filepath(filepath), renderer(renderer), completePageFn(completePageFn) {}
   ~EpubHtmlParser() override = default;
   bool parseAndBuildPages();

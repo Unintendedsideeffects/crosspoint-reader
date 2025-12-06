@@ -11,7 +11,7 @@ class PageElement {
   int yPos;
   explicit PageElement(const int yPos) : yPos(yPos) {}
   virtual ~PageElement() = default;
-  virtual void render(EpdRenderer* renderer) = 0;
+  virtual void render(EpdRenderer& renderer) = 0;
   virtual void serialize(std::ostream& os) = 0;
 };
 
@@ -22,7 +22,7 @@ class PageLine final : public PageElement {
  public:
   PageLine(const TextBlock* block, const int yPos) : PageElement(yPos), block(block) {}
   ~PageLine() override { delete block; }
-  void render(EpdRenderer* renderer) override;
+  void render(EpdRenderer& renderer) override;
   void serialize(std::ostream& os) override;
   static PageLine* deserialize(std::istream& is);
 };
@@ -32,7 +32,7 @@ class Page {
   int nextY = 0;
   // the list of block index and line numbers on this page
   std::vector<PageElement*> elements;
-  void render(EpdRenderer* renderer) const;
+  void render(EpdRenderer& renderer) const;
   ~Page() {
     for (const auto element : elements) {
       delete element;

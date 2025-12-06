@@ -31,9 +31,9 @@
 GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> display(GxEPD2_426_GDEQ0426T82(EPD_CS, EPD_DC,
                                                                                                  EPD_RST, EPD_BUSY));
 InputManager inputManager;
-auto renderer = new EpdRenderer(&display);
+EpdRenderer renderer(&display);
 Screen* currentScreen;
-CrossPointState* appState;
+CrossPointState appState;
 
 // Power button timing
 // Time required to confirm boot from sleep
@@ -136,8 +136,8 @@ void onSelectEpubFile(const std::string& path) {
 
   Epub* epub = loadEpub(path);
   if (epub) {
-    appState->openEpubPath = path;
-    appState->saveToFile();
+    appState.openEpubPath = path;
+    appState.saveToFile();
     exitScreen();
     enterNewScreen(new EpubReaderScreen(renderer, inputManager, epub, onGoHome));
   } else {
@@ -182,9 +182,9 @@ void setup() {
   // SD Card Initialization
   SD.begin(SD_SPI_CS, SPI, SPI_FQ);
 
-  appState = CrossPointState::loadFromFile();
-  if (!appState->openEpubPath.empty()) {
-    Epub* epub = loadEpub(appState->openEpubPath);
+  appState.loadFromFile();
+  if (!appState.openEpubPath.empty()) {
+    Epub* epub = loadEpub(appState.openEpubPath);
     if (epub) {
       exitScreen();
       enterNewScreen(new EpubReaderScreen(renderer, inputManager, epub, onGoHome));
@@ -203,6 +203,13 @@ void setup() {
 
 void loop() {
   delay(10);
+
+  static unsigned long lastMemPrint = 0;
+  if (Serial && millis() - lastMemPrint >= 2000) {
+    Serial.printf("[%lu] Memory - Free: %d bytes, Total: %d bytes, Min Free: %d bytes\n", millis(), ESP.getFreeHeap(),
+                  ESP.getHeapSize(), ESP.getMinFreeHeap());
+    lastMemPrint = millis();
+  }
 
   inputManager.update();
   if (inputManager.wasReleased(InputManager::BTN_POWER) && inputManager.getHeldTime() > POWER_BUTTON_WAKEUP_MS) {

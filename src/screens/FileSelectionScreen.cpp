@@ -105,23 +105,23 @@ void FileSelectionScreen::displayTaskLoop() {
 }
 
 void FileSelectionScreen::render() const {
-  renderer->clearScreen();
+  renderer.clearScreen();
 
-  const auto pageWidth = renderer->getPageWidth();
-  const auto titleWidth = renderer->getTextWidth("CrossPoint Reader", BOLD);
-  renderer->drawText((pageWidth - titleWidth) / 2, 0, "CrossPoint Reader", 1, BOLD);
+  const auto pageWidth = renderer.getPageWidth();
+  const auto titleWidth = renderer.getTextWidth("CrossPoint Reader", BOLD);
+  renderer.drawText((pageWidth - titleWidth) / 2, 0, "CrossPoint Reader", 1, BOLD);
 
   if (files.empty()) {
-    renderer->drawUiText(10, 50, "No EPUBs found");
+    renderer.drawUiText(10, 50, "No EPUBs found");
   } else {
     // Draw selection
-    renderer->fillRect(0, 50 + selectorIndex * 30 + 2, pageWidth - 1, 30);
+    renderer.fillRect(0, 50 + selectorIndex * 30 + 2, pageWidth - 1, 30);
 
     for (size_t i = 0; i < files.size(); i++) {
       const auto file = files[i];
-      renderer->drawUiText(10, 50 + i * 30, file.c_str(), i == selectorIndex ? 0 : 1);
+      renderer.drawUiText(10, 50 + i * 30, file.c_str(), i == selectorIndex ? 0 : 1);
     }
   }
 
-  renderer->flushDisplay();
+  renderer.flushDisplay();
 }

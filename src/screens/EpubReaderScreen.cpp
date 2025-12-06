@@ -154,16 +154,16 @@ void EpubReaderScreen::renderPage() {
       Serial.println("Cache not found, building...");
 
       {
-        const int textWidth = renderer->getTextWidth("Indexing...");
+        const int textWidth = renderer.getTextWidth("Indexing...");
         constexpr int margin = 20;
-        const int x = (renderer->getPageWidth() - textWidth - margin * 2) / 2;
+        const int x = (renderer.getPageWidth() - textWidth - margin * 2) / 2;
         constexpr int y = 50;
         const int w = textWidth + margin * 2;
-        const int h = renderer->getLineHeight() + margin * 2;
-        renderer->fillRect(x, y, w, h, 0);
-        renderer->drawText(x + margin, y + margin, "Indexing...");
-        renderer->drawRect(x + 5, y + 5, w - 10, h - 10);
-        renderer->flushArea(x, y, w, h);
+        const int h = renderer.getLineHeight() + margin * 2;
+        renderer.fillRect(x, y, w, h, 0);
+        renderer.drawText(x + margin, y + margin, "Indexing...");
+        renderer.drawRect(x + 5, y + 5, w - 10, h - 10);
+        renderer.flushArea(x, y, w, h);
       }
 
       section->setupCacheDir();
@@ -184,14 +184,14 @@ void EpubReaderScreen::renderPage() {
     }
   }
 
-  renderer->clearScreen();
+  renderer.clearScreen();
   section->renderPage();
   renderStatusBar();
   if (pagesUntilFullRefresh <= 1) {
-    renderer->flushDisplay(false);
+    renderer.flushDisplay(false);
     pagesUntilFullRefresh = PAGES_PER_REFRESH;
   } else {
-    renderer->flushDisplay();
+    renderer.flushDisplay();
     pagesUntilFullRefresh--;
   }
 
@@ -206,16 +206,16 @@ void EpubReaderScreen::renderPage() {
 }
 
 void EpubReaderScreen::renderStatusBar() const {
-  const auto pageWidth = renderer->getPageWidth();
+  const auto pageWidth = renderer.getPageWidth();
 
   const std::string progress = std::to_string(section->currentPage + 1) + " / " + std::to_string(section->pageCount);
-  const auto progressTextWidth = renderer->getSmallTextWidth(progress.c_str());
-  renderer->drawSmallText(pageWidth - progressTextWidth, 765, progress.c_str());
+  const auto progressTextWidth = renderer.getSmallTextWidth(progress.c_str());
+  renderer.drawSmallText(pageWidth - progressTextWidth, 765, progress.c_str());
 
   const uint16_t percentage = battery.readPercentage();
   const auto percentageText = std::to_string(percentage) + "%";
-  const auto percentageTextWidth = renderer->getSmallTextWidth(percentageText.c_str());
-  renderer->drawSmallText(20, 765, percentageText.c_str());
+  const auto percentageTextWidth = renderer.getSmallTextWidth(percentageText.c_str());
+  renderer.drawSmallText(20, 765, percentageText.c_str());
 
   // 1 column on left, 2 columns on right, 5 columns of battery body
   constexpr int batteryWidth = 15;
@@ -224,23 +224,23 @@ void EpubReaderScreen::renderStatusBar() const {
   constexpr int y = 772;
 
   // Top line
-  renderer->drawLine(x, y, x + batteryWidth - 4, y);
+  renderer.drawLine(x, y, x + batteryWidth - 4, y);
   // Bottom line
-  renderer->drawLine(x, y + batteryHeight - 1, x + batteryWidth - 4, y + batteryHeight - 1);
+  renderer.drawLine(x, y + batteryHeight - 1, x + batteryWidth - 4, y + batteryHeight - 1);
   // Left line
-  renderer->drawLine(x, y, x, y + batteryHeight - 1);
+  renderer.drawLine(x, y, x, y + batteryHeight - 1);
   // Battery end
-  renderer->drawLine(x + batteryWidth - 4, y, x + batteryWidth - 4, y + batteryHeight - 1);
-  renderer->drawLine(x + batteryWidth - 3, y + 2, x + batteryWidth - 3, y + batteryHeight - 3);
-  renderer->drawLine(x + batteryWidth - 2, y + 2, x + batteryWidth - 2, y + batteryHeight - 3);
-  renderer->drawLine(x + batteryWidth - 1, y + 2, x + batteryWidth - 1, y + batteryHeight - 3);
+  renderer.drawLine(x + batteryWidth - 4, y, x + batteryWidth - 4, y + batteryHeight - 1);
+  renderer.drawLine(x + batteryWidth - 3, y + 2, x + batteryWidth - 3, y + batteryHeight - 3);
+  renderer.drawLine(x + batteryWidth - 2, y + 2, x + batteryWidth - 2, y + batteryHeight - 3);
+  renderer.drawLine(x + batteryWidth - 1, y + 2, x + batteryWidth - 1, y + batteryHeight - 3);
 
   // The +1 is to round up, so that we always fill at least one pixel
   int filledWidth = percentage * (batteryWidth - 5) / 100 + 1;
   if (filledWidth > batteryWidth - 5) {
     filledWidth = batteryWidth - 5;  // Ensure we don't overflow
   }
-  renderer->fillRect(x + 1, y + 1, filledWidth, batteryHeight - 2);
+  renderer.fillRect(x + 1, y + 1, filledWidth, batteryHeight - 2);
 
   // Page width minus existing content with 30px padding on each side
   const int leftMargin = 20 + percentageTextWidth + 30;
@@ -248,11 +248,11 @@ void EpubReaderScreen::renderStatusBar() const {
   const int availableTextWidth = pageWidth - leftMargin - rightMargin;
   const auto tocItem = epub->getTocItem(epub->getTocIndexForSpineIndex(currentSpineIndex));
   auto title = tocItem.title;
-  int titleWidth = renderer->getSmallTextWidth(title.c_str());
+  int titleWidth = renderer.getSmallTextWidth(title.c_str());
   while (titleWidth > availableTextWidth) {
     title = title.substr(0, title.length() - 8) + "...";
-    titleWidth = renderer->getSmallTextWidth(title.c_str());
+    titleWidth = renderer.getSmallTextWidth(title.c_str());
   }
 
-  renderer->drawSmallText(leftMargin + (availableTextWidth - titleWidth) / 2, 765, title.c_str());
+  renderer.drawSmallText(leftMargin + (availableTextWidth - titleWidth) / 2, 765, title.c_str());
 }

@@ -7,7 +7,7 @@ class EpdRenderer;
 class Section {
   Epub* epub;
   const int spineIndex;
-  EpdRenderer* renderer;
+  EpdRenderer& renderer;
   std::string cachePath;
 
   void onPageComplete(const Page* page);
@@ -16,7 +16,7 @@ class Section {
   int pageCount = 0;
   int currentPage = 0;
 
-  explicit Section(Epub* epub, const int spineIndex, EpdRenderer* renderer)
+  explicit Section(Epub* epub, const int spineIndex, EpdRenderer& renderer)
       : epub(epub), spineIndex(spineIndex), renderer(renderer) {
     cachePath = epub->getCachePath() + "/" + std::to_string(spineIndex);
   }
