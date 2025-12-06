@@ -2,12 +2,12 @@
 #include <EpdRenderer.h>
 #include <Epub.h>
 #include <GxEPD2_BW.h>
+#include <InputManager.h>
 #include <SD.h>
 #include <SPI.h>
 
 #include "Battery.h"
 #include "CrossPointState.h"
-#include "Input.h"
 #include "screens/BootLogoScreen.h"
 #include "screens/EpubReaderScreen.h"
 #include "screens/FileSelectionScreen.h"
@@ -30,6 +30,7 @@
 
 GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> display(GxEPD2_426_GDEQ0426T82(EPD_CS, EPD_DC,
                                                                                                  EPD_RST, EPD_BUSY));
+InputManager inputManager;
 auto renderer = new EpdRenderer(&display);
 Screen* currentScreen;
 CrossPointState* appState;
@@ -72,36 +73,55 @@ void enterNewScreen(Screen* screen) {
 void verifyWakeupLongPress() {
   // Give the user up to 1000ms to start holding the power button, and must hold for POWER_BUTTON_WAKEUP_MS
   const auto start = millis();
-  auto input = getInput(POWER_BUTTON_WAKEUP_MS);
-  while (input.button != POWER && millis() - start < 1000) {
+  bool abort = false;
+
+  Serial.println("Verifying power button press");
+  inputManager.update();
+  while (!inputManager.isPressed(InputManager::BTN_POWER) && millis() - start < 1000) {
     delay(50);
-    input = getInput(POWER_BUTTON_WAKEUP_MS);
+    inputManager.update();
+    Serial.println("Waiting...");
   }
 
-  if (input.button != POWER || input.pressTime < POWER_BUTTON_WAKEUP_MS) {
+  Serial.printf("Made it? %s\n", inputManager.isPressed(InputManager::BTN_POWER) ? "yes" : "no");
+  if (inputManager.isPressed(InputManager::BTN_POWER)) {
+    do {
+      delay(50);
+      inputManager.update();
+    } while (inputManager.isPressed(InputManager::BTN_POWER) && inputManager.getHeldTime() < POWER_BUTTON_WAKEUP_MS);
+    abort = inputManager.getHeldTime() < POWER_BUTTON_WAKEUP_MS;
+  } else {
+    abort = true;
+  }
+
+  Serial.printf("held for %lu\n", inputManager.getHeldTime());
+
+  if (abort) {
     // Button released too early. Returning to sleep.
     // IMPORTANT: Re-arm the wakeup trigger before sleeping again
-    esp_deep_sleep_enable_gpio_wakeup(1ULL << BTN_GPIO3, ESP_GPIO_WAKEUP_GPIO_LOW);
+    esp_deep_sleep_enable_gpio_wakeup(1ULL << InputManager::POWER_BUTTON_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
     esp_deep_sleep_start();
   }
 }
 
-void waitForNoButton() {
-  while (getInput().button != NONE) {
+void waitForPowerRelease() {
+  inputManager.update();
+  while (inputManager.isPressed(InputManager::BTN_POWER)) {
     delay(50);
+    inputManager.update();
   }
 }
 
 // Enter deep sleep mode
 void enterDeepSleep() {
   exitScreen();
-  enterNewScreen(new SleepScreen(renderer));
+  enterNewScreen(new SleepScreen(renderer, inputManager));
 
   Serial.println("Power button released after a long press. Entering deep sleep.");
   delay(1000);  // Allow Serial buffer to empty and display to update
 
   // Enable Wakeup on LOW (button press)
-  esp_deep_sleep_enable_gpio_wakeup(1ULL << BTN_GPIO3, ESP_GPIO_WAKEUP_GPIO_LOW);
+  esp_deep_sleep_enable_gpio_wakeup(1ULL << InputManager::POWER_BUTTON_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
 
   display.hibernate();
 
@@ -112,17 +132,17 @@ void enterDeepSleep() {
 void onGoHome();
 void onSelectEpubFile(const std::string& path) {
   exitScreen();
-  enterNewScreen(new FullScreenMessageScreen(renderer, "Loading..."));
+  enterNewScreen(new FullScreenMessageScreen(renderer, inputManager, "Loading..."));
 
   Epub* epub = loadEpub(path);
   if (epub) {
     appState->openEpubPath = path;
     appState->saveToFile();
     exitScreen();
-    enterNewScreen(new EpubReaderScreen(renderer, epub, onGoHome));
+    enterNewScreen(new EpubReaderScreen(renderer, inputManager, epub, onGoHome));
   } else {
     exitScreen();
-    enterNewScreen(new FullScreenMessageScreen(renderer, "Failed to load epub", REGULAR, false, false));
+    enterNewScreen(new FullScreenMessageScreen(renderer, inputManager, "Failed to load epub", REGULAR, false, false));
     delay(2000);
     onGoHome();
   }
@@ -130,11 +150,11 @@ void onSelectEpubFile(const std::string& path) {
 
 void onGoHome() {
   exitScreen();
-  enterNewScreen(new FileSelectionScreen(renderer, onSelectEpubFile));
+  enterNewScreen(new FileSelectionScreen(renderer, inputManager, onSelectEpubFile));
 }
 
 void setup() {
-  setupInputPinModes();
+  inputManager.begin();
   verifyWakeupLongPress();
 
   // Begin serial only if USB connected
@@ -157,7 +177,7 @@ void setup() {
   Serial.println("Display initialized");
 
   exitScreen();
-  enterNewScreen(new BootLogoScreen(renderer));
+  enterNewScreen(new BootLogoScreen(renderer, inputManager));
 
   // SD Card Initialization
   SD.begin(SD_SPI_CS, SPI, SPI_FQ);
@@ -167,37 +187,31 @@ void setup() {
     Epub* epub = loadEpub(appState->openEpubPath);
     if (epub) {
       exitScreen();
-      enterNewScreen(new EpubReaderScreen(renderer, epub, onGoHome));
+      enterNewScreen(new EpubReaderScreen(renderer, inputManager, epub, onGoHome));
       // Ensure we're not still holding the power button before leaving setup
-      waitForNoButton();
+      waitForPowerRelease();
       return;
     }
   }
 
   exitScreen();
-  enterNewScreen(new FileSelectionScreen(renderer, onSelectEpubFile));
+  enterNewScreen(new FileSelectionScreen(renderer, inputManager, onSelectEpubFile));
 
   // Ensure we're not still holding the power button before leaving setup
-  waitForNoButton();
+  waitForPowerRelease();
 }
 
 void loop() {
-  delay(50);
+  delay(10);
 
-  const Input input = getInput();
-
-  if (input.button == NONE) {
-    return;
-  }
-
-  if (input.button == POWER && input.pressTime > POWER_BUTTON_SLEEP_MS) {
+  inputManager.update();
+  if (inputManager.wasReleased(InputManager::BTN_POWER) && inputManager.getHeldTime() > POWER_BUTTON_WAKEUP_MS) {
     enterDeepSleep();
     // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start
-    delay(1000);
     return;
   }
 
   if (currentScreen) {
-    currentScreen->handleInput(input);
+    currentScreen->handleInput();
   }
 }

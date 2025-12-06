@@ -59,55 +59,69 @@ void EpubReaderScreen::onExit() {
   epub = nullptr;
 }
 
-void EpubReaderScreen::handleInput(const Input input) {
-  if (input.button == VOLUME_UP || input.button == VOLUME_DOWN || input.button == LEFT || input.button == RIGHT) {
-    const bool skipChapter = input.pressTime > SKIP_CHAPTER_MS;
+void EpubReaderScreen::handleInput() {
+  if (inputManager.wasPressed(InputManager::BTN_BACK)) {
+    onGoHome();
+    return;
+  }
 
-    // No current section, attempt to rerender the book
-    if (!section) {
-      updateRequired = true;
-      return;
-    }
+  const bool prevReleased =
+      inputManager.wasReleased(InputManager::BTN_UP) || inputManager.wasReleased(InputManager::BTN_LEFT);
+  const bool nextReleased =
+      inputManager.wasReleased(InputManager::BTN_DOWN) || inputManager.wasReleased(InputManager::BTN_RIGHT);
 
-    if ((input.button == VOLUME_UP || input.button == LEFT) && skipChapter) {
-      nextPageNumber = 0;
+  if (!prevReleased && !nextReleased) {
+    return;
+  }
+
+  Serial.printf("Prev released: %d, Next released: %d\n", prevReleased, nextReleased);
+
+  const bool skipChapter = inputManager.getHeldTime() > SKIP_CHAPTER_MS;
+
+  if (skipChapter) {
+    // We don't want to delete the section mid-render, so grab the semaphore
+    xSemaphoreTake(renderingMutex, portMAX_DELAY);
+    nextPageNumber = 0;
+    currentSpineIndex = nextReleased ? currentSpineIndex + 1 : currentSpineIndex - 1;
+    delete section;
+    section = nullptr;
+    xSemaphoreGive(renderingMutex);
+    updateRequired = true;
+    return;
+  }
+
+  // No current section, attempt to rerender the book
+  if (!section) {
+    updateRequired = true;
+    return;
+  }
+
+  if (prevReleased) {
+    if (section->currentPage > 0) {
+      section->currentPage--;
+    } else {
+      // We don't want to delete the section mid-render, so grab the semaphore
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      nextPageNumber = UINT16_MAX;
       currentSpineIndex--;
       delete section;
       section = nullptr;
-    } else if ((input.button == VOLUME_DOWN || input.button == RIGHT) && skipChapter) {
+      xSemaphoreGive(renderingMutex);
+    }
+    updateRequired = true;
+  } else {
+    if (section->currentPage < section->pageCount - 1) {
+      section->currentPage++;
+    } else {
+      // We don't want to delete the section mid-render, so grab the semaphore
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
       nextPageNumber = 0;
       currentSpineIndex++;
       delete section;
       section = nullptr;
-    } else if (input.button == VOLUME_UP || input.button == LEFT) {
-      if (section->currentPage > 0) {
-        section->currentPage--;
-      } else {
-        // We don't want to delete the section mid-render, so grab the semaphore
-        xSemaphoreTake(renderingMutex, portMAX_DELAY);
-        nextPageNumber = UINT16_MAX;
-        currentSpineIndex--;
-        delete section;
-        section = nullptr;
-        xSemaphoreGive(renderingMutex);
-      }
-    } else if (input.button == VOLUME_DOWN || input.button == RIGHT) {
-      if (section->currentPage < section->pageCount - 1) {
-        section->currentPage++;
-      } else {
-        // We don't want to delete the section mid-render, so grab the semaphore
-        xSemaphoreTake(renderingMutex, portMAX_DELAY);
-        nextPageNumber = 0;
-        currentSpineIndex++;
-        delete section;
-        section = nullptr;
-        xSemaphoreGive(renderingMutex);
-      }
+      xSemaphoreGive(renderingMutex);
     }
-
     updateRequired = true;
-  } else if (input.button == BACK) {
-    onGoHome();
   }
 }
 

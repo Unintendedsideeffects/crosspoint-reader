@@ -24,9 +24,10 @@ class EpubReaderScreen final : public Screen {
   void renderStatusBar() const;
 
  public:
-  explicit EpubReaderScreen(EpdRenderer* renderer, Epub* epub, const std::function<void()>& onGoHome)
-      : Screen(renderer), epub(epub), onGoHome(onGoHome) {}
+  explicit EpubReaderScreen(EpdRenderer* renderer, InputManager& inputManager, Epub* epub,
+                            const std::function<void()>& onGoHome)
+      : Screen(renderer, inputManager), epub(epub), onGoHome(onGoHome) {}
   void onEnter() override;
   void onExit() override;
-  void handleInput(Input input) override;
+  void handleInput() override;
 };

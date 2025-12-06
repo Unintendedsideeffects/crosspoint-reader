@@ -12,8 +12,13 @@ class FullScreenMessageScreen final : public Screen {
   bool partialUpdate;
 
  public:
-  explicit FullScreenMessageScreen(EpdRenderer* renderer, std::string text, const EpdFontStyle style = REGULAR,
-                                   const bool invert = false, const bool partialUpdate = true)
-      : Screen(renderer), text(std::move(text)), style(style), invert(invert), partialUpdate(partialUpdate) {}
+  explicit FullScreenMessageScreen(EpdRenderer* renderer, InputManager& inputManager, std::string text,
+                                   const EpdFontStyle style = REGULAR, const bool invert = false,
+                                   const bool partialUpdate = true)
+      : Screen(renderer, inputManager),
+        text(std::move(text)),
+        style(style),
+        invert(invert),
+        partialUpdate(partialUpdate) {}
   void onEnter() override;
 };
