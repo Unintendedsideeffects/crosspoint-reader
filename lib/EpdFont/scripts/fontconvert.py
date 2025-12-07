@@ -177,21 +177,17 @@ for i_start, i_end in intervals:
         pixelsbw = []
         px = 0
         pitch = (bitmap.width // 2) + (bitmap.width % 2)
-        for localY in range(bitmap.rows):
-            for xx in range(bitmap.width):
+        for y in range(bitmap.rows):
+            for x in range(bitmap.width):
                 px = px << 1
-                bm = pixels4g[localY * pitch + (xx // 2)]
-                if (xx & 1) == 0:
-                    if bm & 0xF > 0:
-                        px += 1
-                else:
-                    if bm & 0xF0 > 0:
-                        px += 1
+                bm = pixels4g[y * pitch + (x // 2)]
+                px += 1 if ((x & 1) == 0 and bm & 0xF > 0) or ((x & 1) == 1 and bm & 0xF0 > 0) else 0
 
-                if (localY * bitmap.width + xx) % 8 == 7:
+                if (y * bitmap.width + x) % 8 == 7:
                     pixelsbw.append(px)
                     px = 0
         if (bitmap.width * bitmap.rows) % 8 != 0:
+            px = px << (8 - (bitmap.width * bitmap.rows) % 8)
             pixelsbw.append(px)
 
 
