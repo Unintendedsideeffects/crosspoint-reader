@@ -121,8 +121,7 @@ void FileSelectionScreen::render() const {
   renderer.clearScreen();
 
   const auto pageWidth = GfxRenderer::getScreenWidth();
-  const auto titleWidth = renderer.getTextWidth(READER_FONT_ID, "CrossPoint Reader", BOLD);
-  renderer.drawText(READER_FONT_ID, (pageWidth - titleWidth) / 2, 10, "CrossPoint Reader", true, BOLD);
+  renderer.drawCenteredText(READER_FONT_ID, 10, "CrossPoint Reader", true, BOLD);
 
   if (files.empty()) {
     renderer.drawText(UI_FONT_ID, 20, 60, "No EPUBs found");

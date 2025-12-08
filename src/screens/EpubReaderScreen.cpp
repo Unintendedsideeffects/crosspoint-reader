@@ -198,8 +198,7 @@ void EpubReaderScreen::renderScreen() {
 
   if (section->pageCount == 0) {
     Serial.printf("[%lu] [ERS] No pages to render\n", millis());
-    const int width = renderer.getTextWidth(READER_FONT_ID, "Empty chapter", BOLD);
-    renderer.drawText(READER_FONT_ID, (GfxRenderer::getScreenWidth() - width) / 2, 300, "Empty chapter", true, BOLD);
+    renderer.drawCenteredText(READER_FONT_ID, 300, "Empty chapter", true, BOLD);
     renderStatusBar();
     renderer.displayBuffer();
     return;
@@ -207,8 +206,7 @@ void EpubReaderScreen::renderScreen() {
 
   if (section->currentPage < 0 || section->currentPage >= section->pageCount) {
     Serial.printf("[%lu] [ERS] Page out of bounds: %d (max %d)\n", millis(), section->currentPage, section->pageCount);
-    const int width = renderer.getTextWidth(READER_FONT_ID, "Out of bounds", BOLD);
-    renderer.drawText(READER_FONT_ID, (GfxRenderer::getScreenWidth() - width) / 2, 300, "Out of bounds", true, BOLD);
+    renderer.drawCenteredText(READER_FONT_ID, 300, "Out of bounds", true, BOLD);
     renderStatusBar();
     renderer.displayBuffer();
     return;

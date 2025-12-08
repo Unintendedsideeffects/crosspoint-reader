@@ -40,6 +40,7 @@ class GfxRenderer {
 
   // Text
   int getTextWidth(int fontId, const char* text, EpdFontStyle style = REGULAR) const;
+  void drawCenteredText(int fontId, int y, const char* text, bool black = true, EpdFontStyle style = REGULAR) const;
   void drawText(int fontId, int x, int y, const char* text, bool black = true, EpdFontStyle style = REGULAR) const;
   void setFontRenderMode(const FontRenderMode mode) { this->fontRenderMode = mode; }
   int getSpaceWidth(int fontId) const;

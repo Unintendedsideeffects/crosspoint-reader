@@ -47,6 +47,12 @@ int GfxRenderer::getTextWidth(const int fontId, const char* text, const EpdFontS
   return w;
 }
 
+void GfxRenderer::drawCenteredText(const int fontId, const int y, const char* text, const bool black,
+                                   const EpdFontStyle style) const {
+  const int x = (getScreenWidth() - getTextWidth(fontId, text, style)) / 2;
+  drawText(fontId, x, y, text, black, style);
+}
+
 void GfxRenderer::drawText(const int fontId, const int x, const int y, const char* text, const bool black,
                            const EpdFontStyle style) const {
   const int yPos = y + getLineHeight(fontId);
@@ -109,7 +115,8 @@ void GfxRenderer::fillRect(const int x, const int y, const int width, const int 
 }
 
 void GfxRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, const int width, const int height) const {
-  einkDisplay.drawImage(bitmap, x, y, width, height);
+  // Flip X and Y for portrait mode
+  einkDisplay.drawImage(bitmap, y, x, height, width);
 }
 
 void GfxRenderer::clearScreen(const uint8_t color) const { einkDisplay.clearScreen(color); }
