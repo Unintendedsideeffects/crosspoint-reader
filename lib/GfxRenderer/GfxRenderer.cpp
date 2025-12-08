@@ -9,7 +9,7 @@ void GfxRenderer::drawPixel(const int x, const int y, const bool state) const {
 
   // Early return if no framebuffer is set
   if (!frameBuffer) {
-    Serial.printf("!!No framebuffer\n");
+    Serial.printf("[%lu] [GFX] !! No framebuffer\n", millis());
     return;
   }
 
@@ -21,7 +21,7 @@ void GfxRenderer::drawPixel(const int x, const int y, const bool state) const {
   // Bounds checking (portrait: 480x800)
   if (rotatedX < 0 || rotatedX >= EInkDisplay::DISPLAY_WIDTH || rotatedY < 0 ||
       rotatedY >= EInkDisplay::DISPLAY_HEIGHT) {
-    Serial.printf("!! Outside range (%d, %d)\n", x, y);
+    Serial.printf("[%lu] [GFX] !! Outside range (%d, %d)\n", millis(), x, y);
     return;
   }
 
@@ -38,7 +38,7 @@ void GfxRenderer::drawPixel(const int x, const int y, const bool state) const {
 
 int GfxRenderer::getTextWidth(const int fontId, const char* text, const EpdFontStyle style) const {
   if (fontMap.count(fontId) == 0) {
-    Serial.printf("Font %d not found\n", fontId);
+    Serial.printf("[%lu] [GFX] Font %d not found\n", millis(), fontId);
     return 0;
   }
 
@@ -58,7 +58,7 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
   }
 
   if (fontMap.count(fontId) == 0) {
-    Serial.printf("Font %d not found\n", fontId);
+    Serial.printf("[%lu] [GFX] Font %d not found\n", millis(), fontId);
     return;
   }
   const auto font = fontMap.at(fontId);
@@ -91,7 +91,7 @@ void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const bool state) con
     }
   } else {
     // TODO: Implement
-    Serial.println("Line drawing not supported");
+    Serial.printf("[%lu] [GFX] Line drawing not supported\n", millis());
   }
 }
 
@@ -139,7 +139,7 @@ int GfxRenderer::getScreenHeight() { return EInkDisplay::DISPLAY_WIDTH; }
 
 int GfxRenderer::getSpaceWidth(const int fontId) const {
   if (fontMap.count(fontId) == 0) {
-    Serial.printf("Font %d not found\n", fontId);
+    Serial.printf("[%lu] [GFX] Font %d not found\n", millis(), fontId);
     return 0;
   }
 
@@ -148,7 +148,7 @@ int GfxRenderer::getSpaceWidth(const int fontId) const {
 
 int GfxRenderer::getLineHeight(const int fontId) const {
   if (fontMap.count(fontId) == 0) {
-    Serial.printf("Font %d not found\n", fontId);
+    Serial.printf("[%lu] [GFX] Font %d not found\n", millis(), fontId);
     return 0;
   }
 
@@ -173,7 +173,7 @@ void GfxRenderer::renderChar(const EpdFontFamily& fontFamily, const uint32_t cp,
 
   // no glyph?
   if (!glyph) {
-    Serial.printf("No glyph for codepoint %d\n", cp);
+    Serial.printf("[%lu] [GFX] No glyph for codepoint %d\n", millis(), cp);
     return;
   }
 

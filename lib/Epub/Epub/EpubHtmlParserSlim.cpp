@@ -190,7 +190,7 @@ bool EpubHtmlParserSlim::parseAndBuildPages() {
   int done;
 
   if (!parser) {
-    Serial.println("Couldn't allocate memory for parser");
+    Serial.printf("[%lu] [EHP] Couldn't allocate memory for parser\n", millis());
     return false;
   }
 
@@ -200,7 +200,7 @@ bool EpubHtmlParserSlim::parseAndBuildPages() {
 
   FILE* file = fopen(filepath, "r");
   if (!file) {
-    Serial.printf("Couldn't open file %s\n", filepath);
+    Serial.printf("[%lu] [EHP] Couldn't open file %s\n", millis(), filepath);
     XML_ParserFree(parser);
     return false;
   }
@@ -208,7 +208,7 @@ bool EpubHtmlParserSlim::parseAndBuildPages() {
   do {
     void* const buf = XML_GetBuffer(parser, 1024);
     if (!buf) {
-      Serial.println("Couldn't allocate memory for buffer");
+      Serial.printf("[%lu] [EHP] Couldn't allocate memory for buffer\n", millis());
       XML_ParserFree(parser);
       fclose(file);
       return false;
@@ -217,7 +217,7 @@ bool EpubHtmlParserSlim::parseAndBuildPages() {
     const size_t len = fread(buf, 1, 1024, file);
 
     if (ferror(file)) {
-      Serial.println("Read error");
+      Serial.printf("[%lu] [EHP] File read error\n", millis());
       XML_ParserFree(parser);
       fclose(file);
       return false;
@@ -226,7 +226,7 @@ bool EpubHtmlParserSlim::parseAndBuildPages() {
     done = feof(file);
 
     if (XML_ParseBuffer(parser, static_cast<int>(len), done) == XML_STATUS_ERROR) {
-      Serial.printf("Parse error at line %lu:\n%s\n", XML_GetCurrentLineNumber(parser),
+      Serial.printf("[%lu] [EHP] Parse error at line %lu:\n%s\n", millis(), XML_GetCurrentLineNumber(parser),
                     XML_ErrorString(XML_GetErrorCode(parser)));
       XML_ParserFree(parser);
       fclose(file);
@@ -251,7 +251,7 @@ bool EpubHtmlParserSlim::parseAndBuildPages() {
 
 void EpubHtmlParserSlim::makePages() {
   if (!currentTextBlock) {
-    Serial.println("!! No text block to make pages for !!");
+    Serial.printf("[%lu] [EHP] !! No text block to make pages for !!\n", millis());
     return;
   }
 

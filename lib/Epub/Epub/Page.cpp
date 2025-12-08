@@ -26,11 +26,9 @@ PageLine* PageLine::deserialize(std::istream& is) {
 }
 
 void Page::render(GfxRenderer& renderer, const int fontId) const {
-  const auto start = millis();
   for (const auto element : elements) {
     element->render(renderer, fontId);
   }
-  Serial.printf("Rendered page elements (%u) in %dms\n", elements.size(), millis() - start);
 }
 
 void Page::serialize(std::ostream& os) const {
@@ -50,7 +48,7 @@ Page* Page::deserialize(std::istream& is) {
   uint8_t version;
   serialization::readPod(is, version);
   if (version != PAGE_FILE_VERSION) {
-    Serial.printf("Page: Unknown version %u\n", version);
+    Serial.printf("[%lu] [PGE] Deserialization failed: Unknown version %u\n", millis(), version);
     return nullptr;
   }
 

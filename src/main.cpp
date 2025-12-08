@@ -64,7 +64,7 @@ constexpr unsigned long POWER_BUTTON_SLEEP_MS = 1000;
 
 Epub* loadEpub(const std::string& path) {
   if (!SD.exists(path.c_str())) {
-    Serial.printf("File does not exist: %s\n", path.c_str());
+    Serial.printf("[%lu] [   ] File does not exist: %s\n", millis(), path.c_str());
     return nullptr;
   }
 
@@ -73,7 +73,7 @@ Epub* loadEpub(const std::string& path) {
     return epub;
   }
 
-  Serial.println("Failed to load epub");
+  Serial.printf("[%lu] [   ] Failed to load epub\n", millis());
   delete epub;
   return nullptr;
 }
@@ -96,15 +96,13 @@ void verifyWakeupLongPress() {
   const auto start = millis();
   bool abort = false;
 
-  Serial.println("Verifying power button press");
+  Serial.printf("[%lu] [   ] Verifying power button press\n", millis());
   inputManager.update();
   while (!inputManager.isPressed(InputManager::BTN_POWER) && millis() - start < 1000) {
     delay(50);
     inputManager.update();
-    Serial.println("Waiting...");
   }
 
-  Serial.printf("Made it? %s\n", inputManager.isPressed(InputManager::BTN_POWER) ? "yes" : "no");
   if (inputManager.isPressed(InputManager::BTN_POWER)) {
     do {
       delay(50);
@@ -114,8 +112,6 @@ void verifyWakeupLongPress() {
   } else {
     abort = true;
   }
-
-  Serial.printf("held for %lu\n", inputManager.getHeldTime());
 
   if (abort) {
     // Button released too early. Returning to sleep.
@@ -138,7 +134,7 @@ void enterDeepSleep() {
   exitScreen();
   enterNewScreen(new SleepScreen(renderer, inputManager));
 
-  Serial.println("Power button released after a long press. Entering deep sleep.");
+  Serial.printf("[%lu] [   ] Power button released after a long press. Entering deep sleep.\n", millis());
   delay(1000);  // Allow Serial buffer to empty and display to update
 
   // Enable Wakeup on LOW (button press)
@@ -193,12 +189,12 @@ void setup() {
 
   // Initialize display
   einkDisplay.begin();
-  Serial.println("Display initialized");
+  Serial.printf("[%lu] [   ] Display initialized\n", millis());
 
   renderer.insertFont(READER_FONT_ID, bookerlyFontFamily);
   renderer.insertFont(UI_FONT_ID, ubuntuFontFamily);
   renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
-  Serial.println("Fonts loaded");
+  Serial.printf("[%lu] [   ] Fonts setup\n", millis());
 
   exitScreen();
   enterNewScreen(new BootLogoScreen(renderer, inputManager));
@@ -229,8 +225,8 @@ void loop() {
   delay(10);
 
   static unsigned long lastMemPrint = 0;
-  if (Serial && millis() - lastMemPrint >= 5000) {
-    Serial.printf("[%lu] Memory - Free: %d bytes, Total: %d bytes, Min Free: %d bytes\n", millis(), ESP.getFreeHeap(),
+  if (Serial && millis() - lastMemPrint >= 10000) {
+    Serial.printf("[%lu] [MEM] Free: %d bytes, Total: %d bytes, Min Free: %d bytes\n", millis(), ESP.getFreeHeap(),
                   ESP.getHeapSize(), ESP.getMinFreeHeap());
     lastMemPrint = millis();
   }

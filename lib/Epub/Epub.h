@@ -1,5 +1,5 @@
 #pragma once
-#include <HardwareSerial.h>
+#include <Print.h>
 #include <tinyxml2.h>
 
 #include <string>

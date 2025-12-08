@@ -36,7 +36,7 @@ void EpubReaderScreen::onEnter() {
     f.read(data, 4);
     currentSpineIndex = data[0] + (data[1] << 8);
     nextPageNumber = data[2] + (data[3] << 8);
-    Serial.printf("Loaded cache: %d, %d\n", currentSpineIndex, nextPageNumber);
+    Serial.printf("[%lu] [ERS] Loaded cache: %d, %d\n", millis(), currentSpineIndex, nextPageNumber);
     f.close();
   }
 
@@ -154,11 +154,11 @@ void EpubReaderScreen::renderScreen() {
 
   if (!section) {
     const auto filepath = epub->getSpineItem(currentSpineIndex);
-    Serial.printf("Loading file: %s, index: %d\n", filepath.c_str(), currentSpineIndex);
+    Serial.printf("[%lu] [ERS] Loading file: %s, index: %d\n", millis(), filepath.c_str(), currentSpineIndex);
     section = new Section(epub, currentSpineIndex, renderer);
     if (!section->loadCacheMetadata(READER_FONT_ID, lineCompression, marginTop, marginRight, marginBottom,
                                     marginLeft)) {
-      Serial.println("Cache not found, building...");
+      Serial.printf("[%lu] [ERS] Cache not found, building...\n", millis());
 
       {
         const int textWidth = renderer.getTextWidth(READER_FONT_ID, "Indexing...");
@@ -171,20 +171,20 @@ void EpubReaderScreen::renderScreen() {
         renderer.fillRect(x, y, w, h, 0);
         renderer.drawText(READER_FONT_ID, x + margin, y + margin, "Indexing...");
         renderer.drawRect(x + 5, y + 5, w - 10, h - 10);
-        renderer.displayBuffer(EInkDisplay::HALF_REFRESH);
+        renderer.displayBuffer();
         pagesUntilFullRefresh = 0;
       }
 
       section->setupCacheDir();
       if (!section->persistPageDataToSD(READER_FONT_ID, lineCompression, marginTop, marginRight, marginBottom,
                                         marginLeft)) {
-        Serial.println("Failed to persist page data to SD");
+        Serial.printf("[%lu] [ERS] Failed to persist page data to SD\n", millis());
         delete section;
         section = nullptr;
         return;
       }
     } else {
-      Serial.println("Cache found, skipping build...");
+      Serial.printf("[%lu] [ERS] Cache found, skipping build...\n", millis());
     }
 
     if (nextPageNumber == UINT16_MAX) {
@@ -197,7 +197,7 @@ void EpubReaderScreen::renderScreen() {
   renderer.clearScreen();
 
   if (section->pageCount == 0) {
-    Serial.println("No pages to render");
+    Serial.printf("[%lu] [ERS] No pages to render\n", millis());
     const int width = renderer.getTextWidth(READER_FONT_ID, "Empty chapter", BOLD);
     renderer.drawText(READER_FONT_ID, (GfxRenderer::getScreenWidth() - width) / 2, 300, "Empty chapter", true, BOLD);
     renderStatusBar();
@@ -206,7 +206,7 @@ void EpubReaderScreen::renderScreen() {
   }
 
   if (section->currentPage < 0 || section->currentPage >= section->pageCount) {
-    Serial.printf("Page out of bounds: %d (max %d)\n", section->currentPage, section->pageCount);
+    Serial.printf("[%lu] [ERS] Page out of bounds: %d (max %d)\n", millis(), section->currentPage, section->pageCount);
     const int width = renderer.getTextWidth(READER_FONT_ID, "Out of bounds", BOLD);
     renderer.drawText(READER_FONT_ID, (GfxRenderer::getScreenWidth() - width) / 2, 300, "Out of bounds", true, BOLD);
     renderStatusBar();
@@ -215,7 +215,9 @@ void EpubReaderScreen::renderScreen() {
   }
 
   const Page* p = section->loadPageFromSD();
+  const auto start = millis();
   renderContents(p);
+  Serial.printf("[%lu] [ERS] Rendered page in %dms\n", millis(), millis() - start);
   delete p;
 
   File f = SD.open((epub->getCachePath() + "/progress.bin").c_str(), FILE_WRITE);

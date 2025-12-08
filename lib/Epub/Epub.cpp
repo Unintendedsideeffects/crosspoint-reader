@@ -11,7 +11,7 @@ bool Epub::findContentOpfFile(const ZipFile& zip, std::string& contentOpfFile) {
   size_t s;
   const auto metaInfo = reinterpret_cast<char*>(zip.readFileToMemory("META-INF/container.xml", &s, true));
   if (!metaInfo) {
-    Serial.println("Could not find META-INF/container.xml");
+    Serial.printf("[%lu] [EBP] Could not find META-INF/container.xml\n", millis());
     return false;
   }
 
@@ -21,19 +21,19 @@ bool Epub::findContentOpfFile(const ZipFile& zip, std::string& contentOpfFile) {
   free(metaInfo);
 
   if (result != tinyxml2::XML_SUCCESS) {
-    Serial.printf("Could not parse META-INF/container.xml. Error: %d\n", result);
+    Serial.printf("[%lu] [EBP] Could not parse META-INF/container.xml. Error: %d\n", millis(), result);
     return false;
   }
 
   const auto container = metaDataDoc.FirstChildElement("container");
   if (!container) {
-    Serial.println("Could not find container element in META-INF/container.xml");
+    Serial.printf("[%lu] [EBP] Could not find container element in META-INF/container.xml\n", millis());
     return false;
   }
 
   const auto rootfiles = container->FirstChildElement("rootfiles");
   if (!rootfiles) {
-    Serial.println("Could not find rootfiles element in META-INF/container.xml");
+    Serial.printf("[%lu] [EBP] Could not find rootfiles element in META-INF/container.xml\n", millis());
     return false;
   }
 
@@ -51,7 +51,7 @@ bool Epub::findContentOpfFile(const ZipFile& zip, std::string& contentOpfFile) {
     rootfile = rootfile->NextSiblingElement("rootfile");
   }
 
-  Serial.println("Could not get path to content.opf file");
+  Serial.printf("[%lu] [EBP] Could not get path to content.opf file\n", millis());
   return false;
 }
 
@@ -65,7 +65,8 @@ bool Epub::parseContentOpf(ZipFile& zip, std::string& content_opf_file) {
   free(contents);
 
   if (result != tinyxml2::XML_SUCCESS) {
-    Serial.printf("Error parsing content.opf - %s\n", tinyxml2::XMLDocument::ErrorIDToName(result));
+    Serial.printf("[%lu] [EBP] Error parsing content.opf - %s\n", millis(),
+                  tinyxml2::XMLDocument::ErrorIDToName(result));
     return false;
   }
 
@@ -73,7 +74,7 @@ bool Epub::parseContentOpf(ZipFile& zip, std::string& content_opf_file) {
   if (!package) package = doc.FirstChildElement("opf:package");
 
   if (!package) {
-    Serial.println("Could not find package element in content.opf");
+    Serial.printf("[%lu] [EBP] Could not find package element in content.opf\n", millis());
     return false;
   }
 
@@ -81,13 +82,13 @@ bool Epub::parseContentOpf(ZipFile& zip, std::string& content_opf_file) {
   auto metadata = package->FirstChildElement("metadata");
   if (!metadata) metadata = package->FirstChildElement("opf:metadata");
   if (!metadata) {
-    Serial.println("Missing metadata");
+    Serial.printf("[%lu] [EBP] Missing metadata\n", millis());
     return false;
   }
 
   auto titleEl = metadata->FirstChildElement("dc:title");
   if (!titleEl) {
-    Serial.println("Missing title");
+    Serial.printf("[%lu] [EBP] Missing title\n", millis());
     return false;
   }
   this->title = titleEl->GetText();
@@ -98,7 +99,7 @@ bool Epub::parseContentOpf(ZipFile& zip, std::string& content_opf_file) {
     cover = cover->NextSiblingElement("meta");
   }
   if (!cover) {
-    Serial.println("Missing cover");
+    Serial.printf("[%lu] [EBP] Missing cover\n", millis());
   }
   auto coverItem = cover ? cover->Attribute("content") : nullptr;
 
@@ -109,7 +110,7 @@ bool Epub::parseContentOpf(ZipFile& zip, std::string& content_opf_file) {
   auto manifest = package->FirstChildElement("manifest");
   if (!manifest) manifest = package->FirstChildElement("opf:manifest");
   if (!manifest) {
-    Serial.println("Missing manifest");
+    Serial.printf("[%lu] [EBP] Missing manifest\n", millis());
     return false;
   }
 
@@ -142,7 +143,7 @@ bool Epub::parseContentOpf(ZipFile& zip, std::string& content_opf_file) {
   auto spineEl = package->FirstChildElement("spine");
   if (!spineEl) spineEl = package->FirstChildElement("opf:spine");
   if (!spineEl) {
-    Serial.println("Missing spine");
+    Serial.printf("[%lu] [EBP] Missing spine\n", millis());
     return false;
   }
 
@@ -164,13 +165,13 @@ bool Epub::parseContentOpf(ZipFile& zip, std::string& content_opf_file) {
 bool Epub::parseTocNcxFile(const ZipFile& zip) {
   // the ncx file should have been specified in the content.opf file
   if (tocNcxItem.empty()) {
-    Serial.println("No ncx file specified");
+    Serial.printf("[%lu] [EBP] No ncx file specified\n", millis());
     return false;
   }
 
   const auto ncxData = reinterpret_cast<char*>(zip.readFileToMemory(tocNcxItem.c_str(), nullptr, true));
   if (!ncxData) {
-    Serial.printf("Could not find %s\n", tocNcxItem.c_str());
+    Serial.printf("[%lu] [EBP] Could not find %s\n", millis(), tocNcxItem.c_str());
     return false;
   }
 
@@ -180,19 +181,19 @@ bool Epub::parseTocNcxFile(const ZipFile& zip) {
   free(ncxData);
 
   if (result != tinyxml2::XML_SUCCESS) {
-    Serial.printf("Error parsing toc %s\n", tinyxml2::XMLDocument::ErrorIDToName(result));
+    Serial.printf("[%lu] [EBP] Error parsing toc %s\n", millis(), tinyxml2::XMLDocument::ErrorIDToName(result));
     return false;
   }
 
   const auto ncx = doc.FirstChildElement("ncx");
   if (!ncx) {
-    Serial.println("Could not find first child ncx in toc");
+    Serial.printf("[%lu] [EBP] Could not find first child ncx in toc\n", millis());
     return false;
   }
 
   const auto navMap = ncx->FirstChildElement("navMap");
   if (!navMap) {
-    Serial.println("Could not find navMap child in ncx");
+    Serial.printf("[%lu] [EBP] Could not find navMap child in ncx\n", millis());
     return false;
   }
 
@@ -231,7 +232,7 @@ bool Epub::load() {
 
   std::string contentOpfFile;
   if (!findContentOpfFile(zip, contentOpfFile)) {
-    Serial.println("Could not open ePub");
+    Serial.printf("[%lu] [EBP] Could not open ePub\n", millis());
     return false;
   }
 
@@ -314,7 +315,7 @@ uint8_t* Epub::readItemContentsToBytes(const std::string& itemHref, size_t* size
 
   const auto content = zip.readFileToMemory(path.c_str(), size, trailingNullByte);
   if (!content) {
-    Serial.printf("Failed to read item %s\n", path.c_str());
+    Serial.printf("[%lu] [EBP] Failed to read item %s\n", millis(), path.c_str());
     return nullptr;
   }
 
@@ -332,7 +333,7 @@ int Epub::getSpineItemsCount() const { return spine.size(); }
 
 std::string& Epub::getSpineItem(const int spineIndex) {
   if (spineIndex < 0 || spineIndex >= spine.size()) {
-    Serial.printf("getSpineItem index:%d is out of range\n", spineIndex);
+    Serial.printf("[%lu] [EBP] getSpineItem index:%d is out of range\n", millis(), spineIndex);
     return spine.at(0).second;
   }
 
@@ -341,7 +342,7 @@ std::string& Epub::getSpineItem(const int spineIndex) {
 
 EpubTocEntry& Epub::getTocItem(const int tocTndex) {
   if (tocTndex < 0 || tocTndex >= toc.size()) {
-    Serial.printf("getTocItem index:%d is out of range\n", tocTndex);
+    Serial.printf("[%lu] [EBP] getTocItem index:%d is out of range\n", millis(), tocTndex);
     return toc.at(0);
   }
 
@@ -360,7 +361,7 @@ int Epub::getSpineIndexForTocIndex(const int tocIndex) const {
     }
   }
 
-  Serial.println("Section not found");
+  Serial.printf("[%lu] [EBP] Section not found\n", millis());
   // not found - default to the start of the book
   return 0;
 }
@@ -374,7 +375,7 @@ int Epub::getTocIndexForSpineIndex(const int spineIndex) const {
     }
   }
 
-  Serial.println("TOC item not found");
+  Serial.printf("[%lu] [EBP] TOC item not found\n", millis());
   // not found - default to first item
   return 0;
 }

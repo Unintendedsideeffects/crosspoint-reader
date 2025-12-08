@@ -12,13 +12,13 @@
 constexpr uint8_t SECTION_FILE_VERSION = 3;
 
 void Section::onPageComplete(const Page* page) {
-  Serial.printf("Page %d complete - free mem: %lu\n", pageCount, ESP.getFreeHeap());
-
   const auto filePath = cachePath + "/page_" + std::to_string(pageCount) + ".bin";
 
   std::ofstream outputFile("/sd" + filePath);
   page->serialize(outputFile);
   outputFile.close();
+
+  Serial.printf("[%lu] [SCT] Page %d processed\n", millis(), pageCount);
 
   pageCount++;
   delete page;
@@ -58,7 +58,7 @@ bool Section::loadCacheMetadata(const int fontId, const float lineCompression, c
     if (version != SECTION_FILE_VERSION) {
       inputFile.close();
       clearCache();
-      Serial.printf("Section state file: Unknown version %u\n", version);
+      Serial.printf("[%lu] [SCT] Deserialization failed: Unknown version %u\n", millis(), version);
       return false;
     }
 
@@ -75,14 +75,14 @@ bool Section::loadCacheMetadata(const int fontId, const float lineCompression, c
         marginRight != fileMarginRight || marginBottom != fileMarginBottom || marginLeft != fileMarginLeft) {
       inputFile.close();
       clearCache();
-      Serial.println("Section state file: Parameters do not match, ignoring");
+      Serial.printf("[%lu] [SCT] Deserialization failed: Parameters do not match\n", millis());
       return false;
     }
   }
 
   serialization::readPod(inputFile, pageCount);
   inputFile.close();
-  Serial.printf("Loaded cache: %d pages\n", pageCount);
+  Serial.printf("[%lu] [SCT] Deserialization succeeded: %d pages\n", millis(), pageCount);
   return true;
 }
 
@@ -106,11 +106,11 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
   f.close();
 
   if (!success) {
-    Serial.println("Failed to stream item contents");
+    Serial.printf("[%lu] [SCT] Failed to stream item contents to temp file\n", millis());
     return false;
   }
 
-  Serial.printf("Streamed HTML to %s\n", tmpHtmlPath.c_str());
+  Serial.printf("[%lu] [SCT] Streamed temp HTML to %s\n", millis(), tmpHtmlPath.c_str());
 
   const auto sdTmpHtmlPath = "/sd" + tmpHtmlPath;
 
@@ -120,7 +120,7 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
 
   SD.remove(tmpHtmlPath.c_str());
   if (!success) {
-    Serial.println("Failed to parse and build pages");
+    Serial.printf("[%lu] [SCT] Failed to parse XML and build pages\n", millis());
     return false;
   }
 
@@ -132,7 +132,7 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
 Page* Section::loadPageFromSD() const {
   const auto filePath = "/sd" + cachePath + "/page_" + std::to_string(currentPage) + ".bin";
   if (!SD.exists(filePath.c_str() + 3)) {
-    Serial.printf("Page file does not exist: %s\n", filePath.c_str());
+    Serial.printf("[%lu] [SCT] Page file does not exist: %s\n", millis(), filePath.c_str());
     return nullptr;
   }
 

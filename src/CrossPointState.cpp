@@ -23,7 +23,7 @@ bool CrossPointState::loadFromFile() {
   uint8_t version;
   serialization::readPod(inputFile, version);
   if (version != STATE_FILE_VERSION) {
-    Serial.printf("CrossPointState: Unknown version %u\n", version);
+    Serial.printf("[%lu] [CPS] Deserialization failed: Unknown version %u\n", millis(), version);
     inputFile.close();
     return false;
   }
