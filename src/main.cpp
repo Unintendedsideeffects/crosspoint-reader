@@ -171,11 +171,7 @@ void onGoHome() {
 }
 
 void setup() {
-  // Begin serial only if USB connected
-  pinMode(UART0_RXD, INPUT);
-  if (digitalRead(UART0_RXD) == HIGH) {
-    Serial.begin(115200);
-  }
+  Serial.begin(115200);
 
   Serial.printf("[%lu] [   ] Starting CrossPoint version " CROSSPOINT_VERSION "\n", millis());
 

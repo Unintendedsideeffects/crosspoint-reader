@@ -3,7 +3,7 @@
 #include <HardwareSerial.h>
 #include <Serialization.h>
 
-constexpr uint8_t PAGE_FILE_VERSION = 2;
+constexpr uint8_t PAGE_FILE_VERSION = 3;
 
 void PageLine::render(GfxRenderer& renderer, const int fontId) { block->render(renderer, fontId, xPos, yPos); }
 
@@ -16,8 +16,8 @@ void PageLine::serialize(std::ostream& os) {
 }
 
 std::unique_ptr<PageLine> PageLine::deserialize(std::istream& is) {
-  int32_t xPos;
-  int32_t yPos;
+  int16_t xPos;
+  int16_t yPos;
   serialization::readPod(is, xPos);
   serialization::readPod(is, yPos);
 
@@ -26,7 +26,7 @@ std::unique_ptr<PageLine> PageLine::deserialize(std::istream& is) {
 }
 
 void Page::render(GfxRenderer& renderer, const int fontId) const {
-  for (const auto element : elements) {
+  for (auto& element : elements) {
     element->render(renderer, fontId);
   }
 }

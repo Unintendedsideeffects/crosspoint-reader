@@ -11,9 +11,9 @@ enum PageElementTag : uint8_t {
 // represents something that has been added to a page
 class PageElement {
  public:
-  int xPos;
-  int yPos;
-  explicit PageElement(const int xPos, const int yPos) : xPos(xPos), yPos(yPos) {}
+  int16_t xPos;
+  int16_t yPos;
+  explicit PageElement(const int16_t xPos, const int16_t yPos) : xPos(xPos), yPos(yPos) {}
   virtual ~PageElement() = default;
   virtual void render(GfxRenderer& renderer, int fontId) = 0;
   virtual void serialize(std::ostream& os) = 0;
@@ -24,7 +24,7 @@ class PageLine final : public PageElement {
   std::shared_ptr<TextBlock> block;
 
  public:
-  PageLine(std::shared_ptr<TextBlock> block, const int xPos, const int yPos)
+  PageLine(std::shared_ptr<TextBlock> block, const int16_t xPos, const int16_t yPos)
       : PageElement(xPos, yPos), block(std::move(block)) {}
   void render(GfxRenderer& renderer, int fontId) override;
   void serialize(std::ostream& os) override;

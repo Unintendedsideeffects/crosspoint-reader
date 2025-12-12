@@ -28,7 +28,7 @@ class EpubHtmlParserSlim {
   int partWordBufferIndex = 0;
   std::unique_ptr<ParsedText> currentTextBlock = nullptr;
   std::unique_ptr<Page> currentPage = nullptr;
-  int currentPageNextY = 0;
+  int16_t currentPageNextY = 0;
   int fontId;
   float lineCompression;
   int marginTop;
