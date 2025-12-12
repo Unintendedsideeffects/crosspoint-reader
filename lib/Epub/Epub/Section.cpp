@@ -1,17 +1,17 @@
 #include "Section.h"
 
-#include <GfxRenderer.h>
 #include <SD.h>
+#include <Serialization.h>
 
 #include <fstream>
 
 #include "EpubHtmlParserSlim.h"
+#include "FsHelpers.h"
 #include "Page.h"
-#include "Serialization.h"
 
-constexpr uint8_t SECTION_FILE_VERSION = 3;
+constexpr uint8_t SECTION_FILE_VERSION = 4;
 
-void Section::onPageComplete(const Page* page) {
+void Section::onPageComplete(std::unique_ptr<Page> page) {
   const auto filePath = cachePath + "/page_" + std::to_string(pageCount) + ".bin";
 
   std::ofstream outputFile("/sd" + filePath);
@@ -21,7 +21,6 @@ void Section::onPageComplete(const Page* page) {
   Serial.printf("[%lu] [SCT] Page %d processed\n", millis(), pageCount);
 
   pageCount++;
-  delete page;
 }
 
 void Section::writeCacheMetadata(const int fontId, const float lineCompression, const int marginTop,
@@ -57,8 +56,8 @@ bool Section::loadCacheMetadata(const int fontId, const float lineCompression, c
     serialization::readPod(inputFile, version);
     if (version != SECTION_FILE_VERSION) {
       inputFile.close();
-      clearCache();
       Serial.printf("[%lu] [SCT] Deserialization failed: Unknown version %u\n", millis(), version);
+      clearCache();
       return false;
     }
 
@@ -74,8 +73,8 @@ bool Section::loadCacheMetadata(const int fontId, const float lineCompression, c
     if (fontId != fileFontId || lineCompression != fileLineCompression || marginTop != fileMarginTop ||
         marginRight != fileMarginRight || marginBottom != fileMarginBottom || marginLeft != fileMarginLeft) {
       inputFile.close();
-      clearCache();
       Serial.printf("[%lu] [SCT] Deserialization failed: Parameters do not match\n", millis());
+      clearCache();
       return false;
     }
   }
@@ -91,7 +90,21 @@ void Section::setupCacheDir() const {
   SD.mkdir(cachePath.c_str());
 }
 
-void Section::clearCache() const { SD.rmdir(cachePath.c_str()); }
+// Your updated class method (assuming you are using the 'SD' object, which is a wrapper for a specific filesystem)
+bool Section::clearCache() const {
+  if (!SD.exists(cachePath.c_str())) {
+    Serial.printf("[%lu] [SCT] Cache does not exist, no action needed\n", millis());
+    return true;
+  }
+
+  if (!FsHelpers::removeDir(cachePath.c_str())) {
+    Serial.printf("[%lu] [SCT] Failed to clear cache\n", millis());
+    return false;
+  }
+
+  Serial.printf("[%lu] [SCT] Cache cleared successfully\n", millis());
+  return true;
+}
 
 bool Section::persistPageDataToSD(const int fontId, const float lineCompression, const int marginTop,
                                   const int marginRight, const int marginBottom, const int marginLeft) {
@@ -114,8 +127,9 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
 
   const auto sdTmpHtmlPath = "/sd" + tmpHtmlPath;
 
-  auto visitor = EpubHtmlParserSlim(sdTmpHtmlPath.c_str(), renderer, fontId, lineCompression, marginTop, marginRight,
-                                    marginBottom, marginLeft, [this](const Page* page) { this->onPageComplete(page); });
+  EpubHtmlParserSlim visitor(sdTmpHtmlPath.c_str(), renderer, fontId, lineCompression, marginTop, marginRight,
+                             marginBottom, marginLeft,
+                             [this](std::unique_ptr<Page> page) { this->onPageComplete(std::move(page)); });
   success = visitor.parseAndBuildPages();
 
   SD.remove(tmpHtmlPath.c_str());
@@ -129,7 +143,7 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
   return true;
 }
 
-Page* Section::loadPageFromSD() const {
+std::unique_ptr<Page> Section::loadPageFromSD() const {
   const auto filePath = "/sd" + cachePath + "/page_" + std::to_string(currentPage) + ".bin";
   if (!SD.exists(filePath.c_str() + 3)) {
     Serial.printf("[%lu] [SCT] Page file does not exist: %s\n", millis(), filePath.c_str());
@@ -137,7 +151,7 @@ Page* Section::loadPageFromSD() const {
   }
 
   std::ifstream inputFile(filePath);
-  Page* p = Page::deserialize(inputFile);
+  auto page = Page::deserialize(inputFile);
   inputFile.close();
-  return p;
+  return page;
 }

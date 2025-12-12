@@ -10,9 +10,9 @@
 constexpr int PAGES_PER_REFRESH = 15;
 constexpr unsigned long SKIP_CHAPTER_MS = 700;
 constexpr float lineCompression = 0.95f;
-constexpr int marginTop = 11;
+constexpr int marginTop = 10;
 constexpr int marginRight = 10;
-constexpr int marginBottom = 30;
+constexpr int marginBottom = 20;
 constexpr int marginLeft = 10;
 
 void EpubReaderScreen::taskTrampoline(void* param) {
@@ -60,10 +60,8 @@ void EpubReaderScreen::onExit() {
   }
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
-  delete section;
-  section = nullptr;
-  delete epub;
-  epub = nullptr;
+  section.reset();
+  epub.reset();
 }
 
 void EpubReaderScreen::handleInput() {
@@ -88,8 +86,7 @@ void EpubReaderScreen::handleInput() {
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     nextPageNumber = 0;
     currentSpineIndex = nextReleased ? currentSpineIndex + 1 : currentSpineIndex - 1;
-    delete section;
-    section = nullptr;
+    section.reset();
     xSemaphoreGive(renderingMutex);
     updateRequired = true;
     return;
@@ -109,8 +106,7 @@ void EpubReaderScreen::handleInput() {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       nextPageNumber = UINT16_MAX;
       currentSpineIndex--;
-      delete section;
-      section = nullptr;
+      section.reset();
       xSemaphoreGive(renderingMutex);
     }
     updateRequired = true;
@@ -122,8 +118,7 @@ void EpubReaderScreen::handleInput() {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       nextPageNumber = 0;
       currentSpineIndex++;
-      delete section;
-      section = nullptr;
+      section.reset();
       xSemaphoreGive(renderingMutex);
     }
     updateRequired = true;
@@ -155,7 +150,7 @@ void EpubReaderScreen::renderScreen() {
   if (!section) {
     const auto filepath = epub->getSpineItem(currentSpineIndex);
     Serial.printf("[%lu] [ERS] Loading file: %s, index: %d\n", millis(), filepath.c_str(), currentSpineIndex);
-    section = new Section(epub, currentSpineIndex, renderer);
+    section = std::unique_ptr<Section>(new Section(epub, currentSpineIndex, renderer));
     if (!section->loadCacheMetadata(READER_FONT_ID, lineCompression, marginTop, marginRight, marginBottom,
                                     marginLeft)) {
       Serial.printf("[%lu] [ERS] Cache not found, building...\n", millis());
@@ -179,8 +174,7 @@ void EpubReaderScreen::renderScreen() {
       if (!section->persistPageDataToSD(READER_FONT_ID, lineCompression, marginTop, marginRight, marginBottom,
                                         marginLeft)) {
         Serial.printf("[%lu] [ERS] Failed to persist page data to SD\n", millis());
-        delete section;
-        section = nullptr;
+        section.reset();
         return;
       }
     } else {
@@ -212,11 +206,18 @@ void EpubReaderScreen::renderScreen() {
     return;
   }
 
-  const Page* p = section->loadPageFromSD();
-  const auto start = millis();
-  renderContents(p);
-  Serial.printf("[%lu] [ERS] Rendered page in %dms\n", millis(), millis() - start);
-  delete p;
+  {
+    auto p = section->loadPageFromSD();
+    if (!p) {
+      Serial.printf("[%lu] [ERS] Failed to load page from SD - clearing section cache\n", millis());
+      section->clearCache();
+      section.reset();
+      return renderScreen();
+    }
+    const auto start = millis();
+    renderContents(std::move(p));
+    Serial.printf("[%lu] [ERS] Rendered page in %dms\n", millis(), millis() - start);
+  }
 
   File f = SD.open((epub->getCachePath() + "/progress.bin").c_str(), FILE_WRITE);
   uint8_t data[4];
@@ -228,8 +229,8 @@ void EpubReaderScreen::renderScreen() {
   f.close();
 }
 
-void EpubReaderScreen::renderContents(const Page* p) {
-  p->render(renderer, READER_FONT_ID);
+void EpubReaderScreen::renderContents(std::unique_ptr<Page> page) {
+  page->render(renderer, READER_FONT_ID);
   renderStatusBar();
   if (pagesUntilFullRefresh <= 1) {
     renderer.displayBuffer(EInkDisplay::HALF_REFRESH);
@@ -244,13 +245,13 @@ void EpubReaderScreen::renderContents(const Page* p) {
   {
     renderer.clearScreen(0x00);
     renderer.setFontRenderMode(GfxRenderer::GRAYSCALE_LSB);
-    p->render(renderer, READER_FONT_ID);
+    page->render(renderer, READER_FONT_ID);
     renderer.copyGrayscaleLsbBuffers();
 
     // Render and copy to MSB buffer
     renderer.clearScreen(0x00);
     renderer.setFontRenderMode(GfxRenderer::GRAYSCALE_MSB);
-    p->render(renderer, READER_FONT_ID);
+    page->render(renderer, READER_FONT_ID);
     renderer.copyGrayscaleMsbBuffers();
 
     // display grayscale part
