@@ -5,16 +5,16 @@
 #include <InputManager.h>
 #include <SD.h>
 #include <SPI.h>
+#include <builtinFonts/bookerly_2b.h>
+#include <builtinFonts/bookerly_bold_2b.h>
+#include <builtinFonts/bookerly_bold_italic_2b.h>
+#include <builtinFonts/bookerly_italic_2b.h>
+#include <builtinFonts/pixelarial14.h>
+#include <builtinFonts/ubuntu_10.h>
+#include <builtinFonts/ubuntu_bold_10.h>
 
 #include "Battery.h"
 #include "CrossPointState.h"
-#include "builtinFonts/babyblue.h"
-#include "builtinFonts/bookerly_2b.h"
-#include "builtinFonts/bookerly_bold_2b.h"
-#include "builtinFonts/bookerly_bold_italic_2b.h"
-#include "builtinFonts/bookerly_italic_2b.h"
-#include "builtinFonts/ubuntu_10.h"
-#include "builtinFonts/ubuntu_bold_10.h"
 #include "config.h"
 #include "screens/BootLogoScreen.h"
 #include "screens/EpubReaderScreen.h"
@@ -49,7 +49,7 @@ EpdFont bookerlyItalicFont(&bookerly_italic_2b);
 EpdFont bookerlyBoldItalicFont(&bookerly_bold_italic_2b);
 EpdFontFamily bookerlyFontFamily(&bookerlyFont, &bookerlyBoldFont, &bookerlyItalicFont, &bookerlyBoldItalicFont);
 
-EpdFont smallFont(&babyblue);
+EpdFont smallFont(&pixelarial14);
 EpdFontFamily smallFontFamily(&smallFont);
 
 EpdFont ubuntu10Font(&ubuntu_10);

@@ -10,9 +10,9 @@
 constexpr int PAGES_PER_REFRESH = 15;
 constexpr unsigned long SKIP_CHAPTER_MS = 700;
 constexpr float lineCompression = 0.95f;
-constexpr int marginTop = 10;
+constexpr int marginTop = 8;
 constexpr int marginRight = 10;
-constexpr int marginBottom = 20;
+constexpr int marginBottom = 22;
 constexpr int marginLeft = 10;
 
 void EpubReaderScreen::taskTrampoline(void* param) {
@@ -261,17 +261,18 @@ void EpubReaderScreen::renderContents(std::unique_ptr<Page> page) {
 }
 
 void EpubReaderScreen::renderStatusBar() const {
+  constexpr auto textY = 776;
   // Right aligned text for progress counter
   const std::string progress = std::to_string(section->currentPage + 1) + " / " + std::to_string(section->pageCount);
   const auto progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progress.c_str());
-  renderer.drawText(SMALL_FONT_ID, GfxRenderer::getScreenWidth() - marginRight - progressTextWidth, 776,
+  renderer.drawText(SMALL_FONT_ID, GfxRenderer::getScreenWidth() - marginRight - progressTextWidth, textY,
                     progress.c_str());
 
   // Left aligned battery icon and percentage
   const uint16_t percentage = battery.readPercentage();
   const auto percentageText = std::to_string(percentage) + "%";
   const auto percentageTextWidth = renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str());
-  renderer.drawText(SMALL_FONT_ID, 20 + marginLeft, 776, percentageText.c_str());
+  renderer.drawText(SMALL_FONT_ID, 20 + marginLeft, textY, percentageText.c_str());
 
   // 1 column on left, 2 columns on right, 5 columns of battery body
   constexpr int batteryWidth = 15;
@@ -287,8 +288,8 @@ void EpubReaderScreen::renderStatusBar() const {
   renderer.drawLine(x, y, x, y + batteryHeight - 1);
   // Battery end
   renderer.drawLine(x + batteryWidth - 4, y, x + batteryWidth - 4, y + batteryHeight - 1);
-  renderer.drawLine(x + batteryWidth - 3, y + 2, x + batteryWidth - 3, y + batteryHeight - 3);
-  renderer.drawLine(x + batteryWidth - 2, y + 2, x + batteryWidth - 2, y + batteryHeight - 3);
+  renderer.drawLine(x + batteryWidth - 3, y + 2, x + batteryWidth - 1, y + 2);
+  renderer.drawLine(x + batteryWidth - 3, y + batteryHeight - 3, x + batteryWidth - 1, y + batteryHeight - 3);
   renderer.drawLine(x + batteryWidth - 1, y + 2, x + batteryWidth - 1, y + batteryHeight - 3);
 
   // The +1 is to round up, so that we always fill at least one pixel
@@ -311,5 +312,5 @@ void EpubReaderScreen::renderStatusBar() const {
     titleWidth = renderer.getTextWidth(SMALL_FONT_ID, title.c_str());
   }
 
-  renderer.drawText(SMALL_FONT_ID, titleMarginLeft + (availableTextWidth - titleWidth) / 2, 777, title.c_str());
+  renderer.drawText(SMALL_FONT_ID, titleMarginLeft + (availableTextWidth - titleWidth) / 2, textY, title.c_str());
 }
