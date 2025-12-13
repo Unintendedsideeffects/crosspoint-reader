@@ -245,6 +245,20 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   return true;
 }
 
+void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line) {
+  const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
+  const int pageHeight = GfxRenderer::getScreenHeight() - marginTop - marginBottom;
+
+  if (currentPageNextY + lineHeight > pageHeight) {
+    completePageFn(std::move(currentPage));
+    currentPage.reset(new Page());
+    currentPageNextY = marginTop;
+  }
+
+  currentPage->elements.push_back(std::make_shared<PageLine>(line, marginLeft, currentPageNextY));
+  currentPageNextY += lineHeight;
+}
+
 void ChapterHtmlSlimParser::makePages() {
   if (!currentTextBlock) {
     Serial.printf("[%lu] [EHP] !! No text block to make pages for !!\n", millis());
@@ -257,23 +271,9 @@ void ChapterHtmlSlimParser::makePages() {
   }
 
   const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
-  const int pageHeight = GfxRenderer::getScreenHeight() - marginTop - marginBottom;
-
-  // Long running task, make sure to let other things happen
-  vTaskDelay(1);
-
-  const auto lines = currentTextBlock->layoutAndExtractLines(renderer, fontId, marginLeft + marginRight);
-
-  for (auto&& line : lines) {
-    if (currentPageNextY + lineHeight > pageHeight) {
-      completePageFn(std::move(currentPage));
-      currentPage.reset(new Page());
-      currentPageNextY = marginTop;
-    }
-
-    currentPage->elements.push_back(std::make_shared<PageLine>(line, marginLeft, currentPageNextY));
-    currentPageNextY += lineHeight;
-  }
-  // add some extra line between blocks
+  currentTextBlock->layoutAndExtractLines(
+      renderer, fontId, marginLeft + marginRight,
+      [this](const std::shared_ptr<TextBlock>& textBlock) { addLineToPage(textBlock); });
+  // Extra paragrpah spacing
   currentPageNextY += lineHeight / 2;
 }

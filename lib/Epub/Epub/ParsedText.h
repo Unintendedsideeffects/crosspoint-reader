@@ -3,6 +3,7 @@
 #include <EpdFontFamily.h>
 
 #include <cstdint>
+#include <functional>
 #include <list>
 #include <memory>
 #include <string>
@@ -24,6 +25,6 @@ class ParsedText {
   void setStyle(const TextBlock::BLOCK_STYLE style) { this->style = style; }
   TextBlock::BLOCK_STYLE getStyle() const { return style; }
   bool isEmpty() const { return words.empty(); }
-  std::list<std::shared_ptr<TextBlock>> layoutAndExtractLines(const GfxRenderer& renderer, int fontId,
-                                                              int horizontalMargin);
+  void layoutAndExtractLines(const GfxRenderer& renderer, int fontId, int horizontalMargin,
+                             const std::function<void(std::shared_ptr<TextBlock>)>& processLine);
 };

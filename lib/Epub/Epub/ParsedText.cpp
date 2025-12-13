@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <vector>
 
@@ -17,10 +18,10 @@ void ParsedText::addWord(std::string word, const EpdFontStyle fontStyle) {
 }
 
 // Consumes data to minimize memory usage
-std::list<std::shared_ptr<TextBlock>> ParsedText::layoutAndExtractLines(const GfxRenderer& renderer, const int fontId,
-                                                                        const int horizontalMargin) {
+void ParsedText::layoutAndExtractLines(const GfxRenderer& renderer, const int fontId, const int horizontalMargin,
+                                       const std::function<void(std::shared_ptr<TextBlock>)>& processLine) {
   if (words.empty()) {
-    return {};
+    return;
   }
 
   const size_t totalWordCount = words.size();
@@ -99,8 +100,6 @@ std::list<std::shared_ptr<TextBlock>> ParsedText::layoutAndExtractLines(const Gf
     currentWordIndex = nextBreakIndex;
   }
 
-  std::list<std::shared_ptr<TextBlock>> lines;
-
   // Initialize iterators for consumption
   auto wordStartIt = words.begin();
   auto wordStyleStartIt = wordStyles.begin();
@@ -153,7 +152,7 @@ std::list<std::shared_ptr<TextBlock>> ParsedText::layoutAndExtractLines(const Gf
     std::list<EpdFontStyle> lineWordStyles;
     lineWordStyles.splice(lineWordStyles.begin(), wordStyles, wordStyleStartIt, wordStyleEndIt);
 
-    lines.push_back(
+    processLine(
         std::make_shared<TextBlock>(std::move(lineWords), std::move(lineXPos), std::move(lineWordStyles), style));
 
     // Update pointers/indices for the next line
@@ -162,6 +161,4 @@ std::list<std::shared_ptr<TextBlock>> ParsedText::layoutAndExtractLines(const Gf
     wordWidthIndex += lineWordCount;
     lastBreakAt = lineBreak;
   }
-
-  return lines;
 }
