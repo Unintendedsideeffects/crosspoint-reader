@@ -12,6 +12,7 @@ class EpubReaderScreen final : public Screen {
   std::unique_ptr<Section> section = nullptr;
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::unique_ptr<Screen> subScreen = nullptr;
   int currentSpineIndex = 0;
   int nextPageNumber = 0;
   int pagesUntilFullRefresh = 0;

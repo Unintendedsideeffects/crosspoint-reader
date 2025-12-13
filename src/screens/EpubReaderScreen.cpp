@@ -5,6 +5,7 @@
 #include <SD.h>
 
 #include "Battery.h"
+#include "EpubReaderChapterSelectionScreen.h"
 #include "config.h"
 
 constexpr int PAGES_PER_REFRESH = 15;
@@ -65,6 +66,37 @@ void EpubReaderScreen::onExit() {
 }
 
 void EpubReaderScreen::handleInput() {
+  // Pass input responsibility to sub screen if exists
+  if (subScreen) {
+    subScreen->handleInput();
+    return;
+  }
+
+  // Enter chapter selection screen
+  if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+    // Don't start screen transition while rendering
+    xSemaphoreTake(renderingMutex, portMAX_DELAY);
+    subScreen.reset(new EpubReaderChapterSelectionScreen(
+        this->renderer, this->inputManager, epub, currentSpineIndex,
+        [this] {
+          subScreen->onExit();
+          subScreen.reset();
+          updateRequired = true;
+        },
+        [this](const int newSpineIndex) {
+          if (currentSpineIndex != newSpineIndex) {
+            currentSpineIndex = newSpineIndex;
+            nextPageNumber = 0;
+            section.reset();
+          }
+          subScreen->onExit();
+          subScreen.reset();
+          updateRequired = true;
+        }));
+    subScreen->onEnter();
+    xSemaphoreGive(renderingMutex);
+  }
+
   if (inputManager.wasPressed(InputManager::BTN_BACK)) {
     onGoHome();
     return;
