@@ -73,10 +73,8 @@ bool Epub::parseContentOpf(const std::string& contentOpfFilePath) {
     coverImageItem = opfParser.items.at(opfParser.coverItemId);
   }
 
-  if (opfParser.items.count("ncx")) {
-    tocNcxItem = opfParser.items.at("ncx");
-  } else if (opfParser.items.count("ncxtoc")) {
-    tocNcxItem = opfParser.items.at("ncxtoc");
+  if (!opfParser.tocNcxPath.empty()) {
+    tocNcxItem = opfParser.tocNcxPath;
   }
 
   for (auto& spineRef : opfParser.spineRefs) {
