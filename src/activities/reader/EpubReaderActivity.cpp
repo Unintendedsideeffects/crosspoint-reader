@@ -214,12 +214,11 @@ void EpubReaderActivity::renderScreen() {
       {
         const int textWidth = renderer.getTextWidth(READER_FONT_ID, "Indexing...");
         constexpr int margin = 20;
-        // Round all coordinates to 8 pixel boundaries
-        const int x = ((GfxRenderer::getScreenWidth() - textWidth - margin * 2) / 2 + 7) / 8 * 8;
-        constexpr int y = 56;
-        const int w = (textWidth + margin * 2 + 7) / 8 * 8;
-        const int h = (renderer.getLineHeight(READER_FONT_ID) + margin * 2 + 7) / 8 * 8;
-        renderer.clearScreen();
+        const int x = (GfxRenderer::getScreenWidth() - textWidth - margin * 2) / 2;
+        constexpr int y = 50;
+        const int w = textWidth + margin * 2;
+        const int h = renderer.getLineHeight(READER_FONT_ID) + margin * 2;
+        renderer.fillRect(x, y, w, h, false);
         renderer.drawText(READER_FONT_ID, x + margin, y + margin, "Indexing...");
         renderer.drawRect(x + 5, y + 5, w - 10, h - 10);
         renderer.displayBuffer();
