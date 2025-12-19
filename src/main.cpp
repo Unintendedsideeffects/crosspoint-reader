@@ -5,6 +5,7 @@
 #include <InputManager.h>
 #include <SD.h>
 #include <SPI.h>
+#include <WiFi.h>
 #include <builtinFonts/bookerly_2b.h>
 #include <builtinFonts/bookerly_bold_2b.h>
 #include <builtinFonts/bookerly_bold_italic_2b.h>
@@ -19,6 +20,7 @@
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
 #include "activities/home/HomeActivity.h"
+#include "activities/network/CrossPointWebServerActivity.h"
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
@@ -64,6 +66,7 @@ void exitActivity() {
   if (currentActivity) {
     currentActivity->onExit();
     delete currentActivity;
+    currentActivity = nullptr;
   }
 }
 
@@ -136,6 +139,11 @@ void onGoToReader(const std::string& initialEpubPath) {
 }
 void onGoToReaderHome() { onGoToReader(std::string()); }
 
+void onGoToFileTransfer() {
+  exitActivity();
+  enterNewActivity(new CrossPointWebServerActivity(renderer, inputManager, onGoHome));
+}
+
 void onGoToSettings() {
   exitActivity();
   enterNewActivity(new SettingsActivity(renderer, inputManager, onGoHome));
@@ -143,7 +151,7 @@ void onGoToSettings() {
 
 void onGoHome() {
   exitActivity();
-  enterNewActivity(new HomeActivity(renderer, inputManager, onGoToReaderHome, onGoToSettings));
+  enterNewActivity(new HomeActivity(renderer, inputManager, onGoToReaderHome, onGoToSettings, onGoToFileTransfer));
 }
 
 void setup() {
@@ -195,7 +203,10 @@ void setup() {
 }
 
 void loop() {
-  delay(10);
+  static unsigned long lastLoopTime = 0;
+  static unsigned long maxLoopDuration = 0;
+
+  unsigned long loopStartTime = millis();
 
   static unsigned long lastMemPrint = 0;
   if (Serial && millis() - lastMemPrint >= 10000) {
@@ -226,7 +237,29 @@ void loop() {
     return;
   }
 
+  unsigned long activityStartTime = millis();
   if (currentActivity) {
     currentActivity->loop();
+  }
+  unsigned long activityDuration = millis() - activityStartTime;
+
+  unsigned long loopDuration = millis() - loopStartTime;
+  if (loopDuration > maxLoopDuration) {
+    maxLoopDuration = loopDuration;
+    if (maxLoopDuration > 50) {
+      Serial.printf("[%lu] [LOOP] New max loop duration: %lu ms (activity: %lu ms)\n", millis(), maxLoopDuration,
+                    activityDuration);
+    }
+  }
+
+  lastLoopTime = loopStartTime;
+
+  // Add delay at the end of the loop to prevent tight spinning
+  // When an activity requests skip loop delay (e.g., webserver running), use yield() for faster response
+  // Otherwise, use longer delay to save power
+  if (currentActivity && currentActivity->skipLoopDelay()) {
+    yield();  // Give FreeRTOS a chance to run tasks, but return immediately
+  } else {
+    delay(10);  // Normal delay when no activity requires fast response
   }
 }
