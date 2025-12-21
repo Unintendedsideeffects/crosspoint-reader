@@ -7,10 +7,8 @@
 #include <memory>
 #include <string>
 
-#include "../Activity.h"
-#include "WifiSelectionActivity.h"
 #include "activities/ActivityWithSubactivity.h"
-#include "server/CrossPointWebServer.h"
+#include "network/CrossPointWebServer.h"
 
 // Web server activity states
 enum class WebServerActivityState {

@@ -1,6 +1,7 @@
 #include "EpubReaderChapterSelectionActivity.h"
 
 #include <GfxRenderer.h>
+#include <InputManager.h>
 #include <SD.h>
 
 #include "config.h"

@@ -6,6 +6,7 @@
 #include <map>
 
 #include "WifiCredentialStore.h"
+#include "activities/util/KeyboardEntryActivity.h"
 #include "config.h"
 
 void WifiSelectionActivity::taskTrampoline(void* param) {
@@ -18,8 +19,10 @@ void WifiSelectionActivity::onEnter() {
 
   renderingMutex = xSemaphoreCreateMutex();
 
-  // Load saved WiFi credentials
+  // Load saved WiFi credentials - SD card operations need lock as we use SPI for both
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
   WIFI_STORE.loadFromFile();
+  xSemaphoreGive(renderingMutex);
 
   // Reset state
   selectedNetworkIndex = 0;
@@ -32,7 +35,6 @@ void WifiSelectionActivity::onEnter() {
   usedSavedPassword = false;
   savePromptSelection = 0;
   forgetPromptSelection = 0;
-  keyboard.reset();
 
   // Trigger first update to show scanning message
   updateRequired = true;
@@ -98,7 +100,7 @@ void WifiSelectionActivity::startWifiScan() {
 }
 
 void WifiSelectionActivity::processWifiScanResults() {
-  int16_t scanResult = WiFi.scanComplete();
+  const int16_t scanResult = WiFi.scanComplete();
 
   if (scanResult == WIFI_SCAN_RUNNING) {
     // Scan still in progress
@@ -117,7 +119,7 @@ void WifiSelectionActivity::processWifiScanResults() {
 
   for (int i = 0; i < scanResult; i++) {
     std::string ssid = WiFi.SSID(i).c_str();
-    int32_t rssi = WiFi.RSSI(i);
+    const int32_t rssi = WiFi.RSSI(i);
 
     // Skip hidden networks (empty SSID)
     if (ssid.empty()) {
@@ -154,7 +156,7 @@ void WifiSelectionActivity::processWifiScanResults() {
   updateRequired = true;
 }
 
-void WifiSelectionActivity::selectNetwork(int index) {
+void WifiSelectionActivity::selectNetwork(const int index) {
   if (index < 0 || index >= static_cast<int>(networks.size())) {
     return;
   }
@@ -180,11 +182,11 @@ void WifiSelectionActivity::selectNetwork(int index) {
   if (selectedRequiresPassword) {
     // Show password entry
     state = WifiSelectionState::PASSWORD_ENTRY;
-    keyboard.reset(new KeyboardEntryActivity(renderer, inputManager, "Enter WiFi Password",
-                                             "",    // No initial text
-                                             64,    // Max password length
-                                             false  // Show password by default (hard keyboard to use)
-                                             ));
+    enterNewActivity(new KeyboardEntryActivity(renderer, inputManager, "Enter WiFi Password",
+                                               "",    // No initial text
+                                               64,    // Max password length
+                                               false  // Show password by default (hard keyboard to use)
+                                               ));
     updateRequired = true;
   } else {
     // Connect directly for open networks
@@ -202,8 +204,8 @@ void WifiSelectionActivity::attemptConnection() {
   WiFi.mode(WIFI_STA);
 
   // Get password from keyboard if we just entered it
-  if (keyboard && !usedSavedPassword) {
-    enteredPassword = keyboard->getText();
+  if (subActivity && !usedSavedPassword) {
+    enteredPassword = static_cast<KeyboardEntryActivity*>(subActivity.get())->getText();
   }
 
   if (selectedRequiresPassword && !enteredPassword.empty()) {
@@ -218,7 +220,7 @@ void WifiSelectionActivity::checkConnectionStatus() {
     return;
   }
 
-  wl_status_t status = WiFi.status();
+  const wl_status_t status = WiFi.status();
 
   if (status == WL_CONNECTED) {
     // Successfully connected
@@ -275,7 +277,8 @@ void WifiSelectionActivity::loop() {
   }
 
   // Handle password entry state
-  if (state == WifiSelectionState::PASSWORD_ENTRY && keyboard) {
+  if (state == WifiSelectionState::PASSWORD_ENTRY && subActivity) {
+    const auto keyboard = static_cast<KeyboardEntryActivity*>(subActivity.get());
     keyboard->handleInput();
 
     if (keyboard->isComplete()) {
@@ -285,7 +288,7 @@ void WifiSelectionActivity::loop() {
 
     if (keyboard->isCancelled()) {
       state = WifiSelectionState::NETWORK_LIST;
-      keyboard.reset();
+      exitActivity();
       updateRequired = true;
       return;
     }
@@ -309,7 +312,9 @@ void WifiSelectionActivity::loop() {
     } else if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
       if (savePromptSelection == 0) {
         // User chose "Yes" - save the password
+        xSemaphoreTake(renderingMutex, portMAX_DELAY);
         WIFI_STORE.addCredential(selectedSSID, enteredPassword);
+        xSemaphoreGive(renderingMutex);
       }
       // Complete - parent will start web server
       onComplete(true);
@@ -335,7 +340,9 @@ void WifiSelectionActivity::loop() {
     } else if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
       if (forgetPromptSelection == 0) {
         // User chose "Yes" - forget the network
+        xSemaphoreTake(renderingMutex, portMAX_DELAY);
         WIFI_STORE.removeCredential(selectedSSID);
+        xSemaphoreGive(renderingMutex);
         // Update the network list to reflect the change
         const auto network = find_if(networks.begin(), networks.end(),
                                      [this](const WifiNetworkInfo& net) { return net.ssid == selectedSSID; });
@@ -410,15 +417,18 @@ void WifiSelectionActivity::loop() {
   }
 }
 
-std::string WifiSelectionActivity::getSignalStrengthIndicator(int32_t rssi) const {
+std::string WifiSelectionActivity::getSignalStrengthIndicator(const int32_t rssi) const {
   // Convert RSSI to signal bars representation
   if (rssi >= -50) {
     return "||||";  // Excellent
-  } else if (rssi >= -60) {
+  }
+  if (rssi >= -60) {
     return "||| ";  // Good
-  } else if (rssi >= -70) {
+  }
+  if (rssi >= -70) {
     return "||  ";  // Fair
-  } else if (rssi >= -80) {
+  }
+  if (rssi >= -80) {
     return "|   ";  // Weak
   }
   return "    ";  // Very weak
@@ -484,8 +494,8 @@ void WifiSelectionActivity::renderNetworkList() const {
     renderer.drawCenteredText(SMALL_FONT_ID, top + height + 10, "Press OK to scan again", true, REGULAR);
   } else {
     // Calculate how many networks we can display
-    const int startY = 60;
-    const int lineHeight = 25;
+    constexpr int startY = 60;
+    constexpr int lineHeight = 25;
     const int maxVisibleNetworks = (pageHeight - startY - 40) / lineHeight;
 
     // Calculate scroll offset to keep selected item visible
@@ -557,8 +567,8 @@ void WifiSelectionActivity::renderPasswordEntry() const {
   renderer.drawCenteredText(UI_FONT_ID, 38, networkInfo.c_str(), true, REGULAR);
 
   // Draw keyboard
-  if (keyboard) {
-    keyboard->render(58);
+  if (subActivity) {
+    static_cast<KeyboardEntryActivity*>(subActivity.get())->render(58);
   }
 }
 
@@ -593,7 +603,7 @@ void WifiSelectionActivity::renderConnected() const {
   }
   renderer.drawCenteredText(UI_FONT_ID, top + 10, ssidInfo.c_str(), true, REGULAR);
 
-  std::string ipInfo = "IP Address: " + connectedIP;
+  const std::string ipInfo = "IP Address: " + connectedIP;
   renderer.drawCenteredText(UI_FONT_ID, top + 40, ipInfo.c_str(), true, REGULAR);
 
   renderer.drawCenteredText(SMALL_FONT_ID, pageHeight - 30, "Press any button to continue", true, REGULAR);
@@ -617,9 +627,9 @@ void WifiSelectionActivity::renderSavePrompt() const {
 
   // Draw Yes/No buttons
   const int buttonY = top + 80;
-  const int buttonWidth = 60;
-  const int buttonSpacing = 30;
-  const int totalWidth = buttonWidth * 2 + buttonSpacing;
+  constexpr int buttonWidth = 60;
+  constexpr int buttonSpacing = 30;
+  constexpr int totalWidth = buttonWidth * 2 + buttonSpacing;
   const int startX = (pageWidth - totalWidth) / 2;
 
   // Draw "Yes" button
@@ -667,9 +677,9 @@ void WifiSelectionActivity::renderForgetPrompt() const {
 
   // Draw Yes/No buttons
   const int buttonY = top + 80;
-  const int buttonWidth = 60;
-  const int buttonSpacing = 30;
-  const int totalWidth = buttonWidth * 2 + buttonSpacing;
+  constexpr int buttonWidth = 60;
+  constexpr int buttonSpacing = 30;
+  constexpr int totalWidth = buttonWidth * 2 + buttonSpacing;
   const int startX = (pageWidth - totalWidth) / 2;
 
   // Draw "Yes" button

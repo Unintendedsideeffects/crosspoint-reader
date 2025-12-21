@@ -2,8 +2,6 @@
 
 #include <WebServer.h>
 
-#include <functional>
-#include <string>
 #include <vector>
 
 // Structure to hold file information

@@ -1,8 +1,10 @@
 #include "CrossPointWebServerActivity.h"
 
 #include <GfxRenderer.h>
+#include <InputManager.h>
 #include <WiFi.h>
 
+#include "WifiSelectionActivity.h"
 #include "config.h"
 
 void CrossPointWebServerActivity::taskTrampoline(void* param) {

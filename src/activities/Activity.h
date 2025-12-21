@@ -1,8 +1,11 @@
 #pragma once
-#include <InputManager.h>
 
+#include <HardwareSerial.h>
+
+#include <string>
 #include <utility>
 
+class InputManager;
 class GfxRenderer;
 
 class Activity {
