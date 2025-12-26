@@ -337,8 +337,6 @@ void CrossPointWebServerActivity::render() const {
 }
 
 void CrossPointWebServerActivity::renderServerRunning() const {
-  const auto pageHeight = renderer.getScreenHeight();
-
   // Use consistent line spacing
   constexpr int LINE_SPACING = 28;  // Space between lines
 
@@ -389,5 +387,5 @@ void CrossPointWebServerActivity::renderServerRunning() const {
     renderer.drawCenteredText(SMALL_FONT_ID, startY + LINE_SPACING * 4, "Open this URL in your browser", true, REGULAR);
   }
 
-  renderer.drawCenteredText(SMALL_FONT_ID, pageHeight - 30, "Press BACK to exit", true, REGULAR);
+  renderer.drawButtonHints(UI_FONT_ID, "« Exit", "", "", "");
 }
