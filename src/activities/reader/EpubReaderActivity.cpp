@@ -340,71 +340,87 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page) {
 }
 
 void EpubReaderActivity::renderStatusBar() const {
+  // determine visible status bar elements
+  const bool showProgress = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL;
+  const bool showBattery = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::NO_PROGRESS ||
+                           SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL;
+  const bool showChapterTitle = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::NO_PROGRESS ||
+                                SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL;
+
+  // height variable shared by all elements
   constexpr auto textY = 776;
+  int percentageTextWidth = 0;
+  int progressTextWidth = 0;
 
-  // Calculate progress in book
-  const float sectionChapterProg = static_cast<float>(section->currentPage) / section->pageCount;
-  const uint8_t bookProgress = epub->calculateProgress(currentSpineIndex, sectionChapterProg);
+  if (showProgress) {
+    // Calculate progress in book
+    const float sectionChapterProg = static_cast<float>(section->currentPage) / section->pageCount;
+    const uint8_t bookProgress = epub->calculateProgress(currentSpineIndex, sectionChapterProg);
 
-  // Right aligned text for progress counter
-  const std::string progress = std::to_string(section->currentPage + 1) + "/" + std::to_string(section->pageCount) +
-                               "  " + std::to_string(bookProgress) + "%";
-  const auto progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progress.c_str());
-  renderer.drawText(SMALL_FONT_ID, GfxRenderer::getScreenWidth() - marginRight - progressTextWidth, textY,
-                    progress.c_str());
-
-  // Left aligned battery icon and percentage
-  const uint16_t percentage = battery.readPercentage();
-  const auto percentageText = std::to_string(percentage) + "%";
-  const auto percentageTextWidth = renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str());
-  renderer.drawText(SMALL_FONT_ID, 20 + marginLeft, textY, percentageText.c_str());
-
-  // 1 column on left, 2 columns on right, 5 columns of battery body
-  constexpr int batteryWidth = 15;
-  constexpr int batteryHeight = 10;
-  constexpr int x = marginLeft;
-  constexpr int y = 783;
-
-  // Top line
-  renderer.drawLine(x, y, x + batteryWidth - 4, y);
-  // Bottom line
-  renderer.drawLine(x, y + batteryHeight - 1, x + batteryWidth - 4, y + batteryHeight - 1);
-  // Left line
-  renderer.drawLine(x, y, x, y + batteryHeight - 1);
-  // Battery end
-  renderer.drawLine(x + batteryWidth - 4, y, x + batteryWidth - 4, y + batteryHeight - 1);
-  renderer.drawLine(x + batteryWidth - 3, y + 2, x + batteryWidth - 1, y + 2);
-  renderer.drawLine(x + batteryWidth - 3, y + batteryHeight - 3, x + batteryWidth - 1, y + batteryHeight - 3);
-  renderer.drawLine(x + batteryWidth - 1, y + 2, x + batteryWidth - 1, y + batteryHeight - 3);
-
-  // The +1 is to round up, so that we always fill at least one pixel
-  int filledWidth = percentage * (batteryWidth - 5) / 100 + 1;
-  if (filledWidth > batteryWidth - 5) {
-    filledWidth = batteryWidth - 5;  // Ensure we don't overflow
+    // Right aligned text for progress counter
+    const std::string progress = std::to_string(section->currentPage + 1) + "/" + std::to_string(section->pageCount) +
+                                 "  " + std::to_string(bookProgress) + "%";
+    progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progress.c_str());
+    renderer.drawText(SMALL_FONT_ID, GfxRenderer::getScreenWidth() - marginRight - progressTextWidth, textY,
+                      progress.c_str());
   }
-  renderer.fillRect(x + 1, y + 1, filledWidth, batteryHeight - 2);
 
-  // Centered chatper title text
-  // Page width minus existing content with 30px padding on each side
-  const int titleMarginLeft = 20 + percentageTextWidth + 30 + marginLeft;
-  const int titleMarginRight = progressTextWidth + 30 + marginRight;
-  const int availableTextWidth = GfxRenderer::getScreenWidth() - titleMarginLeft - titleMarginRight;
-  const int tocIndex = epub->getTocIndexForSpineIndex(currentSpineIndex);
+  if (showBattery) {
+    // Left aligned battery icon and percentage
+    const uint16_t percentage = battery.readPercentage();
+    const auto percentageText = std::to_string(percentage) + "%";
+    percentageTextWidth = renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str());
+    renderer.drawText(SMALL_FONT_ID, 20 + marginLeft, textY, percentageText.c_str());
 
-  std::string title;
-  int titleWidth;
-  if (tocIndex == -1) {
-    title = "Unnamed";
-    titleWidth = renderer.getTextWidth(SMALL_FONT_ID, "Unnamed");
-  } else {
-    const auto tocItem = epub->getTocItem(tocIndex);
-    title = tocItem.title;
-    titleWidth = renderer.getTextWidth(SMALL_FONT_ID, title.c_str());
-    while (titleWidth > availableTextWidth && title.length() > 11) {
-      title.replace(title.length() - 8, 8, "...");
-      titleWidth = renderer.getTextWidth(SMALL_FONT_ID, title.c_str());
+    // 1 column on left, 2 columns on right, 5 columns of battery body
+    constexpr int batteryWidth = 15;
+    constexpr int batteryHeight = 10;
+    constexpr int x = marginLeft;
+    constexpr int y = 783;
+
+    // Top line
+    renderer.drawLine(x, y, x + batteryWidth - 4, y);
+    // Bottom line
+    renderer.drawLine(x, y + batteryHeight - 1, x + batteryWidth - 4, y + batteryHeight - 1);
+    // Left line
+    renderer.drawLine(x, y, x, y + batteryHeight - 1);
+    // Battery end
+    renderer.drawLine(x + batteryWidth - 4, y, x + batteryWidth - 4, y + batteryHeight - 1);
+    renderer.drawLine(x + batteryWidth - 3, y + 2, x + batteryWidth - 1, y + 2);
+    renderer.drawLine(x + batteryWidth - 3, y + batteryHeight - 3, x + batteryWidth - 1, y + batteryHeight - 3);
+    renderer.drawLine(x + batteryWidth - 1, y + 2, x + batteryWidth - 1, y + batteryHeight - 3);
+
+    // The +1 is to round up, so that we always fill at least one pixel
+    int filledWidth = percentage * (batteryWidth - 5) / 100 + 1;
+    if (filledWidth > batteryWidth - 5) {
+      filledWidth = batteryWidth - 5;  // Ensure we don't overflow
     }
+    renderer.fillRect(x + 1, y + 1, filledWidth, batteryHeight - 2);
   }
 
-  renderer.drawText(SMALL_FONT_ID, titleMarginLeft + (availableTextWidth - titleWidth) / 2, textY, title.c_str());
+  if (showChapterTitle) {
+    // Centered chatper title text
+    // Page width minus existing content with 30px padding on each side
+    const int titleMarginLeft = 20 + percentageTextWidth + 30 + marginLeft;
+    const int titleMarginRight = progressTextWidth + 30 + marginRight;
+    const int availableTextWidth = GfxRenderer::getScreenWidth() - titleMarginLeft - titleMarginRight;
+    const int tocIndex = epub->getTocIndexForSpineIndex(currentSpineIndex);
+
+    std::string title;
+    int titleWidth;
+    if (tocIndex == -1) {
+      title = "Unnamed";
+      titleWidth = renderer.getTextWidth(SMALL_FONT_ID, "Unnamed");
+    } else {
+      const auto tocItem = epub->getTocItem(tocIndex);
+      title = tocItem.title;
+      titleWidth = renderer.getTextWidth(SMALL_FONT_ID, title.c_str());
+      while (titleWidth > availableTextWidth && title.length() > 11) {
+        title.replace(title.length() - 8, 8, "...");
+        titleWidth = renderer.getTextWidth(SMALL_FONT_ID, title.c_str());
+      }
+    }
+
+    renderer.drawText(SMALL_FONT_ID, titleMarginLeft + (availableTextWidth - titleWidth) / 2, textY, title.c_str());
+  }
 }
