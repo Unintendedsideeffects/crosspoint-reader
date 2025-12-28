@@ -56,7 +56,7 @@ void HomeActivity::loop() {
 
   const int menuCount = getMenuItemCount();
 
-  if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+  if (inputManager.wasReleased(InputManager::BTN_CONFIRM)) {
     if (hasContinueReading) {
       // Menu: Continue Reading, Browse, File transfer, Settings
       if (selectorIndex == 0) {
