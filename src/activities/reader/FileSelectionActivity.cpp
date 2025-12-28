@@ -101,7 +101,7 @@ void FileSelectionActivity::loop() {
 
   const bool skipPage = inputManager.getHeldTime() > SKIP_PAGE_MS;
 
-  if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+  if (inputManager.wasReleased(InputManager::BTN_CONFIRM)) {
     if (files.empty()) {
       return;
     }
