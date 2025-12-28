@@ -40,8 +40,12 @@ void FileSelectionActivity::loadFiles() {
 
     if (file.isDirectory()) {
       files.emplace_back(filename + "/");
-    } else if (filename.substr(filename.length() - 5) == ".epub") {
-      files.emplace_back(filename);
+    } else {
+      std::string ext4 = filename.length() >= 4 ? filename.substr(filename.length() - 4) : "";
+      std::string ext5 = filename.length() >= 5 ? filename.substr(filename.length() - 5) : "";
+      if (ext5 == ".epub" || ext5 == ".xtch" || ext4 == ".xtc") {
+        files.emplace_back(filename);
+      }
     }
     file.close();
   }
@@ -165,7 +169,7 @@ void FileSelectionActivity::render() const {
   renderer.drawButtonHints(UI_FONT_ID, "« Home", "Open", "", "");
 
   if (files.empty()) {
-    renderer.drawText(UI_FONT_ID, 20, 60, "No EPUBs found");
+    renderer.drawText(UI_FONT_ID, 20, 60, "No books found");
     renderer.displayBuffer();
     return;
   }

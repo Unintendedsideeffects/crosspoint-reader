@@ -85,8 +85,9 @@ class GfxRenderer {
   void copyGrayscaleLsbBuffers() const;
   void copyGrayscaleMsbBuffers() const;
   void displayGrayBuffer() const;
-  void storeBwBuffer();
+  bool storeBwBuffer();  // Returns true if buffer was stored successfully
   void restoreBwBuffer();
+  void cleanupGrayscaleWithFrameBuffer() const;
 
   // Low level functions
   uint8_t* getFrameBuffer() const;
