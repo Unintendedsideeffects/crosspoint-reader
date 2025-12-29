@@ -51,23 +51,23 @@ void NetworkModeSelectionActivity::onExit() {
 
 void NetworkModeSelectionActivity::loop() {
   // Handle back button - cancel
-  if (inputManager.wasPressed(InputManager::BTN_BACK)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
     onCancel();
     return;
   }
 
   // Handle confirm button - select current option
-  if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
     const NetworkMode mode = (selectedIndex == 0) ? NetworkMode::JOIN_NETWORK : NetworkMode::CREATE_HOTSPOT;
     onModeSelected(mode);
     return;
   }
 
   // Handle navigation
-  const bool prevPressed =
-      inputManager.wasPressed(InputManager::BTN_UP) || inputManager.wasPressed(InputManager::BTN_LEFT);
-  const bool nextPressed =
-      inputManager.wasPressed(InputManager::BTN_DOWN) || inputManager.wasPressed(InputManager::BTN_RIGHT);
+  const bool prevPressed = mappedInput.wasPressed(MappedInputManager::Button::Up) ||
+                           mappedInput.wasPressed(MappedInputManager::Button::Left);
+  const bool nextPressed = mappedInput.wasPressed(MappedInputManager::Button::Down) ||
+                           mappedInput.wasPressed(MappedInputManager::Button::Right);
 
   if (prevPressed) {
     selectedIndex = (selectedIndex + MENU_ITEM_COUNT - 1) % MENU_ITEM_COUNT;
@@ -122,7 +122,8 @@ void NetworkModeSelectionActivity::render() const {
   }
 
   // Draw help text at bottom
-  renderer.drawButtonHints(UI_FONT_ID, "« Back", "Select", "", "");
+  const auto labels = mappedInput.mapLabels("« Back", "Select", "", "");
+  renderer.drawButtonHints(UI_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }

@@ -138,7 +138,7 @@ void KeyboardEntryActivity::handleKeyPress() {
 
 void KeyboardEntryActivity::loop() {
   // Navigation
-  if (inputManager.wasPressed(InputManager::BTN_UP)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Up)) {
     if (selectedRow > 0) {
       selectedRow--;
       // Clamp column to valid range for new row
@@ -148,7 +148,7 @@ void KeyboardEntryActivity::loop() {
     updateRequired = true;
   }
 
-  if (inputManager.wasPressed(InputManager::BTN_DOWN)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Down)) {
     if (selectedRow < NUM_ROWS - 1) {
       selectedRow++;
       const int maxCol = getRowLength(selectedRow) - 1;
@@ -157,7 +157,7 @@ void KeyboardEntryActivity::loop() {
     updateRequired = true;
   }
 
-  if (inputManager.wasPressed(InputManager::BTN_LEFT)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Left)) {
     // Special bottom row case
     if (selectedRow == SPECIAL_ROW) {
       // Bottom row has special key widths
@@ -187,7 +187,7 @@ void KeyboardEntryActivity::loop() {
     updateRequired = true;
   }
 
-  if (inputManager.wasPressed(InputManager::BTN_RIGHT)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Right)) {
     const int maxCol = getRowLength(selectedRow) - 1;
 
     // Special bottom row case
@@ -220,13 +220,13 @@ void KeyboardEntryActivity::loop() {
   }
 
   // Selection
-  if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
     handleKeyPress();
     updateRequired = true;
   }
 
   // Cancel
-  if (inputManager.wasPressed(InputManager::BTN_BACK)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
     if (onCancel) {
       onCancel();
     }

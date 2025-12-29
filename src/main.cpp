@@ -16,6 +16,7 @@
 #include "Battery.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "MappedInputManager.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
 #include "activities/home/HomeActivity.h"
@@ -41,6 +42,7 @@
 
 EInkDisplay einkDisplay(EPD_SCLK, EPD_MOSI, EPD_CS, EPD_DC, EPD_RST, EPD_BUSY);
 InputManager inputManager;
+MappedInputManager mappedInputManager(inputManager);
 GfxRenderer renderer(einkDisplay);
 Activity* currentActivity;
 
@@ -124,7 +126,7 @@ void waitForPowerRelease() {
 // Enter deep sleep mode
 void enterDeepSleep() {
   exitActivity();
-  enterNewActivity(new SleepActivity(renderer, inputManager));
+  enterNewActivity(new SleepActivity(renderer, mappedInputManager));
 
   einkDisplay.deepSleep();
   Serial.printf("[%lu] [   ] Power button press calibration value: %lu ms\n", millis(), t2 - t1);
@@ -139,24 +141,24 @@ void enterDeepSleep() {
 void onGoHome();
 void onGoToReader(const std::string& initialEpubPath) {
   exitActivity();
-  enterNewActivity(new ReaderActivity(renderer, inputManager, initialEpubPath, onGoHome));
+  enterNewActivity(new ReaderActivity(renderer, mappedInputManager, initialEpubPath, onGoHome));
 }
 void onGoToReaderHome() { onGoToReader(std::string()); }
 void onContinueReading() { onGoToReader(APP_STATE.openEpubPath); }
 
 void onGoToFileTransfer() {
   exitActivity();
-  enterNewActivity(new CrossPointWebServerActivity(renderer, inputManager, onGoHome));
+  enterNewActivity(new CrossPointWebServerActivity(renderer, mappedInputManager, onGoHome));
 }
 
 void onGoToSettings() {
   exitActivity();
-  enterNewActivity(new SettingsActivity(renderer, inputManager, onGoHome));
+  enterNewActivity(new SettingsActivity(renderer, mappedInputManager, onGoHome));
 }
 
 void onGoHome() {
   exitActivity();
-  enterNewActivity(new HomeActivity(renderer, inputManager, onContinueReading, onGoToReaderHome, onGoToSettings,
+  enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToReaderHome, onGoToSettings,
                                     onGoToFileTransfer));
 }
 
@@ -193,7 +195,7 @@ void setup() {
     Serial.printf("[%lu] [   ] SD card initialization failed\n", millis());
     setupDisplayAndFonts();
     exitActivity();
-    enterNewActivity(new FullScreenMessageActivity(renderer, inputManager, "SD card error", BOLD));
+    enterNewActivity(new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", BOLD));
     return;
   }
 
@@ -205,7 +207,7 @@ void setup() {
   setupDisplayAndFonts();
 
   exitActivity();
-  enterNewActivity(new BootActivity(renderer, inputManager));
+  enterNewActivity(new BootActivity(renderer, mappedInputManager));
 
   APP_STATE.loadFromFile();
   if (APP_STATE.openEpubPath.empty()) {

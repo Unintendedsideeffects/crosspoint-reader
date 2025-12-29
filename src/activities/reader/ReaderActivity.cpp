@@ -61,7 +61,7 @@ std::unique_ptr<Xtc> ReaderActivity::loadXtc(const std::string& path) {
 void ReaderActivity::onSelectBookFile(const std::string& path) {
   currentBookPath = path;  // Track current book path
   exitActivity();
-  enterNewActivity(new FullScreenMessageActivity(renderer, inputManager, "Loading..."));
+  enterNewActivity(new FullScreenMessageActivity(renderer, mappedInput, "Loading..."));
 
   if (isXtcFile(path)) {
     // Load XTC file
@@ -70,7 +70,7 @@ void ReaderActivity::onSelectBookFile(const std::string& path) {
       onGoToXtcReader(std::move(xtc));
     } else {
       exitActivity();
-      enterNewActivity(new FullScreenMessageActivity(renderer, inputManager, "Failed to load XTC", REGULAR,
+      enterNewActivity(new FullScreenMessageActivity(renderer, mappedInput, "Failed to load XTC", REGULAR,
                                                      EInkDisplay::HALF_REFRESH));
       delay(2000);
       onGoToFileSelection();
@@ -82,7 +82,7 @@ void ReaderActivity::onSelectBookFile(const std::string& path) {
       onGoToEpubReader(std::move(epub));
     } else {
       exitActivity();
-      enterNewActivity(new FullScreenMessageActivity(renderer, inputManager, "Failed to load epub", REGULAR,
+      enterNewActivity(new FullScreenMessageActivity(renderer, mappedInput, "Failed to load epub", REGULAR,
                                                      EInkDisplay::HALF_REFRESH));
       delay(2000);
       onGoToFileSelection();
@@ -95,7 +95,7 @@ void ReaderActivity::onGoToFileSelection(const std::string& fromBookPath) {
   // If coming from a book, start in that book's folder; otherwise start from root
   const auto initialPath = fromBookPath.empty() ? "/" : extractFolderPath(fromBookPath);
   enterNewActivity(new FileSelectionActivity(
-      renderer, inputManager, [this](const std::string& path) { onSelectBookFile(path); }, onGoBack, initialPath));
+      renderer, mappedInput, [this](const std::string& path) { onSelectBookFile(path); }, onGoBack, initialPath));
 }
 
 void ReaderActivity::onGoToEpubReader(std::unique_ptr<Epub> epub) {
@@ -103,7 +103,7 @@ void ReaderActivity::onGoToEpubReader(std::unique_ptr<Epub> epub) {
   currentBookPath = epubPath;
   exitActivity();
   enterNewActivity(new EpubReaderActivity(
-      renderer, inputManager, std::move(epub), [this, epubPath] { onGoToFileSelection(epubPath); },
+      renderer, mappedInput, std::move(epub), [this, epubPath] { onGoToFileSelection(epubPath); },
       [this] { onGoBack(); }));
 }
 
@@ -112,7 +112,7 @@ void ReaderActivity::onGoToXtcReader(std::unique_ptr<Xtc> xtc) {
   currentBookPath = xtcPath;
   exitActivity();
   enterNewActivity(new XtcReaderActivity(
-      renderer, inputManager, std::move(xtc), [this, xtcPath] { onGoToFileSelection(xtcPath); },
+      renderer, mappedInput, std::move(xtc), [this, xtcPath] { onGoToFileSelection(xtcPath); },
       [this] { onGoBack(); }));
 }
 

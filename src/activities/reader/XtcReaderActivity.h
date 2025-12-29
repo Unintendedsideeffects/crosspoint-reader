@@ -32,9 +32,9 @@ class XtcReaderActivity final : public Activity {
   void loadProgress();
 
  public:
-  explicit XtcReaderActivity(GfxRenderer& renderer, InputManager& inputManager, std::unique_ptr<Xtc> xtc,
+  explicit XtcReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::unique_ptr<Xtc> xtc,
                              const std::function<void()>& onGoBack, const std::function<void()>& onGoHome)
-      : Activity("XtcReader", renderer, inputManager), xtc(std::move(xtc)), onGoBack(onGoBack), onGoHome(onGoHome) {}
+      : Activity("XtcReader", renderer, mappedInput), xtc(std::move(xtc)), onGoBack(onGoBack), onGoHome(onGoHome) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;

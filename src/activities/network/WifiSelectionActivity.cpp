@@ -190,7 +190,7 @@ void WifiSelectionActivity::selectNetwork(const int index) {
     // Don't allow screen updates while changing activity
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     enterNewActivity(new KeyboardEntryActivity(
-        renderer, inputManager, "Enter WiFi Password",
+        renderer, mappedInput, "Enter WiFi Password",
         "",     // No initial text
         50,     // Y position
         64,     // Max password length
@@ -302,17 +302,19 @@ void WifiSelectionActivity::loop() {
 
   // Handle save prompt state
   if (state == WifiSelectionState::SAVE_PROMPT) {
-    if (inputManager.wasPressed(InputManager::BTN_LEFT) || inputManager.wasPressed(InputManager::BTN_UP)) {
+    if (mappedInput.wasPressed(MappedInputManager::Button::Up) ||
+        mappedInput.wasPressed(MappedInputManager::Button::Left)) {
       if (savePromptSelection > 0) {
         savePromptSelection--;
         updateRequired = true;
       }
-    } else if (inputManager.wasPressed(InputManager::BTN_RIGHT) || inputManager.wasPressed(InputManager::BTN_DOWN)) {
+    } else if (mappedInput.wasPressed(MappedInputManager::Button::Down) ||
+               mappedInput.wasPressed(MappedInputManager::Button::Right)) {
       if (savePromptSelection < 1) {
         savePromptSelection++;
         updateRequired = true;
       }
-    } else if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+    } else if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
       if (savePromptSelection == 0) {
         // User chose "Yes" - save the password
         xSemaphoreTake(renderingMutex, portMAX_DELAY);
@@ -321,7 +323,7 @@ void WifiSelectionActivity::loop() {
       }
       // Complete - parent will start web server
       onComplete(true);
-    } else if (inputManager.wasPressed(InputManager::BTN_BACK)) {
+    } else if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
       // Skip saving, complete anyway
       onComplete(true);
     }
@@ -330,17 +332,19 @@ void WifiSelectionActivity::loop() {
 
   // Handle forget prompt state (connection failed with saved credentials)
   if (state == WifiSelectionState::FORGET_PROMPT) {
-    if (inputManager.wasPressed(InputManager::BTN_LEFT) || inputManager.wasPressed(InputManager::BTN_UP)) {
+    if (mappedInput.wasPressed(MappedInputManager::Button::Up) ||
+        mappedInput.wasPressed(MappedInputManager::Button::Left)) {
       if (forgetPromptSelection > 0) {
         forgetPromptSelection--;
         updateRequired = true;
       }
-    } else if (inputManager.wasPressed(InputManager::BTN_RIGHT) || inputManager.wasPressed(InputManager::BTN_DOWN)) {
+    } else if (mappedInput.wasPressed(MappedInputManager::Button::Down) ||
+               mappedInput.wasPressed(MappedInputManager::Button::Right)) {
       if (forgetPromptSelection < 1) {
         forgetPromptSelection++;
         updateRequired = true;
       }
-    } else if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+    } else if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
       if (forgetPromptSelection == 0) {
         // User chose "Yes" - forget the network
         xSemaphoreTake(renderingMutex, portMAX_DELAY);
@@ -356,7 +360,7 @@ void WifiSelectionActivity::loop() {
       // Go back to network list
       state = WifiSelectionState::NETWORK_LIST;
       updateRequired = true;
-    } else if (inputManager.wasPressed(InputManager::BTN_BACK)) {
+    } else if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
       // Skip forgetting, go back to network list
       state = WifiSelectionState::NETWORK_LIST;
       updateRequired = true;
@@ -373,7 +377,8 @@ void WifiSelectionActivity::loop() {
 
   // Handle connection failed state
   if (state == WifiSelectionState::CONNECTION_FAILED) {
-    if (inputManager.wasPressed(InputManager::BTN_BACK) || inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+    if (mappedInput.wasPressed(MappedInputManager::Button::Back) ||
+        mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
       // If we used saved credentials, offer to forget the network
       if (usedSavedPassword) {
         state = WifiSelectionState::FORGET_PROMPT;
@@ -390,13 +395,13 @@ void WifiSelectionActivity::loop() {
   // Handle network list state
   if (state == WifiSelectionState::NETWORK_LIST) {
     // Check for Back button to exit (cancel)
-    if (inputManager.wasPressed(InputManager::BTN_BACK)) {
+    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
       onComplete(false);
       return;
     }
 
     // Check for Confirm button to select network or rescan
-    if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
       if (!networks.empty()) {
         selectNetwork(selectedNetworkIndex);
       } else {
@@ -406,12 +411,14 @@ void WifiSelectionActivity::loop() {
     }
 
     // Handle UP/DOWN navigation
-    if (inputManager.wasPressed(InputManager::BTN_UP) || inputManager.wasPressed(InputManager::BTN_LEFT)) {
+    if (mappedInput.wasPressed(MappedInputManager::Button::Up) ||
+        mappedInput.wasPressed(MappedInputManager::Button::Left)) {
       if (selectedNetworkIndex > 0) {
         selectedNetworkIndex--;
         updateRequired = true;
       }
-    } else if (inputManager.wasPressed(InputManager::BTN_DOWN) || inputManager.wasPressed(InputManager::BTN_RIGHT)) {
+    } else if (mappedInput.wasPressed(MappedInputManager::Button::Down) ||
+               mappedInput.wasPressed(MappedInputManager::Button::Right)) {
       if (!networks.empty() && selectedNetworkIndex < static_cast<int>(networks.size()) - 1) {
         selectedNetworkIndex++;
         updateRequired = true;
@@ -557,7 +564,8 @@ void WifiSelectionActivity::renderNetworkList() const {
 
   // Draw help text
   renderer.drawText(SMALL_FONT_ID, 20, pageHeight - 75, "* = Encrypted | + = Saved");
-  renderer.drawButtonHints(UI_FONT_ID, "« Back", "Connect", "", "");
+  const auto labels = mappedInput.mapLabels("« Back", "Connect", "", "");
+  renderer.drawButtonHints(UI_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
 void WifiSelectionActivity::renderConnecting() const {

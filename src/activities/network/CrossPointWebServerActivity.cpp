@@ -57,7 +57,7 @@ void CrossPointWebServerActivity::onEnter() {
   // Launch network mode selection subactivity
   Serial.printf("[%lu] [WEBACT] Launching NetworkModeSelectionActivity...\n", millis());
   enterNewActivity(new NetworkModeSelectionActivity(
-      renderer, inputManager, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
+      renderer, mappedInput, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
       [this]() { onGoBack(); }  // Cancel goes back to home
       ));
 }
@@ -141,7 +141,7 @@ void CrossPointWebServerActivity::onNetworkModeSelected(const NetworkMode mode) 
 
     state = WebServerActivityState::WIFI_SELECTION;
     Serial.printf("[%lu] [WEBACT] Launching WifiSelectionActivity...\n", millis());
-    enterNewActivity(new WifiSelectionActivity(renderer, inputManager,
+    enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
                                                [this](const bool connected) { onWifiSelectionComplete(connected); }));
   } else {
     // AP mode - start access point
@@ -174,7 +174,7 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
     exitActivity();
     state = WebServerActivityState::MODE_SELECTION;
     enterNewActivity(new NetworkModeSelectionActivity(
-        renderer, inputManager, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
+        renderer, mappedInput, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
         [this]() { onGoBack(); }));
   }
 }
@@ -305,7 +305,7 @@ void CrossPointWebServerActivity::loop() {
     }
 
     // Handle exit on Back button
-    if (inputManager.wasPressed(InputManager::BTN_BACK)) {
+    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
       onGoBack();
       return;
     }
@@ -428,5 +428,6 @@ void CrossPointWebServerActivity::renderServerRunning() const {
                               REGULAR);
   }
 
-  renderer.drawButtonHints(UI_FONT_ID, "« Exit", "", "", "");
+  const auto labels = mappedInput.mapLabels("« Exit", "", "", "");
+  renderer.drawButtonHints(UI_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
