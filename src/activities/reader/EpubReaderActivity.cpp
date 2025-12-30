@@ -65,6 +65,16 @@ void EpubReaderActivity::onEnter() {
     }
     f.close();
   }
+  // We may want a better condition to detect if we are opening for the first time.
+  // This will trigger if the book is re-opened at Chapter 0.
+  if (currentSpineIndex == 0) {
+    int textSpineIndex = epub->getSpineIndexForTextReference();
+    if (textSpineIndex != 0) {
+      currentSpineIndex = textSpineIndex;
+      Serial.printf("[%lu] [ERS] Opened for first time, navigating to text reference at index %d\n", millis(),
+                    textSpineIndex);
+    }
+  }
 
   // Save current epub as last opened epub
   APP_STATE.openEpubPath = epub->getPath();
