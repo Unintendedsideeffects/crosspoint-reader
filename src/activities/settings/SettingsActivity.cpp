@@ -38,11 +38,13 @@ const SettingInfo readerSettings[readerSettingsCount] = {
 constexpr int controlsSettingsCount = 4;
 const SettingInfo controlsSettings[controlsSettingsCount] = {
     SettingInfo::Enum("Front Button Layout", &CrossPointSettings::frontButtonLayout,
-                      {"Bck, Cnfrm, Lft, Rght", "Lft, Rght, Bck, Cnfrm", "Lft, Bck, Cnfrm, Rght"}),
+                      {"Bck, Cnfrm, Lft, Rght", "Lft, Rght, Bck, Cnfrm", "Lft, Bck, Cnfrm, Rght",
+                       "Lft, Lft, Rght, Rght"}),
     SettingInfo::Enum("Side Button Layout (reader)", &CrossPointSettings::sideButtonLayout,
                       {"Prev, Next", "Next, Prev"}),
     SettingInfo::Toggle("Long-press Chapter Skip", &CrossPointSettings::longPressChapterSkip),
-    SettingInfo::Enum("Short Power Button Click", &CrossPointSettings::shortPwrBtn, {"Ignore", "Sleep", "Page Turn"})};
+    SettingInfo::Enum("Short Power Button Click", &CrossPointSettings::shortPwrBtn,
+                      {"Ignore", "Sleep", "Page Turn", "Select"})};
 
 constexpr int systemSettingsCount = 6;
 const SettingInfo systemSettings[systemSettingsCount] = {
