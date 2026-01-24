@@ -2,10 +2,10 @@ name: Build
 
 on:
   push:
-    branches: [master]
+    branches: [master, integration/mainline]
     tags: ["v*"]
   pull_request:
-    branches: [master]
+    branches: [master, integration/mainline]
   workflow_dispatch:
 
 concurrency:
@@ -35,6 +35,9 @@ jobs:
 
       - name: Install PlatformIO
         run: pip install --upgrade platformio
+
+      - name: Static checks (cppcheck)
+        run: pio check -e default
 
       - name: Build firmware (dev)
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
