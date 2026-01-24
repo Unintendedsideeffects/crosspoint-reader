@@ -6,6 +6,13 @@ namespace {
 constexpr unsigned long POWER_DOUBLE_TAP_MS = 350;
 }
 
+namespace {
+bool isDualSideLayout() {
+  return static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout) ==
+         CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT;
+}
+}
+
 decltype(InputManager::BTN_BACK) MappedInputManager::mapButton(const Button button) const {
   const auto frontLayout = static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout);
   const auto sideLayout = static_cast<CrossPointSettings::SIDE_BUTTON_LAYOUT>(SETTINGS.sideButtonLayout);
@@ -13,6 +20,8 @@ decltype(InputManager::BTN_BACK) MappedInputManager::mapButton(const Button butt
   switch (button) {
     case Button::Back:
       switch (frontLayout) {
+        case CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT:
+          return InputManager::BTN_BACK;
         case CrossPointSettings::LEFT_RIGHT_BACK_CONFIRM:
           return InputManager::BTN_LEFT;
         case CrossPointSettings::LEFT_BACK_CONFIRM_RIGHT:
@@ -23,6 +32,8 @@ decltype(InputManager::BTN_BACK) MappedInputManager::mapButton(const Button butt
       }
     case Button::Confirm:
       switch (frontLayout) {
+        case CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT:
+          return InputManager::BTN_CONFIRM;
         case CrossPointSettings::LEFT_RIGHT_BACK_CONFIRM:
           return InputManager::BTN_RIGHT;
         case CrossPointSettings::LEFT_BACK_CONFIRM_RIGHT:
@@ -33,6 +44,8 @@ decltype(InputManager::BTN_BACK) MappedInputManager::mapButton(const Button butt
       }
     case Button::Left:
       switch (frontLayout) {
+        case CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT:
+          return InputManager::BTN_LEFT;
         case CrossPointSettings::LEFT_RIGHT_BACK_CONFIRM:
         case CrossPointSettings::LEFT_BACK_CONFIRM_RIGHT:
           return InputManager::BTN_BACK;
@@ -42,6 +55,8 @@ decltype(InputManager::BTN_BACK) MappedInputManager::mapButton(const Button butt
       }
     case Button::Right:
       switch (frontLayout) {
+        case CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT:
+          return InputManager::BTN_RIGHT;
         case CrossPointSettings::LEFT_RIGHT_BACK_CONFIRM:
           return InputManager::BTN_CONFIRM;
         case CrossPointSettings::BACK_CONFIRM_LEFT_RIGHT:
@@ -134,6 +149,17 @@ bool MappedInputManager::wasPressed(const Button button) const {
   if (button == Button::Back && consumePowerBack()) {
     return true;
   }
+  if (isDualSideLayout()) {
+    if (button == Button::Left) {
+      return inputManager.wasPressed(InputManager::BTN_BACK) || inputManager.wasPressed(InputManager::BTN_LEFT);
+    }
+    if (button == Button::Right) {
+      return inputManager.wasPressed(InputManager::BTN_CONFIRM) || inputManager.wasPressed(InputManager::BTN_RIGHT);
+    }
+    if (button == Button::Back || button == Button::Confirm) {
+      return false;
+    }
+  }
   return inputManager.wasPressed(mapButton(button));
 }
 
@@ -144,10 +170,34 @@ bool MappedInputManager::wasReleased(const Button button) const {
   if (button == Button::Back && consumePowerBack()) {
     return true;
   }
+  if (isDualSideLayout()) {
+    if (button == Button::Left) {
+      return inputManager.wasReleased(InputManager::BTN_BACK) || inputManager.wasReleased(InputManager::BTN_LEFT);
+    }
+    if (button == Button::Right) {
+      return inputManager.wasReleased(InputManager::BTN_CONFIRM) || inputManager.wasReleased(InputManager::BTN_RIGHT);
+    }
+    if (button == Button::Back || button == Button::Confirm) {
+      return false;
+    }
+  }
   return inputManager.wasReleased(mapButton(button));
 }
 
-bool MappedInputManager::isPressed(const Button button) const { return inputManager.isPressed(mapButton(button)); }
+bool MappedInputManager::isPressed(const Button button) const {
+  if (isDualSideLayout()) {
+    if (button == Button::Left) {
+      return inputManager.isPressed(InputManager::BTN_BACK) || inputManager.isPressed(InputManager::BTN_LEFT);
+    }
+    if (button == Button::Right) {
+      return inputManager.isPressed(InputManager::BTN_CONFIRM) || inputManager.isPressed(InputManager::BTN_RIGHT);
+    }
+    if (button == Button::Back || button == Button::Confirm) {
+      return false;
+    }
+  }
+  return inputManager.isPressed(mapButton(button));
+}
 
 bool MappedInputManager::wasAnyPressed() const { return inputManager.wasAnyPressed(); }
 
@@ -160,6 +210,8 @@ MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const
   const auto layout = static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout);
 
   switch (layout) {
+    case CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT:
+      return {previous, previous, next, next};
     case CrossPointSettings::LEFT_RIGHT_BACK_CONFIRM:
       return {previous, next, back, confirm};
     case CrossPointSettings::LEFT_BACK_CONFIRM_RIGHT:
