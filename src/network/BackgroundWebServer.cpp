@@ -100,7 +100,7 @@ void BackgroundWebServer::startServer() {
     return;
   }
   if (!server) {
-    server = std::make_unique<CrossPointWebServer>();
+    server.reset(new CrossPointWebServer());
   }
   server->begin();
   if (!server->isRunning()) {
