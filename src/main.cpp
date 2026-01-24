@@ -25,6 +25,7 @@
 #include "activities/settings/SettingsActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
 #include "fontIds.h"
+#include "network/BackgroundWebServer.h"
 
 #define SPI_FQ 40000000
 // Display SPI pins (custom pins for XteinkX4, not hardware SPI defaults)
@@ -366,10 +367,16 @@ void loop() {
     lastMemPrint = millis();
   }
 
+  const bool usbConnected = isUsbConnected();
+  const bool allowBackgroundServer =
+      SETTINGS.backgroundServerOnCharge && (!currentActivity || !currentActivity->blocksBackgroundServer());
+  BackgroundWebServer& backgroundServer = BackgroundWebServer::getInstance();
+  backgroundServer.loop(usbConnected, allowBackgroundServer);
+
   // Check for any user activity (button press or release) or active background work
   static unsigned long lastActivityTime = millis();
   if (inputManager.wasAnyPressed() || inputManager.wasAnyReleased() ||
-      (currentActivity && currentActivity->preventAutoSleep())) {
+      (currentActivity && currentActivity->preventAutoSleep()) || backgroundServer.shouldPreventAutoSleep()) {
     lastActivityTime = millis();  // Reset inactivity timer
   }
 
@@ -406,7 +413,7 @@ void loop() {
   // Add delay at the end of the loop to prevent tight spinning
   // When an activity requests skip loop delay (e.g., webserver running), use yield() for faster response
   // Otherwise, use longer delay to save power
-  if (currentActivity && currentActivity->skipLoopDelay()) {
+  if ((currentActivity && currentActivity->skipLoopDelay()) || backgroundServer.wantsFastLoop()) {
     yield();  // Give FreeRTOS a chance to run tasks, but return immediately
   } else {
     delay(10);  // Normal delay when no activity requires fast response
