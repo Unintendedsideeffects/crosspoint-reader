@@ -2,6 +2,10 @@
 
 #include "CrossPointSettings.h"
 
+namespace {
+constexpr unsigned long POWER_DOUBLE_TAP_MS = 350;
+}
+
 decltype(InputManager::BTN_BACK) MappedInputManager::mapButton(const Button button) const {
   const auto frontLayout = static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout);
   const auto sideLayout = static_cast<CrossPointSettings::SIDE_BUTTON_LAYOUT>(SETTINGS.sideButtonLayout);
@@ -72,21 +76,72 @@ decltype(InputManager::BTN_BACK) MappedInputManager::mapButton(const Button butt
   return InputManager::BTN_BACK;
 }
 
+void MappedInputManager::updatePowerTapState() const {
+  if (SETTINGS.shortPwrBtn != CrossPointSettings::SHORT_PWRBTN::SELECT) {
+    pendingPowerReleaseMs = 0;
+    doubleTapReadyMs = 0;
+    return;
+  }
+
+  const unsigned long now = millis();
+  if (doubleTapReadyMs && now - doubleTapReadyMs > POWER_DOUBLE_TAP_MS) {
+    doubleTapReadyMs = 0;
+  }
+
+  if (!inputManager.wasReleased(InputManager::BTN_POWER)) {
+    return;
+  }
+
+  if (inputManager.getHeldTime() >= SETTINGS.getPowerButtonDuration()) {
+    return;
+  }
+
+  if (pendingPowerReleaseMs && now - pendingPowerReleaseMs <= POWER_DOUBLE_TAP_MS) {
+    pendingPowerReleaseMs = 0;
+    doubleTapReadyMs = now;
+    return;
+  }
+
+  pendingPowerReleaseMs = now;
+}
+
+bool MappedInputManager::consumePowerConfirm() const {
+  updatePowerTapState();
+  if (!pendingPowerReleaseMs || doubleTapReadyMs) {
+    return false;
+  }
+  const unsigned long now = millis();
+  if (now - pendingPowerReleaseMs > POWER_DOUBLE_TAP_MS) {
+    pendingPowerReleaseMs = 0;
+    return true;
+  }
+  return false;
+}
+
+bool MappedInputManager::consumePowerBack() const {
+  updatePowerTapState();
+  if (!doubleTapReadyMs) {
+    return false;
+  }
+  doubleTapReadyMs = 0;
+  return true;
+}
+
 bool MappedInputManager::wasPressed(const Button button) const {
-  if (button == Button::Confirm &&
-      SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SELECT &&
-      inputManager.wasReleased(InputManager::BTN_POWER) &&
-      inputManager.getHeldTime() < SETTINGS.getPowerButtonDuration()) {
+  if (button == Button::Confirm && consumePowerConfirm()) {
+    return true;
+  }
+  if (button == Button::Back && consumePowerBack()) {
     return true;
   }
   return inputManager.wasPressed(mapButton(button));
 }
 
 bool MappedInputManager::wasReleased(const Button button) const {
-  if (button == Button::Confirm &&
-      SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SELECT &&
-      inputManager.wasReleased(InputManager::BTN_POWER) &&
-      inputManager.getHeldTime() < SETTINGS.getPowerButtonDuration()) {
+  if (button == Button::Confirm && consumePowerConfirm()) {
+    return true;
+  }
+  if (button == Button::Back && consumePowerBack()) {
     return true;
   }
   return inputManager.wasReleased(mapButton(button));

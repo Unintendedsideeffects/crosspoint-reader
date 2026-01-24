@@ -13,7 +13,7 @@ class MappedInputManager {
     const char* btn4;
   };
 
-  explicit MappedInputManager(InputManager& inputManager) : inputManager(inputManager) {}
+ explicit MappedInputManager(InputManager& inputManager) : inputManager(inputManager) {}
 
   bool wasPressed(Button button) const;
   bool wasReleased(Button button) const;
@@ -21,9 +21,14 @@ class MappedInputManager {
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;
   unsigned long getHeldTime() const;
-  Labels mapLabels(const char* back, const char* confirm, const char* previous, const char* next) const;
+ Labels mapLabels(const char* back, const char* confirm, const char* previous, const char* next) const;
 
  private:
   InputManager& inputManager;
+  mutable unsigned long pendingPowerReleaseMs = 0;
+  mutable unsigned long doubleTapReadyMs = 0;
   decltype(InputManager::BTN_BACK) mapButton(Button button) const;
+  void updatePowerTapState() const;
+  bool consumePowerConfirm() const;
+  bool consumePowerBack() const;
 };
