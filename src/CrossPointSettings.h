@@ -94,6 +94,8 @@ class CrossPointSettings {
   uint8_t hideBatteryPercentage = HIDE_NEVER;
   // Long-press chapter skip on side buttons
   uint8_t longPressChapterSkip = 1;
+  // Background web server while charging (USB connected)
+  uint8_t backgroundServerOnCharge = 0;
 
   ~CrossPointSettings() = default;
 

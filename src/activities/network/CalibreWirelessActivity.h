@@ -132,4 +132,5 @@ class CalibreWirelessActivity final : public Activity {
   void loop() override;
   bool preventAutoSleep() override { return true; }
   bool skipLoopDelay() override { return true; }
+  bool blocksBackgroundServer() override { return true; }
 };
