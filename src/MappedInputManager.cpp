@@ -72,9 +72,25 @@ decltype(InputManager::BTN_BACK) MappedInputManager::mapButton(const Button butt
   return InputManager::BTN_BACK;
 }
 
-bool MappedInputManager::wasPressed(const Button button) const { return inputManager.wasPressed(mapButton(button)); }
+bool MappedInputManager::wasPressed(const Button button) const {
+  if (button == Button::Confirm &&
+      SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SELECT &&
+      inputManager.wasReleased(InputManager::BTN_POWER) &&
+      inputManager.getHeldTime() < SETTINGS.getPowerButtonDuration()) {
+    return true;
+  }
+  return inputManager.wasPressed(mapButton(button));
+}
 
-bool MappedInputManager::wasReleased(const Button button) const { return inputManager.wasReleased(mapButton(button)); }
+bool MappedInputManager::wasReleased(const Button button) const {
+  if (button == Button::Confirm &&
+      SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SELECT &&
+      inputManager.wasReleased(InputManager::BTN_POWER) &&
+      inputManager.getHeldTime() < SETTINGS.getPowerButtonDuration()) {
+    return true;
+  }
+  return inputManager.wasReleased(mapButton(button));
+}
 
 bool MappedInputManager::isPressed(const Button button) const { return inputManager.isPressed(mapButton(button)); }
 
