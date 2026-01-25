@@ -2,6 +2,8 @@
 
 #include <Utf8.h>
 
+#include "SpiBusMutex.h"
+
 void GfxRenderer::insertFont(const int fontId, EpdFontFamily font) { fontMap.insert({fontId, font}); }
 
 void GfxRenderer::rotateCoordinates(const int x, const int y, int* rotatedX, int* rotatedY) const {
@@ -398,6 +400,7 @@ void GfxRenderer::invertScreen() const {
 }
 
 void GfxRenderer::displayBuffer(const EInkDisplay::RefreshMode refreshMode) const {
+  SpiBusMutex::Guard guard;
   einkDisplay.displayBuffer(refreshMode);
 }
 

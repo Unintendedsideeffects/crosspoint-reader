@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "fontIds.h"
+#include "SpiBusMutex.h"
 
 // Initialize the static instance
 CrossPointSettings CrossPointSettings::instance;
@@ -19,6 +20,7 @@ constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 }  // namespace
 
 bool CrossPointSettings::saveToFile() const {
+  SpiBusMutex::Guard guard;
   // Make sure the directory exists
   SdMan.mkdir("/.crosspoint");
 
