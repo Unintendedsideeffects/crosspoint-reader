@@ -12,8 +12,8 @@
 namespace {
 constexpr const char* MDNS_HOSTNAME = "crosspoint";
 
-bool findBestCredential(const std::vector<WifiCredential>& credentials, const int16_t scanCount,
-                        std::string& outSsid, std::string& outPassword) {
+bool findBestCredential(const std::vector<WifiCredential>& credentials, const int16_t scanCount, std::string& outSsid,
+                        std::string& outPassword) {
   int bestRssi = -1000;
   bool found = false;
   for (int i = 0; i < scanCount; i++) {

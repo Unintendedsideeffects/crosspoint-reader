@@ -37,9 +37,9 @@ const SettingInfo readerSettings[readerSettingsCount] = {
 
 constexpr int controlsSettingsCount = 4;
 const SettingInfo controlsSettings[controlsSettingsCount] = {
-    SettingInfo::Enum("Front Button Layout", &CrossPointSettings::frontButtonLayout,
-                      {"Bck, Cnfrm, Lft, Rght", "Lft, Rght, Bck, Cnfrm", "Lft, Bck, Cnfrm, Rght",
-                       "Lft, Lft, Rght, Rght"}),
+    SettingInfo::Enum(
+        "Front Button Layout", &CrossPointSettings::frontButtonLayout,
+        {"Bck, Cnfrm, Lft, Rght", "Lft, Rght, Bck, Cnfrm", "Lft, Bck, Cnfrm, Rght", "Lft, Lft, Rght, Rght"}),
     SettingInfo::Enum("Side Button Layout (reader)", &CrossPointSettings::sideButtonLayout,
                       {"Prev, Next", "Next, Prev"}),
     SettingInfo::Toggle("Long-press Chapter Skip", &CrossPointSettings::longPressChapterSkip),
@@ -51,7 +51,9 @@ const SettingInfo systemSettings[systemSettingsCount] = {
     SettingInfo::Enum("Time to Sleep", &CrossPointSettings::sleepTimeout,
                       {"1 min", "5 min", "10 min", "15 min", "30 min"}),
     SettingInfo::Toggle("Background Server on Charge", &CrossPointSettings::backgroundServerOnCharge),
-    SettingInfo::Action("KOReader Sync"), SettingInfo::Action("Calibre Settings"), SettingInfo::Action("Clear Cache"),
+    SettingInfo::Action("KOReader Sync"),
+    SettingInfo::Action("Calibre Settings"),
+    SettingInfo::Action("Clear Cache"),
     SettingInfo::Action("Check for updates")};
 }  // namespace
 

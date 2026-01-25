@@ -106,6 +106,9 @@ void MappedInputManager::updatePowerTapState() const {
   }
 
   if (inputManager.getHeldTime() >= SETTINGS.getPowerButtonDuration()) {
+    // Long press detected - clear any pending short-tap state
+    pendingPowerReleaseMs = 0;
+    doubleTapReadyMs = 0;
     return;
   }
 
@@ -141,12 +144,8 @@ bool MappedInputManager::consumePowerBack() const {
 }
 
 bool MappedInputManager::wasPressed(const Button button) const {
-  if (button == Button::Confirm && consumePowerConfirm()) {
-    return true;
-  }
-  if (button == Button::Back && consumePowerBack()) {
-    return true;
-  }
+  // Note: Power button events are handled in wasReleased() only, since all
+  // existing call sites use wasReleased and it matches physical button behavior.
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return inputManager.wasPressed(InputManager::BTN_BACK) || inputManager.wasPressed(InputManager::BTN_LEFT);
@@ -162,8 +161,12 @@ bool MappedInputManager::wasPressed(const Button button) const {
 }
 
 bool MappedInputManager::wasReleased(const Button button) const {
-  // Note: Power button events are only handled in wasPressed() to avoid
-  // consuming the same event twice when code checks both wasPressed and wasReleased.
+  if (button == Button::Confirm && consumePowerConfirm()) {
+    return true;
+  }
+  if (button == Button::Back && consumePowerBack()) {
+    return true;
+  }
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return inputManager.wasReleased(InputManager::BTN_BACK) || inputManager.wasReleased(InputManager::BTN_LEFT);
