@@ -12,10 +12,10 @@ const char* SettingsActivity::categoryNames[categoryCount] = {"Display", "Reader
 
 namespace {
 const std::vector<std::string> timeModeOptions = {"UTC", "Local", "Manual"};
-const std::vector<std::string> timeZoneOptions = {
-    "UTC-12", "UTC-11", "UTC-10", "UTC-9",  "UTC-8",  "UTC-7",  "UTC-6",  "UTC-5", "UTC-4",
-    "UTC-3",  "UTC-2",  "UTC-1",  "UTC+0",  "UTC+1",  "UTC+2",  "UTC+3",  "UTC+4", "UTC+5",
-    "UTC+6",  "UTC+7",  "UTC+8",  "UTC+9",  "UTC+10", "UTC+11", "UTC+12", "UTC+13", "UTC+14"};
+const std::vector<std::string> timeZoneOptions = {"UTC-12", "UTC-11", "UTC-10", "UTC-9",  "UTC-8",  "UTC-7", "UTC-6",
+                                                  "UTC-5",  "UTC-4",  "UTC-3",  "UTC-2",  "UTC-1",  "UTC+0", "UTC+1",
+                                                  "UTC+2",  "UTC+3",  "UTC+4",  "UTC+5",  "UTC+6",  "UTC+7", "UTC+8",
+                                                  "UTC+9",  "UTC+10", "UTC+11", "UTC+12", "UTC+13", "UTC+14"};
 constexpr int displaySettingsCount = 5;
 const SettingInfo displaySettings[displaySettingsCount] = {
     // Should match with SLEEP_SCREEN_MODE

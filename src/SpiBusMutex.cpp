@@ -3,9 +3,7 @@
 namespace {
 StaticSemaphore_t spiMutexBuffer;
 
-SemaphoreHandle_t createMutex() {
-  return xSemaphoreCreateMutexStatic(&spiMutexBuffer);
-}
+SemaphoreHandle_t createMutex() { return xSemaphoreCreateMutexStatic(&spiMutexBuffer); }
 }  // namespace
 
 SemaphoreHandle_t SpiBusMutex::get() {

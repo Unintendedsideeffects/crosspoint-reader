@@ -2,11 +2,11 @@
 
 #include <GfxRenderer.h>
 #include <HardwareSerial.h>
+#include <sys/time.h>
 
 #include <cstdio>
-#include <ctime>
 #include <cstring>
-#include <sys/time.h>
+#include <ctime>
 
 #include "CalibreSettingsActivity.h"
 #include "ClearCacheActivity.h"
@@ -23,7 +23,7 @@ std::string formatTimeForInput() {
   if (now <= 0) {
     return "2024-01-01 00:00";
   }
-  std::tm timeInfo {};
+  std::tm timeInfo{};
   gmtime_r(&now, &timeInfo);
   char buffer[20] = {};
   std::snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d", timeInfo.tm_year + 1900, timeInfo.tm_mon + 1,
@@ -187,7 +187,7 @@ void CategorySettingsActivity::toggleCurrentSetting() {
           16,     // maxLength
           false,  // not password
           [this](const std::string& text) {
-            std::tm parsed {};
+            std::tm parsed{};
             if (parseManualTime(text, parsed)) {
               std::time_t localEpoch = std::mktime(&parsed);
               if (localEpoch > 0) {

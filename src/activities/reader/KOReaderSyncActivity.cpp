@@ -10,7 +10,6 @@
 #include "fontIds.h"
 #include "util/TimeSync.h"
 
-
 void KOReaderSyncActivity::taskTrampoline(void* param) {
   auto* self = static_cast<KOReaderSyncActivity*>(param);
   self->displayTaskLoop();

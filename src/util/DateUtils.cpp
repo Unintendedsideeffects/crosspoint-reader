@@ -24,7 +24,7 @@ std::string currentDate() {
     now += SETTINGS.getTimeZoneOffsetSeconds();
   }
 
-  std::tm timeInfo {};
+  std::tm timeInfo{};
   if (!gmtime_r(&now, &timeInfo)) {
     return {};
   }

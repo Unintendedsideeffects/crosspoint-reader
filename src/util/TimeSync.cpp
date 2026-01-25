@@ -1,10 +1,10 @@
 #include "TimeSync.h"
 
-#include <ctime>
-
 #include <esp_sntp.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+
+#include <ctime>
 
 #include "CrossPointSettings.h"
 

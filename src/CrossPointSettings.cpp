@@ -6,8 +6,8 @@
 
 #include <cstring>
 
-#include "fontIds.h"
 #include "SpiBusMutex.h"
+#include "fontIds.h"
 
 // Initialize the static instance
 CrossPointSettings CrossPointSettings::instance;

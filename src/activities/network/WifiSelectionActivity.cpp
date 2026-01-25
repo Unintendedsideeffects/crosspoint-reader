@@ -4,7 +4,6 @@
 #include <WiFi.h>
 
 #include <algorithm>
-
 #include <map>
 
 #include "MappedInputManager.h"
@@ -366,7 +365,7 @@ void WifiSelectionActivity::loop() {
         xSemaphoreGive(renderingMutex);
         // Update the network list to reflect the change
         const auto network = std::find_if(networks.begin(), networks.end(),
-                                     [this](const WifiNetworkInfo& net) { return net.ssid == selectedSSID; });
+                                          [this](const WifiNetworkInfo& net) { return net.ssid == selectedSSID; });
         if (network != networks.end()) {
           network->hasSavedPassword = false;
         }
