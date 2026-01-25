@@ -63,6 +63,7 @@ bool CrossPointSettings::saveToFile() const {
 }
 
 bool CrossPointSettings::loadFromFile() {
+  SpiBusMutex::Guard guard;
   FsFile inputFile;
   if (!SdMan.openFileForRead("CPS", SETTINGS_FILE, inputFile)) {
     return false;
