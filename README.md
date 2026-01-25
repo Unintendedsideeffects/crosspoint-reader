@@ -71,6 +71,7 @@ See [Development](#development) below.
 ### Prerequisites
 
 * **PlatformIO Core** (`pio`) or **VS Code + PlatformIO IDE**
+* **uv** (for repo-local venv builds)
 * Python 3.8+
 * USB-C cable for flashing the ESP32-C3
 * Xteink X4
@@ -84,6 +85,23 @@ git clone --recursive https://github.com/daveallie/crosspoint-reader
 
 # Or, if you've already cloned without --recursive:
 git submodule update --init --recursive
+```
+
+### Local builds (venv)
+
+If you don't want a system-wide PlatformIO install, use `uv` to manage a repo-local venv:
+
+```sh
+uv venv .venv
+uv pip install --python .venv/bin/python platformio
+.venv/bin/pio run -e default
+```
+
+Other examples:
+
+```sh
+.venv/bin/pio check -e default
+.venv/bin/pio run --target upload
 ```
 
 ### Flashing your device

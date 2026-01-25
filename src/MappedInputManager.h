@@ -13,7 +13,7 @@ class MappedInputManager {
     const char* btn4;
   };
 
- explicit MappedInputManager(InputManager& inputManager) : inputManager(inputManager) {}
+  explicit MappedInputManager(InputManager& inputManager) : inputManager(inputManager) {}
 
   bool wasPressed(Button button) const;
   bool wasReleased(Button button) const;
@@ -21,7 +21,7 @@ class MappedInputManager {
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;
   unsigned long getHeldTime() const;
- Labels mapLabels(const char* back, const char* confirm, const char* previous, const char* next) const;
+  Labels mapLabels(const char* back, const char* confirm, const char* previous, const char* next) const;
 
  private:
   InputManager& inputManager;

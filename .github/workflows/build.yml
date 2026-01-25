@@ -95,12 +95,25 @@ jobs:
         run: |
           # Show actual structure for debugging
           find firmware -type f
-          mv firmware/firmware.bin crosspoint-${{ github.ref_name }}.bin
+          # Locate firmware.bin (artifact preserves directory structure)
+          FIRMWARE_BIN="$(find firmware -type f -name 'firmware.bin' -print -quit)"
+          if [ -z "$FIRMWARE_BIN" ]; then
+            echo "ERROR: firmware.bin not found in downloaded artifact"
+            exit 1
+          fi
+          mv "$FIRMWARE_BIN" crosspoint-${{ github.ref_name }}.bin
+          # Optionally include partitions.bin if present
+          PARTITIONS_BIN="$(find firmware -type f -name 'partitions.bin' -print -quit)"
+          if [ -n "$PARTITIONS_BIN" ]; then
+            mv "$PARTITIONS_BIN" crosspoint-${{ github.ref_name }}-partitions.bin
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: crosspoint-${{ github.ref_name }}.bin
+          files: |
+            crosspoint-${{ github.ref_name }}.bin
+            crosspoint-${{ github.ref_name }}-partitions.bin
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}

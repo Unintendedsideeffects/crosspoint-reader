@@ -4,14 +4,12 @@
 
 namespace {
 constexpr unsigned long POWER_DOUBLE_TAP_MS = 350;
-}
 
-namespace {
 bool isDualSideLayout() {
   return static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout) ==
          CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT;
 }
-}
+}  // namespace
 
 decltype(InputManager::BTN_BACK) MappedInputManager::mapButton(const Button button) const {
   const auto frontLayout = static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout);
@@ -164,12 +162,8 @@ bool MappedInputManager::wasPressed(const Button button) const {
 }
 
 bool MappedInputManager::wasReleased(const Button button) const {
-  if (button == Button::Confirm && consumePowerConfirm()) {
-    return true;
-  }
-  if (button == Button::Back && consumePowerBack()) {
-    return true;
-  }
+  // Note: Power button events are only handled in wasPressed() to avoid
+  // consuming the same event twice when code checks both wasPressed and wasReleased.
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return inputManager.wasReleased(InputManager::BTN_BACK) || inputManager.wasReleased(InputManager::BTN_LEFT);

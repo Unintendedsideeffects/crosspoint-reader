@@ -15,6 +15,7 @@
 #include "KOReaderCredentialStore.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "WifiCredentialStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
 #include "activities/browser/OpdsBookBrowserActivity.h"
@@ -322,6 +323,7 @@ void setup() {
 
   SETTINGS.loadFromFile();
   KOREADER_STORE.loadFromFile();
+  WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
 
   if (!isWakeupAfterFlashing()) {
     // For normal wakeups (not immediately after flashing), verify long press

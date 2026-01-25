@@ -5,6 +5,8 @@
 #include <HardwareSerial.h>
 #include <WiFi.h>
 
+#include <algorithm>
+
 #include "CrossPointWebServer.h"
 
 namespace {
@@ -19,16 +21,15 @@ bool findBestCredential(const std::vector<WifiCredential>& credentials, const in
     if (ssid.empty()) {
       continue;
     }
-    for (const auto& cred : credentials) {
-      if (cred.ssid == ssid) {
-        const int rssi = WiFi.RSSI(i);
-        if (!found || rssi > bestRssi) {
-          bestRssi = rssi;
-          outSsid = cred.ssid;
-          outPassword = cred.password;
-          found = true;
-        }
-        break;
+    auto it = std::find_if(credentials.begin(), credentials.end(),
+                           [&ssid](const WifiCredential& cred) { return cred.ssid == ssid; });
+    if (it != credentials.end()) {
+      const int rssi = WiFi.RSSI(i);
+      if (!found || rssi > bestRssi) {
+        bestRssi = rssi;
+        outSsid = it->ssid;
+        outPassword = it->password;
+        found = true;
       }
     }
   }
@@ -56,10 +57,11 @@ void BackgroundWebServer::ensureCredentialsLoaded() {
   if (credentialsLoaded) {
     return;
   }
-  WIFI_STORE.loadFromFile();
+  // WIFI_STORE is loaded in setup() before any background display tasks,
+  // so we just copy the cached credentials without SD card access here.
   credentials = WIFI_STORE.getCredentials();
   credentialsLoaded = true;
-  Serial.printf("[%lu] [BWS] Loaded %zu saved WiFi networks\n", millis(), credentials.size());
+  Serial.printf("[%lu] [BWS] Using %zu saved WiFi networks\n", millis(), credentials.size());
 }
 
 void BackgroundWebServer::startScan() {
@@ -238,7 +240,8 @@ void BackgroundWebServer::loop(const bool usbConnected, const bool allowRun) {
 
   if (state == State::IDLE) {
     if (WiFi.status() == WL_CONNECTED) {
-      wifiOwned = true;
+      // Use existing connection but don't claim ownership - another activity
+      // may have established it. Only claim ownership when we connect ourselves.
       startServer();
     } else {
       startScan();
@@ -300,9 +303,11 @@ void BackgroundWebServer::loop(const bool usbConnected, const bool allowRun) {
     }
     if (WiFi.status() != WL_CONNECTED) {
       scheduleRetry("wifi disconnected");
+      return;
     }
     if (millis() - stateStartMs >= SERVER_WINDOW_MS) {
       scheduleRetry("server window expired");
+      return;
     }
     return;
   }
