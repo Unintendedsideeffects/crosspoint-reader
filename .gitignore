@@ -7,3 +7,7 @@ lib/EpdFont/fontsrc
 *.generated.h
 build
 **/__pycache__/
+
+# Build artifacts
+firmware.bin
+partitions.bin
