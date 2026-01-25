@@ -144,17 +144,13 @@ bool MappedInputManager::consumePowerBack() const {
 }
 
 bool MappedInputManager::wasPressed(const Button button) const {
-  // Note: Power button events are handled in wasReleased() only, since all
-  // existing call sites use wasReleased and it matches physical button behavior.
+  // In dual-side layout, Left/Right combine two physical buttons
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return inputManager.wasPressed(InputManager::BTN_BACK) || inputManager.wasPressed(InputManager::BTN_LEFT);
     }
     if (button == Button::Right) {
       return inputManager.wasPressed(InputManager::BTN_CONFIRM) || inputManager.wasPressed(InputManager::BTN_RIGHT);
-    }
-    if (button == Button::Back || button == Button::Confirm) {
-      return false;
     }
   }
   return inputManager.wasPressed(mapButton(button));
@@ -167,6 +163,7 @@ bool MappedInputManager::wasReleased(const Button button) const {
   if (button == Button::Back && consumePowerBack()) {
     return true;
   }
+  // In dual-side layout, Left/Right combine two physical buttons
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return inputManager.wasReleased(InputManager::BTN_BACK) || inputManager.wasReleased(InputManager::BTN_LEFT);
@@ -174,23 +171,18 @@ bool MappedInputManager::wasReleased(const Button button) const {
     if (button == Button::Right) {
       return inputManager.wasReleased(InputManager::BTN_CONFIRM) || inputManager.wasReleased(InputManager::BTN_RIGHT);
     }
-    if (button == Button::Back || button == Button::Confirm) {
-      return false;
-    }
   }
   return inputManager.wasReleased(mapButton(button));
 }
 
 bool MappedInputManager::isPressed(const Button button) const {
+  // In dual-side layout, Left/Right combine two physical buttons
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return inputManager.isPressed(InputManager::BTN_BACK) || inputManager.isPressed(InputManager::BTN_LEFT);
     }
     if (button == Button::Right) {
       return inputManager.isPressed(InputManager::BTN_CONFIRM) || inputManager.isPressed(InputManager::BTN_RIGHT);
-    }
-    if (button == Button::Back || button == Button::Confirm) {
-      return false;
     }
   }
   return inputManager.isPressed(mapButton(button));
