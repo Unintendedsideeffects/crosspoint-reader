@@ -87,6 +87,20 @@ void CategorySettingsActivity::toggleCurrentSetting() {
   } else if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
     const uint8_t currentValue = SETTINGS.*(setting.valuePtr);
     SETTINGS.*(setting.valuePtr) = (currentValue + 1) % static_cast<uint8_t>(setting.enumValues.size());
+
+    // When switching to dual-side layout, force power button to SELECT mode
+    // (required for Back/Confirm functionality in that layout)
+    if (strcmp(setting.name, "Front Button Layout") == 0 &&
+        SETTINGS.frontButtonLayout == CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT) {
+      SETTINGS.shortPwrBtn = CrossPointSettings::SELECT;
+    }
+
+    // Prevent changing power button away from SELECT while in dual-side mode
+    // (SELECT is required for Back/Confirm in that layout)
+    if (strcmp(setting.name, "Short Power Button Click") == 0 &&
+        SETTINGS.frontButtonLayout == CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT) {
+      SETTINGS.shortPwrBtn = CrossPointSettings::SELECT;
+    }
   } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
     const int8_t currentValue = SETTINGS.*(setting.valuePtr);
     if (currentValue + setting.valueRange.step > setting.valueRange.max) {
