@@ -1,13 +1,15 @@
 #include "SpiBusMutex.h"
 
 namespace {
-SemaphoreHandle_t spiMutex = nullptr;
+StaticSemaphore_t spiMutexBuffer;
+
+SemaphoreHandle_t createMutex() {
+  return xSemaphoreCreateMutexStatic(&spiMutexBuffer);
 }
+}  // namespace
 
 SemaphoreHandle_t SpiBusMutex::get() {
-  if (!spiMutex) {
-    spiMutex = xSemaphoreCreateMutex();
-  }
+  static SemaphoreHandle_t spiMutex = createMutex();
   return spiMutex;
 }
 
