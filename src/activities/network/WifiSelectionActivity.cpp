@@ -3,12 +3,15 @@
 #include <GfxRenderer.h>
 #include <WiFi.h>
 
+#include <algorithm>
+
 #include <map>
 
 #include "MappedInputManager.h"
 #include "WifiCredentialStore.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "fontIds.h"
+#include "util/TimeSync.h"
 
 void WifiSelectionActivity::taskTrampoline(void* param) {
   auto* self = static_cast<WifiSelectionActivity*>(param);
@@ -251,6 +254,8 @@ void WifiSelectionActivity::checkConnectionStatus() {
     snprintf(ipStr, sizeof(ipStr), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
     connectedIP = ipStr;
 
+    TimeSync::syncTimeWithNtpLowMemory();
+
     // If we entered a new password, ask if user wants to save it
     // Otherwise, immediately complete so parent can start web server
     if (!usedSavedPassword && !enteredPassword.empty()) {
@@ -360,7 +365,7 @@ void WifiSelectionActivity::loop() {
         WIFI_STORE.removeCredential(selectedSSID);
         xSemaphoreGive(renderingMutex);
         // Update the network list to reflect the change
-        const auto network = find_if(networks.begin(), networks.end(),
+        const auto network = std::find_if(networks.begin(), networks.end(),
                                      [this](const WifiNetworkInfo& net) { return net.ssid == selectedSSID; });
         if (network != networks.end()) {
           network->hasSavedPassword = false;

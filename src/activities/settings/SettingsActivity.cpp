@@ -11,6 +11,11 @@
 const char* SettingsActivity::categoryNames[categoryCount] = {"Display", "Reader", "Controls", "System"};
 
 namespace {
+const std::vector<std::string> timeModeOptions = {"UTC", "Local", "Manual"};
+const std::vector<std::string> timeZoneOptions = {
+    "UTC-12", "UTC-11", "UTC-10", "UTC-9",  "UTC-8",  "UTC-7",  "UTC-6",  "UTC-5", "UTC-4",
+    "UTC-3",  "UTC-2",  "UTC-1",  "UTC+0",  "UTC+1",  "UTC+2",  "UTC+3",  "UTC+4", "UTC+5",
+    "UTC+6",  "UTC+7",  "UTC+8",  "UTC+9",  "UTC+10", "UTC+11", "UTC+12", "UTC+13", "UTC+14"};
 constexpr int displaySettingsCount = 5;
 const SettingInfo displaySettings[displaySettingsCount] = {
     // Should match with SLEEP_SCREEN_MODE
@@ -46,11 +51,15 @@ const SettingInfo controlsSettings[controlsSettingsCount] = {
     SettingInfo::Enum("Short Power Button Click", &CrossPointSettings::shortPwrBtn,
                       {"Ignore", "Sleep", "Page Turn", "Select"})};
 
-constexpr int systemSettingsCount = 6;
+constexpr int systemSettingsCount = 10;
 const SettingInfo systemSettings[systemSettingsCount] = {
+    SettingInfo::Enum("Time Mode", &CrossPointSettings::timeMode, timeModeOptions),
+    SettingInfo::Enum("Time Zone", &CrossPointSettings::timeZoneOffset, timeZoneOptions),
+    SettingInfo::Action("Set Manual Time"),
     SettingInfo::Enum("Time to Sleep", &CrossPointSettings::sleepTimeout,
                       {"1 min", "5 min", "10 min", "15 min", "30 min"}),
     SettingInfo::Toggle("Background Server on Charge", &CrossPointSettings::backgroundServerOnCharge),
+    SettingInfo::Enum("TODO Fallback Cover", &CrossPointSettings::todoFallbackCover, {"Standard", "None"}),
     SettingInfo::Action("KOReader Sync"),
     SettingInfo::Action("Calibre Settings"),
     SettingInfo::Action("Clear Cache"),

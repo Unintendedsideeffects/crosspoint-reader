@@ -63,6 +63,12 @@ class CrossPointSettings {
   // Hide battery percentage
   enum HIDE_BATTERY_PERCENTAGE { HIDE_NEVER = 0, HIDE_READER = 1, HIDE_ALWAYS = 2 };
 
+  // TODO fallback cover options
+  enum TODO_FALLBACK_COVER { TODO_FALLBACK_STANDARD = 0, TODO_FALLBACK_NONE = 1 };
+
+  // Time mode options
+  enum TIME_MODE { TIME_UTC = 0, TIME_LOCAL = 1, TIME_MANUAL = 2 };
+
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
   // Sleep screen cover mode settings
@@ -101,6 +107,14 @@ class CrossPointSettings {
   uint8_t longPressChapterSkip = 1;
   // Background web server while charging (USB connected)
   uint8_t backgroundServerOnCharge = 0;
+  // TODO fallback cover when daily file is missing
+  uint8_t todoFallbackCover = TODO_FALLBACK_STANDARD;
+  // Time settings
+  uint8_t timeMode = TIME_UTC;
+  // Timezone offset index: 0 = UTC-12, 12 = UTC+0, 26 = UTC+14
+  uint8_t timeZoneOffset = 12;
+  // Last successful NTP sync (epoch seconds, UTC)
+  uint32_t lastTimeSyncEpoch = 0;
 
   ~CrossPointSettings() = default;
 
@@ -118,6 +132,7 @@ class CrossPointSettings {
   float getReaderLineCompression() const;
   unsigned long getSleepTimeoutMs() const;
   int getRefreshFrequency() const;
+  int getTimeZoneOffsetSeconds() const;
 };
 
 // Helper macro to access settings

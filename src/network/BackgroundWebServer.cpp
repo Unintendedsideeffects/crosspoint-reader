@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include "CrossPointWebServer.h"
+#include "util/TimeSync.h"
 
 namespace {
 constexpr const char* MDNS_HOSTNAME = "crosspoint";
@@ -101,6 +102,7 @@ void BackgroundWebServer::startServer() {
     scheduleRetry("low heap");
     return;
   }
+  TimeSync::syncTimeWithNtpLowMemory();
   if (!server) {
     server.reset(new CrossPointWebServer());
   }

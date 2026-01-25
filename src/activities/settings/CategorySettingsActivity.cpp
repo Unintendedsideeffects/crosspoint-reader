@@ -3,7 +3,10 @@
 #include <GfxRenderer.h>
 #include <HardwareSerial.h>
 
+#include <cstdio>
+#include <ctime>
 #include <cstring>
+#include <sys/time.h>
 
 #include "CalibreSettingsActivity.h"
 #include "ClearCacheActivity.h"
@@ -11,7 +14,49 @@
 #include "KOReaderSettingsActivity.h"
 #include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
+#include "activities/util/KeyboardEntryActivity.h"
 #include "fontIds.h"
+
+namespace {
+std::string formatTimeForInput() {
+  const std::time_t now = std::time(nullptr);
+  if (now <= 0) {
+    return "2024-01-01 00:00";
+  }
+  std::tm timeInfo {};
+  gmtime_r(&now, &timeInfo);
+  char buffer[20] = {};
+  std::snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d", timeInfo.tm_year + 1900, timeInfo.tm_mon + 1,
+                timeInfo.tm_mday, timeInfo.tm_hour, timeInfo.tm_min);
+  return std::string(buffer);
+}
+
+bool parseManualTime(const std::string& text, std::tm& out) {
+  int year = 0;
+  int month = 0;
+  int day = 0;
+  int hour = 0;
+  int minute = 0;
+  const int matched = std::sscanf(text.c_str(), "%d-%d-%d %d:%d", &year, &month, &day, &hour, &minute);
+  if (matched < 3) {
+    return false;
+  }
+  if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+  if (matched >= 5 && (hour < 0 || hour > 23 || minute < 0 || minute > 59)) {
+    return false;
+  }
+  out = {};
+  out.tm_year = year - 1900;
+  out.tm_mon = month - 1;
+  out.tm_mday = day;
+  out.tm_hour = (matched >= 5) ? hour : 0;
+  out.tm_min = (matched >= 5) ? minute : 0;
+  out.tm_sec = 0;
+  return true;
+}
+}  // namespace
 
 void CategorySettingsActivity::taskTrampoline(void* param) {
   auto* self = static_cast<CategorySettingsActivity*>(param);
@@ -132,6 +177,42 @@ void CategorySettingsActivity::toggleCurrentSetting() {
         exitActivity();
         updateRequired = true;
       }));
+      xSemaphoreGive(renderingMutex);
+    } else if (strcmp(setting.name, "Set Manual Time") == 0) {
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      exitActivity();
+      const std::string prefill = formatTimeForInput();
+      enterNewActivity(new KeyboardEntryActivity(
+          renderer, mappedInput, "Manual Time (YYYY-MM-DD HH:MM)", prefill, 10,
+          16,     // maxLength
+          false,  // not password
+          [this](const std::string& text) {
+            std::tm parsed {};
+            if (parseManualTime(text, parsed)) {
+              std::time_t localEpoch = std::mktime(&parsed);
+              if (localEpoch > 0) {
+                int offsetSeconds = 0;
+                const auto mode = static_cast<CrossPointSettings::TIME_MODE>(SETTINGS.timeMode);
+                if (mode == CrossPointSettings::TIME_LOCAL) {
+                  offsetSeconds = SETTINGS.getTimeZoneOffsetSeconds();
+                }
+                const std::time_t utcEpoch = localEpoch - offsetSeconds;
+                timeval tv;
+                tv.tv_sec = utcEpoch;
+                tv.tv_usec = 0;
+                settimeofday(&tv, nullptr);
+                SETTINGS.timeMode = CrossPointSettings::TIME_MANUAL;
+                SETTINGS.lastTimeSyncEpoch = static_cast<uint32_t>(utcEpoch);
+                SETTINGS.saveToFile();
+              }
+            }
+            exitActivity();
+            updateRequired = true;
+          },
+          [this]() {
+            exitActivity();
+            updateRequired = true;
+          }));
       xSemaphoreGive(renderingMutex);
     } else if (strcmp(setting.name, "Check for updates") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);

@@ -24,9 +24,11 @@
 #include "activities/network/CrossPointWebServerActivity.h"
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
+#include "activities/todo/TodoFallbackActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
 #include "fontIds.h"
 #include "network/BackgroundWebServer.h"
+#include "util/DateUtils.h"
 
 #define SPI_FQ 40000000
 // Display SPI pins (custom pins for XteinkX4, not hardware SPI defaults)
@@ -216,6 +218,7 @@ void enterDeepSleep() {
 
 void onGoHome();
 void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab);
+void onGoToTodo();
 void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
   exitActivity();
   enterNewActivity(
@@ -248,10 +251,30 @@ void onGoToBrowser() {
   enterNewActivity(new OpdsBookBrowserActivity(renderer, mappedInputManager, onGoHome));
 }
 
+void onGoToTodo() {
+  exitActivity();
+
+  const std::string today = DateUtils::currentDate();
+  if (!today.empty()) {
+    const std::string todoPath = "/daily/" + today + ".epub";
+    if (SdMan.exists(todoPath.c_str())) {
+      enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoPath, MyLibraryActivity::Tab::Files,
+                                          onGoHome, onGoToMyLibraryWithTab));
+      return;
+    }
+  }
+
+  if (SETTINGS.todoFallbackCover == CrossPointSettings::TODO_FALLBACK_STANDARD) {
+    enterNewActivity(new TodoFallbackActivity(renderer, mappedInputManager, today, onGoHome));
+  } else {
+    enterNewActivity(new FullScreenMessageActivity(renderer, mappedInputManager, "No TODO for today"));
+  }
+}
+
 void onGoHome() {
   exitActivity();
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
-                                    onGoToFileTransfer, onGoToBrowser));
+                                    onGoToFileTransfer, onGoToBrowser, onGoToTodo));
 }
 
 void setupDisplayAndFonts() {

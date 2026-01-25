@@ -14,7 +14,7 @@ CrossPointSettings CrossPointSettings::instance;
 namespace {
 constexpr uint8_t SETTINGS_FILE_VERSION = 1;
 // Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 21;
+constexpr uint8_t SETTINGS_COUNT = 25;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 }  // namespace
 
@@ -50,6 +50,10 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writePod(outputFile, longPressChapterSkip);
   serialization::writePod(outputFile, hyphenationEnabled);
   serialization::writePod(outputFile, backgroundServerOnCharge);
+  serialization::writePod(outputFile, todoFallbackCover);
+  serialization::writePod(outputFile, timeMode);
+  serialization::writePod(outputFile, timeZoneOffset);
+  serialization::writePod(outputFile, lastTimeSyncEpoch);
   outputFile.close();
 
   Serial.printf("[%lu] [CPS] Settings saved to file\n", millis());
@@ -122,6 +126,14 @@ bool CrossPointSettings::loadFromFile() {
     serialization::readPod(inputFile, hyphenationEnabled);
     if (++settingsRead >= fileSettingsCount) break;
     serialization::readPod(inputFile, backgroundServerOnCharge);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, todoFallbackCover);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, timeMode);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, timeZoneOffset);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, lastTimeSyncEpoch);
     if (++settingsRead >= fileSettingsCount) break;
   } while (false);
 
@@ -196,6 +208,11 @@ int CrossPointSettings::getRefreshFrequency() const {
     case REFRESH_30:
       return 30;
   }
+}
+
+int CrossPointSettings::getTimeZoneOffsetSeconds() const {
+  const int offsetHours = static_cast<int>(timeZoneOffset) - 12;
+  return offsetHours * 3600;
 }
 
 int CrossPointSettings::getReaderFontId() const {
