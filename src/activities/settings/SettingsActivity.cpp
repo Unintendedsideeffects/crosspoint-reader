@@ -100,12 +100,12 @@ void SettingsActivity::loop() {
   }
 
   // Handle category selection
-  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     enterCategory(selectedCategoryIndex);
     return;
   }
 
-  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     SETTINGS.saveToFile();
     onGoHome();
     return;

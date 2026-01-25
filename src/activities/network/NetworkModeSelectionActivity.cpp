@@ -51,13 +51,13 @@ void NetworkModeSelectionActivity::onExit() {
 
 void NetworkModeSelectionActivity::loop() {
   // Handle back button - cancel
-  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     onCancel();
     return;
   }
 
   // Handle confirm button - select current option
-  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     const NetworkMode mode = (selectedIndex == 0) ? NetworkMode::JOIN_NETWORK : NetworkMode::CREATE_HOTSPOT;
     onModeSelected(mode);
     return;

@@ -49,13 +49,13 @@ void CategorySettingsActivity::loop() {
   }
 
   // Handle actions with early return
-  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     toggleCurrentSetting();
     updateRequired = true;
     return;
   }
 
-  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     SETTINGS.saveToFile();
     onGoBack();
     return;

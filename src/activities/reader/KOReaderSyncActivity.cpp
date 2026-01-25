@@ -381,7 +381,7 @@ void KOReaderSyncActivity::loop() {
   }
 
   if (state == NO_CREDENTIALS || state == SYNC_FAILED || state == UPLOAD_COMPLETE) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       onCancel();
     }
     return;
@@ -399,7 +399,7 @@ void KOReaderSyncActivity::loop() {
       updateRequired = true;
     }
 
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       if (selectedOption == 0) {
         // Apply remote progress
         onSyncComplete(remotePosition.spineIndex, remotePosition.pageNumber);
@@ -412,14 +412,14 @@ void KOReaderSyncActivity::loop() {
       }
     }
 
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       onCancel();
     }
     return;
   }
 
   if (state == NO_REMOTE_PROGRESS) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       // Calculate hash if not done yet
       if (documentHash.empty()) {
         if (KOREADER_STORE.getMatchMethod() == DocumentMatchMethod::FILENAME) {
@@ -431,7 +431,7 @@ void KOReaderSyncActivity::loop() {
       performUpload();
     }
 
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       onCancel();
     }
     return;

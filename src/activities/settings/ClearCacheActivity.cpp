@@ -151,7 +151,7 @@ void ClearCacheActivity::clearCache() {
 
 void ClearCacheActivity::loop() {
   if (state == WARNING) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       Serial.printf("[%lu] [CLEAR_CACHE] User confirmed, starting cache clear\n", millis());
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       state = CLEARING;
@@ -162,7 +162,7 @@ void ClearCacheActivity::loop() {
       clearCache();
     }
 
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       Serial.printf("[%lu] [CLEAR_CACHE] User cancelled\n", millis());
       goBack();
     }
@@ -170,7 +170,7 @@ void ClearCacheActivity::loop() {
   }
 
   if (state == SUCCESS || state == FAILED) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       goBack();
     }
     return;

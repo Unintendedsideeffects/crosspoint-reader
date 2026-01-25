@@ -144,7 +144,7 @@ bool MappedInputManager::consumePowerBack() const {
 }
 
 bool MappedInputManager::wasPressed(const Button button) const {
-  // In dual-side layout, Left/Right combine two physical buttons
+  // In dual-side layout, Left/Right combine two physical buttons; Back/Confirm disabled on front
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return inputManager.wasPressed(InputManager::BTN_BACK) || inputManager.wasPressed(InputManager::BTN_LEFT);
@@ -152,18 +152,22 @@ bool MappedInputManager::wasPressed(const Button button) const {
     if (button == Button::Right) {
       return inputManager.wasPressed(InputManager::BTN_CONFIRM) || inputManager.wasPressed(InputManager::BTN_RIGHT);
     }
+    if (button == Button::Back || button == Button::Confirm) {
+      return false;  // No front button for Back/Confirm in dual-side mode
+    }
   }
   return inputManager.wasPressed(mapButton(button));
 }
 
 bool MappedInputManager::wasReleased(const Button button) const {
+  // Power button Back/Confirm checked first - works in all layouts
   if (button == Button::Confirm && consumePowerConfirm()) {
     return true;
   }
   if (button == Button::Back && consumePowerBack()) {
     return true;
   }
-  // In dual-side layout, Left/Right combine two physical buttons
+  // In dual-side layout, Left/Right combine two physical buttons; Back/Confirm disabled on front
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return inputManager.wasReleased(InputManager::BTN_BACK) || inputManager.wasReleased(InputManager::BTN_LEFT);
@@ -171,18 +175,24 @@ bool MappedInputManager::wasReleased(const Button button) const {
     if (button == Button::Right) {
       return inputManager.wasReleased(InputManager::BTN_CONFIRM) || inputManager.wasReleased(InputManager::BTN_RIGHT);
     }
+    if (button == Button::Back || button == Button::Confirm) {
+      return false;  // No front button for Back/Confirm in dual-side mode - use power button
+    }
   }
   return inputManager.wasReleased(mapButton(button));
 }
 
 bool MappedInputManager::isPressed(const Button button) const {
-  // In dual-side layout, Left/Right combine two physical buttons
+  // In dual-side layout, Left/Right combine two physical buttons; Back/Confirm disabled on front
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return inputManager.isPressed(InputManager::BTN_BACK) || inputManager.isPressed(InputManager::BTN_LEFT);
     }
     if (button == Button::Right) {
       return inputManager.isPressed(InputManager::BTN_CONFIRM) || inputManager.isPressed(InputManager::BTN_RIGHT);
+    }
+    if (button == Button::Back || button == Button::Confirm) {
+      return false;  // No front button for Back/Confirm in dual-side mode
     }
   }
   return inputManager.isPressed(mapButton(button));

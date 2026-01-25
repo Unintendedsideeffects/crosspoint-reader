@@ -99,7 +99,7 @@ void CalibreWirelessActivity::onExit() {
 }
 
 void CalibreWirelessActivity::loop() {
-  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     onComplete();
     return;
   }
