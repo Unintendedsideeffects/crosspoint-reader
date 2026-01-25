@@ -175,7 +175,7 @@ void KOReaderSyncActivity::onEnter() {
         [](void* param) {
           auto* self = static_cast<KOReaderSyncActivity*>(param);
           // Sync time first
-          syncTimeWithNTP();
+          TimeSync::syncTimeWithNtpLowMemory();
           xSemaphoreTake(self->renderingMutex, portMAX_DELAY);
           self->statusMessage = "Calculating document hash...";
           xSemaphoreGive(self->renderingMutex);
