@@ -15,6 +15,7 @@
 #include "KOReaderCredentialStore.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "WifiCredentialStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
 #include "activities/browser/OpdsBookBrowserActivity.h"
@@ -23,8 +24,12 @@
 #include "activities/network/CrossPointWebServerActivity.h"
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
+#include "activities/todo/TodoActivity.h"
+#include "activities/todo/TodoFallbackActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
 #include "fontIds.h"
+#include "network/BackgroundWebServer.h"
+#include "util/DateUtils.h"
 
 HalDisplay display;
 HalGPIO gpio;
@@ -204,6 +209,7 @@ void enterDeepSleep() {
 
 void onGoHome();
 void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab);
+void onGoToTodo();
 void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
   exitActivity();
   enterNewActivity(
@@ -236,10 +242,46 @@ void onGoToBrowser() {
   enterNewActivity(new OpdsBookBrowserActivity(renderer, mappedInputManager, onGoHome));
 }
 
+void onGoToTodo() {
+  exitActivity();
+
+  const std::string today = DateUtils::currentDate();
+  if (today.empty()) {
+    // Fallback if date is not set
+    enterNewActivity(new TodoFallbackActivity(renderer, mappedInputManager, today, onGoHome));
+    return;
+  }
+
+  // 1. Try markdown (.md)
+  const std::string todoMdPath = "/daily/" + today + ".md";
+  if (SdMan.exists(todoMdPath.c_str())) {
+    enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
+    return;
+  }
+
+  // 2. Try text (.txt)
+  const std::string todoTxtPath = "/daily/" + today + ".txt";
+  if (SdMan.exists(todoTxtPath.c_str())) {
+    enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoTxtPath, today, onGoHome));
+    return;
+  }
+
+  // 3. Try EPUB (ReadOnly/ReaderActivity)
+  const std::string todoEpubPath = "/daily/" + today + ".epub";
+  if (SdMan.exists(todoEpubPath.c_str())) {
+    enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, MyLibraryActivity::Tab::Files,
+                                        onGoHome, onGoToMyLibraryWithTab));
+    return;
+  }
+
+  // 4. Default: Create/Open new MD list
+  enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
+}
+
 void onGoHome() {
   exitActivity();
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
-                                    onGoToFileTransfer, onGoToBrowser));
+                                    onGoToFileTransfer, onGoToBrowser, onGoToTodo));
 }
 
 void setupDisplayAndFonts() {
@@ -293,6 +335,7 @@ void setup() {
 
   SETTINGS.loadFromFile();
   KOREADER_STORE.loadFromFile();
+  WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
 
   if (gpio.isWakeupByPowerButton()) {
     // For normal wakeups, verify power button press duration
@@ -339,9 +382,16 @@ void loop() {
     lastMemPrint = millis();
   }
 
+  const bool usbConnected = isUsbConnected();
+  const bool allowBackgroundServer =
+      SETTINGS.backgroundServerOnCharge && (!currentActivity || !currentActivity->blocksBackgroundServer());
+  BackgroundWebServer& backgroundServer = BackgroundWebServer::getInstance();
+  backgroundServer.loop(usbConnected, allowBackgroundServer);
+
   // Check for any user activity (button press or release) or active background work
   static unsigned long lastActivityTime = millis();
-  if (gpio.wasAnyPressed() || gpio.wasAnyReleased() || (currentActivity && currentActivity->preventAutoSleep())) {
+  if (gpio.wasAnyPressed() || gpio.wasAnyReleased() ||
+      (currentActivity && currentActivity->preventAutoSleep()) || backgroundServer.shouldPreventAutoSleep()) {
     lastActivityTime = millis();  // Reset inactivity timer
   }
 
@@ -377,7 +427,7 @@ void loop() {
   // Add delay at the end of the loop to prevent tight spinning
   // When an activity requests skip loop delay (e.g., webserver running), use yield() for faster response
   // Otherwise, use longer delay to save power
-  if (currentActivity && currentActivity->skipLoopDelay()) {
+  if ((currentActivity && currentActivity->skipLoopDelay()) || backgroundServer.wantsFastLoop()) {
     yield();  // Give FreeRTOS a chance to run tasks, but return immediately
   } else {
     delay(10);  // Normal delay when no activity requires fast response

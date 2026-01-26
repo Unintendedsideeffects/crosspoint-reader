@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "CrossPointSettings.h"
+#include "SpiBusMutex.h"
 #include "util/UrlUtils.h"
 
 bool HttpDownloader::fetchUrl(const std::string& url, Stream& outContent) {
@@ -100,13 +101,21 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
   Serial.printf("[%lu] [HTTP] Content-Length: %zu\n", millis(), contentLength);
 
   // Remove existing file if present
-  if (SdMan.exists(destPath.c_str())) {
-    SdMan.remove(destPath.c_str());
+  {
+    SpiBusMutex::Guard guard;
+    if (SdMan.exists(destPath.c_str())) {
+      SdMan.remove(destPath.c_str());
+    }
   }
 
   // Open file for writing
   FsFile file;
-  if (!SdMan.openFileForWrite("HTTP", destPath.c_str(), file)) {
+  bool openSuccess = false;
+  {
+    SpiBusMutex::Guard guard;
+    openSuccess = SdMan.openFileForWrite("HTTP", destPath.c_str(), file);
+  }
+  if (!openSuccess) {
     Serial.printf("[%lu] [HTTP] Failed to open file for writing\n", millis());
     http.end();
     return FILE_ERROR;
@@ -116,8 +125,11 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
   WiFiClient* stream = http.getStreamPtr();
   if (!stream) {
     Serial.printf("[%lu] [HTTP] Failed to get stream\n", millis());
-    file.close();
-    SdMan.remove(destPath.c_str());
+    {
+      SpiBusMutex::Guard guard;
+      file.close();
+      SdMan.remove(destPath.c_str());
+    }
     http.end();
     return HTTP_ERROR;
   }
@@ -141,11 +153,18 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
       break;
     }
 
-    const size_t written = file.write(buffer, bytesRead);
+    size_t written = 0;
+    {
+      SpiBusMutex::Guard guard;
+      written = file.write(buffer, bytesRead);
+    }
     if (written != bytesRead) {
       Serial.printf("[%lu] [HTTP] Write failed: wrote %zu of %zu bytes\n", millis(), written, bytesRead);
-      file.close();
-      SdMan.remove(destPath.c_str());
+      {
+        SpiBusMutex::Guard guard;
+        file.close();
+        SdMan.remove(destPath.c_str());
+      }
       http.end();
       return FILE_ERROR;
     }
@@ -157,7 +176,10 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
     }
   }
 
-  file.close();
+  {
+    SpiBusMutex::Guard guard;
+    file.close();
+  }
   http.end();
 
   Serial.printf("[%lu] [HTTP] Downloaded %zu bytes\n", millis(), downloaded);
@@ -165,7 +187,10 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
   // Verify download size if known
   if (contentLength > 0 && downloaded != contentLength) {
     Serial.printf("[%lu] [HTTP] Size mismatch: got %zu, expected %zu\n", millis(), downloaded, contentLength);
-    SdMan.remove(destPath.c_str());
+    {
+      SpiBusMutex::Guard guard;
+      SdMan.remove(destPath.c_str());
+    }
     return HTTP_ERROR;
   }
 

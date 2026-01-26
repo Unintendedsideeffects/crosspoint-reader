@@ -25,6 +25,12 @@ class MappedInputManager {
 
  private:
   HalGPIO& gpio;
+  mutable unsigned long pendingPowerReleaseMs = 0;
+  mutable unsigned long doubleTapReadyMs = 0;
+  mutable bool powerReleaseConsumed = false;
 
   bool mapButton(Button button, bool (HalGPIO::*fn)(uint8_t) const) const;
+  void updatePowerTapState() const;
+  bool consumePowerConfirm() const;
+  bool consumePowerBack() const;
 };

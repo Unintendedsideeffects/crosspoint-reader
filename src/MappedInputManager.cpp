@@ -3,6 +3,8 @@
 #include "CrossPointSettings.h"
 
 namespace {
+constexpr unsigned long POWER_DOUBLE_TAP_MS = 350;
+
 using ButtonIndex = uint8_t;
 
 struct FrontLayoutMap {
@@ -22,7 +24,8 @@ constexpr FrontLayoutMap kFrontLayouts[] = {
     {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT},
     {HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT, HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM},
     {HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT, HalGPIO::BTN_BACK, HalGPIO::BTN_RIGHT},
-    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_RIGHT, HalGPIO::BTN_LEFT},
+    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_RIGHT, HalGPIO::BTN_LEFT}, // Index 3: BACK_CONFIRM_RIGHT_LEFT
+    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT}, // Index 4: LEFT_LEFT_RIGHT_RIGHT (placeholder)
 };
 
 // Order matches CrossPointSettings::SIDE_BUTTON_LAYOUT.
@@ -30,6 +33,11 @@ constexpr SideLayoutMap kSideLayouts[] = {
     {HalGPIO::BTN_UP, HalGPIO::BTN_DOWN},
     {HalGPIO::BTN_DOWN, HalGPIO::BTN_UP},
 };
+
+bool isDualSideLayout() {
+  return static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout) ==
+         CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT;
+}
 }  // namespace
 
 bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint8_t) const) const {
@@ -62,11 +70,116 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
   return false;
 }
 
-bool MappedInputManager::wasPressed(const Button button) const { return mapButton(button, &HalGPIO::wasPressed); }
+void MappedInputManager::updatePowerTapState() const {
+  if (SETTINGS.shortPwrBtn != CrossPointSettings::SHORT_PWRBTN::SELECT) {
+    pendingPowerReleaseMs = 0;
+    doubleTapReadyMs = 0;
+    return;
+  }
 
-bool MappedInputManager::wasReleased(const Button button) const { return mapButton(button, &HalGPIO::wasReleased); }
+  const unsigned long now = millis();
+  if (doubleTapReadyMs && now - doubleTapReadyMs > POWER_DOUBLE_TAP_MS) {
+    doubleTapReadyMs = 0;
+  }
 
-bool MappedInputManager::isPressed(const Button button) const { return mapButton(button, &HalGPIO::isPressed); }
+  if (!gpio.wasReleased(HalGPIO::BTN_POWER)) {
+    powerReleaseConsumed = false;
+    return;
+  }
+
+  if (powerReleaseConsumed) {
+    return;
+  }
+  powerReleaseConsumed = true;
+
+  if (gpio.getHeldTime() >= SETTINGS.getPowerButtonDuration()) {
+    // Long press detected - clear any pending short-tap state
+    pendingPowerReleaseMs = 0;
+    doubleTapReadyMs = 0;
+    return;
+  }
+
+  if (pendingPowerReleaseMs && now - pendingPowerReleaseMs <= POWER_DOUBLE_TAP_MS) {
+    pendingPowerReleaseMs = 0;
+    doubleTapReadyMs = now;
+    return;
+  }
+
+  pendingPowerReleaseMs = now;
+}
+
+bool MappedInputManager::consumePowerConfirm() const {
+  updatePowerTapState();
+  if (!pendingPowerReleaseMs || doubleTapReadyMs) {
+    return false;
+  }
+  const unsigned long now = millis();
+  if (now - pendingPowerReleaseMs > POWER_DOUBLE_TAP_MS) {
+    pendingPowerReleaseMs = 0;
+    return true;
+  }
+  return false;
+}
+
+bool MappedInputManager::consumePowerBack() const {
+  updatePowerTapState();
+  if (!doubleTapReadyMs) {
+    return false;
+  }
+  doubleTapReadyMs = 0;
+  return true;
+}
+
+bool MappedInputManager::wasPressed(const Button button) const {
+  if (isDualSideLayout()) {
+    if (button == Button::Left) {
+      return gpio.wasPressed(HalGPIO::BTN_BACK) || gpio.wasPressed(HalGPIO::BTN_LEFT);
+    }
+    if (button == Button::Right) {
+      return gpio.wasPressed(HalGPIO::BTN_CONFIRM) || gpio.wasPressed(HalGPIO::BTN_RIGHT);
+    }
+    if (button == Button::Back || button == Button::Confirm) {
+      return false;
+    }
+  }
+  return mapButton(button, &HalGPIO::wasPressed);
+}
+
+bool MappedInputManager::wasReleased(const Button button) const {
+  if (button == Button::Confirm && consumePowerConfirm()) {
+    return true;
+  }
+  if (button == Button::Back && consumePowerBack()) {
+    return true;
+  }
+  if (isDualSideLayout()) {
+    if (button == Button::Left) {
+      return gpio.wasReleased(HalGPIO::BTN_BACK) || gpio.wasReleased(HalGPIO::BTN_LEFT);
+    }
+    if (button == Button::Right) {
+      return gpio.wasReleased(HalGPIO::BTN_CONFIRM) || gpio.wasReleased(HalGPIO::BTN_RIGHT);
+    }
+    if (button == Button::Back || button == Button::Confirm) {
+      return false;
+    }
+  }
+  return mapButton(button, &HalGPIO::wasReleased);
+}
+
+bool MappedInputManager::isPressed(const Button button) const {
+  if (isDualSideLayout()) {
+    if (button == Button::Left) {
+      return gpio.isPressed(HalGPIO::BTN_BACK) || gpio.isPressed(HalGPIO::BTN_LEFT);
+    }
+    if (button == Button::Right) {
+      return gpio.isPressed(HalGPIO::BTN_CONFIRM) || gpio.isPressed(HalGPIO::BTN_RIGHT);
+    }
+    if (button == Button::Back || button == Button::Confirm) {
+      return false;
+    }
+  }
+  return mapButton(button, &HalGPIO::isPressed);
+}
 
 bool MappedInputManager::wasAnyPressed() const { return gpio.wasAnyPressed(); }
 
@@ -79,12 +192,14 @@ MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const
   const auto layout = static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout);
 
   switch (layout) {
+    case CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT:
+      return {previous, previous, next, next};
     case CrossPointSettings::LEFT_RIGHT_BACK_CONFIRM:
       return {previous, next, back, confirm};
     case CrossPointSettings::LEFT_BACK_CONFIRM_RIGHT:
       return {previous, back, confirm, next};
     case CrossPointSettings::BACK_CONFIRM_RIGHT_LEFT:
-      return {back, confirm, next, previous};
+      return {back, confirm, next, previous}; // Index 3 (Upstream)
     case CrossPointSettings::BACK_CONFIRM_LEFT_RIGHT:
     default:
       return {back, confirm, previous, next};

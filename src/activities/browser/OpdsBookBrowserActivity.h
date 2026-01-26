@@ -33,6 +33,7 @@ class OpdsBookBrowserActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  bool blocksBackgroundServer() override { return true; }
 
  private:
   TaskHandle_t displayTaskHandle = nullptr;
