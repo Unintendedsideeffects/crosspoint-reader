@@ -4,13 +4,10 @@
 #include <string>
 #include <vector>
 
-#include "FeatureFlags.h"
 #include "ImageToFramebufferDecoder.h"
 
-#if ENABLE_IMAGE_SLEEP
 class JpegToFramebufferConverter;
 class PngToFramebufferConverter;
-#endif
 
 class ImageDecoderFactory {
  public:
@@ -21,9 +18,7 @@ class ImageDecoderFactory {
   static std::vector<std::string> getSupportedFormats();
 
  private:
-#if ENABLE_IMAGE_SLEEP
   static std::unique_ptr<JpegToFramebufferConverter> jpegDecoder;
   static std::unique_ptr<PngToFramebufferConverter> pngDecoder;
-#endif
   static bool initialized;
 };

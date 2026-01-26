@@ -6,73 +6,20 @@
 #include <SDCardManager.h>
 #include <SdFat.h>
 
-#include "DitherUtils.h"
-#include "PixelCache.h"
+static FsFile* gPngFile = nullptr;
 
-// Context struct passed through PNGdec callbacks to avoid global mutable state.
-// The draw callback receives this via pDraw->pUser (set by png.decode()).
-// The file I/O callbacks receive the FsFile* via pFile->fHandle (set by pngOpen()).
-struct PngContext {
-  GfxRenderer* renderer;
-  const RenderConfig* config;
-  int screenWidth;
-  int screenHeight;
+static void* pngOpenForDims(const char* filename, int32_t* size) { return gPngFile; }
 
-  // Scaling state
-  float scale;
-  int srcWidth;
-  int srcHeight;
-  int dstWidth;
-  int dstHeight;
-  int lastDstY;  // Track last rendered destination Y to avoid duplicates
+static void pngCloseForDims(void* handle) {}
 
-  PixelCache cache;
-  bool caching;
-
-  PngContext()
-      : renderer(nullptr),
-        config(nullptr),
-        screenWidth(0),
-        screenHeight(0),
-        scale(1.0f),
-        srcWidth(0),
-        srcHeight(0),
-        dstWidth(0),
-        dstHeight(0),
-        lastDstY(-1),
-        caching(false) {}
-};
-
-// File I/O callbacks use pFile->fHandle to access the FsFile*,
-// avoiding the need for global file state.
-static void* pngOpenWithHandle(const char* filename, int32_t* size) {
-  FsFile* f = new FsFile();
-  if (!SdMan.openFileForRead("PNG", std::string(filename), *f)) {
-    delete f;
-    return nullptr;
-  }
-  *size = f->size();
-  return f;
+static int32_t pngReadForDims(PNGFILE* pFile, uint8_t* pBuf, int32_t len) {
+  if (!gPngFile) return 0;
+  return gPngFile->read(pBuf, len);
 }
 
-static void pngCloseWithHandle(void* handle) {
-  FsFile* f = reinterpret_cast<FsFile*>(handle);
-  if (f) {
-    f->close();
-    delete f;
-  }
-}
-
-static int32_t pngReadWithHandle(PNGFILE* pFile, uint8_t* pBuf, int32_t len) {
-  FsFile* f = reinterpret_cast<FsFile*>(pFile->fHandle);
-  if (!f) return 0;
-  return f->read(pBuf, len);
-}
-
-static int32_t pngSeekWithHandle(PNGFILE* pFile, int32_t pos) {
-  FsFile* f = reinterpret_cast<FsFile*>(pFile->fHandle);
-  if (!f) return -1;
-  return f->seek(pos);
+static int32_t pngSeekForDims(PNGFILE* pFile, int32_t pos) {
+  if (!gPngFile) return -1;
+  return gPngFile->seek(pos);
 }
 
 // Single static PNG object shared between getDimensions and decode
@@ -80,11 +27,20 @@ static int32_t pngSeekWithHandle(PNGFILE* pFile, int32_t pos) {
 static PNG png;
 
 bool PngToFramebufferConverter::getDimensionsStatic(const std::string& imagePath, ImageDimensions& out) {
-  int rc =
-      png.open(imagePath.c_str(), pngOpenWithHandle, pngCloseWithHandle, pngReadWithHandle, pngSeekWithHandle, nullptr);
+  FsFile file;
+  if (!SdMan.openFileForRead("PNG", imagePath, file)) {
+    Serial.printf("[%lu] [PNG] Failed to open file for dimensions: %s\n", millis(), imagePath.c_str());
+    return false;
+  }
+
+  gPngFile = &file;
+
+  int rc = png.open(imagePath.c_str(), pngOpenForDims, pngCloseForDims, pngReadForDims, pngSeekForDims, nullptr);
 
   if (rc != 0) {
     Serial.printf("[%lu] [PNG] Failed to open PNG for dimensions: %d\n", millis(), rc);
+    file.close();
+    gPngFile = nullptr;
     return false;
   }
 
@@ -92,128 +48,181 @@ bool PngToFramebufferConverter::getDimensionsStatic(const std::string& imagePath
   out.height = png.getHeight();
 
   png.close();
+  file.close();
+  gPngFile = nullptr;
   return true;
 }
+static GfxRenderer* gRenderer = nullptr;
+static const RenderConfig* gConfig = nullptr;
+static int gScreenWidth = 0;
+static int gScreenHeight = 0;
+static FsFile* pngFile = nullptr;
 
-// Convert entire source line to grayscale with alpha blending to white background.
-// For indexed PNGs with tRNS chunk, alpha values are stored at palette[768] onwards.
-// Processing the whole line at once improves cache locality and reduces per-pixel overhead.
-static void convertLineToGray(uint8_t* pPixels, uint8_t* grayLine, int width, int pixelType, uint8_t* palette,
-                              int hasAlpha) {
-  switch (pixelType) {
-    case PNG_PIXEL_GRAYSCALE:
-      memcpy(grayLine, pPixels, width);
-      break;
+// Scaling state for PNG
+static float gScale = 1.0f;
+static int gSrcWidth = 0;
+static int gSrcHeight = 0;
+static int gDstWidth = 0;
+static int gDstHeight = 0;
+static int gLastDstY = -1;  // Track last rendered destination Y to avoid duplicates
 
-    case PNG_PIXEL_TRUECOLOR:
-      for (int x = 0; x < width; x++) {
-        uint8_t* p = &pPixels[x * 3];
-        grayLine[x] = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
-      }
-      break;
+// Pixel cache for PNG (uses scaled dimensions)
+static uint8_t* gCacheBuffer = nullptr;
+static int gCacheWidth = 0;
+static int gCacheHeight = 0;
+static int gCacheBytesPerRow = 0;
+static int gCacheOriginX = 0;
+static int gCacheOriginY = 0;
 
-    case PNG_PIXEL_INDEXED:
-      if (palette) {
-        if (hasAlpha) {
-          for (int x = 0; x < width; x++) {
-            uint8_t idx = pPixels[x];
-            uint8_t* p = &palette[idx * 3];
-            uint8_t gray = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
-            uint8_t alpha = palette[768 + idx];
-            grayLine[x] = (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
-          }
-        } else {
-          for (int x = 0; x < width; x++) {
-            uint8_t* p = &palette[pPixels[x] * 3];
-            grayLine[x] = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
-          }
-        }
-      } else {
-        memcpy(grayLine, pPixels, width);
-      }
-      break;
+static void cacheSetPixel(int screenX, int screenY, uint8_t value) {
+  if (!gCacheBuffer) return;
+  int localX = screenX - gCacheOriginX;
+  int localY = screenY - gCacheOriginY;
+  if (localX < 0 || localX >= gCacheWidth || localY < 0 || localY >= gCacheHeight) return;
 
-    case PNG_PIXEL_GRAY_ALPHA:
-      for (int x = 0; x < width; x++) {
-        uint8_t gray = pPixels[x * 2];
-        uint8_t alpha = pPixels[x * 2 + 1];
-        grayLine[x] = (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
-      }
-      break;
+  int byteIdx = localY * gCacheBytesPerRow + localX / 4;
+  int bitShift = 6 - (localX % 4) * 2;  // MSB first: pixel 0 at bits 6-7
+  gCacheBuffer[byteIdx] = (gCacheBuffer[byteIdx] & ~(0x03 << bitShift)) | ((value & 0x03) << bitShift);
+}
 
-    case PNG_PIXEL_TRUECOLOR_ALPHA:
-      for (int x = 0; x < width; x++) {
-        uint8_t* p = &pPixels[x * 4];
-        uint8_t gray = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
-        uint8_t alpha = p[3];
-        grayLine[x] = (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
-      }
-      break;
+// 4x4 Bayer matrix for ordered dithering
+static const uint8_t bayer4x4[4][4] = {
+    {0, 8, 2, 10},
+    {12, 4, 14, 6},
+    {3, 11, 1, 9},
+    {15, 7, 13, 5},
+};
 
-    default:
-      memset(grayLine, 128, width);
-      break;
+// Apply Bayer dithering and quantize to 4 levels (0-3)
+// Stateless - works correctly with any pixel processing order
+static uint8_t applyBayerDither4Level(uint8_t gray, int x, int y) {
+  int bayer = bayer4x4[y & 3][x & 3];
+  int dither = (bayer - 8) * 5;  // Scale to ±40 (half of quantization step 85)
+
+  int adjusted = gray + dither;
+  if (adjusted < 0) adjusted = 0;
+  if (adjusted > 255) adjusted = 255;
+
+  if (adjusted < 64) return 0;
+  if (adjusted < 128) return 1;
+  if (adjusted < 192) return 2;
+  return 3;
+}
+
+// Draw a pixel respecting the current render mode for grayscale support
+static void drawPixelWithRenderMode(GfxRenderer* renderer, int x, int y, uint8_t pixelValue) {
+  GfxRenderer::RenderMode renderMode = renderer->getRenderMode();
+  if (renderMode == GfxRenderer::BW && pixelValue < 3) {
+    renderer->drawPixel(x, y, true);
+  } else if (renderMode == GfxRenderer::GRAYSCALE_MSB && (pixelValue == 1 || pixelValue == 2)) {
+    renderer->drawPixel(x, y, false);
+  } else if (renderMode == GfxRenderer::GRAYSCALE_LSB && pixelValue == 1) {
+    renderer->drawPixel(x, y, false);
   }
 }
 
-// Stack buffer for grayscale line conversion (max width from PNGdec)
-static uint8_t grayLineBuffer[PNG_MAX_BUFFERED_PIXELS / 2];
+void* pngOpen(const char* filename, int32_t* size) {
+  pngFile = new FsFile();
+  if (!SdMan.openFileForRead("PNG", std::string(filename), *pngFile)) {
+    delete pngFile;
+    pngFile = nullptr;
+    return nullptr;
+  }
+  *size = pngFile->size();
+  return pngFile;
+}
+
+void pngClose(void* handle) {
+  if (pngFile) {
+    pngFile->close();
+    delete pngFile;
+    pngFile = nullptr;
+  }
+}
+
+int32_t pngRead(PNGFILE* pFile, uint8_t* pBuf, int32_t len) {
+  if (!pngFile) return 0;
+  return pngFile->read(pBuf, len);
+}
+
+int32_t pngSeek(PNGFILE* pFile, int32_t pos) {
+  if (!pngFile) return -1;
+  return pngFile->seek(pos);
+}
+
+// Helper to get grayscale from PNG pixel data
+static uint8_t getGrayFromPixel(uint8_t* pPixels, int x, int pixelType, uint8_t* palette) {
+  switch (pixelType) {
+    case PNG_PIXEL_GRAYSCALE:
+      return pPixels[x];
+
+    case PNG_PIXEL_TRUECOLOR: {
+      uint8_t* p = &pPixels[x * 3];
+      return (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+    }
+
+    case PNG_PIXEL_INDEXED: {
+      uint8_t paletteIndex = pPixels[x];
+      if (palette) {
+        uint8_t* p = &palette[paletteIndex * 3];
+        return (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+      }
+      return paletteIndex;
+    }
+
+    case PNG_PIXEL_GRAY_ALPHA:
+      return pPixels[x * 2];
+
+    case PNG_PIXEL_TRUECOLOR_ALPHA: {
+      uint8_t* p = &pPixels[x * 4];
+      return (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+    }
+
+    default:
+      return 128;
+  }
+}
 
 int pngDrawCallback(PNGDRAW* pDraw) {
-  PngContext* ctx = reinterpret_cast<PngContext*>(pDraw->pUser);
-  if (!ctx || !ctx->config || !ctx->renderer) return 0;
+  if (!gConfig || !gRenderer) return 0;
 
   int srcY = pDraw->y;
-  int srcWidth = ctx->srcWidth;
+  uint8_t* pPixels = pDraw->pPixels;
+  int pixelType = pDraw->iPixelType;
 
   // Calculate destination Y with scaling
-  int dstY = (int)(srcY * ctx->scale);
+  int dstY = (int)(srcY * gScale);
 
   // Skip if we already rendered this destination row (multiple source rows map to same dest)
-  if (dstY == ctx->lastDstY) return 1;
-  ctx->lastDstY = dstY;
+  if (dstY == gLastDstY) return 1;
+  gLastDstY = dstY;
 
   // Check bounds
-  if (dstY >= ctx->dstHeight) return 1;
+  if (dstY >= gDstHeight) return 1;
 
-  int outY = ctx->config->y + dstY;
-  if (outY >= ctx->screenHeight) return 1;
+  int outY = gConfig->y + dstY;
+  if (outY >= gScreenHeight) return 1;
 
-  // Convert entire source line to grayscale (improves cache locality)
-  convertLineToGray(pDraw->pPixels, grayLineBuffer, srcWidth, pDraw->iPixelType, pDraw->pPalette, pDraw->iHasAlpha);
+  // Render scaled row using nearest-neighbor sampling
+  for (int dstX = 0; dstX < gDstWidth; dstX++) {
+    int outX = gConfig->x + dstX;
+    if (outX >= gScreenWidth) continue;
 
-  // Render scaled row using Bresenham-style integer stepping (no floating-point division)
-  int dstWidth = ctx->dstWidth;
-  int outXBase = ctx->config->x;
-  int screenWidth = ctx->screenWidth;
-  bool useDithering = ctx->config->useDithering;
-  bool caching = ctx->caching;
+    // Map destination X back to source X
+    int srcX = (int)(dstX / gScale);
+    if (srcX >= gSrcWidth) srcX = gSrcWidth - 1;
 
-  int srcX = 0;
-  int error = 0;
+    uint8_t gray = getGrayFromPixel(pPixels, srcX, pixelType, pDraw->pPalette);
 
-  for (int dstX = 0; dstX < dstWidth; dstX++) {
-    int outX = outXBase + dstX;
-    if (outX < screenWidth) {
-      uint8_t gray = grayLineBuffer[srcX];
-
-      uint8_t ditheredGray;
-      if (useDithering) {
-        ditheredGray = applyBayerDither4Level(gray, outX, outY);
-      } else {
-        ditheredGray = gray / 85;
-        if (ditheredGray > 3) ditheredGray = 3;
-      }
-      drawPixelWithRenderMode(*ctx->renderer, outX, outY, ditheredGray);
-      if (caching) ctx->cache.setPixel(outX, outY, ditheredGray);
+    uint8_t ditheredGray;
+    if (gConfig->useDithering) {
+      ditheredGray = applyBayerDither4Level(gray, outX, outY);
+    } else {
+      ditheredGray = gray / 85;
+      if (ditheredGray > 3) ditheredGray = 3;
     }
-
-    // Bresenham-style stepping: advance srcX based on ratio srcWidth/dstWidth
-    error += srcWidth;
-    while (error >= dstWidth) {
-      error -= dstWidth;
-      srcX++;
-    }
+    drawPixelWithRenderMode(gRenderer, outX, outY, ditheredGray);
+    cacheSetPixel(outX, outY, ditheredGray);
   }
 
   return 1;
@@ -223,69 +232,116 @@ bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath
                                                     const RenderConfig& config) {
   Serial.printf("[%lu] [PNG] Decoding PNG: %s\n", millis(), imagePath.c_str());
 
-  PngContext ctx;
-  ctx.renderer = &renderer;
-  ctx.config = &config;
-  ctx.screenWidth = renderer.getScreenWidth();
-  ctx.screenHeight = renderer.getScreenHeight();
+  FsFile file;
+  if (!SdMan.openFileForRead("PNG", imagePath, file)) {
+    Serial.printf("[%lu] [PNG] Failed to open file: %s\n", millis(), imagePath.c_str());
+    return false;
+  }
 
-  int rc = png.open(imagePath.c_str(), pngOpenWithHandle, pngCloseWithHandle, pngReadWithHandle, pngSeekWithHandle,
-                    pngDrawCallback);
+  gRenderer = &renderer;
+  gConfig = &config;
+  gScreenWidth = renderer.getScreenWidth();
+  gScreenHeight = renderer.getScreenHeight();
+
+  int rc = png.open(imagePath.c_str(), pngOpen, pngClose, pngRead, pngSeek, pngDrawCallback);
   if (rc != PNG_SUCCESS) {
     Serial.printf("[%lu] [PNG] Failed to open PNG: %d\n", millis(), rc);
+    file.close();
+    gRenderer = nullptr;
+    gConfig = nullptr;
     return false;
   }
 
   if (!validateImageDimensions(png.getWidth(), png.getHeight(), "PNG")) {
     png.close();
+    file.close();
+    gRenderer = nullptr;
+    gConfig = nullptr;
     return false;
   }
 
   // Calculate scale factor to fit within maxWidth x maxHeight
-  ctx.srcWidth = png.getWidth();
-  ctx.srcHeight = png.getHeight();
-  float scaleX = (float)config.maxWidth / ctx.srcWidth;
-  float scaleY = (float)config.maxHeight / ctx.srcHeight;
-  ctx.scale = (scaleX < scaleY) ? scaleX : scaleY;
-  if (ctx.scale > 1.0f) ctx.scale = 1.0f;  // Don't upscale
+  gSrcWidth = png.getWidth();
+  gSrcHeight = png.getHeight();
+  float scaleX = (float)config.maxWidth / gSrcWidth;
+  float scaleY = (float)config.maxHeight / gSrcHeight;
+  gScale = (scaleX < scaleY) ? scaleX : scaleY;
+  if (gScale > 1.0f) gScale = 1.0f;  // Don't upscale
 
-  ctx.dstWidth = (int)(ctx.srcWidth * ctx.scale);
-  ctx.dstHeight = (int)(ctx.srcHeight * ctx.scale);
-  ctx.lastDstY = -1;  // Reset row tracking
+  gDstWidth = (int)(gSrcWidth * gScale);
+  gDstHeight = (int)(gSrcHeight * gScale);
+  gLastDstY = -1;  // Reset row tracking
 
-  Serial.printf("[%lu] [PNG] PNG %dx%d -> %dx%d (scale %.2f), bpp: %d\n", millis(), ctx.srcWidth, ctx.srcHeight,
-                ctx.dstWidth, ctx.dstHeight, ctx.scale, png.getBpp());
+  Serial.printf("[%lu] [PNG] PNG %dx%d -> %dx%d (scale %.2f), bpp: %d\n", millis(), gSrcWidth, gSrcHeight, gDstWidth,
+                gDstHeight, gScale, png.getBpp());
 
   if (png.getBpp() != 8) {
     warnUnsupportedFeature("bit depth (" + std::to_string(png.getBpp()) + "bpp)", imagePath);
   }
 
+  if (png.hasAlpha()) {
+    warnUnsupportedFeature("alpha channel", imagePath);
+  }
+
   // Allocate cache buffer using SCALED dimensions
-  ctx.caching = !config.cachePath.empty();
-  if (ctx.caching) {
-    if (!ctx.cache.allocate(ctx.dstWidth, ctx.dstHeight, config.x, config.y)) {
+  bool caching = !config.cachePath.empty();
+  if (caching) {
+    gCacheWidth = gDstWidth;
+    gCacheHeight = gDstHeight;
+    gCacheBytesPerRow = (gCacheWidth + 3) / 4;
+    gCacheOriginX = config.x;
+    gCacheOriginY = config.y;
+    size_t bufferSize = gCacheBytesPerRow * gCacheHeight;
+    gCacheBuffer = (uint8_t*)malloc(bufferSize);
+    if (gCacheBuffer) {
+      memset(gCacheBuffer, 0, bufferSize);
+      Serial.printf("[%lu] [PNG] Allocated cache buffer: %d bytes for %dx%d\n", millis(), bufferSize, gCacheWidth,
+                    gCacheHeight);
+    } else {
       Serial.printf("[%lu] [PNG] Failed to allocate cache buffer, continuing without caching\n", millis());
-      ctx.caching = false;
+      caching = false;
     }
   }
 
-  unsigned long decodeStart = millis();
-  rc = png.decode(&ctx, 0);
-  unsigned long decodeTime = millis() - decodeStart;
+  rc = png.decode(nullptr, 0);
   if (rc != PNG_SUCCESS) {
     Serial.printf("[%lu] [PNG] Decode failed: %d\n", millis(), rc);
     png.close();
+    file.close();
+    gRenderer = nullptr;
+    gConfig = nullptr;
+    if (gCacheBuffer) {
+      free(gCacheBuffer);
+      gCacheBuffer = nullptr;
+    }
     return false;
   }
 
   png.close();
-  Serial.printf("[%lu] [PNG] PNG decoding complete - render time: %lu ms\n", millis(), decodeTime);
+  file.close();
+  Serial.printf("[%lu] [PNG] PNG decoding complete\n", millis());
 
   // Write cache file if caching was enabled and buffer was allocated
-  if (ctx.caching) {
-    ctx.cache.writeToFile(config.cachePath);
+  if (caching && gCacheBuffer) {
+    FsFile cacheFile;
+    if (SdMan.openFileForWrite("IMG", config.cachePath, cacheFile)) {
+      uint16_t w = gCacheWidth;
+      uint16_t h = gCacheHeight;
+      cacheFile.write(&w, 2);
+      cacheFile.write(&h, 2);
+      cacheFile.write(gCacheBuffer, gCacheBytesPerRow * gCacheHeight);
+      cacheFile.close();
+      Serial.printf("[%lu] [PNG] Cache written: %s (%dx%d, %d bytes)\n", millis(), config.cachePath.c_str(),
+                    gCacheWidth, gCacheHeight, 4 + gCacheBytesPerRow * gCacheHeight);
+    } else {
+      Serial.printf("[%lu] [PNG] Failed to open cache file for writing: %s\n", millis(), config.cachePath.c_str());
+    }
+    free(gCacheBuffer);
+    gCacheBuffer = nullptr;
   }
 
+  gRenderer = nullptr;
+  gConfig = nullptr;
   return true;
 }
 
