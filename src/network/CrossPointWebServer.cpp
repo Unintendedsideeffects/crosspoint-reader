@@ -12,6 +12,7 @@
 #include "SpiBusMutex.h"
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
+#include "util/PathUtils.h"
 #include "util/StringUtils.h"
 
 namespace {
@@ -352,14 +353,15 @@ void CrossPointWebServer::handleFileListData() const {
   String currentPath = "/";
   if (server->hasArg("path")) {
     currentPath = server->arg("path");
-    // Ensure path starts with /
-    if (!currentPath.startsWith("/")) {
-      currentPath = "/" + currentPath;
+
+    // Validate path against traversal attacks
+    if (!PathUtils::isValidSdPath(currentPath)) {
+      Serial.printf("[%lu] [WEB] Path validation failed for: %s\n", millis(), currentPath.c_str());
+      server->send(400, "text/plain", "Invalid path");
+      return;
     }
-    // Remove trailing slash unless it's root
-    if (currentPath.length() > 1 && currentPath.endsWith("/")) {
-      currentPath = currentPath.substring(0, currentPath.length() - 1);
-    }
+
+    currentPath = PathUtils::normalizePath(currentPath);
   }
 
   server->setContentLength(CONTENT_LENGTH_UNKNOWN);
@@ -529,19 +531,27 @@ void CrossPointWebServer::handleUpload() const {
     totalWriteTime = 0;
     writeCount = 0;
 
+    // Validate filename to prevent path traversal
+    if (!PathUtils::isValidFilename(uploadFileName)) {
+      uploadError = "Invalid filename";
+      Serial.printf("[%lu] [WEB] [UPLOAD] Invalid filename rejected: %s\n", millis(), uploadFileName.c_str());
+      return;
+    }
+
     // Get upload path from query parameter (defaults to root if not specified)
     // Note: We use query parameter instead of form data because multipart form
     // fields aren't available until after file upload completes
     if (server->hasArg("path")) {
       uploadPath = server->arg("path");
-      // Ensure path starts with /
-      if (!uploadPath.startsWith("/")) {
-        uploadPath = "/" + uploadPath;
+
+      // Validate path against traversal attacks
+      if (!PathUtils::isValidSdPath(uploadPath)) {
+        uploadError = "Invalid path";
+        Serial.printf("[%lu] [WEB] [UPLOAD] Path validation failed: %s\n", millis(), uploadPath.c_str());
+        return;
       }
-      // Remove trailing slash unless it's root
-      if (uploadPath.length() > 1 && uploadPath.endsWith("/")) {
-        uploadPath = uploadPath.substring(0, uploadPath.length() - 1);
-      }
+
+      uploadPath = PathUtils::normalizePath(uploadPath);
     } else {
       uploadPath = "/";
     }
@@ -674,9 +684,10 @@ void CrossPointWebServer::handleCreateFolder() const {
 
   const String folderName = server->arg("name");
 
-  // Validate folder name
-  if (folderName.isEmpty()) {
-    server->send(400, "text/plain", "Folder name cannot be empty");
+  // Validate folder name (no path separators or traversal)
+  if (!PathUtils::isValidFilename(folderName)) {
+    Serial.printf("[%lu] [WEB] Invalid folder name rejected: %s\n", millis(), folderName.c_str());
+    server->send(400, "text/plain", "Invalid folder name");
     return;
   }
 
@@ -684,12 +695,15 @@ void CrossPointWebServer::handleCreateFolder() const {
   String parentPath = "/";
   if (server->hasArg("path")) {
     parentPath = server->arg("path");
-    if (!parentPath.startsWith("/")) {
-      parentPath = "/" + parentPath;
+
+    // Validate path against traversal attacks
+    if (!PathUtils::isValidSdPath(parentPath)) {
+      Serial.printf("[%lu] [WEB] Path validation failed for mkdir: %s\n", millis(), parentPath.c_str());
+      server->send(400, "text/plain", "Invalid path");
+      return;
     }
-    if (parentPath.length() > 1 && parentPath.endsWith("/")) {
-      parentPath = parentPath.substring(0, parentPath.length() - 1);
-    }
+
+    parentPath = PathUtils::normalizePath(parentPath);
   }
 
   // Build full folder path
@@ -725,16 +739,20 @@ void CrossPointWebServer::handleDelete() const {
   String itemPath = server->arg("path");
   const String itemType = server->hasArg("type") ? server->arg("type") : "file";
 
+  // Validate path against traversal attacks
+  if (!PathUtils::isValidSdPath(itemPath)) {
+    Serial.printf("[%lu] [WEB] Path validation failed for delete: %s\n", millis(), itemPath.c_str());
+    server->send(400, "text/plain", "Invalid path");
+    return;
+  }
+
   // Validate path
   if (itemPath.isEmpty() || itemPath == "/") {
     server->send(400, "text/plain", "Cannot delete root directory");
     return;
   }
 
-  // Ensure path starts with /
-  if (!itemPath.startsWith("/")) {
-    itemPath = "/" + itemPath;
-  }
+  itemPath = PathUtils::normalizePath(itemPath);
 
   // Security check: prevent deletion of protected items
   const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
@@ -853,11 +871,21 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
           wsUploadReceived = 0;
           wsUploadStartTime = millis();
 
-          // Ensure path is valid
-          if (!wsUploadPath.startsWith("/")) wsUploadPath = "/" + wsUploadPath;
-          if (wsUploadPath.length() > 1 && wsUploadPath.endsWith("/")) {
-            wsUploadPath = wsUploadPath.substring(0, wsUploadPath.length() - 1);
+          // Validate filename against traversal attacks
+          if (!PathUtils::isValidFilename(wsUploadFileName)) {
+            Serial.printf("[%lu] [WS] Invalid filename rejected: %s\n", millis(), wsUploadFileName.c_str());
+            wsServer->sendTXT(num, "ERROR:Invalid filename");
+            return;
           }
+
+          // Validate path against traversal attacks
+          if (!PathUtils::isValidSdPath(wsUploadPath)) {
+            Serial.printf("[%lu] [WS] Path validation failed: %s\n", millis(), wsUploadPath.c_str());
+            wsServer->sendTXT(num, "ERROR:Invalid path");
+            return;
+          }
+
+          wsUploadPath = PathUtils::normalizePath(wsUploadPath);
 
           // Build file path
           String filePath = wsUploadPath;
