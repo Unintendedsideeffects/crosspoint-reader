@@ -44,6 +44,7 @@ class KOReaderSyncActivity final : public ActivityWithSubactivity {
   void loop() override;
   void render(Activity::RenderLock&&) override;
   bool preventAutoSleep() override { return state == CONNECTING || state == SYNCING; }
+  bool blocksBackgroundServer() override { return true; }
 
  private:
   enum State {

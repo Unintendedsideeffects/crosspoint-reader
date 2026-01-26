@@ -4,6 +4,8 @@
 #include <Logging.h>
 #include <MD5Builder.h>
 
+#include "SpiBusMutex.h"
+
 namespace {
 // Extract filename from path (everything after last '/')
 std::string getFilename(const std::string& path) {
@@ -42,6 +44,7 @@ size_t KOReaderDocumentId::getOffset(int i) {
 }
 
 std::string KOReaderDocumentId::calculate(const std::string& filePath) {
+  SpiBusMutex::Guard guard;
   FsFile file;
   if (!Storage.openFileForRead("KODoc", filePath, file)) {
     LOG_DBG("KODoc", "Failed to open file: %s", filePath.c_str());

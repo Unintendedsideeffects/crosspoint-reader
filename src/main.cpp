@@ -3,9 +3,7 @@
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
-#include <HalStorage.h>
-#include <I18n.h>
-#include <Logging.h>
+#include <SDCardManager.h>
 #include <SPI.h>
 #include <builtinFonts/all.h>
 
@@ -17,19 +15,21 @@
 #include "KOReaderCredentialStore.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "WifiCredentialStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
 #include "activities/browser/OpdsBookBrowserActivity.h"
 #include "activities/home/HomeActivity.h"
 #include "activities/home/MyLibraryActivity.h"
-#include "activities/home/RecentBooksActivity.h"
 #include "activities/network/CrossPointWebServerActivity.h"
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
+#include "activities/todo/TodoActivity.h"
+#include "activities/todo/TodoFallbackActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
-#include "components/UITheme.h"
 #include "fontIds.h"
-#include "util/ButtonNavigator.h"
+#include "network/BackgroundWebServer.h"
+#include "util/DateUtils.h"
 
 HalDisplay display;
 HalGPIO gpio;
@@ -197,26 +197,25 @@ void waitForPowerRelease() {
 
 // Enter deep sleep mode
 void enterDeepSleep() {
-  APP_STATE.lastSleepFromReader = currentActivity && currentActivity->isReaderActivity();
-  APP_STATE.saveToFile();
   exitActivity();
   enterNewActivity(new SleepActivity(renderer, mappedInputManager));
 
   display.deepSleep();
-  LOG_DBG("MAIN", "Power button press calibration value: %lu ms", t2 - t1);
-  LOG_DBG("MAIN", "Entering deep sleep");
+  Serial.printf("[%lu] [   ] Power button press calibration value: %lu ms\n", millis(), t2 - t1);
+  Serial.printf("[%lu] [   ] Entering deep sleep.\n", millis());
 
   gpio.startDeepSleep();
 }
 
 void onGoHome();
-void onGoToMyLibraryWithPath(const std::string& path);
-void onGoToRecentBooks();
-void onGoToReader(const std::string& initialEpubPath) {
+void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab);
+void onGoToTodo();
+void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
   exitActivity();
   enterNewActivity(
-      new ReaderActivity(renderer, mappedInputManager, initialEpubPath, onGoHome, onGoToMyLibraryWithPath));
+      new ReaderActivity(renderer, mappedInputManager, initialEpubPath, fromTab, onGoHome, onGoToMyLibraryWithTab));
 }
+void onContinueReading() { onGoToReader(APP_STATE.openEpubPath, MyLibraryActivity::Tab::Recent); }
 
 void onGoToFileTransfer() {
   exitActivity();
@@ -233,14 +232,9 @@ void onGoToMyLibrary() {
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
 }
 
-void onGoToRecentBooks() {
+void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab) {
   exitActivity();
-  enterNewActivity(new RecentBooksActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
-}
-
-void onGoToMyLibraryWithPath(const std::string& path) {
-  exitActivity();
-  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, path));
+  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, tab, path));
 }
 
 void onGoToBrowser() {
@@ -248,16 +242,51 @@ void onGoToBrowser() {
   enterNewActivity(new OpdsBookBrowserActivity(renderer, mappedInputManager, onGoHome));
 }
 
+void onGoToTodo() {
+  exitActivity();
+
+  const std::string today = DateUtils::currentDate();
+  if (today.empty()) {
+    // Fallback if date is not set
+    enterNewActivity(new TodoFallbackActivity(renderer, mappedInputManager, today, onGoHome));
+    return;
+  }
+
+  // 1. Try markdown (.md)
+  const std::string todoMdPath = "/daily/" + today + ".md";
+  if (SdMan.exists(todoMdPath.c_str())) {
+    enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
+    return;
+  }
+
+  // 2. Try text (.txt)
+  const std::string todoTxtPath = "/daily/" + today + ".txt";
+  if (SdMan.exists(todoTxtPath.c_str())) {
+    enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoTxtPath, today, onGoHome));
+    return;
+  }
+
+  // 3. Try EPUB (ReadOnly/ReaderActivity)
+  const std::string todoEpubPath = "/daily/" + today + ".epub";
+  if (SdMan.exists(todoEpubPath.c_str())) {
+    enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, MyLibraryActivity::Tab::Files,
+                                        onGoHome, onGoToMyLibraryWithTab));
+    return;
+  }
+
+  // 4. Default: Create/Open new MD list
+  enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
+}
+
 void onGoHome() {
   exitActivity();
-  enterNewActivity(new HomeActivity(renderer, mappedInputManager, onGoToReader, onGoToMyLibrary, onGoToRecentBooks,
-                                    onGoToSettings, onGoToFileTransfer, onGoToBrowser));
+  enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
+                                    onGoToFileTransfer, onGoToBrowser, onGoToTodo));
 }
 
 void setupDisplayAndFonts() {
   display.begin();
-  renderer.begin();
-  LOG_DBG("MAIN", "Display initialized");
+  Serial.printf("[%lu] [   ] Display initialized\n", millis());
   renderer.insertFont(BOOKERLY_14_FONT_ID, bookerly14FontFamily);
 #ifndef OMIT_FONTS
   renderer.insertFont(BOOKERLY_12_FONT_ID, bookerly12FontFamily);
@@ -276,7 +305,7 @@ void setupDisplayAndFonts() {
   renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
   renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
   renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
-  LOG_DBG("MAIN", "Fonts setup");
+  Serial.printf("[%lu] [   ] Fonts setup\n", millis());
 }
 
 void setup() {
@@ -296,8 +325,8 @@ void setup() {
 
   // SD Card Initialization
   // We need 6 open files concurrently when parsing a new chapter
-  if (!Storage.begin()) {
-    LOG_ERR("MAIN", "SD card initialization failed");
+  if (!SdMan.begin()) {
+    Serial.printf("[%lu] [   ] SD card initialization failed\n", millis());
     setupDisplayAndFonts();
     exitActivity();
     enterNewActivity(new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
@@ -305,31 +334,17 @@ void setup() {
   }
 
   SETTINGS.loadFromFile();
-  I18N.loadSettings();
   KOREADER_STORE.loadFromFile();
-  UITheme::getInstance().reload();
-  ButtonNavigator::setMappedInputManager(mappedInputManager);
+  WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
 
-  switch (gpio.getWakeupReason()) {
-    case HalGPIO::WakeupReason::PowerButton:
-      // For normal wakeups, verify power button press duration
-      LOG_DBG("MAIN", "Verifying power button press duration");
-      verifyPowerButtonDuration();
-      break;
-    case HalGPIO::WakeupReason::AfterUSBPower:
-      // If USB power caused a cold boot, go back to sleep
-      LOG_DBG("MAIN", "Wakeup reason: After USB Power");
-      gpio.startDeepSleep();
-      break;
-    case HalGPIO::WakeupReason::AfterFlash:
-      // After flashing, just proceed to boot
-    case HalGPIO::WakeupReason::Other:
-    default:
-      break;
+  if (gpio.isWakeupByPowerButton()) {
+    // For normal wakeups, verify power button press duration
+    Serial.printf("[%lu] [   ] Verifying power button press duration\n", millis());
+    verifyPowerButtonDuration();
   }
 
   // First serial output only here to avoid timing inconsistencies for power button press duration verification
-  LOG_DBG("MAIN", "Starting CrossPoint version " CROSSPOINT_VERSION);
+  Serial.printf("[%lu] [   ] Starting CrossPoint version " CROSSPOINT_VERSION "\n", millis());
 
   setupDisplayAndFonts();
 
@@ -339,18 +354,15 @@ void setup() {
   APP_STATE.loadFromFile();
   RECENT_BOOKS.loadFromFile();
 
-  // Boot to home screen if no book is open, last sleep was not from reader, back button is held, or reader activity
-  // crashed (indicated by readerActivityLoadCount > 0)
-  if (APP_STATE.openEpubPath.empty() || !APP_STATE.lastSleepFromReader ||
-      mappedInputManager.isPressed(MappedInputManager::Button::Back) || APP_STATE.readerActivityLoadCount > 0) {
+  if (APP_STATE.openEpubPath.empty()) {
     onGoHome();
   } else {
     // Clear app state to avoid getting into a boot loop if the epub doesn't load
     const auto path = APP_STATE.openEpubPath;
     APP_STATE.openEpubPath = "";
-    APP_STATE.readerActivityLoadCount++;
+    APP_STATE.lastSleepImage = 0;
     APP_STATE.saveToFile();
-    onGoToReader(path);
+    onGoToReader(path, MyLibraryActivity::Tab::Recent);
   }
 
   // Ensure we're not still holding the power button before leaving setup
@@ -364,39 +376,28 @@ void loop() {
 
   gpio.update();
 
-  renderer.setFadingFix(SETTINGS.fadingFix);
-
   if (Serial && millis() - lastMemPrint >= 10000) {
-    LOG_INF("MEM", "Free: %d bytes, Total: %d bytes, Min Free: %d bytes", ESP.getFreeHeap(), ESP.getHeapSize(),
-            ESP.getMinFreeHeap());
+    Serial.printf("[%lu] [MEM] Free: %d bytes, Total: %d bytes, Min Free: %d bytes\n", millis(), ESP.getFreeHeap(),
+                  ESP.getHeapSize(), ESP.getMinFreeHeap());
     lastMemPrint = millis();
   }
 
-  // Handle incoming serial commands,
-  // nb: we use logSerial from logging to avoid deprecation warnings
-  if (logSerial.available() > 0) {
-    String line = logSerial.readStringUntil('\n');
-    if (line.startsWith("CMD:")) {
-      String cmd = line.substring(4);
-      cmd.trim();
-      if (cmd == "SCREENSHOT") {
-        logSerial.printf("SCREENSHOT_START:%d\n", HalDisplay::BUFFER_SIZE);
-        uint8_t* buf = display.getFrameBuffer();
-        logSerial.write(buf, HalDisplay::BUFFER_SIZE);
-        logSerial.printf("SCREENSHOT_END\n");
-      }
-    }
-  }
+  const bool usbConnected = isUsbConnected();
+  const bool allowBackgroundServer =
+      SETTINGS.backgroundServerOnCharge && (!currentActivity || !currentActivity->blocksBackgroundServer());
+  BackgroundWebServer& backgroundServer = BackgroundWebServer::getInstance();
+  backgroundServer.loop(usbConnected, allowBackgroundServer);
 
   // Check for any user activity (button press or release) or active background work
   static unsigned long lastActivityTime = millis();
-  if (gpio.wasAnyPressed() || gpio.wasAnyReleased() || (currentActivity && currentActivity->preventAutoSleep())) {
+  if (gpio.wasAnyPressed() || gpio.wasAnyReleased() || (currentActivity && currentActivity->preventAutoSleep()) ||
+      backgroundServer.shouldPreventAutoSleep()) {
     lastActivityTime = millis();  // Reset inactivity timer
   }
 
   const unsigned long sleepTimeoutMs = SETTINGS.getSleepTimeoutMs();
   if (millis() - lastActivityTime >= sleepTimeoutMs) {
-    LOG_DBG("SLP", "Auto-sleep triggered after %lu ms of inactivity", sleepTimeoutMs);
+    Serial.printf("[%lu] [SLP] Auto-sleep triggered after %lu ms of inactivity\n", millis(), sleepTimeoutMs);
     enterDeepSleep();
     // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start
     return;
@@ -418,23 +419,17 @@ void loop() {
   if (loopDuration > maxLoopDuration) {
     maxLoopDuration = loopDuration;
     if (maxLoopDuration > 50) {
-      LOG_DBG("LOOP", "New max loop duration: %lu ms (activity: %lu ms)", maxLoopDuration, activityDuration);
+      Serial.printf("[%lu] [LOOP] New max loop duration: %lu ms (activity: %lu ms)\n", millis(), maxLoopDuration,
+                    activityDuration);
     }
   }
 
   // Add delay at the end of the loop to prevent tight spinning
   // When an activity requests skip loop delay (e.g., webserver running), use yield() for faster response
   // Otherwise, use longer delay to save power
-  if (currentActivity && currentActivity->skipLoopDelay()) {
+  if ((currentActivity && currentActivity->skipLoopDelay()) || backgroundServer.wantsFastLoop()) {
     yield();  // Give FreeRTOS a chance to run tasks, but return immediately
   } else {
-    static constexpr unsigned long IDLE_POWER_SAVING_MS = 3000;  // 3 seconds
-    if (millis() - lastActivityTime >= IDLE_POWER_SAVING_MS) {
-      // If we've been inactive for a while, increase the delay to save power
-      delay(50);
-    } else {
-      // Short delay to prevent tight loop while still being responsive
-      delay(10);
-    }
+    delay(10);  // Normal delay when no activity requires fast response
   }
 }

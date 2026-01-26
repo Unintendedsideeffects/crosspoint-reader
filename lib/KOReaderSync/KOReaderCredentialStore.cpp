@@ -5,6 +5,8 @@
 #include <MD5Builder.h>
 #include <Serialization.h>
 
+#include "SpiBusMutex.h"
+
 // Initialize the static instance
 KOReaderCredentialStore KOReaderCredentialStore::instance;
 
@@ -31,6 +33,7 @@ void KOReaderCredentialStore::obfuscate(std::string& data) const {
 }
 
 bool KOReaderCredentialStore::saveToFile() const {
+  SpiBusMutex::Guard guard;
   // Make sure the directory exists
   Storage.mkdir("/.crosspoint");
 
@@ -63,6 +66,7 @@ bool KOReaderCredentialStore::saveToFile() const {
 }
 
 bool KOReaderCredentialStore::loadFromFile() {
+  SpiBusMutex::Guard guard;
   FsFile file;
   if (!Storage.openFileForRead("KRS", KOREADER_FILE, file)) {
     LOG_DBG("KRS", "No credentials file found");

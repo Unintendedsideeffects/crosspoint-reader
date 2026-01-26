@@ -1,12 +1,14 @@
 .pio
-.idea
-.DS_Store
 .vscode
+.DS_Store
+.idea
 lib/EpdFont/fontsrc
-lib/I18n/I18nStrings.cpp
-*.generated.h
 .vs
 build
 **/__pycache__/
 /compile_commands.json
 /.cache
+
+# Build artifacts
+firmware.bin
+partitions.bin

@@ -319,7 +319,7 @@ void CrossPointWebServerActivity::loop() {
           // for back button checking
           mappedInput.update();
           // Check for exit button inside loop for responsiveness
-          if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+          if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
             onGoBack();
             return;
           }
@@ -329,7 +329,7 @@ void CrossPointWebServerActivity::loop() {
     }
 
     // Handle exit on Back button (also check outside loop)
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       onGoBack();
       return;
     }

@@ -1,12 +1,14 @@
 #pragma once
 #include <OpdsParser.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
 #include <functional>
 #include <string>
 #include <vector>
 
 #include "../ActivityWithSubactivity.h"
-#include "util/ButtonNavigator.h"
 
 /**
  * Activity for browsing and downloading books from an OPDS server.
@@ -31,10 +33,13 @@ class OpdsBookBrowserActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
+  bool blocksBackgroundServer() override { return true; }
 
  private:
-  ButtonNavigator buttonNavigator;
+  TaskHandle_t displayTaskHandle = nullptr;
+  SemaphoreHandle_t renderingMutex = nullptr;
+  bool updateRequired = false;
+
   BrowserState state = BrowserState::LOADING;
   std::vector<OpdsEntry> entries;
   std::vector<std::string> navigationHistory;  // Stack of previous feed paths for back navigation
@@ -47,6 +52,10 @@ class OpdsBookBrowserActivity final : public ActivityWithSubactivity {
 
   const std::function<void()> onGoHome;
 
+  static void taskTrampoline(void* param);
+  [[noreturn]] void displayTaskLoop();
+  void render() const;
+
   void checkAndConnectWifi();
   void launchWifiSelection();
   void onWifiSelectionComplete(bool connected);
@@ -54,5 +63,4 @@ class OpdsBookBrowserActivity final : public ActivityWithSubactivity {
   void navigateToEntry(const OpdsEntry& entry);
   void navigateBack();
   void downloadBook(const OpdsEntry& book);
-  bool preventAutoSleep() override { return true; }
 };

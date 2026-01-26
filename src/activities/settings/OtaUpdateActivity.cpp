@@ -1,69 +1,77 @@
 #include "OtaUpdateActivity.h"
 
 #include <GfxRenderer.h>
-#include <I18n.h>
 #include <WiFi.h>
 
 #include "MappedInputManager.h"
 #include "activities/network/WifiSelectionActivity.h"
-#include "components/UITheme.h"
 #include "fontIds.h"
 #include "network/OtaUpdater.h"
+
+void OtaUpdateActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<OtaUpdateActivity*>(param);
+  self->displayTaskLoop();
+}
 
 void OtaUpdateActivity::onWifiSelectionComplete(const bool success) {
   exitActivity();
 
   if (!success) {
-    LOG_ERR("OTA", "WiFi connection failed, exiting");
+    Serial.printf("[%lu] [OTA] WiFi connection failed, exiting\n", millis());
     goBack();
     return;
   }
 
-  LOG_DBG("OTA", "WiFi connected, checking for update");
+  Serial.printf("[%lu] [OTA] WiFi connected, checking for update\n", millis());
 
-  {
-    RenderLock lock(*this);
-    state = CHECKING_FOR_UPDATE;
-  }
-  requestUpdateAndWait();
-
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  state = CHECKING_FOR_UPDATE;
+  xSemaphoreGive(renderingMutex);
+  updateRequired = true;
+  vTaskDelay(10 / portTICK_PERIOD_MS);
   const auto res = updater.checkForUpdate();
   if (res != OtaUpdater::OK) {
-    LOG_DBG("OTA", "Update check failed: %d", res);
-    {
-      RenderLock lock(*this);
-      state = FAILED;
-    }
-    requestUpdate();
+    Serial.printf("[%lu] [OTA] Update check failed: %d\n", millis(), res);
+    xSemaphoreTake(renderingMutex, portMAX_DELAY);
+    state = FAILED;
+    xSemaphoreGive(renderingMutex);
+    updateRequired = true;
     return;
   }
 
   if (!updater.isUpdateNewer()) {
-    LOG_DBG("OTA", "No new update available");
-    {
-      RenderLock lock(*this);
-      state = NO_UPDATE;
-    }
-    requestUpdate();
+    Serial.printf("[%lu] [OTA] No new update available\n", millis());
+    xSemaphoreTake(renderingMutex, portMAX_DELAY);
+    state = NO_UPDATE;
+    xSemaphoreGive(renderingMutex);
+    updateRequired = true;
     return;
   }
 
-  {
-    RenderLock lock(*this);
-    state = WAITING_CONFIRMATION;
-  }
-  requestUpdate();
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  state = WAITING_CONFIRMATION;
+  xSemaphoreGive(renderingMutex);
+  updateRequired = true;
 }
 
 void OtaUpdateActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
+  renderingMutex = xSemaphoreCreateMutex();
+
+  xTaskCreate(&OtaUpdateActivity::taskTrampoline, "OtaUpdateActivityTask",
+              2048,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
+
   // Turn on WiFi immediately
-  LOG_DBG("OTA", "Turning on WiFi...");
+  Serial.printf("[%lu] [OTA] Turning on WiFi...\n", millis());
   WiFi.mode(WIFI_STA);
 
   // Launch WiFi selection subactivity
-  LOG_DBG("OTA", "Launching WifiSelectionActivity...");
+  Serial.printf("[%lu] [OTA] Launching WifiSelectionActivity...\n", millis());
   enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
                                              [this](const bool connected) { onWifiSelectionComplete(connected); }));
 }
@@ -76,9 +84,30 @@ void OtaUpdateActivity::onExit() {
   delay(100);              // Allow disconnect frame to be sent
   WiFi.mode(WIFI_OFF);
   delay(100);  // Allow WiFi hardware to fully power down
+
+  // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  if (displayTaskHandle) {
+    vTaskDelete(displayTaskHandle);
+    displayTaskHandle = nullptr;
+  }
+  vSemaphoreDelete(renderingMutex);
+  renderingMutex = nullptr;
 }
 
-void OtaUpdateActivity::render(Activity::RenderLock&&) {
+void OtaUpdateActivity::displayTaskLoop() {
+  while (true) {
+    if (updateRequired || updater.getRender()) {
+      updateRequired = false;
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      render();
+      xSemaphoreGive(renderingMutex);
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
+
+void OtaUpdateActivity::render() {
   if (subActivity) {
     // Subactivity handles its own rendering
     return;
@@ -86,7 +115,8 @@ void OtaUpdateActivity::render(Activity::RenderLock&&) {
 
   float updaterProgress = 0;
   if (state == UPDATE_IN_PROGRESS) {
-    LOG_DBG("OTA", "Update progress: %d / %d", updater.getProcessedSize(), updater.getTotalSize());
+    Serial.printf("[%lu] [OTA] Update progress: %d / %d\n", millis(), updater.getProcessedSize(),
+                  updater.getTotalSize());
     updaterProgress = static_cast<float>(updater.getProcessedSize()) / static_cast<float>(updater.getTotalSize());
     // Only update every 2% at the most
     if (static_cast<int>(updaterProgress * 50) == lastUpdaterPercentage / 2) {
@@ -98,27 +128,27 @@ void OtaUpdateActivity::render(Activity::RenderLock&&) {
   const auto pageWidth = renderer.getScreenWidth();
 
   renderer.clearScreen();
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, tr(STR_UPDATE), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, "Update", true, EpdFontFamily::BOLD);
 
   if (state == CHECKING_FOR_UPDATE) {
-    renderer.drawCenteredText(UI_10_FONT_ID, 300, tr(STR_CHECKING_UPDATE), true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, 300, "Checking for update...", true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }
 
   if (state == WAITING_CONFIRMATION) {
-    renderer.drawCenteredText(UI_10_FONT_ID, 200, tr(STR_NEW_UPDATE), true, EpdFontFamily::BOLD);
-    renderer.drawText(UI_10_FONT_ID, 20, 250, (std::string(tr(STR_CURRENT_VERSION)) + CROSSPOINT_VERSION).c_str());
-    renderer.drawText(UI_10_FONT_ID, 20, 270, (std::string(tr(STR_NEW_VERSION)) + updater.getLatestVersion()).c_str());
+    renderer.drawCenteredText(UI_10_FONT_ID, 200, "New update available!", true, EpdFontFamily::BOLD);
+    renderer.drawText(UI_10_FONT_ID, 20, 250, "Current Version: " CROSSPOINT_VERSION);
+    renderer.drawText(UI_10_FONT_ID, 20, 270, ("New Version: " + updater.getLatestVersion()).c_str());
 
-    const auto labels = mappedInput.mapLabels(tr(STR_CANCEL), tr(STR_UPDATE), "", "");
-    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    const auto labels = mappedInput.mapLabels("Cancel", "Update", "", "");
+    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
 
   if (state == UPDATE_IN_PROGRESS) {
-    renderer.drawCenteredText(UI_10_FONT_ID, 310, tr(STR_UPDATING), true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, 310, "Updating...", true, EpdFontFamily::BOLD);
     renderer.drawRect(20, 350, pageWidth - 40, 50);
     renderer.fillRect(24, 354, static_cast<int>(updaterProgress * static_cast<float>(pageWidth - 44)), 42);
     renderer.drawCenteredText(UI_10_FONT_ID, 420,
@@ -131,20 +161,20 @@ void OtaUpdateActivity::render(Activity::RenderLock&&) {
   }
 
   if (state == NO_UPDATE) {
-    renderer.drawCenteredText(UI_10_FONT_ID, 300, tr(STR_NO_UPDATE), true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, 300, "No update available", true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }
 
   if (state == FAILED) {
-    renderer.drawCenteredText(UI_10_FONT_ID, 300, tr(STR_UPDATE_FAILED), true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, 300, "Update failed", true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }
 
   if (state == FINISHED) {
-    renderer.drawCenteredText(UI_10_FONT_ID, 300, tr(STR_UPDATE_COMPLETE), true, EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, 350, tr(STR_POWER_ON_HINT));
+    renderer.drawCenteredText(UI_10_FONT_ID, 300, "Update complete", true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, 350, "Press and hold power button to turn back on");
     renderer.displayBuffer();
     state = SHUTTING_DOWN;
     return;
@@ -152,45 +182,37 @@ void OtaUpdateActivity::render(Activity::RenderLock&&) {
 }
 
 void OtaUpdateActivity::loop() {
-  // TODO @ngxson : refactor this logic later
-  if (updater.getRender()) {
-    requestUpdate();
-  }
-
   if (subActivity) {
     subActivity->loop();
     return;
   }
 
   if (state == WAITING_CONFIRMATION) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
-      LOG_DBG("OTA", "New update available, starting download...");
-      {
-        RenderLock lock(*this);
-        state = UPDATE_IN_PROGRESS;
-      }
-      requestUpdate();
-      requestUpdateAndWait();
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+      Serial.printf("[%lu] [OTA] New update available, starting download...\n", millis());
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      state = UPDATE_IN_PROGRESS;
+      xSemaphoreGive(renderingMutex);
+      updateRequired = true;
+      vTaskDelay(10 / portTICK_PERIOD_MS);
       const auto res = updater.installUpdate();
 
       if (res != OtaUpdater::OK) {
-        LOG_DBG("OTA", "Update failed: %d", res);
-        {
-          RenderLock lock(*this);
-          state = FAILED;
-        }
-        requestUpdate();
+        Serial.printf("[%lu] [OTA] Update failed: %d\n", millis(), res);
+        xSemaphoreTake(renderingMutex, portMAX_DELAY);
+        state = FAILED;
+        xSemaphoreGive(renderingMutex);
+        updateRequired = true;
         return;
       }
 
-      {
-        RenderLock lock(*this);
-        state = FINISHED;
-      }
-      requestUpdate();
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      state = FINISHED;
+      xSemaphoreGive(renderingMutex);
+      updateRequired = true;
     }
 
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       goBack();
     }
 
@@ -198,14 +220,14 @@ void OtaUpdateActivity::loop() {
   }
 
   if (state == FAILED) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       goBack();
     }
     return;
   }
 
   if (state == NO_UPDATE) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       goBack();
     }
     return;

@@ -63,4 +63,5 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   void render(Activity::RenderLock&&) override;
   bool skipLoopDelay() override { return webServer && webServer->isRunning(); }
   bool preventAutoSleep() override { return webServer && webServer->isRunning(); }
+  bool blocksBackgroundServer() override { return true; }
 };
