@@ -14,6 +14,11 @@
 #include "SpiBusMutex.h"
 #include "util/UrlUtils.h"
 
+namespace {
+// Timeout for no data received during download (30 seconds)
+constexpr unsigned long DOWNLOAD_TIMEOUT_MS = 30000;
+}  // namespace
+
 bool HttpDownloader::fetchUrl(const std::string& url, Stream& outContent) {
   // Use WiFiClientSecure for HTTPS, regular WiFiClient for HTTP
   std::unique_ptr<WiFiClient> client;
@@ -138,13 +143,28 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
   uint8_t buffer[DOWNLOAD_CHUNK_SIZE];
   size_t downloaded = 0;
   const size_t total = contentLength > 0 ? contentLength : 0;
+  unsigned long lastDataTime = millis();
 
   while (http.connected() && (contentLength == 0 || downloaded < contentLength)) {
     const size_t available = stream->available();
     if (available == 0) {
+      // Check for timeout - no data received for too long
+      if (millis() - lastDataTime > DOWNLOAD_TIMEOUT_MS) {
+        Serial.printf("[%lu] [HTTP] Download timeout - no data for %lu ms\n", millis(), DOWNLOAD_TIMEOUT_MS);
+        {
+          SpiBusMutex::Guard guard;
+          file.close();
+          SdMan.remove(destPath.c_str());
+        }
+        http.end();
+        return TIMEOUT;
+      }
       delay(1);
       continue;
     }
+
+    // Reset timeout on data received
+    lastDataTime = millis();
 
     const size_t toRead = available < DOWNLOAD_CHUNK_SIZE ? available : DOWNLOAD_CHUNK_SIZE;
     const size_t bytesRead = stream->readBytes(buffer, toRead);

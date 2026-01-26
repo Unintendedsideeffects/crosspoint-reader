@@ -170,8 +170,45 @@ bool CrossPointSettings::loadFromFile() {
   } while (false);
 
   inputFile.close();
+
+  // Validate and clamp all settings to valid ranges
+  validateAndClamp();
+
   Serial.printf("[%lu] [CPS] Settings loaded from file\n", millis());
   return true;
+}
+
+void CrossPointSettings::validateAndClamp() {
+  // Enum bounds - clamp to valid range, reset to default if out of bounds
+  if (sleepScreen > BLANK) sleepScreen = DARK;
+  if (sleepScreenCoverMode > CROP) sleepScreenCoverMode = FIT;
+  if (statusBar > FULL) statusBar = FULL;
+  if (orientation > LANDSCAPE_CCW) orientation = PORTRAIT;
+  if (frontButtonLayout > LEFT_LEFT_RIGHT_RIGHT) frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
+  if (sideButtonLayout > NEXT_PREV) sideButtonLayout = PREV_NEXT;
+  if (fontFamily > OPENDYSLEXIC) fontFamily = BOOKERLY;
+  if (fontSize > EXTRA_LARGE) fontSize = MEDIUM;
+  if (lineSpacing > WIDE) lineSpacing = NORMAL;
+  if (paragraphAlignment > RIGHT_ALIGN) paragraphAlignment = JUSTIFIED;
+  if (sleepTimeout > SLEEP_30_MIN) sleepTimeout = SLEEP_10_MIN;
+  if (refreshFrequency > REFRESH_30) refreshFrequency = REFRESH_15;
+  if (shortPwrBtn > SELECT) shortPwrBtn = IGNORE;
+  if (hideBatteryPercentage > HIDE_ALWAYS) hideBatteryPercentage = HIDE_NEVER;
+  if (timeMode > TIME_MANUAL) timeMode = TIME_UTC;
+  if (todoFallbackCover > TODO_FALLBACK_NONE) todoFallbackCover = TODO_FALLBACK_STANDARD;
+
+  // Range values
+  // timeZoneOffset: 0 = UTC-12, 12 = UTC+0, 26 = UTC+14
+  if (timeZoneOffset > 26) timeZoneOffset = 12;  // Reset to UTC+0
+  // screenMargin: valid range 5-40
+  if (screenMargin < 5 || screenMargin > 40) screenMargin = 5;
+
+  // Boolean values - normalize to 0 or 1
+  extraParagraphSpacing = extraParagraphSpacing ? 1 : 0;
+  textAntiAliasing = textAntiAliasing ? 1 : 0;
+  hyphenationEnabled = hyphenationEnabled ? 1 : 0;
+  longPressChapterSkip = longPressChapterSkip ? 1 : 0;
+  backgroundServerOnCharge = backgroundServerOnCharge ? 1 : 0;
 }
 
 float CrossPointSettings::getReaderLineCompression() const {

@@ -168,6 +168,11 @@ class CrossPointSettings {
   bool saveToFile() const;
   bool loadFromFile();
 
+ private:
+  // Validate loaded settings and clamp to valid ranges
+  void validateAndClamp();
+
+ public:
   float getReaderLineCompression() const;
   unsigned long getSleepTimeoutMs() const;
   int getRefreshFrequency() const;
