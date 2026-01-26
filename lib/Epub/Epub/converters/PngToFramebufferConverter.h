@@ -1,5 +1,7 @@
 #pragma once
 
+#include <PNGdec.h>
+
 #include "ImageToFramebufferDecoder.h"
 
 class PngToFramebufferConverter final : public ImageToFramebufferDecoder {
@@ -12,6 +14,6 @@ class PngToFramebufferConverter final : public ImageToFramebufferDecoder {
     return getDimensionsStatic(imagePath, dims);
   }
 
-  static bool supportsFormat(const std::string& extension);
+  bool supportsFormat(const std::string& extension) const override;
   const char* getFormatName() const override { return "PNG"; }
 };

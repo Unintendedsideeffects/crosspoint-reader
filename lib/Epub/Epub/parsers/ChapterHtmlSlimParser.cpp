@@ -1,66 +1,20 @@
 #include "ChapterHtmlSlimParser.h"
 
-#include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HardwareSerial.h>
-#include <ImageConverter.h>
 #include <SDCardManager.h>
 #include <expat.h>
 
 #include "../../Epub.h"
 #include "../Page.h"
-
-// MemoryPrint - a Print adapter that writes to a std::vector<uint8_t>
-class MemoryPrint : public Print {
-  std::vector<uint8_t>& buffer;
-
- public:
-  explicit MemoryPrint(std::vector<uint8_t>& buf) : buffer(buf) {}
-  size_t write(uint8_t b) override {
-    buffer.push_back(b);
-    return 1;
-  }
-  size_t write(const uint8_t* buf, size_t size) override {
-    buffer.insert(buffer.end(), buf, buf + size);
-    return size;
-  }
-};
-
-// MemoryFile - wraps a memory buffer to look like an FsFile for reading
-class MemoryFile : public Stream {
-  const uint8_t* data;
-  size_t dataSize;
-  size_t pos;
-
- public:
-  MemoryFile(const uint8_t* d, size_t s) : data(d), dataSize(s), pos(0) {}
-  int available() override { return dataSize - pos; }
-  int read() override { return (pos < dataSize) ? data[pos++] : -1; }
-  int peek() override { return (pos < dataSize) ? data[pos] : -1; }
-  size_t readBytes(char* buffer, size_t length) override {
-    size_t toRead = std::min(length, dataSize - pos);
-    memcpy(buffer, data + pos, toRead);
-    pos += toRead;
-    return toRead;
-  }
-  size_t write(uint8_t) override { return 0; }
-  void flush() override {}
-  bool seek(size_t position) {
-    if (position <= dataSize) {
-      pos = position;
-      return true;
-    }
-    return false;
-  }
-  size_t position() const { return pos; }
-  size_t size() const { return dataSize; }
-};
+#include "../converters/ImageDecoderFactory.h"
+#include "../converters/ImageToFramebufferDecoder.h"
 
 const char* HEADER_TAGS[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
 constexpr int NUM_HEADER_TAGS = sizeof(HEADER_TAGS) / sizeof(HEADER_TAGS[0]);
 
-// Minimum file size (in bytes) to show progress bar - smaller chapters don't benefit from it
-constexpr size_t MIN_SIZE_FOR_PROGRESS = 50 * 1024;  // 50KB
+// Minimum file size (in bytes) to show indexing popup - smaller chapters don't benefit from it
+constexpr size_t MIN_SIZE_FOR_POPUP = 50 * 1024;  // 50KB
 
 const char* BLOCK_TAGS[] = {"p", "li", "div", "br", "blockquote"};
 constexpr int NUM_BLOCK_TAGS = sizeof(BLOCK_TAGS) / sizeof(BLOCK_TAGS[0]);
@@ -74,60 +28,10 @@ constexpr int NUM_ITALIC_TAGS = sizeof(ITALIC_TAGS) / sizeof(ITALIC_TAGS[0]);
 const char* IMAGE_TAGS[] = {"img"};
 constexpr int NUM_IMAGE_TAGS = sizeof(IMAGE_TAGS) / sizeof(IMAGE_TAGS[0]);
 
-const char* PRE_TAGS[] = {"pre"};
-constexpr int NUM_PRE_TAGS = sizeof(PRE_TAGS) / sizeof(PRE_TAGS[0]);
-
 const char* SKIP_TAGS[] = {"head"};
 constexpr int NUM_SKIP_TAGS = sizeof(SKIP_TAGS) / sizeof(SKIP_TAGS[0]);
 
 bool isWhitespace(const char c) { return c == ' ' || c == '\r' || c == '\n' || c == '\t'; }
-
-namespace {
-bool decode1BitBmpToRaw(const std::vector<uint8_t>& bmpData, std::vector<uint8_t>& rawData, uint16_t& outWidth,
-                        uint16_t& outHeight) {
-  if (bmpData.size() < 54) {
-    return false;
-  }
-  if (bmpData[0] != 'B' || bmpData[1] != 'M') {
-    return false;
-  }
-
-  const uint32_t pixelOffset = bmpData[10] | (bmpData[11] << 8) | (bmpData[12] << 16) | (bmpData[13] << 24);
-  const int32_t width = static_cast<int32_t>(bmpData[18]) | (static_cast<int32_t>(bmpData[19]) << 8) |
-                        (static_cast<int32_t>(bmpData[20]) << 16) | (static_cast<int32_t>(bmpData[21]) << 24);
-  int32_t height = static_cast<int32_t>(bmpData[22]) | (static_cast<int32_t>(bmpData[23]) << 8) |
-                   (static_cast<int32_t>(bmpData[24]) << 16) | (static_cast<int32_t>(bmpData[25]) << 24);
-  const bool topDown = height < 0;
-  if (height < 0) {
-    height = -height;
-  }
-
-  const uint16_t bitsPerPixel = bmpData[28] | (bmpData[29] << 8);
-  if (bitsPerPixel != 1 || width <= 0 || height <= 0) {
-    return false;
-  }
-
-  const uint32_t rowBytesBmp = ((static_cast<uint32_t>(width) + 31) / 32) * 4;
-  const uint32_t rowBytesRaw = (static_cast<uint32_t>(width) + 7) / 8;
-  const uint64_t requiredSize =
-      static_cast<uint64_t>(pixelOffset) + static_cast<uint64_t>(rowBytesBmp) * static_cast<uint64_t>(height);
-  if (requiredSize > bmpData.size()) {
-    return false;
-  }
-
-  rawData.assign(rowBytesRaw * static_cast<uint32_t>(height), 0);
-  for (int32_t row = 0; row < height; row++) {
-    const uint32_t srcRow = static_cast<uint32_t>(topDown ? row : (height - 1 - row));
-    const uint32_t srcOffset = pixelOffset + srcRow * rowBytesBmp;
-    const uint32_t dstOffset = static_cast<uint32_t>(row) * rowBytesRaw;
-    memcpy(rawData.data() + dstOffset, bmpData.data() + srcOffset, rowBytesRaw);
-  }
-
-  outWidth = static_cast<uint16_t>(width);
-  outHeight = static_cast<uint16_t>(height);
-  return true;
-}
-}  // namespace
 
 // given the start and end of a tag, check to see if it matches a known tag
 bool matches(const char* tag_name, const char* possible_tags[], const int possible_tag_count) {
@@ -183,20 +87,20 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
   if (strcmp(name, "table") == 0) {
     // Add placeholder text
     self->startNewTextBlock(TextBlock::CENTER_ALIGN);
-    if (self->currentTextBlock) {
-      self->currentTextBlock->addWord("[Table omitted]", EpdFontFamily::ITALIC);
-    }
 
-    // Skip table contents
-    self->skipUntilDepth = self->depth;
+    self->italicUntilDepth = min(self->italicUntilDepth, self->depth);
+    // Advance depth before processing character data (like you would for a element with text)
     self->depth += 1;
+    self->characterData(userData, "[Table omitted]", strlen("[Table omitted]"));
+
+    // Skip table contents (skip until parent as we pre-advanced depth above)
+    self->skipUntilDepth = self->depth - 1;
     return;
   }
 
   if (matches(name, IMAGE_TAGS, NUM_IMAGE_TAGS)) {
     std::string src;
-    std::string alt = "Image";
-
+    std::string alt;
     if (atts != nullptr) {
       for (int i = 0; atts[i]; i += 2) {
         if (strcmp(atts[i], "src") == 0) {
@@ -205,24 +109,133 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
           alt = atts[i + 1];
         }
       }
-    }
 
-    // Try to process the actual image
-    if (!src.empty() && self->epub) {
-      self->processImage(src.c_str(), alt.c_str());
-    } else {
-      // Fallback to placeholder text
-      Serial.printf("[%lu] [EHP] Image placeholder: %s\n", millis(), alt.c_str());
-      self->startNewTextBlock(TextBlock::CENTER_ALIGN);
-      std::string placeholder = "[Image: " + alt + "] ";
-      self->italicUntilDepth = min(self->italicUntilDepth, self->depth);
+      if (!src.empty()) {
+        Serial.printf("[%lu] [EHP] Found image: src=%s\n", millis(), src.c_str());
+
+        // Get the spine item's href to resolve the relative path
+        size_t lastUnderscore = self->filepath.rfind('_');
+        if (lastUnderscore != std::string::npos && lastUnderscore > 0) {
+          std::string indexStr = self->filepath.substr(lastUnderscore + 1);
+          indexStr.resize(indexStr.find('.'));
+          int spineIndex = atoi(indexStr.c_str());
+
+          const auto& spineItem = self->epub->getSpineItem(spineIndex);
+          std::string htmlHref = spineItem.href;
+          size_t lastSlash = htmlHref.find_last_of('/');
+          std::string htmlDir = (lastSlash != std::string::npos) ? htmlHref.substr(0, lastSlash + 1) : "";
+
+          // Resolve the image path relative to the HTML file
+          std::string imageHref = src;
+          while (imageHref.find("../") == 0) {
+            imageHref = imageHref.substr(3);
+            if (!htmlDir.empty()) {
+              size_t dirSlash = htmlDir.find_last_of('/', htmlDir.length() - 2);
+              htmlDir = (dirSlash != std::string::npos) ? htmlDir.substr(0, dirSlash + 1) : "";
+            }
+          }
+          std::string resolvedPath = htmlDir + imageHref;
+
+          // Create a unique filename for the cached image
+          std::string ext;
+          size_t extPos = resolvedPath.rfind('.');
+          if (extPos != std::string::npos) {
+            ext = resolvedPath.substr(extPos);
+          }
+          std::string cachedImagePath = self->epub->getCachePath() + "/img_" + std::to_string(spineIndex) + "_" +
+                                        std::to_string(self->imageCounter++) + ext;
+
+          // Extract image to cache file
+          FsFile cachedImageFile;
+          bool extractSuccess = false;
+          if (SdMan.openFileForWrite("EHP", cachedImagePath, cachedImageFile)) {
+            extractSuccess = self->epub->readItemContentsToStream(resolvedPath, cachedImageFile, 4096);
+            cachedImageFile.flush();
+            cachedImageFile.close();
+            delay(50);  // Give SD card time to sync
+          }
+
+          if (extractSuccess) {
+            // Get image dimensions
+            ImageDimensions dims = {0, 0};
+            ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(cachedImagePath);
+            if (decoder && decoder->getDimensions(cachedImagePath, dims)) {
+              Serial.printf("[%lu] [EHP] Image dimensions: %dx%d\n", millis(), dims.width, dims.height);
+
+              // Scale to fit viewport while maintaining aspect ratio
+              int maxWidth = self->viewportWidth;
+              int maxHeight = self->viewportHeight;
+              float scaleX = (dims.width > maxWidth) ? (float)maxWidth / dims.width : 1.0f;
+              float scaleY = (dims.height > maxHeight) ? (float)maxHeight / dims.height : 1.0f;
+              float scale = (scaleX < scaleY) ? scaleX : scaleY;
+              if (scale > 1.0f) scale = 1.0f;
+
+              int displayWidth = (int)(dims.width * scale);
+              int displayHeight = (int)(dims.height * scale);
+
+              Serial.printf("[%lu] [EHP] Display size: %dx%d (scale %.2f)\n", millis(), displayWidth, displayHeight,
+                            scale);
+
+              // Create page for image
+              if (self->currentPage && !self->currentPage->elements.empty()) {
+                self->completePageFn(std::move(self->currentPage));
+                self->currentPage.reset(new Page());
+                if (!self->currentPage) {
+                  Serial.printf("[%lu] [EHP] Failed to create new page\n", millis());
+                  return;
+                }
+                self->currentPageNextY = 0;
+              } else if (!self->currentPage) {
+                self->currentPage.reset(new Page());
+                if (!self->currentPage) {
+                  Serial.printf("[%lu] [EHP] Failed to create initial page\n", millis());
+                  return;
+                }
+                self->currentPageNextY = 0;
+              }
+
+              // Create ImageBlock and add to page
+              auto imageBlock = std::make_shared<ImageBlock>(cachedImagePath, displayWidth, displayHeight);
+              if (!imageBlock) {
+                Serial.printf("[%lu] [EHP] Failed to create ImageBlock\n", millis());
+                return;
+              }
+              int xPos = (self->viewportWidth - displayWidth) / 2;
+              auto pageImage = std::make_shared<PageImage>(imageBlock, xPos, self->currentPageNextY);
+              if (!pageImage) {
+                Serial.printf("[%lu] [EHP] Failed to create PageImage\n", millis());
+                return;
+              }
+              self->currentPage->elements.push_back(pageImage);
+              self->currentPageNextY += displayHeight;
+
+              self->depth += 1;
+              return;
+            } else {
+              Serial.printf("[%lu] [EHP] Failed to get image dimensions\n", millis());
+              SdMan.remove(cachedImagePath.c_str());
+            }
+          } else {
+            Serial.printf("[%lu] [EHP] Failed to extract image\n", millis());
+          }
+        }
+      }
+
+      // Fallback to alt text if image processing fails
+      if (!alt.empty()) {
+        alt = "[Image: " + alt + "]";
+        self->startNewTextBlock(TextBlock::CENTER_ALIGN);
+        self->italicUntilDepth = std::min(self->italicUntilDepth, self->depth);
+        self->depth += 1;
+        self->characterData(userData, alt.c_str(), alt.length());
+        return;
+      }
+
+      // No alt text, skip
+      self->skipUntilDepth = self->depth;
       self->depth += 1;
-      self->characterData(userData, placeholder.c_str(), placeholder.length());
       return;
     }
-
-    self->depth += 1;
-    return;
   }
 
   if (matches(name, SKIP_TAGS, NUM_SKIP_TAGS)) {
@@ -244,31 +257,46 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     }
   }
 
-  if (matches(name, PRE_TAGS, NUM_PRE_TAGS)) {
-    self->startNewTextBlock(TextBlock::LEFT_ALIGN);
-    self->preUntilDepth = std::min(self->preUntilDepth, self->depth);
-  } else if (matches(name, HEADER_TAGS, NUM_HEADER_TAGS)) {
+  if (matches(name, HEADER_TAGS, NUM_HEADER_TAGS)) {
     self->startNewTextBlock(TextBlock::CENTER_ALIGN);
     self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
-  } else if (matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS)) {
+    self->depth += 1;
+    return;
+  }
+
+  if (matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS)) {
     if (strcmp(name, "br") == 0) {
       if (self->partWordBufferIndex > 0) {
         // flush word preceding <br/> to currentTextBlock before calling startNewTextBlock
         self->flushPartWordBuffer();
       }
       self->startNewTextBlock(self->currentTextBlock->getStyle());
-    } else {
-      self->startNewTextBlock((TextBlock::Style)self->paragraphAlignment);
-      if (strcmp(name, "li") == 0) {
-        self->currentTextBlock->addWord("\xe2\x80\xa2", EpdFontFamily::REGULAR);
-      }
+      self->depth += 1;
+      return;
     }
-  } else if (matches(name, BOLD_TAGS, NUM_BOLD_TAGS)) {
-    self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
-  } else if (matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS)) {
-    self->italicUntilDepth = std::min(self->italicUntilDepth, self->depth);
+
+    self->startNewTextBlock(static_cast<TextBlock::Style>(self->paragraphAlignment));
+    if (strcmp(name, "li") == 0) {
+      self->currentTextBlock->addWord("\xe2\x80\xa2", EpdFontFamily::REGULAR);
+    }
+
+    self->depth += 1;
+    return;
   }
 
+  if (matches(name, BOLD_TAGS, NUM_BOLD_TAGS)) {
+    self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
+    self->depth += 1;
+    return;
+  }
+
+  if (matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS)) {
+    self->italicUntilDepth = std::min(self->italicUntilDepth, self->depth);
+    self->depth += 1;
+    return;
+  }
+
+  // Unprocessed tag, just increasing depth and continue forward
   self->depth += 1;
 }
 
@@ -282,33 +310,6 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
 
   for (int i = 0; i < len; i++) {
     if (isWhitespace(s[i])) {
-      if (self->preUntilDepth < self->depth) {
-        // Inside PRE block: preserve whitespace
-        if (s[i] == '\n') {
-          if (self->partWordBufferIndex > 0) self->flushPartWordBuffer();
-
-          if (self->currentTextBlock && self->currentTextBlock->isEmpty()) {
-            // Force a blank line by adding a space
-            self->currentTextBlock->addWord(" ", EpdFontFamily::REGULAR);
-          }
-          self->startNewTextBlock(self->currentTextBlock ? self->currentTextBlock->getStyle() : TextBlock::LEFT_ALIGN);
-        } else if (s[i] == '\r') {
-          // Ignore CR, rely on LF
-        } else {
-          // Space or Tab
-          if (self->partWordBufferIndex >= MAX_WORD_SIZE) self->flushPartWordBuffer();
-
-          char c = (s[i] == '\t') ? ' ' : s[i];  // Convert tab to space
-          self->partWordBuffer[self->partWordBufferIndex++] = c;
-
-          if (s[i] == '\t' && self->partWordBufferIndex < MAX_WORD_SIZE) {
-            // Add extra space for tab (2 spaces total)
-            self->partWordBuffer[self->partWordBufferIndex++] = ' ';
-          }
-        }
-        continue;
-      }
-
       // Currently looking at whitespace, if there's anything in the partWordBuffer, flush it
       if (self->partWordBufferIndex > 0) {
         self->flushPartWordBuffer();
@@ -359,10 +360,10 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
     // We don't want to flush out content when closing inline tags like <span>.
     // Currently this also flushes out on closing <b> and <i> tags, but they are line tags so that shouldn't happen,
     // text styling needs to be overhauled to fix it.
-    const bool shouldBreakText = matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS) ||
-                                 matches(name, HEADER_TAGS, NUM_HEADER_TAGS) || matches(name, PRE_TAGS, NUM_PRE_TAGS) ||
-                                 matches(name, BOLD_TAGS, NUM_BOLD_TAGS) ||
-                                 matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS) || self->depth == 1;
+    const bool shouldBreakText =
+        matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS) || matches(name, HEADER_TAGS, NUM_HEADER_TAGS) ||
+        matches(name, BOLD_TAGS, NUM_BOLD_TAGS) || matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS) ||
+        strcmp(name, "table") == 0 || matches(name, IMAGE_TAGS, NUM_IMAGE_TAGS) || self->depth == 1;
 
     if (shouldBreakText) {
       self->flushPartWordBuffer();
@@ -374,11 +375,6 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
   // Leaving skip
   if (self->skipUntilDepth == self->depth) {
     self->skipUntilDepth = INT_MAX;
-  }
-
-  // Leaving pre
-  if (self->preUntilDepth == self->depth) {
-    self->preUntilDepth = INT_MAX;
   }
 
   // Leaving bold
@@ -409,10 +405,10 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
     return false;
   }
 
-  // Get file size for progress calculation
-  const size_t totalSize = file.size();
-  size_t bytesRead = 0;
-  int lastProgress = -1;
+  // Get file size to decide whether to show indexing popup.
+  if (popupFn && file.size() >= MIN_SIZE_FOR_POPUP) {
+    popupFn();
+  }
 
   XML_SetUserData(parser, this);
   XML_SetElementHandler(parser, startElement, endElement);
@@ -440,17 +436,6 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
       XML_ParserFree(parser);
       file.close();
       return false;
-    }
-
-    // Update progress (call every 10% change to avoid too frequent updates)
-    // Only show progress for larger chapters where rendering overhead is worth it
-    bytesRead += len;
-    if (progressFn && totalSize >= MIN_SIZE_FOR_PROGRESS) {
-      const int progress = static_cast<int>((bytesRead * 100) / totalSize);
-      if (lastProgress / 10 != progress / 10) {
-        lastProgress = progress;
-        progressFn(progress);
-      }
     }
 
     done = file.available() == 0;
@@ -516,132 +501,4 @@ void ChapterHtmlSlimParser::makePages() {
   if (extraParagraphSpacing) {
     currentPageNextY += lineHeight / 2;
   }
-}
-
-void ChapterHtmlSlimParser::addImageToPage(std::shared_ptr<PageImage> image) {
-  const int imageHeight = image->getHeight();
-
-  // Start a new page if image won't fit
-  if (currentPageNextY + imageHeight > viewportHeight) {
-    completePageFn(std::move(currentPage));
-    currentPage.reset(new Page());
-    currentPageNextY = 0;
-  }
-
-  // Center the image horizontally
-  const int16_t xPos = (viewportWidth - image->getWidth()) / 2;
-
-  // Update position and add to page
-  image->xPos = xPos;
-  image->yPos = currentPageNextY;
-  currentPage->elements.push_back(image);
-  currentPageNextY += imageHeight;
-
-  // Add some spacing after image
-  const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
-  currentPageNextY += lineHeight / 2;
-}
-
-void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
-  Serial.printf("[%lu] [EHP] Processing image: %s\n", millis(), src);
-
-  // Resolve relative path against content base path
-  // Combine base path with src and normalize to handle .. components
-  std::string imagePath = FsHelpers::normalisePath(contentBasePath + src);
-  Serial.printf("[%lu] [EHP] Resolved image path: %s\n", millis(), imagePath.c_str());
-
-  // Detect format
-  auto format = ImageConverter::detectFormat(imagePath.c_str());
-  if (format == ImageConverter::FORMAT_UNKNOWN) {
-    // Unsupported format - show placeholder
-    Serial.printf("[%lu] [EHP] Unsupported image format: %s\n", millis(), src);
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
-    std::string placeholder = "[Image: " + std::string(alt) + "]";
-    currentTextBlock->addWord(placeholder.c_str(), EpdFontFamily::ITALIC);
-    return;
-  }
-
-  // Read image data from EPUB
-  size_t imageDataSize = 0;
-  uint8_t* imageData = epub->readItemContentsToBytes(imagePath, &imageDataSize);
-  if (!imageData || imageDataSize == 0) {
-    Serial.printf("[%lu] [EHP] Failed to read image from EPUB: %s\n", millis(), imagePath.c_str());
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
-    std::string placeholder = "[Image: " + std::string(alt) + "]";
-    currentTextBlock->addWord(placeholder.c_str(), EpdFontFamily::ITALIC);
-    return;
-  }
-
-  // Flush any pending text before adding image
-  if (currentTextBlock && !currentTextBlock->isEmpty()) {
-    makePages();
-    currentTextBlock.reset(
-        new ParsedText((TextBlock::Style)paragraphAlignment, extraParagraphSpacing, hyphenationEnabled));
-  }
-
-  // Ensure current page exists
-  if (!currentPage) {
-    currentPage.reset(new Page());
-    currentPageNextY = 0;
-  }
-
-  // Calculate max dimensions for inline image (max half viewport height for inline)
-  const int maxWidth = viewportWidth;
-  const int maxHeight = viewportHeight / 2;
-
-  // Write image data to a temp file for the converter
-  // This is necessary because the converters expect FsFile
-  const std::string tempImagePath = epub->getCachePath() + "/.tmp_image";
-  FsFile tempImage;
-  if (!SdMan.openFileForWrite("EHP", tempImagePath, tempImage)) {
-    Serial.printf("[%lu] [EHP] Failed to create temp image file\n", millis());
-    free(imageData);
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
-    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
-    return;
-  }
-  tempImage.write(imageData, imageDataSize);
-  tempImage.close();
-  free(imageData);
-
-  // Reopen for reading
-  if (!SdMan.openFileForRead("EHP", tempImagePath, tempImage)) {
-    Serial.printf("[%lu] [EHP] Failed to open temp image file for reading\n", millis());
-    SdMan.remove(tempImagePath.c_str());
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
-    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
-    return;
-  }
-
-  // Convert to 1-bit BMP for raw rendering
-  std::vector<uint8_t> bmpData;
-  MemoryPrint bmpOut(bmpData);
-
-  bool success = ImageConverter::convertTo1BitBmpStream(tempImage, format, bmpOut, maxWidth, maxHeight);
-  tempImage.close();
-  SdMan.remove(tempImagePath.c_str());
-
-  if (!success || bmpData.size() < 54) {
-    Serial.printf("[%lu] [EHP] Failed to convert image to 1-bit BMP\n", millis());
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
-    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
-    return;
-  }
-
-  // Decode BMP to raw 1-bit data for display
-  std::vector<uint8_t> rawData;
-  uint16_t bmpWidth = 0;
-  uint16_t bmpHeight = 0;
-  if (!decode1BitBmpToRaw(bmpData, rawData, bmpWidth, bmpHeight)) {
-    Serial.printf("[%lu] [EHP] Failed to decode 1-bit BMP\n", millis());
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
-    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
-    return;
-  }
-
-  Serial.printf("[%lu] [EHP] Converted image: %dx%d, %zu bytes (raw)\n", millis(), bmpWidth, bmpHeight, rawData.size());
-
-  // Create PageImage and add to page (raw 1-bit data)
-  auto pageImage = std::make_shared<PageImage>(std::move(rawData), bmpWidth, bmpHeight, 0, 0);
-  addImageToPage(pageImage);
 }

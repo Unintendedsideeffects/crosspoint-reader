@@ -1,16 +1,13 @@
 #include "JpegToFramebufferConverter.h"
 
 #include <GfxRenderer.h>
-#include <Logging.h>
+#include <HardwareSerial.h>
 #include <SDCardManager.h>
 #include <SdFat.h>
 #include <picojpeg.h>
 
 #include <cstdio>
 #include <cstring>
-
-#include "DitherUtils.h"
-#include "PixelCache.h"
 
 struct JpegContext {
   FsFile& file;
@@ -20,10 +17,112 @@ struct JpegContext {
   JpegContext(FsFile& f) : file(f), bufferPos(0), bufferFilled(0) {}
 };
 
+// Cache buffer for storing 2-bit pixels during decode
+struct PixelCache {
+  uint8_t* buffer;
+  int width;
+  int height;
+  int bytesPerRow;
+  int originX;  // config.x - to convert screen coords to cache coords
+  int originY;  // config.y
+
+  PixelCache() : buffer(nullptr), width(0), height(0), bytesPerRow(0), originX(0), originY(0) {}
+
+  bool allocate(int w, int h, int ox, int oy) {
+    width = w;
+    height = h;
+    originX = ox;
+    originY = oy;
+    bytesPerRow = (w + 3) / 4;  // 2 bits per pixel, 4 pixels per byte
+    size_t bufferSize = bytesPerRow * h;
+    buffer = (uint8_t*)malloc(bufferSize);
+    if (buffer) {
+      memset(buffer, 0, bufferSize);
+      Serial.printf("[%lu] [JPG] Allocated cache buffer: %d bytes for %dx%d\n", millis(), bufferSize, w, h);
+    }
+    return buffer != nullptr;
+  }
+
+  void setPixel(int screenX, int screenY, uint8_t value) {
+    if (!buffer) return;
+    int localX = screenX - originX;
+    int localY = screenY - originY;
+    if (localX < 0 || localX >= width || localY < 0 || localY >= height) return;
+
+    int byteIdx = localY * bytesPerRow + localX / 4;
+    int bitShift = 6 - (localX % 4) * 2;  // MSB first: pixel 0 at bits 6-7
+    buffer[byteIdx] = (buffer[byteIdx] & ~(0x03 << bitShift)) | ((value & 0x03) << bitShift);
+  }
+
+  bool writeToFile(const std::string& cachePath) {
+    if (!buffer) return false;
+
+    FsFile cacheFile;
+    if (!SdMan.openFileForWrite("IMG", cachePath, cacheFile)) {
+      Serial.printf("[%lu] [JPG] Failed to open cache file for writing: %s\n", millis(), cachePath.c_str());
+      return false;
+    }
+
+    uint16_t w = width;
+    uint16_t h = height;
+    cacheFile.write(&w, 2);
+    cacheFile.write(&h, 2);
+    cacheFile.write(buffer, bytesPerRow * height);
+    cacheFile.close();
+
+    Serial.printf("[%lu] [JPG] Cache written: %s (%dx%d, %d bytes)\n", millis(), cachePath.c_str(), width, height,
+                  4 + bytesPerRow * height);
+    return true;
+  }
+
+  ~PixelCache() {
+    if (buffer) {
+      free(buffer);
+      buffer = nullptr;
+    }
+  }
+};
+
+// 4x4 Bayer matrix for ordered dithering
+static const uint8_t bayer4x4[4][4] = {
+    {0, 8, 2, 10},
+    {12, 4, 14, 6},
+    {3, 11, 1, 9},
+    {15, 7, 13, 5},
+};
+
+// Apply Bayer dithering and quantize to 4 levels (0-3)
+// Stateless - works correctly with any pixel processing order (ideal for MCU-based decoding)
+static uint8_t applyBayerDither4Level(uint8_t gray, int x, int y) {
+  int bayer = bayer4x4[y & 3][x & 3];
+  int dither = (bayer - 8) * 5;  // Scale to ±40 (half of quantization step 85)
+
+  int adjusted = gray + dither;
+  if (adjusted < 0) adjusted = 0;
+  if (adjusted > 255) adjusted = 255;
+
+  if (adjusted < 64) return 0;
+  if (adjusted < 128) return 1;
+  if (adjusted < 192) return 2;
+  return 3;
+}
+
+// Draw a pixel respecting the current render mode for grayscale support
+static void drawPixelWithRenderMode(GfxRenderer& renderer, int x, int y, uint8_t pixelValue) {
+  GfxRenderer::RenderMode renderMode = renderer.getRenderMode();
+  if (renderMode == GfxRenderer::BW && pixelValue < 3) {
+    renderer.drawPixel(x, y, true);
+  } else if (renderMode == GfxRenderer::GRAYSCALE_MSB && (pixelValue == 1 || pixelValue == 2)) {
+    renderer.drawPixel(x, y, false);
+  } else if (renderMode == GfxRenderer::GRAYSCALE_LSB && pixelValue == 1) {
+    renderer.drawPixel(x, y, false);
+  }
+}
+
 bool JpegToFramebufferConverter::getDimensionsStatic(const std::string& imagePath, ImageDimensions& out) {
   FsFile file;
-  if (!Storage.openFileForRead("JPG", imagePath, file)) {
-    LOG_ERR("JPG", "Failed to open file for dimensions: %s", imagePath.c_str());
+  if (!SdMan.openFileForRead("JPG", imagePath, file)) {
+    Serial.printf("[%lu] [JPG] Failed to open file for dimensions: %s\n", millis(), imagePath.c_str());
     return false;
   }
 
@@ -34,23 +133,23 @@ bool JpegToFramebufferConverter::getDimensionsStatic(const std::string& imagePat
   file.close();
 
   if (status != 0) {
-    LOG_ERR("JPG", "Failed to init JPEG for dimensions: %d", status);
+    Serial.printf("[%lu] [JPG] Failed to init JPEG for dimensions: %d\n", millis(), status);
     return false;
   }
 
   out.width = imageInfo.m_width;
   out.height = imageInfo.m_height;
-  LOG_DBG("JPG", "Image dimensions: %dx%d", out.width, out.height);
+  Serial.printf("[%lu] [JPG] Image dimensions: %dx%d\n", millis(), out.width, out.height);
   return true;
 }
 
 bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath, GfxRenderer& renderer,
                                                      const RenderConfig& config) {
-  LOG_DBG("JPG", "Decoding JPEG: %s", imagePath.c_str());
+  Serial.printf("[%lu] [JPG] Decoding JPEG: %s\n", millis(), imagePath.c_str());
 
   FsFile file;
-  if (!Storage.openFileForRead("JPG", imagePath, file)) {
-    LOG_ERR("JPG", "Failed to open file: %s", imagePath.c_str());
+  if (!SdMan.openFileForRead("JPG", imagePath, file)) {
+    Serial.printf("[%lu] [JPG] Failed to open file: %s\n", millis(), imagePath.c_str());
     return false;
   }
 
@@ -59,7 +158,7 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
 
   int status = pjpeg_decode_init(&imageInfo, jpegReadCallback, &context, 0);
   if (status != 0) {
-    LOG_ERR("JPG", "picojpeg init failed: %d", status);
+    Serial.printf("[%lu] [JPG] picojpeg init failed: %d\n", millis(), status);
     file.close();
     return false;
   }
@@ -69,35 +168,24 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
     return false;
   }
 
-  // Calculate output dimensions
-  int destWidth, destHeight;
-  float scale;
+  // Calculate scale factor to fit within maxWidth/maxHeight
+  float scaleX =
+      (config.maxWidth > 0 && imageInfo.m_width > config.maxWidth) ? (float)config.maxWidth / imageInfo.m_width : 1.0f;
+  float scaleY = (config.maxHeight > 0 && imageInfo.m_height > config.maxHeight)
+                     ? (float)config.maxHeight / imageInfo.m_height
+                     : 1.0f;
+  float scale = (scaleX < scaleY) ? scaleX : scaleY;
+  if (scale > 1.0f) scale = 1.0f;
 
-  if (config.useExactDimensions && config.maxWidth > 0 && config.maxHeight > 0) {
-    // Use exact dimensions as specified (avoids rounding mismatches with pre-calculated sizes)
-    destWidth = config.maxWidth;
-    destHeight = config.maxHeight;
-    scale = (float)destWidth / imageInfo.m_width;
-  } else {
-    // Calculate scale factor to fit within maxWidth/maxHeight
-    float scaleX = (config.maxWidth > 0 && imageInfo.m_width > config.maxWidth)
-                       ? (float)config.maxWidth / imageInfo.m_width
-                       : 1.0f;
-    float scaleY = (config.maxHeight > 0 && imageInfo.m_height > config.maxHeight)
-                       ? (float)config.maxHeight / imageInfo.m_height
-                       : 1.0f;
-    scale = (scaleX < scaleY) ? scaleX : scaleY;
-    if (scale > 1.0f) scale = 1.0f;
+  int destWidth = (int)(imageInfo.m_width * scale);
+  int destHeight = (int)(imageInfo.m_height * scale);
 
-    destWidth = (int)(imageInfo.m_width * scale);
-    destHeight = (int)(imageInfo.m_height * scale);
-  }
-
-  LOG_DBG("JPG", "JPEG %dx%d -> %dx%d (scale %.2f), scan type: %d, MCU: %dx%d", imageInfo.m_width, imageInfo.m_height,
-          destWidth, destHeight, scale, imageInfo.m_scanType, imageInfo.m_MCUWidth, imageInfo.m_MCUHeight);
+  Serial.printf("[%lu] [JPG] JPEG %dx%d -> %dx%d (scale %.2f), scan type: %d, MCU: %dx%d\n", millis(),
+                imageInfo.m_width, imageInfo.m_height, destWidth, destHeight, scale, imageInfo.m_scanType,
+                imageInfo.m_MCUWidth, imageInfo.m_MCUHeight);
 
   if (!imageInfo.m_pMCUBufR || !imageInfo.m_pMCUBufG || !imageInfo.m_pMCUBufB) {
-    LOG_ERR("JPG", "Null buffer pointers in imageInfo");
+    Serial.printf("[%lu] [JPG] Null buffer pointers in imageInfo\n", millis());
     file.close();
     return false;
   }
@@ -110,7 +198,7 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
   bool caching = !config.cachePath.empty();
   if (caching) {
     if (!cache.allocate(destWidth, destHeight, config.x, config.y)) {
-      LOG_ERR("JPG", "Failed to allocate cache buffer, continuing without caching");
+      Serial.printf("[%lu] [JPG] Failed to allocate cache buffer, continuing without caching\n", millis());
       caching = false;
     }
   }
@@ -124,7 +212,7 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
       break;
     }
     if (status != 0) {
-      LOG_ERR("JPG", "MCU decode failed: %d", status);
+      Serial.printf("[%lu] [JPG] MCU decode failed: %d\n", millis(), status);
       file.close();
       return false;
     }
@@ -253,7 +341,7 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
     }
   }
 
-  LOG_DBG("JPG", "Decoding complete");
+  Serial.printf("[%lu] [JPG] Decoding complete\n", millis());
   file.close();
 
   // Write cache file if caching was enabled
@@ -288,7 +376,7 @@ unsigned char JpegToFramebufferConverter::jpegReadCallback(unsigned char* pBuf, 
   return 0;
 }
 
-bool JpegToFramebufferConverter::supportsFormat(const std::string& extension) {
+bool JpegToFramebufferConverter::supportsFormat(const std::string& extension) const {
   std::string ext = extension;
   for (auto& c : ext) {
     c = tolower(c);
