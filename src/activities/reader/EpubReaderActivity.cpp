@@ -11,6 +11,7 @@
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 
 namespace {
@@ -56,20 +57,23 @@ void EpubReaderActivity::onEnter() {
 
   epub->setupCacheDir();
 
-  FsFile f;
-  if (SdMan.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
-    uint8_t data[6];
-    int dataSize = f.read(data, 6);
-    if (dataSize == 4 || dataSize == 6) {
-      currentSpineIndex = data[0] + (data[1] << 8);
-      nextPageNumber = data[2] + (data[3] << 8);
-      cachedSpineIndex = currentSpineIndex;
-      Serial.printf("[%lu] [ERS] Loaded cache: %d, %d\n", millis(), currentSpineIndex, nextPageNumber);
+  {
+    SpiBusMutex::Guard guard;
+    FsFile f;
+    if (SdMan.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
+      uint8_t data[6];
+      int dataSize = f.read(data, 6);
+      if (dataSize == 4 || dataSize == 6) {
+        currentSpineIndex = data[0] + (data[1] << 8);
+        nextPageNumber = data[2] + (data[3] << 8);
+        cachedSpineIndex = currentSpineIndex;
+        Serial.printf("[%lu] [ERS] Loaded cache: %d, %d\n", millis(), currentSpineIndex, nextPageNumber);
+      }
+      if (dataSize == 6) {
+        cachedChapterTotalPageCount = data[4] + (data[5] << 8);
+      }
+      f.close();
     }
-    if (dataSize == 6) {
-      cachedChapterTotalPageCount = data[4] + (data[5] << 8);
-    }
-    f.close();
   }
   // We may want a better condition to detect if we are opening for the first time.
   // This will trigger if the book is re-opened at Chapter 0.
@@ -303,9 +307,14 @@ void EpubReaderActivity::renderScreen() {
     const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
     const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
 
-    if (!section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
-                                  SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
-                                  viewportHeight, SETTINGS.hyphenationEnabled)) {
+    bool sectionLoaded = false;
+    {
+      SpiBusMutex::Guard guard;
+      sectionLoaded = section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
+                                               SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
+                                               viewportHeight, SETTINGS.hyphenationEnabled);
+    }
+    if (!sectionLoaded) {
       Serial.printf("[%lu] [ERS] Cache not found, building...\n", millis());
 
       // Progress bar dimensions
@@ -396,7 +405,11 @@ void EpubReaderActivity::renderScreen() {
   }
 
   {
-    auto p = section->loadPageFromSectionFile();
+    std::unique_ptr<Page> p;
+    {
+      SpiBusMutex::Guard guard;
+      p = section->loadPageFromSectionFile();
+    }
     if (!p) {
       Serial.printf("[%lu] [ERS] Failed to load page from SD - clearing section cache\n", millis());
       section->clearCache();
@@ -408,17 +421,20 @@ void EpubReaderActivity::renderScreen() {
     Serial.printf("[%lu] [ERS] Rendered page in %dms\n", millis(), millis() - start);
   }
 
-  FsFile f;
-  if (SdMan.openFileForWrite("ERS", epub->getCachePath() + "/progress.bin", f)) {
-    uint8_t data[6];
-    data[0] = currentSpineIndex & 0xFF;
-    data[1] = (currentSpineIndex >> 8) & 0xFF;
-    data[2] = section->currentPage & 0xFF;
-    data[3] = (section->currentPage >> 8) & 0xFF;
-    data[4] = section->pageCount & 0xFF;
-    data[5] = (section->pageCount >> 8) & 0xFF;
-    f.write(data, 6);
-    f.close();
+  {
+    SpiBusMutex::Guard guard;
+    FsFile f;
+    if (SdMan.openFileForWrite("ERS", epub->getCachePath() + "/progress.bin", f)) {
+      uint8_t data[6];
+      data[0] = currentSpineIndex & 0xFF;
+      data[1] = (currentSpineIndex >> 8) & 0xFF;
+      data[2] = section->currentPage & 0xFF;
+      data[3] = (section->currentPage >> 8) & 0xFF;
+      data[4] = section->pageCount & 0xFF;
+      data[5] = (section->pageCount >> 8) & 0xFF;
+      f.write(data, 6);
+      f.close();
+    }
   }
 }
 

@@ -8,6 +8,7 @@
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
 
@@ -82,6 +83,7 @@ void MyLibraryActivity::loadRecentBooks() {
 void MyLibraryActivity::loadFiles() {
   files.clear();
 
+  SpiBusMutex::Guard guard;
   auto root = SdMan.open(basepath.c_str());
   if (!root || !root.isDirectory()) {
     if (root) root.close();

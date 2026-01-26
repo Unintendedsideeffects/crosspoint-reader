@@ -2,41 +2,13 @@
 
 #include <GfxRenderer.h>
 #include <WiFi.h>
-#include <esp_sntp.h>
 
 #include "KOReaderCredentialStore.h"
 #include "KOReaderDocumentId.h"
 #include "MappedInputManager.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "fontIds.h"
-
-namespace {
-void syncTimeWithNTP() {
-  // Stop SNTP if already running (can't reconfigure while running)
-  if (esp_sntp_enabled()) {
-    esp_sntp_stop();
-  }
-
-  // Configure SNTP
-  esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);
-  esp_sntp_setservername(0, "pool.ntp.org");
-  esp_sntp_init();
-
-  // Wait for time to sync (with timeout)
-  int retry = 0;
-  const int maxRetries = 50;  // 5 seconds max
-  while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED && retry < maxRetries) {
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    retry++;
-  }
-
-  if (retry < maxRetries) {
-    Serial.printf("[%lu] [KOSync] NTP time synced\n", millis());
-  } else {
-    Serial.printf("[%lu] [KOSync] NTP sync timeout, using fallback\n", millis());
-  }
-}
-}  // namespace
+#include "util/TimeSync.h"
 
 void KOReaderSyncActivity::taskTrampoline(void* param) {
   auto* self = static_cast<KOReaderSyncActivity*>(param);
@@ -61,7 +33,7 @@ void KOReaderSyncActivity::onWifiSelectionComplete(const bool success) {
   updateRequired = true;
 
   // Sync time with NTP before making API requests
-  syncTimeWithNTP();
+  TimeSync::syncTimeWithNtpLowMemory();
 
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   statusMessage = "Calculating document hash...";
@@ -202,7 +174,7 @@ void KOReaderSyncActivity::onEnter() {
         [](void* param) {
           auto* self = static_cast<KOReaderSyncActivity*>(param);
           // Sync time first
-          syncTimeWithNTP();
+          TimeSync::syncTimeWithNtpLowMemory();
           xSemaphoreTake(self->renderingMutex, portMAX_DELAY);
           self->statusMessage = "Calculating document hash...";
           xSemaphoreGive(self->renderingMutex);
@@ -381,7 +353,7 @@ void KOReaderSyncActivity::loop() {
   }
 
   if (state == NO_CREDENTIALS || state == SYNC_FAILED || state == UPLOAD_COMPLETE) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       onCancel();
     }
     return;
@@ -399,7 +371,7 @@ void KOReaderSyncActivity::loop() {
       updateRequired = true;
     }
 
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       if (selectedOption == 0) {
         // Apply remote progress
         onSyncComplete(remotePosition.spineIndex, remotePosition.pageNumber);
@@ -412,14 +384,14 @@ void KOReaderSyncActivity::loop() {
       }
     }
 
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       onCancel();
     }
     return;
   }
 
   if (state == NO_REMOTE_PROGRESS) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       // Calculate hash if not done yet
       if (documentHash.empty()) {
         if (KOREADER_STORE.getMatchMethod() == DocumentMatchMethod::FILENAME) {
@@ -431,7 +403,7 @@ void KOReaderSyncActivity::loop() {
       performUpload();
     }
 
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       onCancel();
     }
     return;

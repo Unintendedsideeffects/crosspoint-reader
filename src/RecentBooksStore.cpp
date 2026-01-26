@@ -6,6 +6,8 @@
 
 #include <algorithm>
 
+#include "SpiBusMutex.h"
+
 namespace {
 constexpr uint8_t RECENT_BOOKS_FILE_VERSION = 2;
 constexpr char RECENT_BOOKS_FILE[] = "/.crosspoint/recent.bin";
@@ -34,6 +36,7 @@ void RecentBooksStore::addBook(const std::string& path, const std::string& title
 }
 
 bool RecentBooksStore::saveToFile() const {
+  SpiBusMutex::Guard guard;
   // Make sure the directory exists
   SdMan.mkdir("/.crosspoint");
 
@@ -58,6 +61,7 @@ bool RecentBooksStore::saveToFile() const {
 }
 
 bool RecentBooksStore::loadFromFile() {
+  SpiBusMutex::Guard guard;
   FsFile inputFile;
   if (!SdMan.openFileForRead("RBS", RECENT_BOOKS_FILE, inputFile)) {
     return false;

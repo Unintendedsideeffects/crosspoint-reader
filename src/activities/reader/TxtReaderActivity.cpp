@@ -10,6 +10,7 @@
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 
 namespace {
@@ -270,6 +271,7 @@ void TxtReaderActivity::buildPageIndex() {
 }
 
 bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>& outLines, size_t& nextOffset) {
+  SpiBusMutex::Guard guard;
   outLines.clear();
   const size_t fileSize = txt->getFileSize();
 
@@ -575,6 +577,7 @@ void TxtReaderActivity::renderStatusBar(const int orientedMarginRight, const int
 }
 
 void TxtReaderActivity::saveProgress() const {
+  SpiBusMutex::Guard guard;
   FsFile f;
   if (SdMan.openFileForWrite("TRS", txt->getCachePath() + "/progress.bin", f)) {
     uint8_t data[4];
@@ -588,6 +591,7 @@ void TxtReaderActivity::saveProgress() const {
 }
 
 void TxtReaderActivity::loadProgress() {
+  SpiBusMutex::Guard guard;
   FsFile f;
   if (SdMan.openFileForRead("TRS", txt->getCachePath() + "/progress.bin", f)) {
     uint8_t data[4];
@@ -618,6 +622,7 @@ bool TxtReaderActivity::loadPageIndexCache() {
   // - uint32_t: total pages count
   // - N * uint32_t: page offsets
 
+  SpiBusMutex::Guard guard;
   std::string cachePath = txt->getCachePath() + "/index.bin";
   FsFile f;
   if (!SdMan.openFileForRead("TRS", cachePath, f)) {
@@ -710,6 +715,7 @@ bool TxtReaderActivity::loadPageIndexCache() {
 }
 
 void TxtReaderActivity::savePageIndexCache() const {
+  SpiBusMutex::Guard guard;
   std::string cachePath = txt->getCachePath() + "/index.bin";
   FsFile f;
   if (!SdMan.openFileForWrite("TRS", cachePath, f)) {

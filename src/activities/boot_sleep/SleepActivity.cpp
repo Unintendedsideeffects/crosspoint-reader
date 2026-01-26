@@ -8,6 +8,7 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 #include "images/CrossLarge.h"
 #include "util/StringUtils.h"
@@ -46,6 +47,7 @@ void SleepActivity::renderPopup(const char* message) const {
 }
 
 void SleepActivity::renderCustomSleepScreen() const {
+  SpiBusMutex::Guard guard;
   // Check if we have a /sleep directory
   auto dir = SdMan.open("/sleep");
   if (dir && dir.isDirectory()) {
@@ -210,6 +212,7 @@ void SleepActivity::renderBitmapSleepScreen(const Bitmap& bitmap) const {
 }
 
 void SleepActivity::renderCoverSleepScreen() const {
+  SpiBusMutex::Guard guard;
   if (APP_STATE.openEpubPath.empty()) {
     return renderDefaultSleepScreen();
   }

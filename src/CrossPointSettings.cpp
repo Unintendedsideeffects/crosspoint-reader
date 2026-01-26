@@ -6,6 +6,7 @@
 
 #include <cstring>
 
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 
 // Initialize the static instance
@@ -22,11 +23,12 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 namespace {
 constexpr uint8_t SETTINGS_FILE_VERSION = 1;
 // Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 23;
+constexpr uint8_t SETTINGS_COUNT = 28;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 }  // namespace
 
 bool CrossPointSettings::saveToFile() const {
+  SpiBusMutex::Guard guard;
   // Make sure the directory exists
   SdMan.mkdir("/.crosspoint");
 
@@ -60,6 +62,11 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writeString(outputFile, std::string(opdsUsername));
   serialization::writeString(outputFile, std::string(opdsPassword));
   serialization::writePod(outputFile, sleepScreenCoverFilter);
+  serialization::writePod(outputFile, backgroundServerOnCharge);
+  serialization::writePod(outputFile, todoFallbackCover);
+  serialization::writePod(outputFile, timeMode);
+  serialization::writePod(outputFile, timeZoneOffset);
+  serialization::writePod(outputFile, lastTimeSyncEpoch);
   // New fields added at end for backward compatibility
   outputFile.close();
 
@@ -68,6 +75,7 @@ bool CrossPointSettings::saveToFile() const {
 }
 
 bool CrossPointSettings::loadFromFile() {
+  SpiBusMutex::Guard guard;
   FsFile inputFile;
   if (!SdMan.openFileForRead("CPS", SETTINGS_FILE, inputFile)) {
     return false;
@@ -148,6 +156,16 @@ bool CrossPointSettings::loadFromFile() {
     if (++settingsRead >= fileSettingsCount) break;
     readAndValidate(inputFile, sleepScreenCoverFilter, SLEEP_SCREEN_COVER_FILTER_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, backgroundServerOnCharge);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, todoFallbackCover);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, timeMode);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, timeZoneOffset);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, lastTimeSyncEpoch);
+    if (++settingsRead >= fileSettingsCount) break;
     // New fields added at end for backward compatibility
   } while (false);
 
@@ -222,6 +240,11 @@ int CrossPointSettings::getRefreshFrequency() const {
     case REFRESH_30:
       return 30;
   }
+}
+
+int CrossPointSettings::getTimeZoneOffsetSeconds() const {
+  const int offsetHours = static_cast<int>(timeZoneOffset) - 12;
+  return offsetHours * 3600;
 }
 
 int CrossPointSettings::getReaderFontId() const {
