@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include "SpiBusMutex.h"
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
 #include "util/StringUtils.h"
@@ -231,6 +232,7 @@ void CrossPointWebServer::handleStatus() const {
 }
 
 void CrossPointWebServer::scanFiles(const char* path, const std::function<void(FileInfo)>& callback) const {
+  SpiBusMutex::Guard guard;
   FsFile root = SdMan.open(path);
   if (!root) {
     Serial.printf("[%lu] [WEB] Failed to open directory: %s\n", millis(), path);
@@ -368,6 +370,7 @@ static size_t writeCount = 0;
 
 static bool flushUploadBuffer() {
   if (uploadBufferPos > 0 && uploadFile) {
+    SpiBusMutex::Guard guard;
     esp_task_wdt_reset();  // Reset watchdog before potentially slow SD write
     const unsigned long writeStart = millis();
     const size_t written = uploadFile.write(uploadBuffer, uploadBufferPos);
@@ -477,7 +480,10 @@ void CrossPointWebServer::handleUpload() const {
         if (uploadBufferPos >= UPLOAD_BUFFER_SIZE) {
           if (!flushUploadBuffer()) {
             uploadError = "Failed to write to SD card - disk may be full";
-            uploadFile.close();
+            {
+              SpiBusMutex::Guard guard;
+              uploadFile.close();
+            }
             return;
           }
         }
@@ -500,7 +506,10 @@ void CrossPointWebServer::handleUpload() const {
       if (!flushUploadBuffer()) {
         uploadError = "Failed to write final data to SD card";
       }
-      uploadFile.close();
+      {
+        SpiBusMutex::Guard guard;
+        uploadFile.close();
+      }
 
       if (uploadError.isEmpty()) {
         uploadSuccess = true;
@@ -522,6 +531,7 @@ void CrossPointWebServer::handleUpload() const {
   } else if (upload.status == UPLOAD_FILE_ABORTED) {
     uploadBufferPos = 0;  // Discard buffered data
     if (uploadFile) {
+      SpiBusMutex::Guard guard;
       uploadFile.close();
       // Try to delete the incomplete file
       String filePath = uploadPath;
@@ -646,19 +656,22 @@ void CrossPointWebServer::handleDelete() const {
 
   if (itemType == "folder") {
     // For folders, try to remove (will fail if not empty)
-    FsFile dir = SdMan.open(itemPath.c_str());
-    if (dir && dir.isDirectory()) {
-      // Check if folder is empty
-      FsFile entry = dir.openNextFile();
-      if (entry) {
-        // Folder is not empty
-        entry.close();
+    {
+      SpiBusMutex::Guard guard;
+      FsFile dir = SdMan.open(itemPath.c_str());
+      if (dir && dir.isDirectory()) {
+        // Check if folder is empty
+        FsFile entry = dir.openNextFile();
+        if (entry) {
+          // Folder is not empty
+          entry.close();
+          dir.close();
+          Serial.printf("[%lu] [WEB] Delete failed - folder not empty: %s\n", millis(), itemPath.c_str());
+          server->send(400, "text/plain", "Folder is not empty. Delete contents first.");
+          return;
+        }
         dir.close();
-        Serial.printf("[%lu] [WEB] Delete failed - folder not empty: %s\n", millis(), itemPath.c_str());
-        server->send(400, "text/plain", "Folder is not empty. Delete contents first.");
-        return;
       }
-      dir.close();
     }
     success = SdMan.rmdir(itemPath.c_str());
   } else {
@@ -694,6 +707,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       Serial.printf("[%lu] [WS] Client %u disconnected\n", millis(), num);
       // Clean up any in-progress upload
       if (wsUploadInProgress && wsUploadFile) {
+        SpiBusMutex::Guard guard;
         wsUploadFile.close();
         // Delete incomplete file
         String filePath = wsUploadPath;
@@ -773,10 +787,15 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
 
       // Write binary data directly to file
       esp_task_wdt_reset();
-      size_t written = wsUploadFile.write(payload, length);
+      size_t written = 0;
+      {
+        SpiBusMutex::Guard guard;
+        written = wsUploadFile.write(payload, length);
+      }
       esp_task_wdt_reset();
 
       if (written != length) {
+        SpiBusMutex::Guard guard;
         wsUploadFile.close();
         wsUploadInProgress = false;
         wsServer->sendTXT(num, "ERROR:Write failed - disk full?");
@@ -795,7 +814,10 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
 
       // Check if upload complete
       if (wsUploadReceived >= wsUploadSize) {
-        wsUploadFile.close();
+        {
+          SpiBusMutex::Guard guard;
+          wsUploadFile.close();
+        }
         wsUploadInProgress = false;
 
         unsigned long elapsed = millis() - wsUploadStartTime;

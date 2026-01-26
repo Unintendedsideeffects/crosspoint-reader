@@ -191,8 +191,11 @@ bool MappedInputManager::isPressed(const Button button) const {
     if (button == Button::Right) {
       return inputManager.isPressed(InputManager::BTN_CONFIRM) || inputManager.isPressed(InputManager::BTN_RIGHT);
     }
-    if (button == Button::Back || button == Button::Confirm) {
-      return false;  // No front button for Back/Confirm in dual-side mode
+    if (button == Button::Back) {
+      return inputManager.isPressed(InputManager::BTN_BACK) || inputManager.isPressed(InputManager::BTN_LEFT);
+    }
+    if (button == Button::Confirm) {
+      return false;  // No front button for Confirm in dual-side mode
     }
   }
   return inputManager.isPressed(mapButton(button));

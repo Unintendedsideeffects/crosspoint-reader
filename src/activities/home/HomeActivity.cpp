@@ -14,6 +14,7 @@
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "ScreenComponents.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
 
@@ -241,6 +242,7 @@ void HomeActivity::render() {
     // Only load from SD on first render, then use stored buffer
     if (hasContinueReading && hasCoverImage && !coverBmpPath.empty() && !coverRendered) {
       // First time: load cover from SD and render
+      SpiBusMutex::Guard guard;
       FsFile file;
       if (SdMan.openFileForRead("HOME", coverBmpPath, file)) {
         Bitmap bitmap(file);

@@ -73,32 +73,29 @@ bool OtaUpdater::isUpdateNewer() const {
     return false;
   }
 
-  int currentMajor, currentMinor, currentPatch;
-  int latestMajor, latestMinor, latestPatch;
+  int currentMajor = 0, currentMinor = 0, currentPatch = 0;
+  int latestMajor = 0, latestMinor = 0, latestPatch = 0;
 
-  const auto currentVersion = CROSSPOINT_VERSION;
+  const char* latestStr = latestVersion.c_str();
+  const char* currentStr = CROSSPOINT_VERSION;
 
-  // semantic version check (only match on 3 segments)
-  sscanf(latestVersion.c_str(), "%d.%d.%d", &latestMajor, &latestMinor, &latestPatch);
-  sscanf(currentVersion, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch);
+  // Strip leading 'v' or 'V' if present
+  if (*latestStr == 'v' || *latestStr == 'V') latestStr++;
+  if (*currentStr == 'v' || *currentStr == 'V') currentStr++;
 
-  /*
-   * Compare major versions.
-   * If they differ, return true if latest major version greater than current major version
-   * otherwise return false.
-   */
+  // Parse and validate - require exactly 3 segments
+  if (sscanf(latestStr, "%d.%d.%d", &latestMajor, &latestMinor, &latestPatch) != 3) {
+    Serial.printf("[%lu] [OTA] Failed to parse latest version: %s\n", millis(), latestVersion.c_str());
+    return false;
+  }
+
+  if (sscanf(currentStr, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch) != 3) {
+    Serial.printf("[%lu] [OTA] Failed to parse current version: %s\n", millis(), CROSSPOINT_VERSION);
+    return false;
+  }
+
   if (latestMajor != currentMajor) return latestMajor > currentMajor;
-
-  /*
-   * Compare minor versions.
-   * If they differ, return true if latest minor version greater than current minor version
-   * otherwise return false.
-   */
   if (latestMinor != currentMinor) return latestMinor > currentMinor;
-
-  /*
-   * Check patch versions.
-   */
   return latestPatch > currentPatch;
 }
 

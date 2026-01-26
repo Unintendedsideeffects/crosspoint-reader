@@ -3,7 +3,7 @@
 namespace {
 StaticSemaphore_t spiMutexBuffer;
 
-SemaphoreHandle_t createMutex() { return xSemaphoreCreateMutexStatic(&spiMutexBuffer); }
+SemaphoreHandle_t createMutex() { return xSemaphoreCreateRecursiveMutexStatic(&spiMutexBuffer); }
 }  // namespace
 
 SemaphoreHandle_t SpiBusMutex::get() {
@@ -14,14 +14,14 @@ SemaphoreHandle_t SpiBusMutex::get() {
 void SpiBusMutex::lock() {
   auto mutex = get();
   if (mutex) {
-    xSemaphoreTake(mutex, portMAX_DELAY);
+    xSemaphoreTakeRecursive(mutex, portMAX_DELAY);
   }
 }
 
 void SpiBusMutex::unlock() {
   auto mutex = get();
   if (mutex) {
-    xSemaphoreGive(mutex);
+    xSemaphoreGiveRecursive(mutex);
   }
 }
 

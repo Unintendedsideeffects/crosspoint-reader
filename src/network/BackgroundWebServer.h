@@ -17,6 +17,7 @@ class BackgroundWebServer {
   bool isRunning() const;
   bool shouldPreventAutoSleep() const;
   bool wantsFastLoop() const;
+  void invalidateCredentialsCache();
 
  private:
   BackgroundWebServer() = default;

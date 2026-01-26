@@ -5,6 +5,7 @@
 #include <SDCardManager.h>
 
 #include "MappedInputManager.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 
 void ClearCacheActivity::taskTrampoline(void* param) {
@@ -105,6 +106,7 @@ void ClearCacheActivity::render() {
 void ClearCacheActivity::clearCache() {
   Serial.printf("[%lu] [CLEAR_CACHE] Clearing cache...\n", millis());
 
+  SpiBusMutex::Guard guard;
   // Open .crosspoint directory
   auto root = SdMan.open("/.crosspoint");
   if (!root || !root.isDirectory()) {

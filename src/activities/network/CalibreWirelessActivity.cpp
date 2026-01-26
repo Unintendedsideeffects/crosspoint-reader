@@ -9,6 +9,7 @@
 
 #include "MappedInputManager.h"
 #include "ScreenComponents.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
 
@@ -592,10 +593,13 @@ void CalibreWirelessActivity::handleSendBook(const std::string& data) {
   setStatus("Receiving: " + filename);
 
   // Open file for writing
-  if (!SdMan.openFileForWrite("CAL", currentFilename.c_str(), currentFile)) {
-    setError("Failed to create file");
-    sendJsonResponse(OpCode::ERROR, "{\"message\":\"Failed to create file\"}");
-    return;
+  {
+    SpiBusMutex::Guard guard;
+    if (!SdMan.openFileForWrite("CAL", currentFilename.c_str(), currentFile)) {
+      setError("Failed to create file");
+      sendJsonResponse(OpCode::ERROR, "{\"message\":\"Failed to create file\"}");
+      return;
+    }
   }
 
   // Send OK to start receiving binary data
@@ -608,7 +612,11 @@ void CalibreWirelessActivity::handleSendBook(const std::string& data) {
   // Check if recvBuffer has leftover data (binary file data that arrived with the JSON)
   if (!recvBuffer.empty()) {
     size_t toWrite = std::min(recvBuffer.size(), binaryBytesRemaining);
-    size_t written = currentFile.write(reinterpret_cast<const uint8_t*>(recvBuffer.data()), toWrite);
+    size_t written = 0;
+    {
+      SpiBusMutex::Guard guard;
+      written = currentFile.write(reinterpret_cast<const uint8_t*>(recvBuffer.data()), toWrite);
+    }
     bytesReceived += written;
     binaryBytesRemaining -= written;
     recvBuffer = recvBuffer.substr(toWrite);
@@ -644,7 +652,10 @@ void CalibreWirelessActivity::receiveBinaryData() {
   if (available == 0) {
     // Check if connection is still alive
     if (!tcpClient.connected()) {
-      currentFile.close();
+      {
+        SpiBusMutex::Guard guard;
+        currentFile.close();
+      }
       inBinaryMode = false;
       setError("Transfer interrupted");
     }
@@ -656,15 +667,21 @@ void CalibreWirelessActivity::receiveBinaryData() {
   const size_t bytesRead = tcpClient.read(buffer, toRead);
 
   if (bytesRead > 0) {
-    currentFile.write(buffer, bytesRead);
+    {
+      SpiBusMutex::Guard guard;
+      currentFile.write(buffer, bytesRead);
+    }
     bytesReceived += bytesRead;
     binaryBytesRemaining -= bytesRead;
     updateRequired = true;
 
     if (binaryBytesRemaining == 0) {
       // Transfer complete
-      currentFile.flush();
-      currentFile.close();
+      {
+        SpiBusMutex::Guard guard;
+        currentFile.flush();
+        currentFile.close();
+      }
       inBinaryMode = false;
 
       setState(WirelessState::WAITING);

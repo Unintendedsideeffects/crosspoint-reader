@@ -54,6 +54,12 @@ bool BackgroundWebServer::shouldPreventAutoSleep() const {
 
 bool BackgroundWebServer::wantsFastLoop() const { return isRunning(); }
 
+void BackgroundWebServer::invalidateCredentialsCache() {
+  credentialsLoaded = false;
+  credentials.clear();
+  Serial.printf("[%lu] [BWS] Credentials cache invalidated\n", millis());
+}
+
 void BackgroundWebServer::ensureCredentialsLoaded() {
   if (credentialsLoaded) {
     return;
@@ -315,7 +321,7 @@ void BackgroundWebServer::loop(const bool usbConnected, const bool allowRun) {
   }
 
   if (state == State::WAIT_RETRY) {
-    if (millis() >= nextRetryMs) {
+    if (static_cast<int32_t>(millis() - nextRetryMs) >= 0) {
       startScan();
     }
     return;

@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "SpiBusMutex.h"
 #include "util/UrlUtils.h"
 
 bool HttpDownloader::fetchUrl(const std::string& url, Stream& outContent) {
@@ -99,7 +100,10 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
   WiFiClient* stream = http.getStreamPtr();
   if (!stream) {
     Serial.printf("[%lu] [HTTP] Failed to get stream\n", millis());
-    file.close();
+    {
+      SpiBusMutex::Guard guard;
+      file.close();
+    }
     SdMan.remove(destPath.c_str());
     http.end();
     return HTTP_ERROR;
@@ -124,10 +128,17 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
       break;
     }
 
-    const size_t written = file.write(buffer, bytesRead);
+    size_t written = 0;
+    {
+      SpiBusMutex::Guard guard;
+      written = file.write(buffer, bytesRead);
+    }
     if (written != bytesRead) {
       Serial.printf("[%lu] [HTTP] Write failed: wrote %zu of %zu bytes\n", millis(), written, bytesRead);
-      file.close();
+      {
+        SpiBusMutex::Guard guard;
+        file.close();
+      }
       SdMan.remove(destPath.c_str());
       http.end();
       return FILE_ERROR;
@@ -140,7 +151,10 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
     }
   }
 
-  file.close();
+  {
+    SpiBusMutex::Guard guard;
+    file.close();
+  }
   http.end();
 
   Serial.printf("[%lu] [HTTP] Downloaded %zu bytes\n", millis(), downloaded);
