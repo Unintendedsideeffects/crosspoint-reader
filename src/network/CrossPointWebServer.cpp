@@ -873,7 +873,13 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
         SdMan.remove(filePath.c_str());
         Serial.printf("[%lu] [WS] Deleted incomplete upload: %s\n", millis(), filePath.c_str());
       }
+      // Reset all upload state to prevent stale data affecting next connection
       wsUploadInProgress = false;
+      wsUploadFileName.clear();
+      wsUploadPath.clear();
+      wsUploadSize = 0;
+      wsUploadReceived = 0;
+      wsUploadStartTime = 0;
       break;
 
     case WStype_CONNECTED: {

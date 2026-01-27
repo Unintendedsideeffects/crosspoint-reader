@@ -11,21 +11,25 @@
 
 #include "MappedInputManager.h"
 #include "NetworkModeSelectionActivity.h"
+#include "ScreenComponents.h"
 #include "WifiSelectionActivity.h"
-#include "activities/network/CalibreConnectActivity.h"
 #include "fontIds.h"
 
 namespace {
 // AP Mode configuration
 constexpr const char* AP_SSID = "CrossPoint-Reader";
 constexpr const char* AP_PASSWORD = nullptr;  // Open network for ease of use
-constexpr const char* AP_HOSTNAME = "crosspoint";
+constexpr const char* HOSTNAME = "crosspoint";
 constexpr uint8_t AP_CHANNEL = 1;
 constexpr uint8_t AP_MAX_CONNECTIONS = 4;
 
 // DNS server for captive portal (redirects all DNS queries to our IP)
 DNSServer* dnsServer = nullptr;
 constexpr uint16_t DNS_PORT = 53;
+
+// Task shutdown timeout
+constexpr int TASK_EXIT_TIMEOUT_MS = 500;
+constexpr int TASK_EXIT_POLL_MS = 10;
 }  // namespace
 
 void CrossPointWebServerActivity::taskTrampoline(void* param) {
@@ -48,6 +52,17 @@ void CrossPointWebServerActivity::onEnter() {
   connectedSSID.clear();
   lastHandleClientTime = 0;
   updateRequired = true;
+
+  // Reset upload progress tracking
+  lastProgressReceived = 0;
+  lastProgressTotal = 0;
+  currentUploadName.clear();
+  lastCompleteName.clear();
+  lastCompleteAt = 0;
+
+  // Reset task control flags
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   xTaskCreate(&CrossPointWebServerActivity::taskTrampoline, "WebServerActivityTask",
               2048,               // Stack size
@@ -104,23 +119,31 @@ void CrossPointWebServerActivity::onExit() {
 
   Serial.printf("[%lu] [WEBACT] [MEM] Free heap after WiFi disconnect: %d bytes\n", millis(), ESP.getFreeHeap());
 
-  // Acquire mutex before deleting task
-  Serial.printf("[%lu] [WEBACT] Acquiring rendering mutex before task deletion...\n", millis());
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  // Signal the display task to exit gracefully
+  Serial.printf("[%lu] [WEBACT] Signaling display task to exit...\n", millis());
+  exitTaskRequested.store(true);
 
-  // Delete the display task
-  Serial.printf("[%lu] [WEBACT] Deleting display task...\n", millis());
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-    Serial.printf("[%lu] [WEBACT] Display task deleted\n", millis());
+  // Wait for task to exit (with timeout)
+  int waited = 0;
+  while (!taskHasExited.load() && waited < TASK_EXIT_TIMEOUT_MS) {
+    vTaskDelay(pdMS_TO_TICKS(TASK_EXIT_POLL_MS));
+    waited += TASK_EXIT_POLL_MS;
   }
 
-  // Delete the mutex
+  // Force delete if task didn't exit gracefully (shouldn't happen)
+  if (!taskHasExited.load() && displayTaskHandle != nullptr) {
+    Serial.printf("[%lu] [WEBACT] WARNING: Display task did not exit gracefully, force deleting\n", millis());
+    vTaskDelete(displayTaskHandle);
+  }
+  displayTaskHandle = nullptr;
+
+  // Now safe to delete the mutex (task is no longer using it)
   Serial.printf("[%lu] [WEBACT] Deleting mutex...\n", millis());
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
-  Serial.printf("[%lu] [WEBACT] Mutex deleted\n", millis());
+  if (renderingMutex != nullptr) {
+    vSemaphoreDelete(renderingMutex);
+    renderingMutex = nullptr;
+  }
+  Serial.printf("[%lu] [WEBACT] Cleanup complete\n", millis());
 
   Serial.printf("[%lu] [WEBACT] [MEM] Free heap at onExit end: %d bytes\n", millis(), ESP.getFreeHeap());
 }
@@ -140,19 +163,7 @@ void CrossPointWebServerActivity::onNetworkModeSelected(const NetworkMode mode) 
   // Exit mode selection subactivity
   exitActivity();
 
-  if (mode == NetworkMode::CONNECT_CALIBRE) {
-    exitActivity();
-    enterNewActivity(new CalibreConnectActivity(renderer, mappedInput, [this] {
-      exitActivity();
-      state = WebServerActivityState::MODE_SELECTION;
-      enterNewActivity(new NetworkModeSelectionActivity(
-          renderer, mappedInput, [this](const NetworkMode nextMode) { onNetworkModeSelected(nextMode); },
-          [this]() { onGoBack(); }));
-    }));
-    return;
-  }
-
-  if (mode == NetworkMode::JOIN_NETWORK) {
+  if (mode == NetworkMode::JOIN_NETWORK || mode == NetworkMode::CONNECT_CALIBRE) {
     // STA mode - launch WiFi selection
     Serial.printf("[%lu] [WEBACT] Turning on WiFi (STA mode)...\n", millis());
     WiFi.mode(WIFI_STA);
@@ -181,8 +192,8 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
     exitActivity();
 
     // Start mDNS for hostname resolution
-    if (MDNS.begin(AP_HOSTNAME)) {
-      Serial.printf("[%lu] [WEBACT] mDNS started: http://%s.local/\n", millis(), AP_HOSTNAME);
+    if (MDNS.begin(HOSTNAME)) {
+      Serial.printf("[%lu] [WEBACT] mDNS started: http://%s.local/\n", millis(), HOSTNAME);
     }
 
     // Start the web server
@@ -234,8 +245,8 @@ void CrossPointWebServerActivity::startAccessPoint() {
   Serial.printf("[%lu] [WEBACT] IP: %s\n", millis(), connectedIP.c_str());
 
   // Start mDNS for hostname resolution
-  if (MDNS.begin(AP_HOSTNAME)) {
-    Serial.printf("[%lu] [WEBACT] mDNS started: http://%s.local/\n", millis(), AP_HOSTNAME);
+  if (MDNS.begin(HOSTNAME)) {
+    Serial.printf("[%lu] [WEBACT] mDNS started: http://%s.local/\n", millis(), HOSTNAME);
   } else {
     Serial.printf("[%lu] [WEBACT] WARNING: mDNS failed to start\n", millis());
   }
@@ -269,7 +280,8 @@ void CrossPointWebServerActivity::startWebServer() {
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     render();
     xSemaphoreGive(renderingMutex);
-    Serial.printf("[%lu] [WEBACT] Rendered File Transfer screen\n", millis());
+    Serial.printf("[%lu] [WEBACT] Rendered transfer screen (mode: %s)\n", millis(),
+                  networkMode == NetworkMode::CONNECT_CALIBRE ? "Calibre" : "File Transfer");
   } else {
     Serial.printf("[%lu] [WEBACT] ERROR: Failed to start web server!\n", millis());
     webServer.reset();
@@ -285,6 +297,45 @@ void CrossPointWebServerActivity::stopWebServer() {
     Serial.printf("[%lu] [WEBACT] Web server stopped\n", millis());
   }
   webServer.reset();
+}
+
+void CrossPointWebServerActivity::updateUploadProgress() {
+  if (!webServer) return;
+
+  const auto status = webServer->getWsUploadStatus();
+  bool changed = false;
+
+  if (status.inProgress) {
+    if (status.received != lastProgressReceived || status.total != lastProgressTotal ||
+        status.filename != currentUploadName) {
+      lastProgressReceived = status.received;
+      lastProgressTotal = status.total;
+      currentUploadName = status.filename;
+      changed = true;
+    }
+  } else if (lastProgressReceived != 0 || lastProgressTotal != 0) {
+    lastProgressReceived = 0;
+    lastProgressTotal = 0;
+    currentUploadName.clear();
+    changed = true;
+  }
+
+  if (status.lastCompleteAt != 0 && status.lastCompleteAt != lastCompleteAt) {
+    lastCompleteAt = status.lastCompleteAt;
+    lastCompleteName = status.lastCompleteName;
+    changed = true;
+  }
+
+  // Clear completion message after 6 seconds
+  if (lastCompleteAt > 0 && (millis() - lastCompleteAt) >= 6000) {
+    lastCompleteAt = 0;
+    lastCompleteName.clear();
+    changed = true;
+  }
+
+  if (changed) {
+    updateRequired = true;
+  }
 }
 
 void CrossPointWebServerActivity::loop() {
@@ -336,9 +387,9 @@ void CrossPointWebServerActivity::loop() {
       esp_task_wdt_reset();
 
       // Process HTTP requests in tight loop for maximum throughput
-      // More iterations = more data processed per main loop cycle
-      constexpr int MAX_ITERATIONS = 500;
-      for (int i = 0; i < MAX_ITERATIONS && webServer->isRunning(); i++) {
+      // Use fewer iterations for Calibre mode to allow more frequent UI updates
+      const int maxIterations = (networkMode == NetworkMode::CONNECT_CALIBRE) ? 80 : 500;
+      for (int i = 0; i < maxIterations && webServer->isRunning(); i++) {
         webServer->handleClient();
         // Reset watchdog every 32 iterations
         if ((i & 0x1F) == 0x1F) {
@@ -355,6 +406,9 @@ void CrossPointWebServerActivity::loop() {
         }
       }
       lastHandleClientTime = millis();
+
+      // Update upload progress (for Calibre mode UI)
+      updateUploadProgress();
     }
 
     // Handle exit on Back button (also check outside loop)
@@ -366,15 +420,23 @@ void CrossPointWebServerActivity::loop() {
 }
 
 void CrossPointWebServerActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      render();
+      if (!exitTaskRequested.load()) {  // Double-check after acquiring mutex
+        render();
+      }
       xSemaphoreGive(renderingMutex);
     }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
+
+  // Signal that we've exited cleanly
+  taskHasExited.store(true);
+
+  // Task deletes itself - this is the safe FreeRTOS pattern
+  vTaskDelete(nullptr);
 }
 
 void CrossPointWebServerActivity::render() const {
@@ -393,8 +455,6 @@ void CrossPointWebServerActivity::render() const {
 }
 
 void drawQRCode(const GfxRenderer& renderer, const int x, const int y, const std::string& data) {
-  // Implementation of QR code calculation
-  // The structure to manage the QR code
   QRCode qrcode;
   uint8_t qrcodeBytes[qrcode_getBufferSize(4)];
   Serial.printf("[%lu] [WEBACT] QR Code (%lu): %s\n", millis(), data.length(), data.c_str());
@@ -404,19 +464,82 @@ void drawQRCode(const GfxRenderer& renderer, const int x, const int y, const std
   for (uint8_t cy = 0; cy < qrcode.size; cy++) {
     for (uint8_t cx = 0; cx < qrcode.size; cx++) {
       if (qrcode_getModule(&qrcode, cx, cy)) {
-        // Serial.print("**");
         renderer.fillRect(x + px * cx, y + px * cy, px, px, true);
-      } else {
-        // Serial.print("  ");
       }
     }
-    // Serial.print("\n");
   }
 }
 
 void CrossPointWebServerActivity::renderServerRunning() const {
-  // Use consistent line spacing
-  constexpr int LINE_SPACING = 28;  // Space between lines
+  if (networkMode == NetworkMode::CONNECT_CALIBRE) {
+    renderCalibreUI();
+  } else {
+    renderFileTransferUI();
+  }
+}
+
+void CrossPointWebServerActivity::renderCalibreUI() const {
+  constexpr int LINE_SPACING = 24;
+  constexpr int SMALL_SPACING = 20;
+  constexpr int SECTION_SPACING = 40;
+  constexpr int TOP_PADDING = 14;
+
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, "Connect to Calibre", true, EpdFontFamily::BOLD);
+
+  int y = 55 + TOP_PADDING;
+  renderer.drawCenteredText(UI_10_FONT_ID, y, "Network", true, EpdFontFamily::BOLD);
+  y += LINE_SPACING;
+
+  std::string ssidInfo = "Network: " + connectedSSID;
+  if (ssidInfo.length() > 28) {
+    ssidInfo.replace(25, ssidInfo.length() - 25, "...");
+  }
+  renderer.drawCenteredText(UI_10_FONT_ID, y, ssidInfo.c_str());
+  renderer.drawCenteredText(UI_10_FONT_ID, y + LINE_SPACING, ("IP: " + connectedIP).c_str());
+
+  y += LINE_SPACING * 2 + SECTION_SPACING;
+  renderer.drawCenteredText(UI_10_FONT_ID, y, "Setup", true, EpdFontFamily::BOLD);
+  y += LINE_SPACING;
+  renderer.drawCenteredText(SMALL_FONT_ID, y, "1) Install CrossPoint Reader plugin");
+  renderer.drawCenteredText(SMALL_FONT_ID, y + SMALL_SPACING, "2) Be on the same WiFi network");
+  renderer.drawCenteredText(SMALL_FONT_ID, y + SMALL_SPACING * 2, "3) In Calibre: \"Send to device\"");
+  renderer.drawCenteredText(SMALL_FONT_ID, y + SMALL_SPACING * 3, "Keep this screen open while sending");
+
+  y += SMALL_SPACING * 3 + SECTION_SPACING;
+  renderer.drawCenteredText(UI_10_FONT_ID, y, "Status", true, EpdFontFamily::BOLD);
+  y += LINE_SPACING;
+
+  if (lastProgressTotal > 0 && lastProgressReceived <= lastProgressTotal) {
+    std::string label = "Receiving";
+    if (!currentUploadName.empty()) {
+      label += ": " + currentUploadName;
+      if (label.length() > 34) {
+        label.replace(31, label.length() - 31, "...");
+      }
+    }
+    renderer.drawCenteredText(SMALL_FONT_ID, y, label.c_str());
+    constexpr int barWidth = 300;
+    constexpr int barHeight = 16;
+    constexpr int barX = (480 - barWidth) / 2;
+    ScreenComponents::drawProgressBar(renderer, barX, y + 22, barWidth, barHeight, lastProgressReceived,
+                                      lastProgressTotal);
+    y += 40;
+  }
+
+  if (lastCompleteAt > 0 && (millis() - lastCompleteAt) < 6000) {
+    std::string msg = "Received: " + lastCompleteName;
+    if (msg.length() > 36) {
+      msg.replace(33, msg.length() - 33, "...");
+    }
+    renderer.drawCenteredText(SMALL_FONT_ID, y, msg.c_str());
+  }
+
+  const auto labels = mappedInput.mapLabels("« Exit", "", "", "");
+  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+}
+
+void CrossPointWebServerActivity::renderFileTransferUI() const {
+  constexpr int LINE_SPACING = 28;
 
   renderer.drawCenteredText(UI_12_FONT_ID, 15, "File Transfer", true, EpdFontFamily::BOLD);
 
@@ -433,13 +556,13 @@ void CrossPointWebServerActivity::renderServerRunning() const {
 
     renderer.drawCenteredText(SMALL_FONT_ID, startY + LINE_SPACING * 3,
                               "or scan QR code with your phone to connect to Wifi.");
-    // Show QR code for URL
+    // Show QR code for WiFi config
     const std::string wifiConfig = std::string("WIFI:S:") + connectedSSID + ";;";
     drawQRCode(renderer, (480 - 6 * 33) / 2, startY + LINE_SPACING * 4, wifiConfig);
 
     startY += 6 * 29 + 3 * LINE_SPACING;
     // Show primary URL (hostname)
-    std::string hostnameUrl = std::string("http://") + AP_HOSTNAME + ".local/";
+    std::string hostnameUrl = std::string("http://") + HOSTNAME + ".local/";
     renderer.drawCenteredText(UI_10_FONT_ID, startY + LINE_SPACING * 3, hostnameUrl.c_str(), true, EpdFontFamily::BOLD);
 
     // Show IP address as fallback
@@ -451,7 +574,7 @@ void CrossPointWebServerActivity::renderServerRunning() const {
     renderer.drawCenteredText(SMALL_FONT_ID, startY + LINE_SPACING * 6, "or scan QR code with your phone:");
     drawQRCode(renderer, (480 - 6 * 33) / 2, startY + LINE_SPACING * 7, hostnameUrl);
   } else {
-    // STA mode display (original behavior)
+    // STA mode display
     const int startY = 65;
 
     std::string ssidInfo = "Network: " + connectedSSID;
@@ -468,7 +591,7 @@ void CrossPointWebServerActivity::renderServerRunning() const {
     renderer.drawCenteredText(UI_10_FONT_ID, startY + LINE_SPACING * 2, webInfo.c_str(), true, EpdFontFamily::BOLD);
 
     // Also show hostname URL
-    std::string hostnameUrl = std::string("or http://") + AP_HOSTNAME + ".local/";
+    std::string hostnameUrl = std::string("or http://") + HOSTNAME + ".local/";
     renderer.drawCenteredText(SMALL_FONT_ID, startY + LINE_SPACING * 3, hostnameUrl.c_str());
 
     renderer.drawCenteredText(SMALL_FONT_ID, startY + LINE_SPACING * 4, "Open this URL in your browser");
