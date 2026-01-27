@@ -35,16 +35,29 @@ bool CrossPointState::loadFromFile() {
   }
 
   uint8_t version;
-  serialization::readPod(inputFile, version);
+  if (!serialization::readPod(inputFile, version)) {
+    Serial.printf("[%lu] [CPS] Failed to read version\n", millis());
+    inputFile.close();
+    return false;
+  }
   if (version > STATE_FILE_VERSION) {
     Serial.printf("[%lu] [CPS] Deserialization failed: Unknown version %u\n", millis(), version);
     inputFile.close();
     return false;
   }
 
-  serialization::readString(inputFile, openEpubPath);
+  if (!serialization::readString(inputFile, openEpubPath)) {
+    Serial.printf("[%lu] [CPS] Failed to read epub path\n", millis());
+    inputFile.close();
+    return false;
+  }
+
   if (version >= 2) {
-    serialization::readPod(inputFile, lastSleepImage);
+    if (!serialization::readPod(inputFile, lastSleepImage)) {
+      Serial.printf("[%lu] [CPS] Failed to read sleep image index\n", millis());
+      inputFile.close();
+      return false;
+    }
   } else {
     lastSleepImage = 0;
   }
