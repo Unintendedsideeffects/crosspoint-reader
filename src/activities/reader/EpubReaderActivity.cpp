@@ -4,7 +4,6 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <SDCardManager.h>
-
 #include <esp_task_wdt.h>
 
 #include "CrossPointSettings.h"
