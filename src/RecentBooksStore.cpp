@@ -68,17 +68,30 @@ bool RecentBooksStore::loadFromFile() {
   }
 
   uint8_t version;
-  serialization::readPod(inputFile, version);
+  if (!serialization::readPod(inputFile, version)) {
+    Serial.printf("[%lu] [RBS] Failed to read version\n", millis());
+    inputFile.close();
+    return false;
+  }
+
   if (version != RECENT_BOOKS_FILE_VERSION) {
     if (version == 1) {
       // Old version, just read paths
       uint8_t count;
-      serialization::readPod(inputFile, count);
+      if (!serialization::readPod(inputFile, count)) {
+        Serial.printf("[%lu] [RBS] Failed to read count\n", millis());
+        inputFile.close();
+        return false;
+      }
       recentBooks.clear();
       recentBooks.reserve(count);
       for (uint8_t i = 0; i < count; i++) {
         std::string path;
-        serialization::readString(inputFile, path);
+        if (!serialization::readString(inputFile, path)) {
+          Serial.printf("[%lu] [RBS] Failed to read path\n", millis());
+          inputFile.close();
+          return false;
+        }
         // Title and author will be empty, they will be filled when the book is
         // opened again
         recentBooks.push_back({path, "", ""});
@@ -90,16 +103,23 @@ bool RecentBooksStore::loadFromFile() {
     }
   } else {
     uint8_t count;
-    serialization::readPod(inputFile, count);
+    if (!serialization::readPod(inputFile, count)) {
+      Serial.printf("[%lu] [RBS] Failed to read count\n", millis());
+      inputFile.close();
+      return false;
+    }
 
     recentBooks.clear();
     recentBooks.reserve(count);
 
     for (uint8_t i = 0; i < count; i++) {
       std::string path, title, author;
-      serialization::readString(inputFile, path);
-      serialization::readString(inputFile, title);
-      serialization::readString(inputFile, author);
+      if (!serialization::readString(inputFile, path) || !serialization::readString(inputFile, title) ||
+          !serialization::readString(inputFile, author)) {
+        Serial.printf("[%lu] [RBS] Failed to read book entry %d\n", millis(), i);
+        inputFile.close();
+        return false;
+      }
       recentBooks.push_back({path, title, author});
     }
   }
