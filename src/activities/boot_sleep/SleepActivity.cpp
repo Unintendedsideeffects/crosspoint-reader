@@ -179,10 +179,19 @@ void SleepActivity::renderBitmapSleepScreen(const Bitmap& bitmap) const {
 
   Serial.printf("[%lu] [SLP] drawing to %d x %d\n", millis(), x, y);
   renderer.clearScreen();
+
+  const bool hasGreyscale = bitmap.hasGreyscale() &&
+                            SETTINGS.sleepScreenCoverFilter == CrossPointSettings::SLEEP_SCREEN_COVER_FILTER::NO_FILTER;
+
   renderer.drawBitmap(bitmap, x, y, pageWidth, pageHeight, cropX, cropY);
+
+  if (SETTINGS.sleepScreenCoverFilter == CrossPointSettings::SLEEP_SCREEN_COVER_FILTER::INVERTED_BLACK_AND_WHITE) {
+    renderer.invertScreen();
+  }
+
   renderer.displayBuffer(EInkDisplay::HALF_REFRESH);
 
-  if (bitmap.hasGreyscale()) {
+  if (hasGreyscale) {
     bitmap.rewindToData();
     renderer.clearScreen(0x00);
     renderer.setRenderMode(GfxRenderer::GRAYSCALE_LSB);
