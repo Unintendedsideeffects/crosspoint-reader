@@ -282,8 +282,12 @@ void CrossPointWebServer::handleStatus() const {
 }
 
 void CrossPointWebServer::scanFiles(const char* path, const std::function<void(FileInfo)>& callback) const {
-  SpiBusMutex::Guard guard;
-  FsFile root = SdMan.open(path);
+  FsFile root;
+  {
+    SpiBusMutex::Guard guard;
+    root = SdMan.open(path);
+  }
+
   if (!root) {
     Serial.printf("[%lu] [WEB] Failed to open directory: %s\n", millis(), path);
     return;
@@ -291,53 +295,70 @@ void CrossPointWebServer::scanFiles(const char* path, const std::function<void(F
 
   if (!root.isDirectory()) {
     Serial.printf("[%lu] [WEB] Not a directory: %s\n", millis(), path);
+    SpiBusMutex::Guard guard;
     root.close();
     return;
   }
 
   Serial.printf("[%lu] [WEB] Scanning files in: %s\n", millis(), path);
 
-  FsFile file = root.openNextFile();
-  char name[500];
-  while (file) {
-    file.getName(name, sizeof(name));
-    auto fileName = String(name);
+  while (true) {
+    FileInfo info;
+    bool shouldHide = false;
 
-    // Skip hidden items (starting with ".")
-    bool shouldHide = fileName.startsWith(".");
+    // Scope SD card operations with mutex
+    {
+      SpiBusMutex::Guard guard;
+      FsFile file = root.openNextFile();
+      if (!file) {
+        break;
+      }
 
-    // Check against explicitly hidden items list
-    if (!shouldHide) {
-      for (size_t i = 0; i < HIDDEN_ITEMS_COUNT; i++) {
-        if (fileName.equals(HIDDEN_ITEMS[i])) {
-          shouldHide = true;
-          break;
+      char name[500];
+      file.getName(name, sizeof(name));
+      auto fileName = String(name);
+
+      // Skip hidden items (starting with ".")
+      shouldHide = fileName.startsWith(".");
+
+      // Check against explicitly hidden items list
+      if (!shouldHide) {
+        for (size_t i = 0; i < HIDDEN_ITEMS_COUNT; i++) {
+          if (fileName.equals(HIDDEN_ITEMS[i])) {
+            shouldHide = true;
+            break;
+          }
         }
       }
+
+      if (!shouldHide) {
+        info.name = fileName;
+        info.isDirectory = file.isDirectory();
+
+        if (info.isDirectory) {
+          info.size = 0;
+          info.isEpub = false;
+        } else {
+          info.size = file.size();
+          info.isEpub = isEpubFile(info.name);
+        }
+      }
+      file.close();
     }
 
+    // Callback performs network operations - run without mutex
     if (!shouldHide) {
-      FileInfo info;
-      info.name = fileName;
-      info.isDirectory = file.isDirectory();
-
-      if (info.isDirectory) {
-        info.size = 0;
-        info.isEpub = false;
-      } else {
-        info.size = file.size();
-        info.isEpub = isEpubFile(info.name);
-      }
-
       callback(info);
     }
 
-    file.close();
     yield();               // Yield to allow WiFi and other tasks to process during long scans
     esp_task_wdt_reset();  // Reset watchdog to prevent timeout on large directories
-    file = root.openNextFile();
   }
-  root.close();
+
+  {
+    SpiBusMutex::Guard guard;
+    root.close();
+  }
 }
 
 bool CrossPointWebServer::isEpubFile(const String& filename) const {
@@ -372,7 +393,7 @@ void CrossPointWebServer::handleFileListData() const {
   bool seenFirst = false;
   JsonDocument doc;
 
-  scanFiles(currentPath.c_str(), [this, &output, &doc, seenFirst](const FileInfo& info) mutable {
+  scanFiles(currentPath.c_str(), [this, &output, &doc, &seenFirst](const FileInfo& info) {
     doc.clear();
     doc["name"] = info.name;
     doc["size"] = info.size;
