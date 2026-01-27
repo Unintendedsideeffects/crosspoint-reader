@@ -566,18 +566,24 @@ void CrossPointWebServer::handleUpload() const {
 
     // Check if file already exists - SD operations can be slow
     esp_task_wdt_reset();
-    if (SdMan.exists(filePath.c_str())) {
-      Serial.printf("[%lu] [WEB] [UPLOAD] Overwriting existing file: %s\n", millis(), filePath.c_str());
-      esp_task_wdt_reset();
-      SdMan.remove(filePath.c_str());
+    {
+      SpiBusMutex::Guard guard;
+      if (SdMan.exists(filePath.c_str())) {
+        Serial.printf("[%lu] [WEB] [UPLOAD] Overwriting existing file: %s\n", millis(), filePath.c_str());
+        // No need to reset watchdog inside mutex unless it takes very long
+        SdMan.remove(filePath.c_str());
+      }
     }
 
     // Open file for writing - this can be slow due to FAT cluster allocation
     esp_task_wdt_reset();
-    if (!SdMan.openFileForWrite("WEB", filePath, uploadFile)) {
-      uploadError = "Failed to create file on SD card";
-      Serial.printf("[%lu] [WEB] [UPLOAD] FAILED to create file: %s\n", millis(), filePath.c_str());
-      return;
+    {
+      SpiBusMutex::Guard guard;
+      if (!SdMan.openFileForWrite("WEB", filePath, uploadFile)) {
+        uploadError = "Failed to create file on SD card";
+        Serial.printf("[%lu] [WEB] [UPLOAD] FAILED to create file: %s\n", millis(), filePath.c_str());
+        return;
+      }
     }
     esp_task_wdt_reset();
 
