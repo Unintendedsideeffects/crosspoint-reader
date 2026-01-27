@@ -10,7 +10,3 @@ dependencies = [
     "clang-format>=21.1.8",
     "platformio>=6.1.18",
 ]
-
-[build-system]
-requires = ["uv_build>=0.9.26,<0.10.0"]
-build-backend = "uv_build"
