@@ -9,13 +9,17 @@
 #include "../ParsedText.h"
 #include "../blocks/TextBlock.h"
 
+class Epub;
 class Page;
+class PageImage;
 class GfxRenderer;
 
 #define MAX_WORD_SIZE 200
 
 class ChapterHtmlSlimParser {
   const std::string& filepath;
+  std::string contentBasePath;  // Base path for resolving relative URLs
+  std::shared_ptr<Epub> epub;   // Epub for reading image data (may be null)
   GfxRenderer& renderer;
   std::function<void(std::unique_ptr<Page>)> completePageFn;
   std::function<void(int)> progressFn;  // Progress callback (0-100)
@@ -41,6 +45,8 @@ class ChapterHtmlSlimParser {
   void startNewTextBlock(TextBlock::Style style);
   void flushPartWordBuffer();
   void makePages();
+  void processImage(const char* src, const char* alt);
+  void addImageToPage(std::shared_ptr<PageImage> image);
   // XML callbacks
   static void XMLCALL startElement(void* userData, const XML_Char* name, const XML_Char** atts);
   static void XMLCALL characterData(void* userData, const XML_Char* s, int len);
@@ -52,8 +58,11 @@ class ChapterHtmlSlimParser {
                                  const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                  const uint16_t viewportHeight, const bool hyphenationEnabled,
                                  const std::function<void(std::unique_ptr<Page>)>& completePageFn,
-                                 const std::function<void(int)>& progressFn = nullptr)
+                                 const std::function<void(int)>& progressFn = nullptr,
+                                 const std::shared_ptr<Epub>& epub = nullptr, const std::string& contentBasePath = "")
       : filepath(filepath),
+        contentBasePath(contentBasePath),
+        epub(epub),
         renderer(renderer),
         fontId(fontId),
         lineCompression(lineCompression),
