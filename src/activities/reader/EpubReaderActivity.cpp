@@ -4,7 +4,6 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <SDCardManager.h>
-
 #include <esp_task_wdt.h>
 
 #include "CrossPointSettings.h"
@@ -320,8 +319,8 @@ void EpubReaderActivity::renderScreen() {
     {
       SpiBusMutex::Guard guard;
       sectionLoaded = section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
-                                               SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
-                                               viewportHeight, SETTINGS.hyphenationEnabled);
+                                               SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment,
+                                               viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled);
     }
     if (!sectionLoaded) {
       Serial.printf("[%lu] [ERS] Cache not found, building...\n", millis());
