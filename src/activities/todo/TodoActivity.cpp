@@ -78,16 +78,14 @@ void TodoActivity::loop() {
     return;
   }
 
-  // Navigation
+  // Navigation (Up/Down only)
   const bool upPressed = mappedInput.wasPressed(MappedInputManager::Button::Up);
   const bool downPressed = mappedInput.wasPressed(MappedInputManager::Button::Down);
-  const bool leftPressed = mappedInput.wasPressed(MappedInputManager::Button::Left);
-  const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
 
   // +1 for the "Add New Task" button at the end
   const int totalItems = static_cast<int>(items.size()) + 1;
 
-  if (upPressed || leftPressed) {
+  if (upPressed) {
     if (selectedIndex > 0) {
       selectedIndex--;
       // Adjust scroll if moving above view
@@ -96,7 +94,7 @@ void TodoActivity::loop() {
       }
       updateRequired = true;
     }
-  } else if (downPressed || rightPressed) {
+  } else if (downPressed) {
     if (selectedIndex < totalItems - 1) {
       selectedIndex++;
       // Adjust scroll if moving below view
@@ -105,6 +103,45 @@ void TodoActivity::loop() {
         scrollOffset = selectedIndex - visibleItems + 1;
       }
       updateRequired = true;
+    }
+  }
+
+  // Reordering (Left/Right) - only for task items, not headers or "Add New"
+  const bool leftPressed = mappedInput.wasPressed(MappedInputManager::Button::Left);
+  const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
+
+  if (selectedIndex < static_cast<int>(items.size()) && !items[selectedIndex].isHeader) {
+    if (leftPressed) {
+      // Move task UP in list (swap with previous item, skipping headers)
+      int targetIndex = selectedIndex - 1;
+      while (targetIndex >= 0 && items[targetIndex].isHeader) {
+        targetIndex--;
+      }
+      if (targetIndex >= 0) {
+        std::swap(items[selectedIndex], items[targetIndex]);
+        selectedIndex = targetIndex;
+        if (selectedIndex < scrollOffset) {
+          scrollOffset = selectedIndex;
+        }
+        saveTasks();
+        updateRequired = true;
+      }
+    } else if (rightPressed) {
+      // Move task DOWN in list (swap with next item, skipping headers)
+      int targetIndex = selectedIndex + 1;
+      while (targetIndex < static_cast<int>(items.size()) && items[targetIndex].isHeader) {
+        targetIndex++;
+      }
+      if (targetIndex < static_cast<int>(items.size())) {
+        std::swap(items[selectedIndex], items[targetIndex]);
+        selectedIndex = targetIndex;
+        const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
+        if (selectedIndex >= scrollOffset + visibleItems) {
+          scrollOffset = selectedIndex - visibleItems + 1;
+        }
+        saveTasks();
+        updateRequired = true;
+      }
     }
   }
 
@@ -260,8 +297,9 @@ void TodoActivity::render() {
     }
   }
 
-  // Hints
-  const auto labels = mappedInput.mapLabels("Back", "Toggle", "", "");
+  // Hints - show reorder hints for task items
+  bool canReorder = selectedIndex < static_cast<int>(items.size()) && !items[selectedIndex].isHeader;
+  const auto labels = mappedInput.mapLabels("Back", "Toggle", canReorder ? "Move Up" : "", canReorder ? "Move Dn" : "");
   renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
