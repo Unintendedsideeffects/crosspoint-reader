@@ -2,11 +2,10 @@
 
 #include <ArduinoJson.h>
 
+#include "CrossPointSettings.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 #include "esp_wifi.h"
-
-#include "CrossPointSettings.h"
 
 namespace {
 constexpr char latestReleaseUrl[] = "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/releases/latest";
