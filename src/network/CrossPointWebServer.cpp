@@ -373,7 +373,7 @@ void CrossPointWebServer::handleFileListData() const {
   // Get current path from query string (default to root)
   String currentPath = "/";
   if (server->hasArg("path")) {
-    currentPath = server->arg("path");
+    currentPath = PathUtils::urlDecode(server->arg("path"));
 
     // Validate path against traversal attacks
     if (!PathUtils::isValidSdPath(currentPath)) {
@@ -426,7 +426,7 @@ void CrossPointWebServer::handleDownload() const {
     return;
   }
 
-  String itemPath = server->arg("path");
+  String itemPath = PathUtils::urlDecode(server->arg("path"));
   if (itemPath.isEmpty() || itemPath == "/") {
     server->send(400, "text/plain", "Invalid path");
     return;
@@ -563,7 +563,7 @@ void CrossPointWebServer::handleUpload() const {
     // Note: We use query parameter instead of form data because multipart form
     // fields aren't available until after file upload completes
     if (server->hasArg("path")) {
-      uploadPath = server->arg("path");
+      uploadPath = PathUtils::urlDecode(server->arg("path"));
 
       // Validate path against traversal attacks
       if (!PathUtils::isValidSdPath(uploadPath)) {
@@ -721,7 +721,7 @@ void CrossPointWebServer::handleCreateFolder() const {
   // Get parent path
   String parentPath = "/";
   if (server->hasArg("path")) {
-    parentPath = server->arg("path");
+    parentPath = PathUtils::urlDecode(server->arg("path"));
 
     // Validate path against traversal attacks
     if (!PathUtils::isValidSdPath(parentPath)) {
@@ -763,7 +763,7 @@ void CrossPointWebServer::handleDelete() const {
     return;
   }
 
-  String itemPath = server->arg("path");
+  String itemPath = PathUtils::urlDecode(server->arg("path"));
   const String itemType = server->hasArg("type") ? server->arg("type") : "file";
 
   // Validate path against traversal attacks
