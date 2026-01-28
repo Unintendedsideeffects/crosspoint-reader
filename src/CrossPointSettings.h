@@ -104,6 +104,9 @@ class CrossPointSettings {
   // Time mode options
   enum TIME_MODE { TIME_UTC = 0, TIME_LOCAL = 1, TIME_MANUAL = 2 };
 
+  // Release channel options
+  enum RELEASE_CHANNEL { RELEASE_STABLE = 0, RELEASE_NIGHTLY = 1, RELEASE_CHANNEL_COUNT };
+
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
   // Sleep screen cover mode settings
@@ -154,6 +157,8 @@ class CrossPointSettings {
   uint8_t timeZoneOffset = 12;
   // Last successful NTP sync (epoch seconds, UTC)
   uint32_t lastTimeSyncEpoch = 0;
+  // OTA release channel selection
+  uint8_t releaseChannel = RELEASE_STABLE;
 
   ~CrossPointSettings() = default;
 
