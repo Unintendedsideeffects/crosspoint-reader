@@ -1,0 +1,96 @@
+name: Nightly Release
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: true
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
+          restore-keys: ${{ runner.os }}-platformio-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Compute nightly version
+        id: version
+        shell: bash
+        run: |
+          base_version=$(python - <<'PY'
+import re
+from pathlib import Path
+text = Path('platformio.ini').read_text()
+match = re.search(r'^\\[crosspoint\\]\\s*\\nversion\\s*=\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)\\s*$', text, re.M)
+if not match:
+    raise SystemExit('crosspoint.version not found')
+print(f"{match.group(1)}.{match.group(2)}")
+PY
+          )
+          nightly_patch=$(date -u +%Y%m%d)
+          nightly_version="${base_version}.${nightly_patch}"
+          echo "nightly_version=${nightly_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Update build version
+        env:
+          NIGHTLY_VERSION: ${{ steps.version.outputs.nightly_version }}
+        run: |
+          python - <<'PY'
+from pathlib import Path
+import os
+
+path = Path('platformio.ini')
+lines = path.read_text().splitlines()
+nightly = os.environ['NIGHTLY_VERSION']
+
+out = []
+in_crosspoint = False
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith('[') and stripped.endswith(']'):
+        in_crosspoint = stripped == '[crosspoint]'
+    if in_crosspoint and stripped.startswith('version'):
+        line = f"version = {nightly}"
+    out.append(line)
+
+path.write_text("\n".join(out) + "\n")
+PY
+
+      - name: Build firmware (nightly)
+        run: pio run -e gh_release
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.nightly_version }}
+          name: Nightly ${{ steps.version.outputs.nightly_version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: |
+            .pio/build/gh_release/firmware.bin
+            .pio/build/gh_release/partitions.bin
+            .pio/build/gh_release/bootloader.bin
