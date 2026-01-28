@@ -109,8 +109,8 @@ bool decode1BitBmpToRaw(const std::vector<uint8_t>& bmpData, std::vector<uint8_t
 
   const uint32_t rowBytesBmp = ((static_cast<uint32_t>(width) + 31) / 32) * 4;
   const uint32_t rowBytesRaw = (static_cast<uint32_t>(width) + 7) / 8;
-  const uint64_t requiredSize = static_cast<uint64_t>(pixelOffset) +
-                                static_cast<uint64_t>(rowBytesBmp) * static_cast<uint64_t>(height);
+  const uint64_t requiredSize =
+      static_cast<uint64_t>(pixelOffset) + static_cast<uint64_t>(rowBytesBmp) * static_cast<uint64_t>(height);
   if (requiredSize > bmpData.size()) {
     return false;
   }
@@ -639,8 +639,7 @@ void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
     return;
   }
 
-  Serial.printf("[%lu] [EHP] Converted image: %dx%d, %zu bytes (raw)\n", millis(), bmpWidth, bmpHeight,
-                rawData.size());
+  Serial.printf("[%lu] [EHP] Converted image: %dx%d, %zu bytes (raw)\n", millis(), bmpWidth, bmpHeight, rawData.size());
 
   // Create PageImage and add to page (raw 1-bit data)
   auto pageImage = std::make_shared<PageImage>(std::move(rawData), bmpWidth, bmpHeight, 0, 0);
