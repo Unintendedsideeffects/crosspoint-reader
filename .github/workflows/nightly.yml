@@ -41,14 +41,14 @@ jobs:
         shell: bash
         run: |
           base_version=$(python - <<'PY'
-import re
-from pathlib import Path
-text = Path('platformio.ini').read_text()
-match = re.search(r'^\\[crosspoint\\]\\s*\\nversion\\s*=\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)\\s*$', text, re.M)
-if not match:
-    raise SystemExit('crosspoint.version not found')
-print(f"{match.group(1)}.{match.group(2)}")
-PY
+          import re
+          from pathlib import Path
+          text = Path('platformio.ini').read_text()
+          match = re.search(r'^\\[crosspoint\\]\\s*\\nversion\\s*=\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)\\s*$', text, re.M)
+          if not match:
+              raise SystemExit('crosspoint.version not found')
+          print(f"{match.group(1)}.{match.group(2)}")
+          PY
           )
           nightly_patch=$(date -u +%Y%m%d)
           nightly_version="${base_version}.${nightly_patch}"
@@ -59,25 +59,25 @@ PY
           NIGHTLY_VERSION: ${{ steps.version.outputs.nightly_version }}
         run: |
           python - <<'PY'
-from pathlib import Path
-import os
+          from pathlib import Path
+          import os
 
-path = Path('platformio.ini')
-lines = path.read_text().splitlines()
-nightly = os.environ['NIGHTLY_VERSION']
+          path = Path('platformio.ini')
+          lines = path.read_text().splitlines()
+          nightly = os.environ['NIGHTLY_VERSION']
 
-out = []
-in_crosspoint = False
-for line in lines:
-    stripped = line.strip()
-    if stripped.startswith('[') and stripped.endswith(']'):
-        in_crosspoint = stripped == '[crosspoint]'
-    if in_crosspoint and stripped.startswith('version'):
-        line = f"version = {nightly}"
-    out.append(line)
+          out = []
+          in_crosspoint = False
+          for line in lines:
+              stripped = line.strip()
+              if stripped.startswith('[') and stripped.endswith(']'):
+                  in_crosspoint = stripped == '[crosspoint]'
+              if in_crosspoint and stripped.startswith('version'):
+                  line = f"version = {nightly}"
+              out.append(line)
 
-path.write_text("\n".join(out) + "\n")
-PY
+          path.write_text("\n".join(out) + "\n")
+          PY
 
       - name: Build firmware (nightly)
         run: pio run -e gh_release
