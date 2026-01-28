@@ -24,8 +24,10 @@ constexpr FrontLayoutMap kFrontLayouts[] = {
     {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT},
     {HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT, HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM},
     {HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT, HalGPIO::BTN_BACK, HalGPIO::BTN_RIGHT},
-    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_RIGHT, HalGPIO::BTN_LEFT}, // Index 3: BACK_CONFIRM_RIGHT_LEFT
-    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT}, // Index 4: LEFT_LEFT_RIGHT_RIGHT (placeholder)
+    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_RIGHT,
+     HalGPIO::BTN_LEFT},  // Index 3: BACK_CONFIRM_RIGHT_LEFT
+    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT,
+     HalGPIO::BTN_RIGHT},  // Index 4: LEFT_LEFT_RIGHT_RIGHT (placeholder)
 };
 
 // Order matches CrossPointSettings::SIDE_BUTTON_LAYOUT.
@@ -199,7 +201,7 @@ MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const
     case CrossPointSettings::LEFT_BACK_CONFIRM_RIGHT:
       return {previous, back, confirm, next};
     case CrossPointSettings::BACK_CONFIRM_RIGHT_LEFT:
-      return {back, confirm, next, previous}; // Index 3 (Upstream)
+      return {back, confirm, next, previous};  // Index 3 (Upstream)
     case CrossPointSettings::BACK_CONFIRM_LEFT_RIGHT:
     default:
       return {back, confirm, previous, next};

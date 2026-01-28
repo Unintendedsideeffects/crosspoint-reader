@@ -382,7 +382,7 @@ void loop() {
     lastMemPrint = millis();
   }
 
-  const bool usbConnected = isUsbConnected();
+  const bool usbConnected = gpio.isUsbConnected();
   const bool allowBackgroundServer =
       SETTINGS.backgroundServerOnCharge && (!currentActivity || !currentActivity->blocksBackgroundServer());
   BackgroundWebServer& backgroundServer = BackgroundWebServer::getInstance();
@@ -390,8 +390,8 @@ void loop() {
 
   // Check for any user activity (button press or release) or active background work
   static unsigned long lastActivityTime = millis();
-  if (gpio.wasAnyPressed() || gpio.wasAnyReleased() ||
-      (currentActivity && currentActivity->preventAutoSleep()) || backgroundServer.shouldPreventAutoSleep()) {
+  if (gpio.wasAnyPressed() || gpio.wasAnyReleased() || (currentActivity && currentActivity->preventAutoSleep()) ||
+      backgroundServer.shouldPreventAutoSleep()) {
     lastActivityTime = millis();  // Reset inactivity timer
   }
 
@@ -399,13 +399,13 @@ void loop() {
   if (millis() - lastActivityTime >= sleepTimeoutMs) {
     Serial.printf("[%lu] [SLP] Auto-sleep triggered after %lu ms of inactivity\n", millis(), sleepTimeoutMs);
     enterDeepSleep();
-    // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start`
+    // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start
     return;
   }
 
   if (gpio.isPressed(HalGPIO::BTN_POWER) && gpio.getHeldTime() > SETTINGS.getPowerButtonDuration()) {
     enterDeepSleep();
-    // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start`
+    // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start
     return;
   }
 
