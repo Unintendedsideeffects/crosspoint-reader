@@ -23,7 +23,7 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 namespace {
 constexpr uint8_t SETTINGS_FILE_VERSION = 1;
 // Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 28;
+constexpr uint8_t SETTINGS_COUNT = 29;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 }  // namespace
 
@@ -67,6 +67,7 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writePod(outputFile, timeMode);
   serialization::writePod(outputFile, timeZoneOffset);
   serialization::writePod(outputFile, lastTimeSyncEpoch);
+  serialization::writePod(outputFile, releaseChannel);
   // New fields added at end for backward compatibility
   outputFile.close();
 
@@ -166,6 +167,8 @@ bool CrossPointSettings::loadFromFile() {
     if (++settingsRead >= fileSettingsCount) break;
     serialization::readPod(inputFile, lastTimeSyncEpoch);
     if (++settingsRead >= fileSettingsCount) break;
+    readAndValidate(inputFile, releaseChannel, RELEASE_CHANNEL_COUNT);
+    if (++settingsRead >= fileSettingsCount) break;
     // New fields added at end for backward compatibility
   } while (false);
 
@@ -196,6 +199,7 @@ void CrossPointSettings::validateAndClamp() {
   if (hideBatteryPercentage > HIDE_ALWAYS) hideBatteryPercentage = HIDE_NEVER;
   if (timeMode > TIME_MANUAL) timeMode = TIME_UTC;
   if (todoFallbackCover > TODO_FALLBACK_NONE) todoFallbackCover = TODO_FALLBACK_STANDARD;
+  if (releaseChannel >= RELEASE_CHANNEL_COUNT) releaseChannel = RELEASE_STABLE;
 
   // Range values
   // timeZoneOffset: 0 = UTC-12, 12 = UTC+0, 26 = UTC+14

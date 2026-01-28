@@ -89,7 +89,7 @@ PY
           name: Nightly ${{ steps.version.outputs.nightly_version }}
           generate_release_notes: true
           draft: false
-          prerelease: false
+          prerelease: true
           files: |
             .pio/build/gh_release/firmware.bin
             .pio/build/gh_release/partitions.bin
