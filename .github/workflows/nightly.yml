@@ -44,7 +44,7 @@ jobs:
           import re
           from pathlib import Path
           text = Path('platformio.ini').read_text()
-          match = re.search(r'^\\[crosspoint\\]\\s*\\nversion\\s*=\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)\\s*$', text, re.M)
+          match = re.search(r'^\[crosspoint\]\s*\nversion\s*=\s*([0-9]+)\.([0-9]+)\.([0-9]+)\s*$', text, re.M)
           if not match:
               raise SystemExit('crosspoint.version not found')
           print(f"{match.group(1)}.{match.group(2)}")
