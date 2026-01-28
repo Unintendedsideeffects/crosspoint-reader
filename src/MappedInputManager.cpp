@@ -133,6 +133,12 @@ bool MappedInputManager::consumePowerBack() const {
 }
 
 bool MappedInputManager::wasPressed(const Button button) const {
+  if (button == Button::Confirm && consumePowerConfirm()) {
+    return true;
+  }
+  if (button == Button::Back && consumePowerBack()) {
+    return true;
+  }
   if (isDualSideLayout()) {
     if (button == Button::Left) {
       return gpio.wasPressed(HalGPIO::BTN_BACK) || gpio.wasPressed(HalGPIO::BTN_LEFT);

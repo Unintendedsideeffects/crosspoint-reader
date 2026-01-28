@@ -40,6 +40,15 @@ bool isValidSdPath(const String& path);
 String normalizePath(const String& path);
 
 /**
+ * Decode URL-encoded path fragments (e.g. %2F, %20).
+ * Converts '+' to space.
+ *
+ * @param path The URL-encoded path to decode
+ * @return Decoded path
+ */
+String urlDecode(const String& path);
+
+/**
  * Validate a filename (no path separators or traversal).
  * Used for uploaded filenames before combining with destination path.
  *
