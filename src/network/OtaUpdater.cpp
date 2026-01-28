@@ -8,9 +8,10 @@
 #include "esp_wifi.h"
 
 namespace {
-constexpr char latestReleaseUrl[] = "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/releases/latest";
+constexpr char latestReleaseUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/latest";
 constexpr char releasesListUrl[] =
-    "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/releases?per_page=1";
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases?per_page=1";
 
 /* This is buffer and size holder to keep upcoming data from latestReleaseUrl */
 char* local_buf;
