@@ -74,6 +74,9 @@ constexpr int NUM_ITALIC_TAGS = sizeof(ITALIC_TAGS) / sizeof(ITALIC_TAGS[0]);
 const char* IMAGE_TAGS[] = {"img"};
 constexpr int NUM_IMAGE_TAGS = sizeof(IMAGE_TAGS) / sizeof(IMAGE_TAGS[0]);
 
+const char* PRE_TAGS[] = {"pre"};
+constexpr int NUM_PRE_TAGS = sizeof(PRE_TAGS) / sizeof(PRE_TAGS[0]);
+
 const char* SKIP_TAGS[] = {"head"};
 constexpr int NUM_SKIP_TAGS = sizeof(SKIP_TAGS) / sizeof(SKIP_TAGS[0]);
 
@@ -194,7 +197,10 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     }
   }
 
-  if (matches(name, HEADER_TAGS, NUM_HEADER_TAGS)) {
+  if (matches(name, PRE_TAGS, NUM_PRE_TAGS)) {
+    self->startNewTextBlock(TextBlock::LEFT_ALIGN);
+    self->preUntilDepth = std::min(self->preUntilDepth, self->depth);
+  } else if (matches(name, HEADER_TAGS, NUM_HEADER_TAGS)) {
     self->startNewTextBlock(TextBlock::CENTER_ALIGN);
     self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
   } else if (matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS)) {
@@ -229,6 +235,33 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
 
   for (int i = 0; i < len; i++) {
     if (isWhitespace(s[i])) {
+      if (self->preUntilDepth < self->depth) {
+        // Inside PRE block: preserve whitespace
+        if (s[i] == '\n') {
+          if (self->partWordBufferIndex > 0) self->flushPartWordBuffer();
+
+          if (self->currentTextBlock && self->currentTextBlock->isEmpty()) {
+            // Force a blank line by adding a space
+            self->currentTextBlock->addWord(" ", EpdFontFamily::REGULAR);
+          }
+          self->startNewTextBlock(self->currentTextBlock ? self->currentTextBlock->getStyle() : TextBlock::LEFT_ALIGN);
+        } else if (s[i] == '\r') {
+          // Ignore CR, rely on LF
+        } else {
+          // Space or Tab
+          if (self->partWordBufferIndex >= MAX_WORD_SIZE) self->flushPartWordBuffer();
+
+          char c = (s[i] == '\t') ? ' ' : s[i];  // Convert tab to space
+          self->partWordBuffer[self->partWordBufferIndex++] = c;
+
+          if (s[i] == '\t' && self->partWordBufferIndex < MAX_WORD_SIZE) {
+            // Add extra space for tab (2 spaces total)
+            self->partWordBuffer[self->partWordBufferIndex++] = ' ';
+          }
+        }
+        continue;
+      }
+
       // Currently looking at whitespace, if there's anything in the partWordBuffer, flush it
       if (self->partWordBufferIndex > 0) {
         self->flushPartWordBuffer();
@@ -279,9 +312,10 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
     // We don't want to flush out content when closing inline tags like <span>.
     // Currently this also flushes out on closing <b> and <i> tags, but they are line tags so that shouldn't happen,
     // text styling needs to be overhauled to fix it.
-    const bool shouldBreakText =
-        matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS) || matches(name, HEADER_TAGS, NUM_HEADER_TAGS) ||
-        matches(name, BOLD_TAGS, NUM_BOLD_TAGS) || matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS) || self->depth == 1;
+    const bool shouldBreakText = matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS) ||
+                                 matches(name, HEADER_TAGS, NUM_HEADER_TAGS) || matches(name, PRE_TAGS, NUM_PRE_TAGS) ||
+                                 matches(name, BOLD_TAGS, NUM_BOLD_TAGS) ||
+                                 matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS) || self->depth == 1;
 
     if (shouldBreakText) {
       self->flushPartWordBuffer();
@@ -293,6 +327,11 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
   // Leaving skip
   if (self->skipUntilDepth == self->depth) {
     self->skipUntilDepth = INT_MAX;
+  }
+
+  // Leaving pre
+  if (self->preUntilDepth == self->depth) {
+    self->preUntilDepth = INT_MAX;
   }
 
   // Leaving bold
