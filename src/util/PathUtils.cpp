@@ -76,6 +76,40 @@ String normalizePath(const String& path) {
   return result;
 }
 
+namespace {
+int hexValue(const char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+  if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+  return -1;
+}
+}  // namespace
+
+String urlDecode(const String& path) {
+  String result;
+  result.reserve(path.length());
+
+  for (size_t i = 0; i < path.length(); i++) {
+    const char c = path[i];
+    if (c == '%' && i + 2 < path.length()) {
+      const int hi = hexValue(path[i + 1]);
+      const int lo = hexValue(path[i + 2]);
+      if (hi >= 0 && lo >= 0) {
+        result += static_cast<char>((hi << 4) | lo);
+        i += 2;
+        continue;
+      }
+    }
+    if (c == '+') {
+      result += ' ';
+    } else {
+      result += c;
+    }
+  }
+
+  return result;
+}
+
 bool isValidFilename(const String& filename) {
   // Empty filenames are invalid
   if (filename.isEmpty()) {

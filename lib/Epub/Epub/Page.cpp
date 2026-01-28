@@ -33,35 +33,10 @@ void PageImage::render(GfxRenderer& renderer, const int fontId, const int xOffse
     return;
   }
 
-  // Create a memory stream from the BMP data and use GfxRenderer's drawImage
-  // The BMP data is already in the correct format for display
-  // We need to parse the BMP header to get pixel offset, then render the image data
   const int x = xPos + xOffset;
   const int y = yPos + yOffset;
-
-  // Parse BMP header to find pixel data offset
-  if (bmpData.size() < 54) {
-    Serial.printf("[%lu] [PGE] BMP data too small\n", millis());
-    return;
-  }
-
-  // Verify BMP signature
-  if (bmpData[0] != 'B' || bmpData[1] != 'M') {
-    Serial.printf("[%lu] [PGE] Invalid BMP signature\n", millis());
-    return;
-  }
-
-  // Get pixel data offset from header (offset 10, little-endian 32-bit)
-  uint32_t pixelOffset = bmpData[10] | (bmpData[11] << 8) | (bmpData[12] << 16) | (bmpData[13] << 24);
-
-  // Get bits per pixel from header (offset 28, little-endian 16-bit)
-  uint16_t bitsPerPixel = bmpData[28] | (bmpData[29] << 8);
-
-  // Draw the image using GfxRenderer's drawImage method
-  // Note: drawImage expects raw pixel data, so we pass data starting at pixel offset
-  if (pixelOffset < bmpData.size()) {
-    renderer.drawImage(bmpData.data() + pixelOffset, x, y, imageWidth, imageHeight);
-  }
+  // bmpData contains raw 1-bit image data (packed by row, MSB first).
+  renderer.drawImage(bmpData.data(), x, y, imageWidth, imageHeight);
 }
 
 bool PageImage::serialize(FsFile& file) {

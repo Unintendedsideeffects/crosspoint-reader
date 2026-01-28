@@ -82,6 +82,53 @@ constexpr int NUM_SKIP_TAGS = sizeof(SKIP_TAGS) / sizeof(SKIP_TAGS[0]);
 
 bool isWhitespace(const char c) { return c == ' ' || c == '\r' || c == '\n' || c == '\t'; }
 
+namespace {
+bool decode1BitBmpToRaw(const std::vector<uint8_t>& bmpData, std::vector<uint8_t>& rawData, uint16_t& outWidth,
+                        uint16_t& outHeight) {
+  if (bmpData.size() < 54) {
+    return false;
+  }
+  if (bmpData[0] != 'B' || bmpData[1] != 'M') {
+    return false;
+  }
+
+  const uint32_t pixelOffset = bmpData[10] | (bmpData[11] << 8) | (bmpData[12] << 16) | (bmpData[13] << 24);
+  const int32_t width = static_cast<int32_t>(bmpData[18]) | (static_cast<int32_t>(bmpData[19]) << 8) |
+                        (static_cast<int32_t>(bmpData[20]) << 16) | (static_cast<int32_t>(bmpData[21]) << 24);
+  int32_t height = static_cast<int32_t>(bmpData[22]) | (static_cast<int32_t>(bmpData[23]) << 8) |
+                   (static_cast<int32_t>(bmpData[24]) << 16) | (static_cast<int32_t>(bmpData[25]) << 24);
+  const bool topDown = height < 0;
+  if (height < 0) {
+    height = -height;
+  }
+
+  const uint16_t bitsPerPixel = bmpData[28] | (bmpData[29] << 8);
+  if (bitsPerPixel != 1 || width <= 0 || height <= 0) {
+    return false;
+  }
+
+  const uint32_t rowBytesBmp = ((static_cast<uint32_t>(width) + 31) / 32) * 4;
+  const uint32_t rowBytesRaw = (static_cast<uint32_t>(width) + 7) / 8;
+  const uint64_t requiredSize = static_cast<uint64_t>(pixelOffset) +
+                                static_cast<uint64_t>(rowBytesBmp) * static_cast<uint64_t>(height);
+  if (requiredSize > bmpData.size()) {
+    return false;
+  }
+
+  rawData.assign(rowBytesRaw * static_cast<uint32_t>(height), 0);
+  for (int32_t row = 0; row < height; row++) {
+    const uint32_t srcRow = static_cast<uint32_t>(topDown ? row : (height - 1 - row));
+    const uint32_t srcOffset = pixelOffset + srcRow * rowBytesBmp;
+    const uint32_t dstOffset = static_cast<uint32_t>(row) * rowBytesRaw;
+    memcpy(rawData.data() + dstOffset, bmpData.data() + srcOffset, rowBytesRaw);
+  }
+
+  outWidth = static_cast<uint16_t>(width);
+  outHeight = static_cast<uint16_t>(height);
+  return true;
+}
+}  // namespace
+
 // given the start and end of a tag, check to see if it matches a known tag
 bool matches(const char* tag_name, const char* possible_tags[], const int possible_tag_count) {
   for (int i = 0; i < possible_tag_count; i++) {
@@ -566,29 +613,36 @@ void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
     return;
   }
 
-  // Convert to BMP
+  // Convert to 1-bit BMP for raw rendering
   std::vector<uint8_t> bmpData;
   MemoryPrint bmpOut(bmpData);
 
-  bool success = ImageConverter::convertToBmpStream(tempImage, format, bmpOut, maxWidth, maxHeight, false);
+  bool success = ImageConverter::convertTo1BitBmpStream(tempImage, format, bmpOut, maxWidth, maxHeight);
   tempImage.close();
   SdMan.remove(tempImagePath.c_str());
 
   if (!success || bmpData.size() < 54) {
-    Serial.printf("[%lu] [EHP] Failed to convert image to BMP\n", millis());
+    Serial.printf("[%lu] [EHP] Failed to convert image to 1-bit BMP\n", millis());
     startNewTextBlock(TextBlock::CENTER_ALIGN);
     currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
     return;
   }
 
-  // Parse BMP dimensions from header
-  uint16_t bmpWidth = bmpData[18] | (bmpData[19] << 8);
-  int32_t bmpHeight = bmpData[22] | (bmpData[23] << 8) | (bmpData[24] << 16) | (bmpData[25] << 24);
-  if (bmpHeight < 0) bmpHeight = -bmpHeight;  // Top-down BMPs have negative height
+  // Decode BMP to raw 1-bit data for display
+  std::vector<uint8_t> rawData;
+  uint16_t bmpWidth = 0;
+  uint16_t bmpHeight = 0;
+  if (!decode1BitBmpToRaw(bmpData, rawData, bmpWidth, bmpHeight)) {
+    Serial.printf("[%lu] [EHP] Failed to decode 1-bit BMP\n", millis());
+    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
+    return;
+  }
 
-  Serial.printf("[%lu] [EHP] Converted image: %dx%d, %zu bytes\n", millis(), bmpWidth, bmpHeight, bmpData.size());
+  Serial.printf("[%lu] [EHP] Converted image: %dx%d, %zu bytes (raw)\n", millis(), bmpWidth, bmpHeight,
+                rawData.size());
 
-  // Create PageImage and add to page
-  auto pageImage = std::make_shared<PageImage>(std::move(bmpData), bmpWidth, static_cast<uint16_t>(bmpHeight), 0, 0);
+  // Create PageImage and add to page (raw 1-bit data)
+  auto pageImage = std::make_shared<PageImage>(std::move(rawData), bmpWidth, bmpHeight, 0, 0);
   addImageToPage(pageImage);
 }
