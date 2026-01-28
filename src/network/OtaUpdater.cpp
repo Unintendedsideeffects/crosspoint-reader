@@ -6,8 +6,12 @@
 #include "esp_https_ota.h"
 #include "esp_wifi.h"
 
+#include "CrossPointSettings.h"
+
 namespace {
 constexpr char latestReleaseUrl[] = "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/releases/latest";
+constexpr char releasesListUrl[] =
+    "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/releases?per_page=1";
 
 /* This is buffer and size holder to keep upcoming data from latestReleaseUrl */
 char* local_buf;
@@ -60,12 +64,21 @@ esp_err_t event_handler(esp_http_client_event_t* event) {
 } /* namespace */
 
 OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
+  updateAvailable = false;
+  latestVersion.clear();
+  otaUrl.clear();
+  otaSize = 0;
+  totalSize = 0;
+
   JsonDocument filter;
   esp_err_t esp_err;
   JsonDocument doc;
 
+  const bool useReleaseList = (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY);
+  const char* releaseUrl = useReleaseList ? releasesListUrl : latestReleaseUrl;
+
   esp_http_client_config_t client_config = {
-      .url = latestReleaseUrl,
+      .url = releaseUrl,
       .event_handler = event_handler,
       /* Default HTTP client buffer size 512 byte only */
       .buffer_size = 8192,
@@ -113,32 +126,49 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     return INTERNAL_UPDATE_ERROR;
   }
 
-  filter["tag_name"] = true;
-  filter["assets"][0]["name"] = true;
-  filter["assets"][0]["browser_download_url"] = true;
-  filter["assets"][0]["size"] = true;
+  if (useReleaseList) {
+    filter[0]["tag_name"] = true;
+    filter[0]["assets"][0]["name"] = true;
+    filter[0]["assets"][0]["browser_download_url"] = true;
+    filter[0]["assets"][0]["size"] = true;
+  } else {
+    filter["tag_name"] = true;
+    filter["assets"][0]["name"] = true;
+    filter["assets"][0]["browser_download_url"] = true;
+    filter["assets"][0]["size"] = true;
+  }
   const DeserializationError error = deserializeJson(doc, local_buf, DeserializationOption::Filter(filter));
   if (error) {
     Serial.printf("[%lu] [OTA] JSON parse failed: %s\n", millis(), error.c_str());
     return JSON_PARSE_ERROR;
   }
 
-  if (!doc["tag_name"].is<std::string>()) {
+  JsonVariant release = doc.as<JsonVariant>();
+  if (useReleaseList) {
+    if (!doc.is<JsonArray>() || doc.size() == 0) {
+      Serial.printf("[%lu] [OTA] No releases found\n", millis());
+      return JSON_PARSE_ERROR;
+    }
+    release = doc[0];
+  }
+
+  if (!release["tag_name"].is<std::string>()) {
     Serial.printf("[%lu] [OTA] No tag_name found\n", millis());
     return JSON_PARSE_ERROR;
   }
 
-  if (!doc["assets"].is<JsonArray>()) {
+  if (!release["assets"].is<JsonArray>()) {
     Serial.printf("[%lu] [OTA] No assets found\n", millis());
     return JSON_PARSE_ERROR;
   }
 
-  latestVersion = doc["tag_name"].as<std::string>();
+  latestVersion = release["tag_name"].as<std::string>();
 
-  for (int i = 0; i < doc["assets"].size(); i++) {
-    if (doc["assets"][i]["name"] == "firmware.bin") {
-      otaUrl = doc["assets"][i]["browser_download_url"].as<std::string>();
-      otaSize = doc["assets"][i]["size"].as<size_t>();
+  const auto assets = release["assets"].as<JsonArray>();
+  for (const auto& asset : assets) {
+    if (asset["name"] == "firmware.bin") {
+      otaUrl = asset["browser_download_url"].as<std::string>();
+      otaSize = asset["size"].as<size_t>();
       totalSize = otaSize;
       updateAvailable = true;
       break;
