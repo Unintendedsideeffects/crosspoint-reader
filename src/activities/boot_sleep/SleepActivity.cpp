@@ -26,7 +26,6 @@ void validateSleepBmpsOnce() {
     return;
   }
 
-  sleepBmpCache.scanned = true;
   sleepBmpCache.validFiles.clear();
 
   auto dir = SdMan.open("/sleep");
@@ -64,6 +63,7 @@ void validateSleepBmpsOnce() {
     file.close();
   }
   dir.close();
+  sleepBmpCache.scanned = true;
 }
 }  // namespace
 
