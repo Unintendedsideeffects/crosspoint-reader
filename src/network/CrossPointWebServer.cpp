@@ -50,8 +50,10 @@ void clearEpubCacheIfNeeded(const String& filePath) {
 
 // Helper to invalidate sleep BMP cache when /sleep/ or /sleep.bmp is modified
 void invalidateSleepCacheIfNeeded(const String& filePath) {
-  if (filePath.equalsIgnoreCase("/sleep.bmp") || filePath.startsWith("/sleep/") ||
-      filePath.equalsIgnoreCase("/sleep")) {
+  String lowerPath = filePath;
+  lowerPath.toLowerCase();
+  if (lowerPath.equals("/sleep.bmp") || lowerPath.startsWith("/sleep/") ||
+      lowerPath.equals("/sleep")) {
     invalidateSleepBmpCache();
   }
 }
