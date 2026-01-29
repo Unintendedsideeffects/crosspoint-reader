@@ -12,7 +12,10 @@ SemaphoreHandle_t SpiBusMutex::getMutex() {
   return mutex;
 }
 
-void SpiBusMutex::take() { xSemaphoreTake(getMutex(), portMAX_DELAY); }
+void SpiBusMutex::take() {
+  BaseType_t result = xSemaphoreTake(getMutex(), portMAX_DELAY);
+  configASSERT(result == pdTRUE);
+}
 
 void SpiBusMutex::give() { xSemaphoreGive(getMutex()); }
 
