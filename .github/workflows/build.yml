@@ -2,10 +2,10 @@ name: Build
 
 on:
   push:
-    branches: [master, integration/mainline]
+    branches: [master, fork-drift]
     tags: ["v*"]
   pull_request:
-    branches: [master, integration/mainline]
+    branches: [master, fork-drift]
   workflow_dispatch:
 
 concurrency:
@@ -115,3 +115,57 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  ci-latest:
+    needs: build
+    if: ${{ !startsWith(github.ref, 'refs/tags/') && github.ref == 'refs/heads/fork-drift' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download firmware
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: firmware
+
+      - name: Prepare CI release assets
+        run: |
+          # Show actual structure for debugging
+          find firmware -type f
+          # Locate firmware.bin (artifact preserves directory structure)
+          FIRMWARE_BIN="$(find firmware -type f -name 'firmware.bin' -print -quit)"
+          if [ -z "$FIRMWARE_BIN" ]; then
+            echo "ERROR: firmware.bin not found in downloaded artifact"
+            exit 1
+          fi
+          cp "$FIRMWARE_BIN" firmware.bin
+
+          PARTITIONS_BIN="$(find firmware -type f -name 'partitions.bin' -print -quit)"
+          if [ -z "$PARTITIONS_BIN" ]; then
+            echo "ERROR: partitions.bin not found in downloaded artifact"
+            exit 1
+          fi
+          cp "$PARTITIONS_BIN" partitions.bin
+
+      - name: Remove existing CI assets (if any)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/ci-latest --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
+          for asset_id in $asset_ids; do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}"
+          done
+
+      - name: Publish CI release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ci-latest
+          name: CI Latest
+          prerelease: true
+          draft: false
+          generate_release_notes: false
+          files: |
+            firmware.bin
+            partitions.bin
