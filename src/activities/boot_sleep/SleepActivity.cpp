@@ -31,6 +31,7 @@ void validateSleepBmpsOnce() {
   auto dir = SdMan.open("/sleep");
   if (!(dir && dir.isDirectory())) {
     if (dir) dir.close();
+    sleepBmpCache.scanned = true;
     return;
   }
 
