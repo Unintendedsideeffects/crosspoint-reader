@@ -5,18 +5,10 @@ SemaphoreHandle_t SpiBusMutex::getMutex() {
   return mutex;
 }
 
-void SpiBusMutex::take() {
-  xSemaphoreTake(getMutex(), portMAX_DELAY);
-}
+void SpiBusMutex::take() { xSemaphoreTake(getMutex(), portMAX_DELAY); }
 
-void SpiBusMutex::give() {
-  xSemaphoreGive(getMutex());
-}
+void SpiBusMutex::give() { xSemaphoreGive(getMutex()); }
 
-SpiBusMutex::Guard::Guard() {
-  SpiBusMutex::take();
-}
+SpiBusMutex::Guard::Guard() { SpiBusMutex::take(); }
 
-SpiBusMutex::Guard::~Guard() {
-  SpiBusMutex::give();
-}
+SpiBusMutex::Guard::~Guard() { SpiBusMutex::give(); }
