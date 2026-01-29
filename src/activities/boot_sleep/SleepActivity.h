@@ -3,6 +3,9 @@
 
 class Bitmap;
 
+// Call this when /sleep/ folder or /sleep.bmp is modified via web interface
+void invalidateSleepBmpCache();
+
 class SleepActivity final : public Activity {
  public:
   explicit SleepActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
