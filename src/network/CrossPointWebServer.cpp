@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include "activities/boot_sleep/SleepActivity.h"
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
 #include "util/StringUtils.h"
@@ -42,6 +43,14 @@ void clearEpubCacheIfNeeded(const String& filePath) {
   if (StringUtils::checkFileExtension(filePath, ".epub")) {
     Epub(filePath.c_str(), "/.crosspoint").clearCache();
     Serial.printf("[%lu] [WEB] Cleared epub cache for: %s\n", millis(), filePath.c_str());
+  }
+}
+
+// Helper to invalidate sleep BMP cache when /sleep/ or /sleep.bmp is modified
+void invalidateSleepCacheIfNeeded(const String& filePath) {
+  if (filePath.equalsIgnoreCase("/sleep.bmp") || filePath.startsWith("/sleep/") ||
+      filePath.equalsIgnoreCase("/sleep")) {
+    invalidateSleepBmpCache();
   }
 }
 }  // namespace
@@ -629,6 +638,7 @@ void CrossPointWebServer::handleUpload() const {
         if (!filePath.endsWith("/")) filePath += "/";
         filePath += uploadFileName;
         clearEpubCacheIfNeeded(filePath);
+        invalidateSleepCacheIfNeeded(filePath);
       }
     }
   } else if (upload.status == UPLOAD_FILE_ABORTED) {
@@ -698,6 +708,7 @@ void CrossPointWebServer::handleCreateFolder() const {
   // Create the folder
   if (SdMan.mkdir(folderPath.c_str())) {
     Serial.printf("[%lu] [WEB] Folder created successfully: %s\n", millis(), folderPath.c_str());
+    invalidateSleepCacheIfNeeded(folderPath);
     server->send(200, "text/plain", "Folder created: " + folderName);
   } else {
     Serial.printf("[%lu] [WEB] Failed to create folder: %s\n", millis(), folderPath.c_str());
@@ -780,6 +791,7 @@ void CrossPointWebServer::handleDelete() const {
 
   if (success) {
     Serial.printf("[%lu] [WEB] Successfully deleted: %s\n", millis(), itemPath.c_str());
+    invalidateSleepCacheIfNeeded(itemPath);
     server->send(200, "text/plain", "Deleted successfully");
   } else {
     Serial.printf("[%lu] [WEB] Failed to delete: %s\n", millis(), itemPath.c_str());
@@ -920,11 +932,12 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
         Serial.printf("[%lu] [WS] Upload complete: %s (%d bytes in %lu ms, %.1f KB/s)\n", millis(),
                       wsUploadFileName.c_str(), wsUploadSize, elapsed, kbps);
 
-        // Clear epub cache to prevent stale metadata issues when overwriting files
+        // Clear caches to prevent stale data when overwriting files
         String filePath = wsUploadPath;
         if (!filePath.endsWith("/")) filePath += "/";
         filePath += wsUploadFileName;
         clearEpubCacheIfNeeded(filePath);
+        invalidateSleepCacheIfNeeded(filePath);
 
         wsServer->sendTXT(num, "DONE");
         lastProgressSent = 0;

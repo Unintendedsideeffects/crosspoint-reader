@@ -8,6 +8,7 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 #include "images/CrossLarge.h"
 #include "util/StringUtils.h"
@@ -68,6 +69,13 @@ void validateSleepBmpsOnce() {
 }
 }  // namespace
 
+void invalidateSleepBmpCache() {
+  sleepBmpCache.scanned = false;
+  sleepBmpCache.sleepDirFound = false;
+  sleepBmpCache.validFiles.clear();
+  Serial.printf("[%lu] [SLP] Sleep BMP cache invalidated\n", millis());
+}
+
 void SleepActivity::onEnter() {
   Activity::onEnter();
   renderPopup("Entering Sleep...");
@@ -102,6 +110,7 @@ void SleepActivity::renderPopup(const char* message) const {
 }
 
 void SleepActivity::renderCustomSleepScreen() const {
+  SpiBusMutex::Guard guard;
   validateSleepBmpsOnce();
   const auto numFiles = sleepBmpCache.validFiles.size();
   if (sleepBmpCache.sleepDirFound && numFiles > 0) {
