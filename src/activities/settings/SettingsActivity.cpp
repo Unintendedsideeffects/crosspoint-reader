@@ -53,7 +53,7 @@ constexpr int systemSettingsCount = 6;
 const SettingInfo systemSettings[systemSettingsCount] = {
     SettingInfo::Enum("Time to Sleep", &CrossPointSettings::sleepTimeout,
                       {"1 min", "5 min", "10 min", "15 min", "30 min"}),
-    SettingInfo::Enum("Release Channel", &CrossPointSettings::releaseChannel, {"Stable", "Nightly"}),
+    SettingInfo::Enum("Release Channel", &CrossPointSettings::releaseChannel, {"Stable", "Nightly", "Latest Build"}),
     SettingInfo::Action("KOReader Sync"),
     SettingInfo::Action("OPDS Browser"),
     SettingInfo::Action("Clear Cache"),
