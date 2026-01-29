@@ -52,8 +52,7 @@ void clearEpubCacheIfNeeded(const String& filePath) {
 void invalidateSleepCacheIfNeeded(const String& filePath) {
   String lowerPath = filePath;
   lowerPath.toLowerCase();
-  if (lowerPath.equals("/sleep.bmp") || lowerPath.startsWith("/sleep/") ||
-      lowerPath.equals("/sleep")) {
+  if (lowerPath.equals("/sleep.bmp") || lowerPath.startsWith("/sleep/") || lowerPath.equals("/sleep")) {
     invalidateSleepBmpCache();
   }
 }
