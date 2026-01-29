@@ -49,7 +49,7 @@ void validateSleepBmpsOnce() {
       continue;
     }
 
-    if (filename.length() < 4 || filename.substr(filename.length() - 4) != ".bmp") {
+    if (!StringUtils::checkFileExtension(filename, ".bmp")) {
       Serial.printf("[%lu] [SLP] Skipping non-.bmp file name: %s\n", millis(), name);
       file.close();
       continue;
@@ -107,9 +107,9 @@ void SleepActivity::renderCustomSleepScreen() const {
   if (sleepBmpCache.sleepDirFound && numFiles > 0) {
     // Generate a random number between 1 and numFiles
     auto randomFileIndex = random(numFiles);
-    // If we picked the same image as last time, reroll
-    while (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
-      randomFileIndex = random(numFiles);
+    // If we picked the same image as last time, pick a different index deterministically.
+    if (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
+      randomFileIndex = (randomFileIndex + 1 + random(numFiles - 1)) % numFiles;
     }
     APP_STATE.lastSleepImage = randomFileIndex;
     APP_STATE.saveToFile();
@@ -118,6 +118,7 @@ void SleepActivity::renderCustomSleepScreen() const {
     if (SdMan.openFileForRead("SLP", filename, file)) {
       Serial.printf("[%lu] [SLP] Randomly loading: /sleep/%s\n", millis(),
                     sleepBmpCache.validFiles[randomFileIndex].c_str());
+      // Short delay to avoid SD timing issues before parsing the bitmap.
       delay(100);
       Bitmap bitmap(file, true);
       if (bitmap.parseHeaders() == BmpReaderError::Ok) {
