@@ -105,7 +105,12 @@ class CrossPointSettings {
   enum TIME_MODE { TIME_UTC = 0, TIME_LOCAL = 1, TIME_MANUAL = 2 };
 
   // Release channel options
-  enum RELEASE_CHANNEL { RELEASE_STABLE = 0, RELEASE_NIGHTLY = 1, RELEASE_CHANNEL_COUNT };
+  enum RELEASE_CHANNEL {
+    RELEASE_STABLE = 0,
+    RELEASE_NIGHTLY = 1,
+    RELEASE_LATEST_SUCCESSFUL = 2,
+    RELEASE_CHANNEL_COUNT
+  };
 
   // Sleep screen settings
   uint8_t sleepScreen = DARK;

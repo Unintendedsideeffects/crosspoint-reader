@@ -11,7 +11,17 @@ namespace {
 constexpr char latestReleaseUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/latest";
 constexpr char releasesListUrl[] =
-    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases?per_page=1";
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases?per_page=5";
+constexpr char ciLatestReleaseUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/ci-latest";
+
+bool parseSemver(const std::string& version, int& major, int& minor, int& patch) {
+  const char* versionStr = version.c_str();
+  if (versionStr[0] == 'v' || versionStr[0] == 'V') {
+    versionStr += 1;
+  }
+  return sscanf(versionStr, "%d.%d.%d", &major, &minor, &patch) == 3;
+}
 
 /* This is buffer and size holder to keep upcoming data from latestReleaseUrl */
 char* local_buf;
@@ -66,7 +76,12 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   JsonDocument doc;
 
   const bool useReleaseList = (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY);
-  const char* releaseUrl = useReleaseList ? releasesListUrl : latestReleaseUrl;
+  const char* releaseUrl = latestReleaseUrl;
+  if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY) {
+    releaseUrl = releasesListUrl;
+  } else if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL) {
+    releaseUrl = ciLatestReleaseUrl;
+  }
 
   esp_http_client_config_t client_config = {
       .url = releaseUrl,
@@ -119,6 +134,8 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
 
   if (useReleaseList) {
     filter[0]["tag_name"] = true;
+    filter[0]["prerelease"] = true;
+    filter[0]["draft"] = true;
     filter[0]["assets"][0]["name"] = true;
     filter[0]["assets"][0]["browser_download_url"] = true;
     filter[0]["assets"][0]["size"] = true;
@@ -140,7 +157,25 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
       Serial.printf("[%lu] [OTA] No releases found\n", millis());
       return JSON_PARSE_ERROR;
     }
-    release = doc[0];
+    bool releaseFound = false;
+    for (const auto& candidate : doc.as<JsonArray>()) {
+      if (candidate["draft"].is<bool>() && candidate["draft"].as<bool>()) {
+        continue;
+      }
+      if (!candidate["prerelease"].is<bool>() || !candidate["prerelease"].as<bool>()) {
+        continue;
+      }
+      if (candidate["tag_name"] == "ci-latest") {
+        continue;
+      }
+      release = candidate;
+      releaseFound = true;
+      break;
+    }
+    if (!releaseFound) {
+      Serial.printf("[%lu] [OTA] No nightly releases found\n", millis());
+      return JSON_PARSE_ERROR;
+    }
   }
 
   if (!release["tag_name"].is<std::string>()) {
@@ -176,18 +211,32 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
 }
 
 bool OtaUpdater::isUpdateNewer() const {
-  if (!updateAvailable || latestVersion.empty() || latestVersion == CROSSPOINT_VERSION) {
+  if (!updateAvailable || latestVersion.empty()) {
     return false;
   }
 
-  int currentMajor, currentMinor, currentPatch;
-  int latestMajor, latestMinor, latestPatch;
+  if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL) {
+    return true;
+  }
 
-  const auto currentVersion = CROSSPOINT_VERSION;
+  if (latestVersion == CROSSPOINT_VERSION) {
+    return false;
+  }
 
-  // semantic version check (only match on 3 segments)
-  sscanf(latestVersion.c_str(), "%d.%d.%d", &latestMajor, &latestMinor, &latestPatch);
-  sscanf(currentVersion, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch);
+  int currentMajor = 0;
+  int currentMinor = 0;
+  int currentPatch = 0;
+  int latestMajor = 0;
+  int latestMinor = 0;
+  int latestPatch = 0;
+
+  const auto currentVersion = std::string(CROSSPOINT_VERSION);
+
+  const bool latestParsed = parseSemver(latestVersion, latestMajor, latestMinor, latestPatch);
+  const bool currentParsed = parseSemver(currentVersion, currentMajor, currentMinor, currentPatch);
+  if (!latestParsed || !currentParsed) {
+    return latestVersion != currentVersion;
+  }
 
   /*
    * Compare major versions.
