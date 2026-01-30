@@ -78,7 +78,8 @@ void invalidateSleepBmpCache() {
 
 void SleepActivity::onEnter() {
   Activity::onEnter();
-  renderPopup("Entering Sleep...");
+  // Skip the "Entering Sleep..." popup to avoid unnecessary screen refresh
+  // The sleep screen will be displayed immediately anyway
 
   if (SETTINGS.sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::BLANK) {
     return renderBlankSleepScreen();
@@ -120,15 +121,18 @@ void SleepActivity::renderCustomSleepScreen() const {
     if (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
       randomFileIndex = (randomFileIndex + 1 + random(numFiles - 1)) % numFiles;
     }
+    // Only save to file if the selection actually changed
+    const bool selectionChanged = (APP_STATE.lastSleepImage != randomFileIndex);
     APP_STATE.lastSleepImage = randomFileIndex;
-    APP_STATE.saveToFile();
+    if (selectionChanged) {
+      APP_STATE.saveToFile();
+    }
     const auto filename = "/sleep/" + sleepBmpCache.validFiles[randomFileIndex];
     FsFile file;
     if (SdMan.openFileForRead("SLP", filename, file)) {
       Serial.printf("[%lu] [SLP] Randomly loading: /sleep/%s\n", millis(),
                     sleepBmpCache.validFiles[randomFileIndex].c_str());
-      // Short delay to avoid SD timing issues before parsing the bitmap.
-      delay(100);
+      // Removed unnecessary 100ms delay - SD card operations are already synchronized
       Bitmap bitmap(file, true);
       if (bitmap.parseHeaders() == BmpReaderError::Ok) {
         renderBitmapSleepScreen(bitmap);
