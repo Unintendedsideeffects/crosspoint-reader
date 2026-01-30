@@ -3,22 +3,50 @@
 namespace PathUtils {
 
 bool containsTraversal(const String& path) {
-  // Check for null bytes (could be used to truncate strings in C)
-  if (path.indexOf('\0') >= 0) {
+  // Note: null byte check removed - indexOf('\0') finds the internal C-string terminator
+  // Null bytes are checked separately in isValidSdPath via character iteration
+
+  // Check for ".." as a path component (actual traversal), not just any ".." in filename
+  // Patterns that indicate traversal:
+  // - "/../" anywhere in path
+  // - "/.." at end of path
+  // - "../" at start of path
+  // - path equals ".."
+  if (path.indexOf("/../") >= 0) {
+    Serial.printf("[PathUtils] traversal: /../\n");
+    return true;
+  }
+  if (path.endsWith("/..")) {
+    Serial.printf("[PathUtils] traversal: ends /.. \n");
+    return true;
+  }
+  if (path.startsWith("../")) {
+    Serial.printf("[PathUtils] traversal: starts ../\n");
+    return true;
+  }
+  if (path == "..") {
+    Serial.printf("[PathUtils] traversal: equals ..\n");
     return true;
   }
 
-  // Check for ".." in various forms
-  // Direct check for parent directory reference
-  if (path.indexOf("..") >= 0) {
-    return true;
-  }
-
-  // Check for URL-encoded variants (%2e = '.', %2f = '/')
-  // %2e%2e = "..", %2e%2e%2f = "../"
+  // Check for URL-encoded traversal variants (in case called before decoding)
+  // %2e = '.', %2f = '/'
   String lower = path;
   lower.toLowerCase();
-  if (lower.indexOf("%2e%2e") >= 0 || lower.indexOf("%2e.") >= 0 || lower.indexOf(".%2e") >= 0) {
+  if (lower.indexOf("%2e%2e%2f") >= 0) {
+    Serial.printf("[PathUtils] traversal: %%2e%%2e%%2f\n");
+    return true;
+  }
+  if (lower.indexOf("%2f%2e%2e") >= 0) {
+    Serial.printf("[PathUtils] traversal: %%2f%%2e%%2e\n");
+    return true;
+  }
+  if (lower.indexOf("..%2f") >= 0) {
+    Serial.printf("[PathUtils] traversal: ..%%2f\n");
+    return true;
+  }
+  if (lower.indexOf("%2f..") >= 0) {
+    Serial.printf("[PathUtils] traversal: %%2f..\n");
     return true;
   }
 
@@ -28,22 +56,26 @@ bool containsTraversal(const String& path) {
 bool isValidSdPath(const String& path) {
   // Empty paths are invalid
   if (path.isEmpty()) {
+    Serial.printf("[PathUtils] REJECT: empty path\n");
     return false;
   }
 
   // Check length (FAT32 path limit is 255 chars)
   if (path.length() > 255) {
+    Serial.printf("[PathUtils] REJECT: path too long (%d chars)\n", path.length());
     return false;
   }
 
   // Must not contain traversal attempts
   if (containsTraversal(path)) {
+    Serial.printf("[PathUtils] REJECT: traversal in '%s'\n", path.c_str());
     return false;
   }
 
   // Check for null bytes
   for (size_t i = 0; i < path.length(); i++) {
     if (path[i] == '\0') {
+      Serial.printf("[PathUtils] REJECT: null at %d\n", i);
       return false;
     }
   }
@@ -144,6 +176,54 @@ bool isValidFilename(const String& filename) {
   }
 
   return true;
+}
+
+// TODO: TEMPORARY DEBUG - remove after fixing 400 error issue
+String getValidationFailureReason(const String& path) {
+  if (path.isEmpty()) {
+    return "empty path";
+  }
+  if (path.length() > 255) {
+    return "path too long: " + String(path.length()) + " chars";
+  }
+
+  // Check traversal patterns (don't use indexOf('\0') - it finds the C-string terminator)
+  if (path.indexOf("/../") >= 0) {
+    return "contains /../";
+  }
+  if (path.endsWith("/..")) {
+    return "ends with /..";
+  }
+  if (path.startsWith("../")) {
+    return "starts with ../";
+  }
+  if (path == "..") {
+    return "path is ..";
+  }
+
+  String lower = path;
+  lower.toLowerCase();
+  if (lower.indexOf("%2e%2e%2f") >= 0) {
+    return "contains %2e%2e%2f";
+  }
+  if (lower.indexOf("%2f%2e%2e") >= 0) {
+    return "contains %2f%2e%2e";
+  }
+  if (lower.indexOf("..%2f") >= 0) {
+    return "contains ..%2f";
+  }
+  if (lower.indexOf("%2f..") >= 0) {
+    return "contains %2f..";
+  }
+
+  // Check for null bytes
+  for (size_t i = 0; i < path.length(); i++) {
+    if (path[i] == '\0') {
+      return "null byte at position " + String(i);
+    }
+  }
+
+  return "unknown reason";
 }
 
 }  // namespace PathUtils
