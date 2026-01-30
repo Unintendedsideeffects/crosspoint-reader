@@ -386,6 +386,17 @@ void loop() {
   const bool allowBackgroundServer =
       SETTINGS.backgroundServerOnCharge && (!currentActivity || !currentActivity->blocksBackgroundServer());
   BackgroundWebServer& backgroundServer = BackgroundWebServer::getInstance();
+
+  static bool lastUsbConnected = false;
+  static bool lastAllowBackgroundServer = false;
+  if (usbConnected != lastUsbConnected || allowBackgroundServer != lastAllowBackgroundServer) {
+    Serial.printf("[%lu] [BWS] usbConnected=%d, allowBackgroundServer=%d (setting=%d, hasActivity=%d, blocks=%d)\n",
+                  millis(), usbConnected, allowBackgroundServer, SETTINGS.backgroundServerOnCharge,
+                  currentActivity != nullptr, currentActivity ? currentActivity->blocksBackgroundServer() : 0);
+    lastUsbConnected = usbConnected;
+    lastAllowBackgroundServer = allowBackgroundServer;
+  }
+
   backgroundServer.loop(usbConnected, allowBackgroundServer);
 
   // Check for any user activity (button press or release) or active background work
