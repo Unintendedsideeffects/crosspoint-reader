@@ -8,13 +8,78 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 #include "images/CrossLarge.h"
 #include "util/StringUtils.h"
 
+namespace {
+struct SleepBmpCache {
+  bool scanned = false;
+  bool sleepDirFound = false;
+  std::vector<std::string> validFiles;
+};
+
+SleepBmpCache sleepBmpCache;
+
+void validateSleepBmpsOnce() {
+  if (sleepBmpCache.scanned) {
+    return;
+  }
+
+  sleepBmpCache.validFiles.clear();
+
+  auto dir = SdMan.open("/sleep");
+  if (!(dir && dir.isDirectory())) {
+    if (dir) dir.close();
+    sleepBmpCache.scanned = true;
+    return;
+  }
+
+  sleepBmpCache.sleepDirFound = true;
+  char name[500];
+  for (auto file = dir.openNextFile(); file; file = dir.openNextFile()) {
+    if (file.isDirectory()) {
+      file.close();
+      continue;
+    }
+    file.getName(name, sizeof(name));
+    auto filename = std::string(name);
+    if (filename.empty() || filename[0] == '.') {
+      file.close();
+      continue;
+    }
+
+    if (!StringUtils::checkFileExtension(filename, ".bmp")) {
+      Serial.printf("[%lu] [SLP] Skipping non-.bmp file name: %s\n", millis(), name);
+      file.close();
+      continue;
+    }
+    Bitmap bitmap(file);
+    if (bitmap.parseHeaders() != BmpReaderError::Ok) {
+      Serial.printf("[%lu] [SLP] Skipping invalid BMP file: %s\n", millis(), name);
+      file.close();
+      continue;
+    }
+    sleepBmpCache.validFiles.emplace_back(filename);
+    file.close();
+  }
+  dir.close();
+  sleepBmpCache.scanned = true;
+}
+}  // namespace
+
+void invalidateSleepBmpCache() {
+  sleepBmpCache.scanned = false;
+  sleepBmpCache.sleepDirFound = false;
+  sleepBmpCache.validFiles.clear();
+  Serial.printf("[%lu] [SLP] Sleep BMP cache invalidated\n", millis());
+}
+
 void SleepActivity::onEnter() {
   Activity::onEnter();
-  renderPopup("Entering Sleep...");
+  // Skip the "Entering Sleep..." popup to avoid unnecessary screen refresh
+  // The sleep screen will be displayed immediately anyway
 
   if (SETTINGS.sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::BLANK) {
     return renderBlankSleepScreen();
@@ -46,63 +111,35 @@ void SleepActivity::renderPopup(const char* message) const {
 }
 
 void SleepActivity::renderCustomSleepScreen() const {
-  // Check if we have a /sleep directory
-  auto dir = SdMan.open("/sleep");
-  if (dir && dir.isDirectory()) {
-    std::vector<std::string> files;
-    char name[500];
-    // collect all valid BMP files
-    for (auto file = dir.openNextFile(); file; file = dir.openNextFile()) {
-      if (file.isDirectory()) {
-        file.close();
-        continue;
-      }
-      file.getName(name, sizeof(name));
-      auto filename = std::string(name);
-      if (filename[0] == '.') {
-        file.close();
-        continue;
-      }
-
-      if (filename.substr(filename.length() - 4) != ".bmp") {
-        Serial.printf("[%lu] [SLP] Skipping non-.bmp file name: %s\n", millis(), name);
-        file.close();
-        continue;
-      }
-      Bitmap bitmap(file);
-      if (bitmap.parseHeaders() != BmpReaderError::Ok) {
-        Serial.printf("[%lu] [SLP] Skipping invalid BMP file: %s\n", millis(), name);
-        file.close();
-        continue;
-      }
-      files.emplace_back(filename);
-      file.close();
+  SpiBusMutex::Guard guard;
+  validateSleepBmpsOnce();
+  const auto numFiles = sleepBmpCache.validFiles.size();
+  if (sleepBmpCache.sleepDirFound && numFiles > 0) {
+    // Generate a random number between 1 and numFiles
+    auto randomFileIndex = random(numFiles);
+    // If we picked the same image as last time, pick a different index deterministically.
+    if (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
+      randomFileIndex = (randomFileIndex + 1 + random(numFiles - 1)) % numFiles;
     }
-    const auto numFiles = files.size();
-    if (numFiles > 0) {
-      // Generate a random number between 1 and numFiles
-      auto randomFileIndex = random(numFiles);
-      // If we picked the same image as last time, reroll
-      while (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
-        randomFileIndex = random(numFiles);
-      }
-      APP_STATE.lastSleepImage = randomFileIndex;
+    // Only save to file if the selection actually changed
+    const bool selectionChanged = (APP_STATE.lastSleepImage != randomFileIndex);
+    APP_STATE.lastSleepImage = randomFileIndex;
+    if (selectionChanged) {
       APP_STATE.saveToFile();
-      const auto filename = "/sleep/" + files[randomFileIndex];
-      FsFile file;
-      if (SdMan.openFileForRead("SLP", filename, file)) {
-        Serial.printf("[%lu] [SLP] Randomly loading: /sleep/%s\n", millis(), files[randomFileIndex].c_str());
-        delay(100);
-        Bitmap bitmap(file, true);
-        if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-          renderBitmapSleepScreen(bitmap);
-          dir.close();
-          return;
-        }
+    }
+    const auto filename = "/sleep/" + sleepBmpCache.validFiles[randomFileIndex];
+    FsFile file;
+    if (SdMan.openFileForRead("SLP", filename, file)) {
+      Serial.printf("[%lu] [SLP] Randomly loading: /sleep/%s\n", millis(),
+                    sleepBmpCache.validFiles[randomFileIndex].c_str());
+      // Removed unnecessary 100ms delay - SD card operations are already synchronized
+      Bitmap bitmap(file, true);
+      if (bitmap.parseHeaders() == BmpReaderError::Ok) {
+        renderBitmapSleepScreen(bitmap);
+        return;
       }
     }
   }
-  if (dir) dir.close();
 
   // Look for sleep.bmp on the root of the sd card to determine if we should
   // render a custom sleep screen instead of the default.
