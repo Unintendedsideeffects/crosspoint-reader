@@ -49,10 +49,11 @@ const SettingInfo controlsSettings[controlsSettingsCount] = {
     SettingInfo::Enum("Short Power Button Click", &CrossPointSettings::shortPwrBtn,
                       {"Ignore", "Sleep", "Page Turn", "Select"})};
 
-constexpr int systemSettingsCount = 6;
+constexpr int systemSettingsCount = 7;
 const SettingInfo systemSettings[systemSettingsCount] = {
     SettingInfo::Enum("Time to Sleep", &CrossPointSettings::sleepTimeout,
                       {"1 min", "5 min", "10 min", "15 min", "30 min"}),
+    SettingInfo::Toggle("File Server on Charge", &CrossPointSettings::backgroundServerOnCharge),
     SettingInfo::Enum("Release Channel", &CrossPointSettings::releaseChannel, {"Stable", "Nightly", "Latest Build"}),
     SettingInfo::Action("KOReader Sync"),
     SettingInfo::Action("OPDS Browser"),
