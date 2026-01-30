@@ -6,6 +6,7 @@
 #include <SDCardManager.h>
 #include <Serialization.h>
 
+#include "../converters/DitherUtils.h"
 #include "../converters/ImageDecoderFactory.h"
 
 // Cache file format:
@@ -79,20 +80,12 @@ static bool renderFromCache(GfxRenderer& renderer, const std::string& cachePath,
     }
 
     int destY = y + row;
-    GfxRenderer::RenderMode renderMode = renderer.getRenderMode();
     for (int col = 0; col < cachedWidth; col++) {
       int byteIdx = col / 4;
       int bitShift = 6 - (col % 4) * 2;  // MSB first within byte
       uint8_t pixelValue = (rowBuffer[byteIdx] >> bitShift) & 0x03;
 
-      // Draw based on render mode (same logic as GfxRenderer::drawBitmap)
-      if (renderMode == GfxRenderer::BW && pixelValue < 3) {
-        renderer.drawPixel(x + col, destY, true);
-      } else if (renderMode == GfxRenderer::GRAYSCALE_MSB && (pixelValue == 1 || pixelValue == 2)) {
-        renderer.drawPixel(x + col, destY, false);
-      } else if (renderMode == GfxRenderer::GRAYSCALE_LSB && pixelValue == 1) {
-        renderer.drawPixel(x + col, destY, false);
-      }
+      drawPixelWithRenderMode(renderer, x + col, destY, pixelValue);
     }
   }
 
