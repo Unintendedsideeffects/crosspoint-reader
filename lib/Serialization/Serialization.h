@@ -15,13 +15,14 @@ static void writePod(FsFile& file, const T& value) {
 }
 
 template <typename T>
-static void readPod(std::istream& is, T& value) {
+static bool readPod(std::istream& is, T& value) {
   is.read(reinterpret_cast<char*>(&value), sizeof(T));
+  return is.good();
 }
 
 template <typename T>
-static void readPod(FsFile& file, T& value) {
-  file.read(reinterpret_cast<uint8_t*>(&value), sizeof(T));
+static bool readPod(FsFile& file, T& value) {
+  return file.read(reinterpret_cast<uint8_t*>(&value), sizeof(T)) == sizeof(T);
 }
 
 static void writeString(std::ostream& os, const std::string& s) {
@@ -36,17 +37,20 @@ static void writeString(FsFile& file, const std::string& s) {
   file.write(reinterpret_cast<const uint8_t*>(s.data()), len);
 }
 
-static void readString(std::istream& is, std::string& s) {
+static bool readString(std::istream& is, std::string& s) {
   uint32_t len;
-  readPod(is, len);
+  if (!readPod(is, len)) return false;
+  if (len > 65536) return false;  // Sanity check: max 64KB for metadata strings
   s.resize(len);
   is.read(&s[0], len);
+  return is.good();
 }
 
-static void readString(FsFile& file, std::string& s) {
+static bool readString(FsFile& file, std::string& s) {
   uint32_t len;
-  readPod(file, len);
+  if (!readPod(file, len)) return false;
+  if (len > 65536) return false;  // Sanity check: max 64KB for metadata strings
   s.resize(len);
-  file.read(&s[0], len);
+  return file.read(&s[0], len) == len;
 }
 }  // namespace serialization

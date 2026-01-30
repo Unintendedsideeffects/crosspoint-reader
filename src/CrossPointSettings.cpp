@@ -6,6 +6,7 @@
 
 #include <cstring>
 
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 
 // Initialize the static instance
@@ -22,11 +23,12 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 namespace {
 constexpr uint8_t SETTINGS_FILE_VERSION = 1;
 // Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 23;
+constexpr uint8_t SETTINGS_COUNT = 29;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 }  // namespace
 
 bool CrossPointSettings::saveToFile() const {
+  SpiBusMutex::Guard guard;
   // Make sure the directory exists
   SdMan.mkdir("/.crosspoint");
 
@@ -60,6 +62,12 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writeString(outputFile, std::string(opdsUsername));
   serialization::writeString(outputFile, std::string(opdsPassword));
   serialization::writePod(outputFile, sleepScreenCoverFilter);
+  serialization::writePod(outputFile, backgroundServerOnCharge);
+  serialization::writePod(outputFile, todoFallbackCover);
+  serialization::writePod(outputFile, timeMode);
+  serialization::writePod(outputFile, timeZoneOffset);
+  serialization::writePod(outputFile, lastTimeSyncEpoch);
+  serialization::writePod(outputFile, releaseChannel);
   // New fields added at end for backward compatibility
   outputFile.close();
 
@@ -68,6 +76,7 @@ bool CrossPointSettings::saveToFile() const {
 }
 
 bool CrossPointSettings::loadFromFile() {
+  SpiBusMutex::Guard guard;
   FsFile inputFile;
   if (!SdMan.openFileForRead("CPS", SETTINGS_FILE, inputFile)) {
     return false;
@@ -148,12 +157,62 @@ bool CrossPointSettings::loadFromFile() {
     if (++settingsRead >= fileSettingsCount) break;
     readAndValidate(inputFile, sleepScreenCoverFilter, SLEEP_SCREEN_COVER_FILTER_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, backgroundServerOnCharge);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, todoFallbackCover);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, timeMode);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, timeZoneOffset);
+    if (++settingsRead >= fileSettingsCount) break;
+    serialization::readPod(inputFile, lastTimeSyncEpoch);
+    if (++settingsRead >= fileSettingsCount) break;
+    readAndValidate(inputFile, releaseChannel, RELEASE_CHANNEL_COUNT);
+    if (++settingsRead >= fileSettingsCount) break;
     // New fields added at end for backward compatibility
   } while (false);
 
   inputFile.close();
+
+  // Validate and clamp all settings to valid ranges
+  validateAndClamp();
+
   Serial.printf("[%lu] [CPS] Settings loaded from file\n", millis());
   return true;
+}
+
+void CrossPointSettings::validateAndClamp() {
+  // Enum bounds - clamp to valid range, reset to default if out of bounds
+  if (sleepScreen > BLANK) sleepScreen = DARK;
+  if (sleepScreenCoverMode > CROP) sleepScreenCoverMode = FIT;
+  if (statusBar > FULL) statusBar = FULL;
+  if (orientation > LANDSCAPE_CCW) orientation = PORTRAIT;
+  if (frontButtonLayout > LEFT_LEFT_RIGHT_RIGHT) frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
+  if (sideButtonLayout > NEXT_PREV) sideButtonLayout = PREV_NEXT;
+  if (fontFamily > OPENDYSLEXIC) fontFamily = BOOKERLY;
+  if (fontSize > EXTRA_LARGE) fontSize = MEDIUM;
+  if (lineSpacing > WIDE) lineSpacing = NORMAL;
+  if (paragraphAlignment > RIGHT_ALIGN) paragraphAlignment = JUSTIFIED;
+  if (sleepTimeout > SLEEP_30_MIN) sleepTimeout = SLEEP_10_MIN;
+  if (refreshFrequency > REFRESH_30) refreshFrequency = REFRESH_15;
+  if (shortPwrBtn > SELECT) shortPwrBtn = IGNORE;
+  if (hideBatteryPercentage > HIDE_ALWAYS) hideBatteryPercentage = HIDE_NEVER;
+  if (timeMode > TIME_MANUAL) timeMode = TIME_UTC;
+  if (todoFallbackCover > TODO_FALLBACK_NONE) todoFallbackCover = TODO_FALLBACK_STANDARD;
+  if (releaseChannel >= RELEASE_CHANNEL_COUNT) releaseChannel = RELEASE_STABLE;
+
+  // Range values
+  // timeZoneOffset: 0 = UTC-12, 12 = UTC+0, 26 = UTC+14
+  if (timeZoneOffset > 26) timeZoneOffset = 12;  // Reset to UTC+0
+  // screenMargin: valid range 5-40
+  if (screenMargin < 5 || screenMargin > 40) screenMargin = 5;
+
+  // Boolean values - normalize to 0 or 1
+  extraParagraphSpacing = extraParagraphSpacing ? 1 : 0;
+  textAntiAliasing = textAntiAliasing ? 1 : 0;
+  hyphenationEnabled = hyphenationEnabled ? 1 : 0;
+  longPressChapterSkip = longPressChapterSkip ? 1 : 0;
+  backgroundServerOnCharge = backgroundServerOnCharge ? 1 : 0;
 }
 
 float CrossPointSettings::getReaderLineCompression() const {
@@ -222,6 +281,11 @@ int CrossPointSettings::getRefreshFrequency() const {
     case REFRESH_30:
       return 30;
   }
+}
+
+int CrossPointSettings::getTimeZoneOffsetSeconds() const {
+  const int offsetHours = static_cast<int>(timeZoneOffset) - 12;
+  return offsetHours * 3600;
 }
 
 int CrossPointSettings::getReaderFontId() const {

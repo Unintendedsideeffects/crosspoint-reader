@@ -50,6 +50,7 @@ class CrossPointSettings {
     LEFT_RIGHT_BACK_CONFIRM = 1,
     LEFT_BACK_CONFIRM_RIGHT = 2,
     BACK_CONFIRM_RIGHT_LEFT = 3,
+    LEFT_LEFT_RIGHT_RIGHT = 4,
     FRONT_BUTTON_LAYOUT_COUNT
   };
 
@@ -92,10 +93,24 @@ class CrossPointSettings {
   };
 
   // Short power button press actions
-  enum SHORT_PWRBTN { IGNORE = 0, SLEEP = 1, PAGE_TURN = 2, SHORT_PWRBTN_COUNT };
+  enum SHORT_PWRBTN { IGNORE = 0, SLEEP = 1, PAGE_TURN = 2, SELECT = 3, SHORT_PWRBTN_COUNT };
 
   // Hide battery percentage
   enum HIDE_BATTERY_PERCENTAGE { HIDE_NEVER = 0, HIDE_READER = 1, HIDE_ALWAYS = 2, HIDE_BATTERY_PERCENTAGE_COUNT };
+
+  // TODO fallback cover options
+  enum TODO_FALLBACK_COVER { TODO_FALLBACK_STANDARD = 0, TODO_FALLBACK_NONE = 1 };
+
+  // Time mode options
+  enum TIME_MODE { TIME_UTC = 0, TIME_LOCAL = 1, TIME_MANUAL = 2 };
+
+  // Release channel options
+  enum RELEASE_CHANNEL {
+    RELEASE_STABLE = 0,
+    RELEASE_NIGHTLY = 1,
+    RELEASE_LATEST_SUCCESSFUL = 2,
+    RELEASE_CHANNEL_COUNT
+  };
 
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
@@ -137,6 +152,18 @@ class CrossPointSettings {
   uint8_t hideBatteryPercentage = HIDE_NEVER;
   // Long-press chapter skip on side buttons
   uint8_t longPressChapterSkip = 1;
+  // Background web server while charging (USB connected)
+  uint8_t backgroundServerOnCharge = 0;
+  // TODO fallback cover when daily file is missing
+  uint8_t todoFallbackCover = TODO_FALLBACK_STANDARD;
+  // Time settings
+  uint8_t timeMode = TIME_UTC;
+  // Timezone offset index: 0 = UTC-12, 12 = UTC+0, 26 = UTC+14
+  uint8_t timeZoneOffset = 12;
+  // Last successful NTP sync (epoch seconds, UTC)
+  uint32_t lastTimeSyncEpoch = 0;
+  // OTA release channel selection
+  uint8_t releaseChannel = RELEASE_STABLE;
 
   ~CrossPointSettings() = default;
 
@@ -151,9 +178,15 @@ class CrossPointSettings {
   bool saveToFile() const;
   bool loadFromFile();
 
+ private:
+  // Validate loaded settings and clamp to valid ranges
+  void validateAndClamp();
+
+ public:
   float getReaderLineCompression() const;
   unsigned long getSleepTimeoutMs() const;
   int getRefreshFrequency() const;
+  int getTimeZoneOffsetSeconds() const;
 };
 
 // Helper macro to access settings

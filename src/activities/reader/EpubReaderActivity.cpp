@@ -4,6 +4,7 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <SDCardManager.h>
+#include <esp_task_wdt.h>
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
@@ -11,6 +12,7 @@
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 
 namespace {
@@ -21,6 +23,12 @@ constexpr int statusBarMargin = 19;
 constexpr int progressBarMarginTop = 1;
 
 }  // namespace
+
+void EpubReaderActivity::waitForRenderingMutex() {
+  while (xSemaphoreTake(renderingMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+    esp_task_wdt_reset();
+  }
+}
 
 void EpubReaderActivity::taskTrampoline(void* param) {
   auto* self = static_cast<EpubReaderActivity*>(param);
@@ -56,20 +64,23 @@ void EpubReaderActivity::onEnter() {
 
   epub->setupCacheDir();
 
-  FsFile f;
-  if (SdMan.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
-    uint8_t data[6];
-    int dataSize = f.read(data, 6);
-    if (dataSize == 4 || dataSize == 6) {
-      currentSpineIndex = data[0] + (data[1] << 8);
-      nextPageNumber = data[2] + (data[3] << 8);
-      cachedSpineIndex = currentSpineIndex;
-      Serial.printf("[%lu] [ERS] Loaded cache: %d, %d\n", millis(), currentSpineIndex, nextPageNumber);
+  {
+    SpiBusMutex::Guard guard;
+    FsFile f;
+    if (SdMan.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
+      uint8_t data[6];
+      int dataSize = f.read(data, 6);
+      if (dataSize == 4 || dataSize == 6) {
+        currentSpineIndex = data[0] + (data[1] << 8);
+        nextPageNumber = data[2] + (data[3] << 8);
+        cachedSpineIndex = currentSpineIndex;
+        Serial.printf("[%lu] [ERS] Loaded cache: %d, %d\n", millis(), currentSpineIndex, nextPageNumber);
+      }
+      if (dataSize == 6) {
+        cachedChapterTotalPageCount = data[4] + (data[5] << 8);
+      }
+      f.close();
     }
-    if (dataSize == 6) {
-      cachedChapterTotalPageCount = data[4] + (data[5] << 8);
-    }
-    f.close();
   }
   // We may want a better condition to detect if we are opening for the first time.
   // This will trigger if the book is re-opened at Chapter 0.
@@ -105,11 +116,12 @@ void EpubReaderActivity::onExit() {
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);
 
   // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  waitForRenderingMutex();
   if (displayTaskHandle) {
     vTaskDelete(displayTaskHandle);
     displayTaskHandle = nullptr;
   }
+  xSemaphoreGive(renderingMutex);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
   section.reset();
@@ -126,7 +138,7 @@ void EpubReaderActivity::loop() {
   // Enter chapter selection activity
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     // Don't start activity transition while rendering
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
+    waitForRenderingMutex();
     const int currentPage = section ? section->currentPage : 0;
     const int totalPages = section ? section->pageCount : 0;
     exitActivity();
@@ -200,7 +212,7 @@ void EpubReaderActivity::loop() {
 
   if (skipChapter) {
     // We don't want to delete the section mid-render, so grab the semaphore
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
+    waitForRenderingMutex();
     nextPageNumber = 0;
     currentSpineIndex = nextTriggered ? currentSpineIndex + 1 : currentSpineIndex - 1;
     section.reset();
@@ -220,7 +232,7 @@ void EpubReaderActivity::loop() {
       section->currentPage--;
     } else {
       // We don't want to delete the section mid-render, so grab the semaphore
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      waitForRenderingMutex();
       nextPageNumber = UINT16_MAX;
       currentSpineIndex--;
       section.reset();
@@ -232,7 +244,7 @@ void EpubReaderActivity::loop() {
       section->currentPage++;
     } else {
       // We don't want to delete the section mid-render, so grab the semaphore
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      waitForRenderingMutex();
       nextPageNumber = 0;
       currentSpineIndex++;
       section.reset();
@@ -246,7 +258,7 @@ void EpubReaderActivity::displayTaskLoop() {
   while (true) {
     if (updateRequired) {
       updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      waitForRenderingMutex();
       renderScreen();
       xSemaphoreGive(renderingMutex);
     }
@@ -303,9 +315,14 @@ void EpubReaderActivity::renderScreen() {
     const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
     const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
 
-    if (!section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
-                                  SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
-                                  viewportHeight, SETTINGS.hyphenationEnabled)) {
+    bool sectionLoaded = false;
+    {
+      SpiBusMutex::Guard guard;
+      sectionLoaded = section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
+                                               SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment,
+                                               viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled);
+    }
+    if (!sectionLoaded) {
       Serial.printf("[%lu] [ERS] Cache not found, building...\n", millis());
 
       // Progress bar dimensions
@@ -396,7 +413,11 @@ void EpubReaderActivity::renderScreen() {
   }
 
   {
-    auto p = section->loadPageFromSectionFile();
+    std::unique_ptr<Page> p;
+    {
+      SpiBusMutex::Guard guard;
+      p = section->loadPageFromSectionFile();
+    }
     if (!p) {
       Serial.printf("[%lu] [ERS] Failed to load page from SD - clearing section cache\n", millis());
       section->clearCache();
@@ -408,17 +429,20 @@ void EpubReaderActivity::renderScreen() {
     Serial.printf("[%lu] [ERS] Rendered page in %dms\n", millis(), millis() - start);
   }
 
-  FsFile f;
-  if (SdMan.openFileForWrite("ERS", epub->getCachePath() + "/progress.bin", f)) {
-    uint8_t data[6];
-    data[0] = currentSpineIndex & 0xFF;
-    data[1] = (currentSpineIndex >> 8) & 0xFF;
-    data[2] = section->currentPage & 0xFF;
-    data[3] = (section->currentPage >> 8) & 0xFF;
-    data[4] = section->pageCount & 0xFF;
-    data[5] = (section->pageCount >> 8) & 0xFF;
-    f.write(data, 6);
-    f.close();
+  {
+    SpiBusMutex::Guard guard;
+    FsFile f;
+    if (SdMan.openFileForWrite("ERS", epub->getCachePath() + "/progress.bin", f)) {
+      uint8_t data[6];
+      data[0] = currentSpineIndex & 0xFF;
+      data[1] = (currentSpineIndex >> 8) & 0xFF;
+      data[2] = section->currentPage & 0xFF;
+      data[3] = (section->currentPage >> 8) & 0xFF;
+      data[4] = section->pageCount & 0xFF;
+      data[5] = (section->pageCount >> 8) & 0xFF;
+      f.write(data, 6);
+      f.close();
+    }
   }
 }
 

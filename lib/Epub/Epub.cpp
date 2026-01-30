@@ -2,7 +2,7 @@
 
 #include <FsHelpers.h>
 #include <HardwareSerial.h>
-#include <JpegToBmpConverter.h>
+#include <ImageConverter.h>
 #include <SDCardManager.h>
 #include <ZipFile.h>
 
@@ -389,43 +389,51 @@ bool Epub::generateCoverBmp(bool cropped) const {
     return false;
   }
 
-  if (coverImageHref.substr(coverImageHref.length() - 4) == ".jpg" ||
-      coverImageHref.substr(coverImageHref.length() - 5) == ".jpeg") {
-    Serial.printf("[%lu] [EBP] Generating BMP from JPG cover image (%s mode)\n", millis(), cropped ? "cropped" : "fit");
-    const auto coverJpgTempPath = getCachePath() + "/.cover.jpg";
-
-    FsFile coverJpg;
-    if (!SdMan.openFileForWrite("EBP", coverJpgTempPath, coverJpg)) {
-      return false;
-    }
-    readItemContentsToStream(coverImageHref, coverJpg, 1024);
-    coverJpg.close();
-
-    if (!SdMan.openFileForRead("EBP", coverJpgTempPath, coverJpg)) {
-      return false;
-    }
-
-    FsFile coverBmp;
-    if (!SdMan.openFileForWrite("EBP", getCoverBmpPath(cropped), coverBmp)) {
-      coverJpg.close();
-      return false;
-    }
-    const bool success = JpegToBmpConverter::jpegFileToBmpStream(coverJpg, coverBmp, cropped);
-    coverJpg.close();
-    coverBmp.close();
-    SdMan.remove(coverJpgTempPath.c_str());
-
-    if (!success) {
-      Serial.printf("[%lu] [EBP] Failed to generate BMP from JPG cover image\n", millis());
-      SdMan.remove(getCoverBmpPath(cropped).c_str());
-    }
-    Serial.printf("[%lu] [EBP] Generated BMP from JPG cover image, success: %s\n", millis(), success ? "yes" : "no");
-    return success;
-  } else {
-    Serial.printf("[%lu] [EBP] Cover image is not a JPG, skipping\n", millis());
+  // Detect image format using ImageConverter
+  const auto format = ImageConverter::detectFormat(coverImageHref.c_str());
+  if (format == ImageConverter::FORMAT_UNKNOWN) {
+    Serial.printf("[%lu] [EBP] Unsupported cover image format: %s\n", millis(), coverImageHref.c_str());
+    return false;
   }
 
-  return false;
+  Serial.printf("[%lu] [EBP] Generating BMP from %s cover image (%s mode)\n", millis(),
+                format == ImageConverter::FORMAT_PNG ? "PNG" : "JPG", cropped ? "cropped" : "fit");
+
+  const auto coverTempPath = getCachePath() + "/.cover_temp";
+
+  FsFile coverImage;
+  if (!SdMan.openFileForWrite("EBP", coverTempPath, coverImage)) {
+    return false;
+  }
+  readItemContentsToStream(coverImageHref, coverImage, 1024);
+  coverImage.close();
+
+  if (!SdMan.openFileForRead("EBP", coverTempPath, coverImage)) {
+    return false;
+  }
+
+  FsFile coverBmp;
+  if (!SdMan.openFileForWrite("EBP", getCoverBmpPath(cropped), coverBmp)) {
+    coverImage.close();
+    return false;
+  }
+
+  // Use ImageConverter which handles both JPEG and PNG
+  constexpr int TARGET_MAX_WIDTH = 480;
+  constexpr int TARGET_MAX_HEIGHT = 800;
+  const bool success =
+      ImageConverter::convertToBmpStream(coverImage, format, coverBmp, TARGET_MAX_WIDTH, TARGET_MAX_HEIGHT, cropped);
+
+  coverImage.close();
+  coverBmp.close();
+  SdMan.remove(coverTempPath.c_str());
+
+  if (!success) {
+    Serial.printf("[%lu] [EBP] Failed to generate BMP from cover image\n", millis());
+    SdMan.remove(getCoverBmpPath(cropped).c_str());
+  }
+  Serial.printf("[%lu] [EBP] Generated BMP from cover image, success: %s\n", millis(), success ? "yes" : "no");
+  return success;
 }
 
 std::string Epub::getThumbBmpPath() const { return cachePath + "/thumb.bmp"; }
@@ -447,49 +455,52 @@ bool Epub::generateThumbBmp() const {
     return false;
   }
 
-  if (coverImageHref.substr(coverImageHref.length() - 4) == ".jpg" ||
-      coverImageHref.substr(coverImageHref.length() - 5) == ".jpeg") {
-    Serial.printf("[%lu] [EBP] Generating thumb BMP from JPG cover image\n", millis());
-    const auto coverJpgTempPath = getCachePath() + "/.cover.jpg";
-
-    FsFile coverJpg;
-    if (!SdMan.openFileForWrite("EBP", coverJpgTempPath, coverJpg)) {
-      return false;
-    }
-    readItemContentsToStream(coverImageHref, coverJpg, 1024);
-    coverJpg.close();
-
-    if (!SdMan.openFileForRead("EBP", coverJpgTempPath, coverJpg)) {
-      return false;
-    }
-
-    FsFile thumbBmp;
-    if (!SdMan.openFileForWrite("EBP", getThumbBmpPath(), thumbBmp)) {
-      coverJpg.close();
-      return false;
-    }
-    // Use smaller target size for Continue Reading card (half of screen: 240x400)
-    // Generate 1-bit BMP for fast home screen rendering (no gray passes needed)
-    constexpr int THUMB_TARGET_WIDTH = 240;
-    constexpr int THUMB_TARGET_HEIGHT = 400;
-    const bool success = JpegToBmpConverter::jpegFileTo1BitBmpStreamWithSize(coverJpg, thumbBmp, THUMB_TARGET_WIDTH,
-                                                                             THUMB_TARGET_HEIGHT);
-    coverJpg.close();
-    thumbBmp.close();
-    SdMan.remove(coverJpgTempPath.c_str());
-
-    if (!success) {
-      Serial.printf("[%lu] [EBP] Failed to generate thumb BMP from JPG cover image\n", millis());
-      SdMan.remove(getThumbBmpPath().c_str());
-    }
-    Serial.printf("[%lu] [EBP] Generated thumb BMP from JPG cover image, success: %s\n", millis(),
-                  success ? "yes" : "no");
-    return success;
-  } else {
-    Serial.printf("[%lu] [EBP] Cover image is not a JPG, skipping thumbnail\n", millis());
+  // Detect image format using ImageConverter
+  const auto format = ImageConverter::detectFormat(coverImageHref.c_str());
+  if (format == ImageConverter::FORMAT_UNKNOWN) {
+    Serial.printf("[%lu] [EBP] Unsupported cover image format for thumbnail: %s\n", millis(), coverImageHref.c_str());
+    return false;
   }
 
-  return false;
+  Serial.printf("[%lu] [EBP] Generating thumb BMP from %s cover image\n", millis(),
+                format == ImageConverter::FORMAT_PNG ? "PNG" : "JPG");
+
+  const auto coverTempPath = getCachePath() + "/.cover_temp";
+
+  FsFile coverImage;
+  if (!SdMan.openFileForWrite("EBP", coverTempPath, coverImage)) {
+    return false;
+  }
+  readItemContentsToStream(coverImageHref, coverImage, 1024);
+  coverImage.close();
+
+  if (!SdMan.openFileForRead("EBP", coverTempPath, coverImage)) {
+    return false;
+  }
+
+  FsFile thumbBmp;
+  if (!SdMan.openFileForWrite("EBP", getThumbBmpPath(), thumbBmp)) {
+    coverImage.close();
+    return false;
+  }
+
+  // Use smaller target size for Continue Reading card (half of screen: 240x400)
+  // Generate 1-bit BMP for fast home screen rendering (no gray passes needed)
+  constexpr int THUMB_TARGET_WIDTH = 240;
+  constexpr int THUMB_TARGET_HEIGHT = 400;
+  const bool success =
+      ImageConverter::convertTo1BitBmpStream(coverImage, format, thumbBmp, THUMB_TARGET_WIDTH, THUMB_TARGET_HEIGHT);
+
+  coverImage.close();
+  thumbBmp.close();
+  SdMan.remove(coverTempPath.c_str());
+
+  if (!success) {
+    Serial.printf("[%lu] [EBP] Failed to generate thumb BMP from cover image\n", millis());
+    SdMan.remove(getThumbBmpPath().c_str());
+  }
+  Serial.printf("[%lu] [EBP] Generated thumb BMP from cover image, success: %s\n", millis(), success ? "yes" : "no");
+  return success;
 }
 
 uint8_t* Epub::readItemContentsToBytes(const std::string& itemHref, size_t* size, const bool trailingNullByte) const {

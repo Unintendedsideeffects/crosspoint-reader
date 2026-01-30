@@ -4,6 +4,9 @@
 #include <SDCardManager.h>
 #include <Serialization.h>
 
+#include "SpiBusMutex.h"
+#include "network/BackgroundWebServer.h"
+
 // Initialize the static instance
 WifiCredentialStore WifiCredentialStore::instance;
 
@@ -28,6 +31,7 @@ void WifiCredentialStore::obfuscate(std::string& data) const {
 }
 
 bool WifiCredentialStore::saveToFile() const {
+  SpiBusMutex::Guard guard;
   // Make sure the directory exists
   SdMan.mkdir("/.crosspoint");
 
@@ -59,6 +63,7 @@ bool WifiCredentialStore::saveToFile() const {
 }
 
 bool WifiCredentialStore::loadFromFile() {
+  SpiBusMutex::Guard guard;
   FsFile file;
   if (!SdMan.openFileForRead("WCS", WIFI_FILE, file)) {
     return false;
@@ -107,7 +112,11 @@ bool WifiCredentialStore::addCredential(const std::string& ssid, const std::stri
   if (cred != credentials.end()) {
     cred->password = password;
     Serial.printf("[%lu] [WCS] Updated credentials for: %s\n", millis(), ssid.c_str());
-    return saveToFile();
+    const bool saved = saveToFile();
+    if (saved) {
+      BackgroundWebServer::getInstance().invalidateCredentialsCache();
+    }
+    return saved;
   }
 
   // Check if we've reached the limit
@@ -119,7 +128,11 @@ bool WifiCredentialStore::addCredential(const std::string& ssid, const std::stri
   // Add new credential
   credentials.push_back({ssid, password});
   Serial.printf("[%lu] [WCS] Added credentials for: %s\n", millis(), ssid.c_str());
-  return saveToFile();
+  const bool saved = saveToFile();
+  if (saved) {
+    BackgroundWebServer::getInstance().invalidateCredentialsCache();
+  }
+  return saved;
 }
 
 bool WifiCredentialStore::removeCredential(const std::string& ssid) {
@@ -128,7 +141,11 @@ bool WifiCredentialStore::removeCredential(const std::string& ssid) {
   if (cred != credentials.end()) {
     credentials.erase(cred);
     Serial.printf("[%lu] [WCS] Removed credentials for: %s\n", millis(), ssid.c_str());
-    return saveToFile();
+    const bool saved = saveToFile();
+    if (saved) {
+      BackgroundWebServer::getInstance().invalidateCredentialsCache();
+    }
+    return saved;
   }
   return false;  // Not found
 }
@@ -148,6 +165,8 @@ bool WifiCredentialStore::hasSavedCredential(const std::string& ssid) const { re
 
 void WifiCredentialStore::clearAll() {
   credentials.clear();
-  saveToFile();
+  if (saveToFile()) {
+    BackgroundWebServer::getInstance().invalidateCredentialsCache();
+  }
   Serial.printf("[%lu] [WCS] Cleared all WiFi credentials\n", millis());
 }

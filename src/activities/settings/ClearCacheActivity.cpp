@@ -5,6 +5,7 @@
 #include <SDCardManager.h>
 
 #include "MappedInputManager.h"
+#include "SpiBusMutex.h"
 #include "fontIds.h"
 
 void ClearCacheActivity::taskTrampoline(void* param) {
@@ -105,6 +106,7 @@ void ClearCacheActivity::render() {
 void ClearCacheActivity::clearCache() {
   Serial.printf("[%lu] [CLEAR_CACHE] Clearing cache...\n", millis());
 
+  SpiBusMutex::Guard guard;
   // Open .crosspoint directory
   auto root = SdMan.open("/.crosspoint");
   if (!root || !root.isDirectory()) {
@@ -151,7 +153,7 @@ void ClearCacheActivity::clearCache() {
 
 void ClearCacheActivity::loop() {
   if (state == WARNING) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       Serial.printf("[%lu] [CLEAR_CACHE] User confirmed, starting cache clear\n", millis());
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       state = CLEARING;
@@ -162,7 +164,7 @@ void ClearCacheActivity::loop() {
       clearCache();
     }
 
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       Serial.printf("[%lu] [CLEAR_CACHE] User cancelled\n", millis());
       goBack();
     }
@@ -170,7 +172,7 @@ void ClearCacheActivity::loop() {
   }
 
   if (state == SUCCESS || state == FAILED) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       goBack();
     }
     return;

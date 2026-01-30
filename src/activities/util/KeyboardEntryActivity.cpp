@@ -233,13 +233,13 @@ void KeyboardEntryActivity::loop() {
   }
 
   // Selection
-  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     handleKeyPress();
     updateRequired = true;
   }
 
   // Cancel
-  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     if (onCancel) {
       onCancel();
     }

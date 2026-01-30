@@ -7,6 +7,7 @@
 
 #include "Battery.h"
 #include "fontIds.h"
+#include "network/BackgroundWebServer.h"
 
 void ScreenComponents::drawBattery(const GfxRenderer& renderer, const int left, const int top,
                                    const bool showPercentage) {
@@ -40,6 +41,13 @@ void ScreenComponents::drawBattery(const GfxRenderer& renderer, const int left, 
   }
 
   renderer.fillRect(x + 2, y + 2, filledWidth, batteryHeight - 4);
+
+  if (BackgroundWebServer::getInstance().isRunning()) {
+    constexpr int indicatorSize = 3;
+    const int indicatorX = x + batteryWidth + 1;
+    const int indicatorY = y + (batteryHeight - indicatorSize) / 2;
+    renderer.fillRect(indicatorX, indicatorY, indicatorSize, indicatorSize);
+  }
 }
 
 void ScreenComponents::drawBookProgressBar(const GfxRenderer& renderer, const size_t bookProgress) {

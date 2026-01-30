@@ -40,19 +40,24 @@ const SettingInfo readerSettings[readerSettingsCount] = {
 
 constexpr int controlsSettingsCount = 4;
 const SettingInfo controlsSettings[controlsSettingsCount] = {
-    SettingInfo::Enum(
-        "Front Button Layout", &CrossPointSettings::frontButtonLayout,
-        {"Bck, Cnfrm, Lft, Rght", "Lft, Rght, Bck, Cnfrm", "Lft, Bck, Cnfrm, Rght", "Bck, Cnfrm, Rght, Lft"}),
+    SettingInfo::Enum("Front Button Layout", &CrossPointSettings::frontButtonLayout,
+                      {"Bck, Cnfrm, Lft, Rght", "Lft, Rght, Bck, Cnfrm", "Lft, Bck, Cnfrm, Rght",
+                       "Bck, Cnfrm, Rght, Lft", "Lft, Lft, Rght, Rght (Pwr=Sel)"}),
     SettingInfo::Enum("Side Button Layout (reader)", &CrossPointSettings::sideButtonLayout,
                       {"Prev, Next", "Next, Prev"}),
     SettingInfo::Toggle("Long-press Chapter Skip", &CrossPointSettings::longPressChapterSkip),
-    SettingInfo::Enum("Short Power Button Click", &CrossPointSettings::shortPwrBtn, {"Ignore", "Sleep", "Page Turn"})};
+    SettingInfo::Enum("Short Power Button Click", &CrossPointSettings::shortPwrBtn,
+                      {"Ignore", "Sleep", "Page Turn", "Select"})};
 
-constexpr int systemSettingsCount = 5;
+constexpr int systemSettingsCount = 7;
 const SettingInfo systemSettings[systemSettingsCount] = {
     SettingInfo::Enum("Time to Sleep", &CrossPointSettings::sleepTimeout,
                       {"1 min", "5 min", "10 min", "15 min", "30 min"}),
-    SettingInfo::Action("KOReader Sync"), SettingInfo::Action("OPDS Browser"), SettingInfo::Action("Clear Cache"),
+    SettingInfo::Toggle("File Server on Charge", &CrossPointSettings::backgroundServerOnCharge),
+    SettingInfo::Enum("Release Channel", &CrossPointSettings::releaseChannel, {"Stable", "Nightly", "Latest Build"}),
+    SettingInfo::Action("KOReader Sync"),
+    SettingInfo::Action("OPDS Browser"),
+    SettingInfo::Action("Clear Cache"),
     SettingInfo::Action("Check for updates")};
 }  // namespace
 
@@ -98,13 +103,13 @@ void SettingsActivity::loop() {
     return;
   }
 
-  // Handle category selection
-  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+  // Handle category selection (use wasReleased for power button SELECT mode support)
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     enterCategory(selectedCategoryIndex);
     return;
   }
 
-  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     SETTINGS.saveToFile();
     onGoHome();
     return;

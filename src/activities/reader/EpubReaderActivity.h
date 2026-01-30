@@ -23,6 +23,7 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
 
   static void taskTrampoline(void* param);
   [[noreturn]] void displayTaskLoop();
+  void waitForRenderingMutex();
   void renderScreen();
   void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
                       int orientedMarginBottom, int orientedMarginLeft);

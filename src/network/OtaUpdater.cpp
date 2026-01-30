@@ -2,12 +2,26 @@
 
 #include <ArduinoJson.h>
 
+#include "CrossPointSettings.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 #include "esp_wifi.h"
 
 namespace {
-constexpr char latestReleaseUrl[] = "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/releases/latest";
+constexpr char latestReleaseUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/latest";
+constexpr char releasesListUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases?per_page=5";
+constexpr char ciLatestReleaseUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/ci-latest";
+
+bool parseSemver(const std::string& version, int& major, int& minor, int& patch) {
+  const char* versionStr = version.c_str();
+  if (versionStr[0] == 'v' || versionStr[0] == 'V') {
+    versionStr += 1;
+  }
+  return sscanf(versionStr, "%d.%d.%d", &major, &minor, &patch) == 3;
+}
 
 /* This is buffer and size holder to keep upcoming data from latestReleaseUrl */
 char* local_buf;
@@ -29,43 +43,48 @@ esp_err_t http_client_set_header_cb(esp_http_client_handle_t http_client) {
 esp_err_t event_handler(esp_http_client_event_t* event) {
   /* We do interested in only HTTP_EVENT_ON_DATA event only */
   if (event->event_id != HTTP_EVENT_ON_DATA) return ESP_OK;
-
-  if (!esp_http_client_is_chunked_response(event->client)) {
-    int content_len = esp_http_client_get_content_length(event->client);
-    int copy_len = 0;
-
-    if (local_buf == NULL) {
-      /* local_buf life span is tracked by caller checkForUpdate */
-      local_buf = static_cast<char*>(calloc(content_len + 1, sizeof(char)));
-      output_len = 0;
-      if (local_buf == NULL) {
-        Serial.printf("[%lu] [OTA] HTTP Client Out of Memory Failed, Allocation %d\n", millis(), content_len);
-        return ESP_ERR_NO_MEM;
-      }
-    }
-    copy_len = min(event->data_len, (content_len - output_len));
-    if (copy_len) {
-      memcpy(local_buf + output_len, event->data, copy_len);
-    }
-    output_len += copy_len;
-  } else {
-    /* Code might be hits here, It happened once (for version checking) but I need more logs to handle that */
-    int chunked_len;
-    esp_http_client_get_chunk_length(event->client, &chunked_len);
-    Serial.printf("[%lu] [OTA] esp_http_client_is_chunked_response failed, chunked_len: %d\n", millis(), chunked_len);
+  if (event->data_len <= 0) {
+    return ESP_OK;
   }
 
+  const int data_len = event->data_len;
+  char* new_buf = static_cast<char*>(realloc(local_buf, output_len + data_len + 1));
+  if (new_buf == NULL) {
+    Serial.printf("[%lu] [OTA] HTTP Client Out of Memory Failed, Allocation %d\n", millis(), data_len);
+    return ESP_ERR_NO_MEM;
+  }
+
+  local_buf = new_buf;
+  memcpy(local_buf + output_len, event->data, data_len);
+  output_len += data_len;
+  local_buf[output_len] = '\0';
   return ESP_OK;
 } /* event_handler */
 } /* namespace */
 
 OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
+  updateAvailable = false;
+  latestVersion.clear();
+  otaUrl.clear();
+  otaSize = 0;
+  totalSize = 0;
+  local_buf = nullptr;
+  output_len = 0;
+
   JsonDocument filter;
   esp_err_t esp_err;
   JsonDocument doc;
 
+  const bool useReleaseList = (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY);
+  const char* releaseUrl = latestReleaseUrl;
+  if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY) {
+    releaseUrl = releasesListUrl;
+  } else if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL) {
+    releaseUrl = ciLatestReleaseUrl;
+  }
+
   esp_http_client_config_t client_config = {
-      .url = latestReleaseUrl,
+      .url = releaseUrl,
       .event_handler = event_handler,
       /* Default HTTP client buffer size 512 byte only */
       .buffer_size = 8192,
@@ -113,32 +132,69 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     return INTERNAL_UPDATE_ERROR;
   }
 
-  filter["tag_name"] = true;
-  filter["assets"][0]["name"] = true;
-  filter["assets"][0]["browser_download_url"] = true;
-  filter["assets"][0]["size"] = true;
+  if (useReleaseList) {
+    filter[0]["tag_name"] = true;
+    filter[0]["prerelease"] = true;
+    filter[0]["draft"] = true;
+    filter[0]["assets"][0]["name"] = true;
+    filter[0]["assets"][0]["browser_download_url"] = true;
+    filter[0]["assets"][0]["size"] = true;
+  } else {
+    filter["tag_name"] = true;
+    filter["assets"][0]["name"] = true;
+    filter["assets"][0]["browser_download_url"] = true;
+    filter["assets"][0]["size"] = true;
+  }
   const DeserializationError error = deserializeJson(doc, local_buf, DeserializationOption::Filter(filter));
   if (error) {
     Serial.printf("[%lu] [OTA] JSON parse failed: %s\n", millis(), error.c_str());
     return JSON_PARSE_ERROR;
   }
 
-  if (!doc["tag_name"].is<std::string>()) {
+  JsonVariant release = doc.as<JsonVariant>();
+  if (useReleaseList) {
+    if (!doc.is<JsonArray>() || doc.size() == 0) {
+      Serial.printf("[%lu] [OTA] No releases found\n", millis());
+      return JSON_PARSE_ERROR;
+    }
+    bool releaseFound = false;
+    for (const auto& candidate : doc.as<JsonArray>()) {
+      if (candidate["draft"].is<bool>() && candidate["draft"].as<bool>()) {
+        continue;
+      }
+      if (!candidate["prerelease"].is<bool>() || !candidate["prerelease"].as<bool>()) {
+        continue;
+      }
+      if (candidate["tag_name"] == "ci-latest") {
+        continue;
+      }
+      release = candidate;
+      releaseFound = true;
+      break;
+    }
+    if (!releaseFound) {
+      Serial.printf("[%lu] [OTA] No nightly releases found\n", millis());
+      return JSON_PARSE_ERROR;
+    }
+  }
+
+  if (!release["tag_name"].is<std::string>()) {
     Serial.printf("[%lu] [OTA] No tag_name found\n", millis());
     return JSON_PARSE_ERROR;
   }
 
-  if (!doc["assets"].is<JsonArray>()) {
+  if (!release["assets"].is<JsonArray>()) {
     Serial.printf("[%lu] [OTA] No assets found\n", millis());
     return JSON_PARSE_ERROR;
   }
 
-  latestVersion = doc["tag_name"].as<std::string>();
+  latestVersion = release["tag_name"].as<std::string>();
 
-  for (int i = 0; i < doc["assets"].size(); i++) {
-    if (doc["assets"][i]["name"] == "firmware.bin") {
-      otaUrl = doc["assets"][i]["browser_download_url"].as<std::string>();
-      otaSize = doc["assets"][i]["size"].as<size_t>();
+  const auto assets = release["assets"].as<JsonArray>();
+  for (const auto& asset : assets) {
+    if (asset["name"] == "firmware.bin") {
+      otaUrl = asset["browser_download_url"].as<std::string>();
+      otaSize = asset["size"].as<size_t>();
       totalSize = otaSize;
       updateAvailable = true;
       break;
@@ -155,18 +211,32 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
 }
 
 bool OtaUpdater::isUpdateNewer() const {
-  if (!updateAvailable || latestVersion.empty() || latestVersion == CROSSPOINT_VERSION) {
+  if (!updateAvailable || latestVersion.empty()) {
     return false;
   }
 
-  int currentMajor, currentMinor, currentPatch;
-  int latestMajor, latestMinor, latestPatch;
+  if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL) {
+    return true;
+  }
 
-  const auto currentVersion = CROSSPOINT_VERSION;
+  if (latestVersion == CROSSPOINT_VERSION) {
+    return false;
+  }
 
-  // semantic version check (only match on 3 segments)
-  sscanf(latestVersion.c_str(), "%d.%d.%d", &latestMajor, &latestMinor, &latestPatch);
-  sscanf(currentVersion, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch);
+  int currentMajor = 0;
+  int currentMinor = 0;
+  int currentPatch = 0;
+  int latestMajor = 0;
+  int latestMinor = 0;
+  int latestPatch = 0;
+
+  const auto currentVersion = std::string(CROSSPOINT_VERSION);
+
+  const bool latestParsed = parseSemver(latestVersion, latestMajor, latestMinor, latestPatch);
+  const bool currentParsed = parseSemver(currentVersion, currentMajor, currentMinor, currentPatch);
+  if (!latestParsed || !currentParsed) {
+    return latestVersion != currentVersion;
+  }
 
   /*
    * Compare major versions.

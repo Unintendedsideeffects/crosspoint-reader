@@ -42,4 +42,5 @@ class OtaUpdateActivity : public ActivityWithSubactivity {
   void onExit() override;
   void loop() override;
   bool preventAutoSleep() override { return state == CHECKING_FOR_UPDATE || state == UPDATE_IN_PROGRESS; }
+  bool blocksBackgroundServer() override { return true; }
 };

@@ -17,6 +17,7 @@ class HttpDownloader {
     HTTP_ERROR,
     FILE_ERROR,
     ABORTED,
+    TIMEOUT,
   };
 
   /**

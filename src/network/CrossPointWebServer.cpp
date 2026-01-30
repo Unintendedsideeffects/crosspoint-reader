@@ -9,8 +9,11 @@
 
 #include <algorithm>
 
+#include "SpiBusMutex.h"
+#include "activities/boot_sleep/SleepActivity.h"
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
+#include "util/PathUtils.h"
 #include "util/StringUtils.h"
 
 namespace {
@@ -42,6 +45,15 @@ void clearEpubCacheIfNeeded(const String& filePath) {
   if (StringUtils::checkFileExtension(filePath, ".epub")) {
     Epub(filePath.c_str(), "/.crosspoint").clearCache();
     Serial.printf("[%lu] [WEB] Cleared epub cache for: %s\n", millis(), filePath.c_str());
+  }
+}
+
+// Helper to invalidate sleep BMP cache when /sleep/ or /sleep.bmp is modified
+void invalidateSleepCacheIfNeeded(const String& filePath) {
+  String lowerPath = filePath;
+  lowerPath.toLowerCase();
+  if (lowerPath.equals("/sleep.bmp") || lowerPath.startsWith("/sleep/") || lowerPath.equals("/sleep")) {
+    invalidateSleepBmpCache();
   }
 }
 }  // namespace
@@ -280,7 +292,12 @@ void CrossPointWebServer::handleStatus() const {
 }
 
 void CrossPointWebServer::scanFiles(const char* path, const std::function<void(FileInfo)>& callback) const {
-  FsFile root = SdMan.open(path);
+  FsFile root;
+  {
+    SpiBusMutex::Guard guard;
+    root = SdMan.open(path);
+  }
+
   if (!root) {
     Serial.printf("[%lu] [WEB] Failed to open directory: %s\n", millis(), path);
     return;
@@ -288,53 +305,70 @@ void CrossPointWebServer::scanFiles(const char* path, const std::function<void(F
 
   if (!root.isDirectory()) {
     Serial.printf("[%lu] [WEB] Not a directory: %s\n", millis(), path);
+    SpiBusMutex::Guard guard;
     root.close();
     return;
   }
 
   Serial.printf("[%lu] [WEB] Scanning files in: %s\n", millis(), path);
 
-  FsFile file = root.openNextFile();
-  char name[500];
-  while (file) {
-    file.getName(name, sizeof(name));
-    auto fileName = String(name);
+  while (true) {
+    FileInfo info;
+    bool shouldHide = false;
 
-    // Skip hidden items (starting with ".")
-    bool shouldHide = fileName.startsWith(".");
+    // Scope SD card operations with mutex
+    {
+      SpiBusMutex::Guard guard;
+      FsFile file = root.openNextFile();
+      if (!file) {
+        break;
+      }
 
-    // Check against explicitly hidden items list
-    if (!shouldHide) {
-      for (size_t i = 0; i < HIDDEN_ITEMS_COUNT; i++) {
-        if (fileName.equals(HIDDEN_ITEMS[i])) {
-          shouldHide = true;
-          break;
+      char name[500];
+      file.getName(name, sizeof(name));
+      auto fileName = String(name);
+
+      // Skip hidden items (starting with ".")
+      shouldHide = fileName.startsWith(".");
+
+      // Check against explicitly hidden items list
+      if (!shouldHide) {
+        for (size_t i = 0; i < HIDDEN_ITEMS_COUNT; i++) {
+          if (fileName.equals(HIDDEN_ITEMS[i])) {
+            shouldHide = true;
+            break;
+          }
         }
       }
+
+      if (!shouldHide) {
+        info.name = fileName;
+        info.isDirectory = file.isDirectory();
+
+        if (info.isDirectory) {
+          info.size = 0;
+          info.isEpub = false;
+        } else {
+          info.size = file.size();
+          info.isEpub = isEpubFile(info.name);
+        }
+      }
+      file.close();
     }
 
+    // Callback performs network operations - run without mutex
     if (!shouldHide) {
-      FileInfo info;
-      info.name = fileName;
-      info.isDirectory = file.isDirectory();
-
-      if (info.isDirectory) {
-        info.size = 0;
-        info.isEpub = false;
-      } else {
-        info.size = file.size();
-        info.isEpub = isEpubFile(info.name);
-      }
-
       callback(info);
     }
 
-    file.close();
     yield();               // Yield to allow WiFi and other tasks to process during long scans
     esp_task_wdt_reset();  // Reset watchdog to prevent timeout on large directories
-    file = root.openNextFile();
   }
-  root.close();
+
+  {
+    SpiBusMutex::Guard guard;
+    root.close();
+  }
 }
 
 bool CrossPointWebServer::isEpubFile(const String& filename) const {
@@ -349,15 +383,24 @@ void CrossPointWebServer::handleFileListData() const {
   // Get current path from query string (default to root)
   String currentPath = "/";
   if (server->hasArg("path")) {
-    currentPath = server->arg("path");
-    // Ensure path starts with /
-    if (!currentPath.startsWith("/")) {
-      currentPath = "/" + currentPath;
+    const String rawArg = server->arg("path");
+    currentPath = PathUtils::urlDecode(rawArg);
+    Serial.printf("[%lu] [WEB] Files API - raw arg: '%s' (%d bytes), decoded: '%s' (%d bytes)\n", millis(),
+                  rawArg.c_str(), rawArg.length(), currentPath.c_str(), currentPath.length());
+
+    // Validate path against traversal attacks
+    if (!PathUtils::isValidSdPath(currentPath)) {
+      Serial.printf("[%lu] [WEB] Path validation FAILED for: '%s'\n", millis(), currentPath.c_str());
+      // TODO: TEMPORARY DEBUG - remove after fixing 400 error issue
+      const String reason = PathUtils::getValidationFailureReason(currentPath);
+      String debugMsg = "Invalid path - reason: " + reason + ", raw: '" + rawArg + "' (" + String(rawArg.length()) +
+                        " bytes), decoded: '" + currentPath + "' (" + String(currentPath.length()) + " bytes)";
+      server->send(400, "text/plain", debugMsg);
+      return;
     }
-    // Remove trailing slash unless it's root
-    if (currentPath.length() > 1 && currentPath.endsWith("/")) {
-      currentPath = currentPath.substring(0, currentPath.length() - 1);
-    }
+    Serial.printf("[%lu] [WEB] Path validation OK\n", millis());
+
+    currentPath = PathUtils::normalizePath(currentPath);
   }
 
   server->setContentLength(CONTENT_LENGTH_UNKNOWN);
@@ -368,7 +411,7 @@ void CrossPointWebServer::handleFileListData() const {
   bool seenFirst = false;
   JsonDocument doc;
 
-  scanFiles(currentPath.c_str(), [this, &output, &doc, seenFirst](const FileInfo& info) mutable {
+  scanFiles(currentPath.c_str(), [this, &output, &doc, &seenFirst](const FileInfo& info) {
     doc.clear();
     doc["name"] = info.name;
     doc["size"] = info.size;
@@ -401,7 +444,7 @@ void CrossPointWebServer::handleDownload() const {
     return;
   }
 
-  String itemPath = server->arg("path");
+  String itemPath = PathUtils::urlDecode(server->arg("path"));
   if (itemPath.isEmpty() || itemPath == "/") {
     server->send(400, "text/plain", "Invalid path");
     return;
@@ -480,6 +523,7 @@ static size_t writeCount = 0;
 
 static bool flushUploadBuffer() {
   if (uploadBufferPos > 0 && uploadFile) {
+    SpiBusMutex::Guard guard;
     esp_task_wdt_reset();  // Reset watchdog before potentially slow SD write
     const unsigned long writeStart = millis();
     const size_t written = uploadFile.write(uploadBuffer, uploadBufferPos);
@@ -526,19 +570,27 @@ void CrossPointWebServer::handleUpload() const {
     totalWriteTime = 0;
     writeCount = 0;
 
+    // Validate filename to prevent path traversal
+    if (!PathUtils::isValidFilename(uploadFileName)) {
+      uploadError = "Invalid filename";
+      Serial.printf("[%lu] [WEB] [UPLOAD] Invalid filename rejected: %s\n", millis(), uploadFileName.c_str());
+      return;
+    }
+
     // Get upload path from query parameter (defaults to root if not specified)
     // Note: We use query parameter instead of form data because multipart form
     // fields aren't available until after file upload completes
     if (server->hasArg("path")) {
-      uploadPath = server->arg("path");
-      // Ensure path starts with /
-      if (!uploadPath.startsWith("/")) {
-        uploadPath = "/" + uploadPath;
+      uploadPath = PathUtils::urlDecode(server->arg("path"));
+
+      // Validate path against traversal attacks
+      if (!PathUtils::isValidSdPath(uploadPath)) {
+        uploadError = "Invalid path";
+        Serial.printf("[%lu] [WEB] [UPLOAD] Path validation failed: %s\n", millis(), uploadPath.c_str());
+        return;
       }
-      // Remove trailing slash unless it's root
-      if (uploadPath.length() > 1 && uploadPath.endsWith("/")) {
-        uploadPath = uploadPath.substring(0, uploadPath.length() - 1);
-      }
+
+      uploadPath = PathUtils::normalizePath(uploadPath);
     } else {
       uploadPath = "/";
     }
@@ -553,18 +605,24 @@ void CrossPointWebServer::handleUpload() const {
 
     // Check if file already exists - SD operations can be slow
     esp_task_wdt_reset();
-    if (SdMan.exists(filePath.c_str())) {
-      Serial.printf("[%lu] [WEB] [UPLOAD] Overwriting existing file: %s\n", millis(), filePath.c_str());
-      esp_task_wdt_reset();
-      SdMan.remove(filePath.c_str());
+    {
+      SpiBusMutex::Guard guard;
+      if (SdMan.exists(filePath.c_str())) {
+        Serial.printf("[%lu] [WEB] [UPLOAD] Overwriting existing file: %s\n", millis(), filePath.c_str());
+        // No need to reset watchdog inside mutex unless it takes very long
+        SdMan.remove(filePath.c_str());
+      }
     }
 
     // Open file for writing - this can be slow due to FAT cluster allocation
     esp_task_wdt_reset();
-    if (!SdMan.openFileForWrite("WEB", filePath, uploadFile)) {
-      uploadError = "Failed to create file on SD card";
-      Serial.printf("[%lu] [WEB] [UPLOAD] FAILED to create file: %s\n", millis(), filePath.c_str());
-      return;
+    {
+      SpiBusMutex::Guard guard;
+      if (!SdMan.openFileForWrite("WEB", filePath, uploadFile)) {
+        uploadError = "Failed to create file on SD card";
+        Serial.printf("[%lu] [WEB] [UPLOAD] FAILED to create file: %s\n", millis(), filePath.c_str());
+        return;
+      }
     }
     esp_task_wdt_reset();
 
@@ -589,7 +647,10 @@ void CrossPointWebServer::handleUpload() const {
         if (uploadBufferPos >= UPLOAD_BUFFER_SIZE) {
           if (!flushUploadBuffer()) {
             uploadError = "Failed to write to SD card - disk may be full";
-            uploadFile.close();
+            {
+              SpiBusMutex::Guard guard;
+              uploadFile.close();
+            }
             return;
           }
         }
@@ -612,7 +673,10 @@ void CrossPointWebServer::handleUpload() const {
       if (!flushUploadBuffer()) {
         uploadError = "Failed to write final data to SD card";
       }
-      uploadFile.close();
+      {
+        SpiBusMutex::Guard guard;
+        uploadFile.close();
+      }
 
       if (uploadError.isEmpty()) {
         uploadSuccess = true;
@@ -629,11 +693,13 @@ void CrossPointWebServer::handleUpload() const {
         if (!filePath.endsWith("/")) filePath += "/";
         filePath += uploadFileName;
         clearEpubCacheIfNeeded(filePath);
+        invalidateSleepCacheIfNeeded(filePath);
       }
     }
   } else if (upload.status == UPLOAD_FILE_ABORTED) {
     uploadBufferPos = 0;  // Discard buffered data
     if (uploadFile) {
+      SpiBusMutex::Guard guard;
       uploadFile.close();
       // Try to delete the incomplete file
       String filePath = uploadPath;
@@ -664,22 +730,26 @@ void CrossPointWebServer::handleCreateFolder() const {
 
   const String folderName = server->arg("name");
 
-  // Validate folder name
-  if (folderName.isEmpty()) {
-    server->send(400, "text/plain", "Folder name cannot be empty");
+  // Validate folder name (no path separators or traversal)
+  if (!PathUtils::isValidFilename(folderName)) {
+    Serial.printf("[%lu] [WEB] Invalid folder name rejected: %s\n", millis(), folderName.c_str());
+    server->send(400, "text/plain", "Invalid folder name");
     return;
   }
 
   // Get parent path
   String parentPath = "/";
   if (server->hasArg("path")) {
-    parentPath = server->arg("path");
-    if (!parentPath.startsWith("/")) {
-      parentPath = "/" + parentPath;
+    parentPath = PathUtils::urlDecode(server->arg("path"));
+
+    // Validate path against traversal attacks
+    if (!PathUtils::isValidSdPath(parentPath)) {
+      Serial.printf("[%lu] [WEB] Path validation failed for mkdir: %s\n", millis(), parentPath.c_str());
+      server->send(400, "text/plain", "Invalid path");
+      return;
     }
-    if (parentPath.length() > 1 && parentPath.endsWith("/")) {
-      parentPath = parentPath.substring(0, parentPath.length() - 1);
-    }
+
+    parentPath = PathUtils::normalizePath(parentPath);
   }
 
   // Build full folder path
@@ -698,6 +768,7 @@ void CrossPointWebServer::handleCreateFolder() const {
   // Create the folder
   if (SdMan.mkdir(folderPath.c_str())) {
     Serial.printf("[%lu] [WEB] Folder created successfully: %s\n", millis(), folderPath.c_str());
+    invalidateSleepCacheIfNeeded(folderPath);
     server->send(200, "text/plain", "Folder created: " + folderName);
   } else {
     Serial.printf("[%lu] [WEB] Failed to create folder: %s\n", millis(), folderPath.c_str());
@@ -712,8 +783,15 @@ void CrossPointWebServer::handleDelete() const {
     return;
   }
 
-  String itemPath = server->arg("path");
+  String itemPath = PathUtils::urlDecode(server->arg("path"));
   const String itemType = server->hasArg("type") ? server->arg("type") : "file";
+
+  // Validate path against traversal attacks
+  if (!PathUtils::isValidSdPath(itemPath)) {
+    Serial.printf("[%lu] [WEB] Path validation failed for delete: %s\n", millis(), itemPath.c_str());
+    server->send(400, "text/plain", "Invalid path");
+    return;
+  }
 
   // Validate path
   if (itemPath.isEmpty() || itemPath == "/") {
@@ -721,10 +799,7 @@ void CrossPointWebServer::handleDelete() const {
     return;
   }
 
-  // Ensure path starts with /
-  if (!itemPath.startsWith("/")) {
-    itemPath = "/" + itemPath;
-  }
+  itemPath = PathUtils::normalizePath(itemPath);
 
   // Security check: prevent deletion of protected items
   const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
@@ -758,19 +833,22 @@ void CrossPointWebServer::handleDelete() const {
 
   if (itemType == "folder") {
     // For folders, try to remove (will fail if not empty)
-    FsFile dir = SdMan.open(itemPath.c_str());
-    if (dir && dir.isDirectory()) {
-      // Check if folder is empty
-      FsFile entry = dir.openNextFile();
-      if (entry) {
-        // Folder is not empty
-        entry.close();
+    {
+      SpiBusMutex::Guard guard;
+      FsFile dir = SdMan.open(itemPath.c_str());
+      if (dir && dir.isDirectory()) {
+        // Check if folder is empty
+        FsFile entry = dir.openNextFile();
+        if (entry) {
+          // Folder is not empty
+          entry.close();
+          dir.close();
+          Serial.printf("[%lu] [WEB] Delete failed - folder not empty: %s\n", millis(), itemPath.c_str());
+          server->send(400, "text/plain", "Folder is not empty. Delete contents first.");
+          return;
+        }
         dir.close();
-        Serial.printf("[%lu] [WEB] Delete failed - folder not empty: %s\n", millis(), itemPath.c_str());
-        server->send(400, "text/plain", "Folder is not empty. Delete contents first.");
-        return;
       }
-      dir.close();
     }
     success = SdMan.rmdir(itemPath.c_str());
   } else {
@@ -780,6 +858,7 @@ void CrossPointWebServer::handleDelete() const {
 
   if (success) {
     Serial.printf("[%lu] [WEB] Successfully deleted: %s\n", millis(), itemPath.c_str());
+    invalidateSleepCacheIfNeeded(itemPath);
     server->send(200, "text/plain", "Deleted successfully");
   } else {
     Serial.printf("[%lu] [WEB] Failed to delete: %s\n", millis(), itemPath.c_str());
@@ -806,6 +885,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       Serial.printf("[%lu] [WS] Client %u disconnected\n", millis(), num);
       // Clean up any in-progress upload
       if (wsUploadInProgress && wsUploadFile) {
+        SpiBusMutex::Guard guard;
         wsUploadFile.close();
         // Delete incomplete file
         String filePath = wsUploadPath;
@@ -814,7 +894,13 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
         SdMan.remove(filePath.c_str());
         Serial.printf("[%lu] [WS] Deleted incomplete upload: %s\n", millis(), filePath.c_str());
       }
+      // Reset all upload state to prevent stale data affecting next connection
       wsUploadInProgress = false;
+      wsUploadFileName.clear();
+      wsUploadPath.clear();
+      wsUploadSize = 0;
+      wsUploadReceived = 0;
+      wsUploadStartTime = 0;
       break;
 
     case WStype_CONNECTED: {
@@ -839,11 +925,21 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
           wsUploadReceived = 0;
           wsUploadStartTime = millis();
 
-          // Ensure path is valid
-          if (!wsUploadPath.startsWith("/")) wsUploadPath = "/" + wsUploadPath;
-          if (wsUploadPath.length() > 1 && wsUploadPath.endsWith("/")) {
-            wsUploadPath = wsUploadPath.substring(0, wsUploadPath.length() - 1);
+          // Validate filename against traversal attacks
+          if (!PathUtils::isValidFilename(wsUploadFileName)) {
+            Serial.printf("[%lu] [WS] Invalid filename rejected: %s\n", millis(), wsUploadFileName.c_str());
+            wsServer->sendTXT(num, "ERROR:Invalid filename");
+            return;
           }
+
+          // Validate path against traversal attacks
+          if (!PathUtils::isValidSdPath(wsUploadPath)) {
+            Serial.printf("[%lu] [WS] Path validation failed: %s\n", millis(), wsUploadPath.c_str());
+            wsServer->sendTXT(num, "ERROR:Invalid path");
+            return;
+          }
+
+          wsUploadPath = PathUtils::normalizePath(wsUploadPath);
 
           // Build file path
           String filePath = wsUploadPath;
@@ -885,10 +981,15 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
 
       // Write binary data directly to file
       esp_task_wdt_reset();
-      size_t written = wsUploadFile.write(payload, length);
+      size_t written = 0;
+      {
+        SpiBusMutex::Guard guard;
+        written = wsUploadFile.write(payload, length);
+      }
       esp_task_wdt_reset();
 
       if (written != length) {
+        SpiBusMutex::Guard guard;
         wsUploadFile.close();
         wsUploadInProgress = false;
         wsServer->sendTXT(num, "ERROR:Write failed - disk full?");
@@ -907,7 +1008,10 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
 
       // Check if upload complete
       if (wsUploadReceived >= wsUploadSize) {
-        wsUploadFile.close();
+        {
+          SpiBusMutex::Guard guard;
+          wsUploadFile.close();
+        }
         wsUploadInProgress = false;
 
         wsLastCompleteName = wsUploadFileName;
@@ -920,11 +1024,12 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
         Serial.printf("[%lu] [WS] Upload complete: %s (%d bytes in %lu ms, %.1f KB/s)\n", millis(),
                       wsUploadFileName.c_str(), wsUploadSize, elapsed, kbps);
 
-        // Clear epub cache to prevent stale metadata issues when overwriting files
+        // Clear caches to prevent stale data when overwriting files
         String filePath = wsUploadPath;
         if (!filePath.endsWith("/")) filePath += "/";
         filePath += wsUploadFileName;
         clearEpubCacheIfNeeded(filePath);
+        invalidateSleepCacheIfNeeded(filePath);
 
         wsServer->sendTXT(num, "DONE");
         lastProgressSent = 0;
