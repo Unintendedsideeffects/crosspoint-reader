@@ -243,6 +243,11 @@ void BackgroundWebServer::loop(const bool usbConnected, const bool allowRun) {
 
   ensureCredentialsLoaded();
   if (credentials.empty()) {
+    static bool warnedEmpty = false;
+    if (!warnedEmpty) {
+      Serial.printf("[%lu] [BWS] No saved WiFi credentials - background server disabled\n", millis());
+      warnedEmpty = true;
+    }
     return;
   }
 
@@ -250,8 +255,10 @@ void BackgroundWebServer::loop(const bool usbConnected, const bool allowRun) {
     if (WiFi.status() == WL_CONNECTED) {
       // Use existing connection but don't claim ownership - another activity
       // may have established it. Only claim ownership when we connect ourselves.
+      Serial.printf("[%lu] [BWS] WiFi already connected, starting server\n", millis());
       startServer();
     } else {
+      Serial.printf("[%lu] [BWS] WiFi not connected (status=%d), starting scan\n", millis(), WiFi.status());
       startScan();
     }
     return;
