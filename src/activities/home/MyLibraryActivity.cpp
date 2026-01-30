@@ -205,7 +205,9 @@ void MyLibraryActivity::loop() {
           updateRequired = true;
         } else {
           // Open file
-          onSelectBook(basepath + files[selectorIndex], currentTab);
+          const auto fullPath = basepath + files[selectorIndex];
+          Serial.printf("[%lu] [LIB] Opening file: %s\n", millis(), fullPath.c_str());
+          onSelectBook(fullPath, currentTab);
         }
       }
     }

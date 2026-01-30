@@ -104,7 +104,10 @@ void ReaderActivity::onGoToTxtReader(std::unique_ptr<Txt> txt) {
 void ReaderActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
+  Serial.printf("[%lu] [RDR] onEnter with path: %s\n", millis(), initialBookPath.c_str());
+
   if (initialBookPath.empty()) {
+    Serial.printf("[%lu] [RDR] Empty path, going to library\n", millis());
     goToLibrary();  // Start from root when entering via Browse
     return;
   }
@@ -119,11 +122,14 @@ void ReaderActivity::onEnter() {
     }
     onGoToXtcReader(std::move(xtc));
   } else if (isTxtFile(initialBookPath)) {
+    Serial.printf("[%lu] [RDR] Detected as TXT/MD file\n", millis());
     auto txt = loadTxt(initialBookPath);
     if (!txt) {
+      Serial.printf("[%lu] [RDR] Failed to load TXT/MD, going back\n", millis());
       onGoBack();
       return;
     }
+    Serial.printf("[%lu] [RDR] TXT/MD loaded, opening reader\n", millis());
     onGoToTxtReader(std::move(txt));
   } else {
     auto epub = loadEpub(initialBookPath);
