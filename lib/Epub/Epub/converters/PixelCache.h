@@ -1,7 +1,8 @@
 #pragma once
 
-#include <HalStorage.h>
-#include <Logging.h>
+#include <HardwareSerial.h>
+#include <SDCardManager.h>
+#include <SdFat.h>
 #include <stdint.h>
 
 #include <cstring>
@@ -18,8 +19,6 @@ struct PixelCache {
   int originY;  // config.y
 
   PixelCache() : buffer(nullptr), width(0), height(0), bytesPerRow(0), originX(0), originY(0) {}
-  PixelCache(const PixelCache&) = delete;
-  PixelCache& operator=(const PixelCache&) = delete;
 
   static constexpr size_t MAX_CACHE_BYTES = 256 * 1024;  // 256KB limit for embedded targets
 
@@ -31,13 +30,14 @@ struct PixelCache {
     bytesPerRow = (w + 3) / 4;  // 2 bits per pixel, 4 pixels per byte
     size_t bufferSize = (size_t)bytesPerRow * h;
     if (bufferSize > MAX_CACHE_BYTES) {
-      LOG_ERR("IMG", "Cache buffer too large: %d bytes for %dx%d (limit %d)", bufferSize, w, h, MAX_CACHE_BYTES);
+      Serial.printf("[%lu] [IMG] Cache buffer too large: %d bytes for %dx%d (limit %d)\n", millis(), bufferSize, w, h,
+                    MAX_CACHE_BYTES);
       return false;
     }
     buffer = (uint8_t*)malloc(bufferSize);
     if (buffer) {
       memset(buffer, 0, bufferSize);
-      LOG_DBG("IMG", "Allocated cache buffer: %d bytes for %dx%d", bufferSize, w, h);
+      Serial.printf("[%lu] [IMG] Allocated cache buffer: %d bytes for %dx%d\n", millis(), bufferSize, w, h);
     }
     return buffer != nullptr;
   }
@@ -57,8 +57,8 @@ struct PixelCache {
     if (!buffer) return false;
 
     FsFile cacheFile;
-    if (!Storage.openFileForWrite("IMG", cachePath, cacheFile)) {
-      LOG_ERR("IMG", "Failed to open cache file for writing: %s", cachePath.c_str());
+    if (!SdMan.openFileForWrite("IMG", cachePath, cacheFile)) {
+      Serial.printf("[%lu] [IMG] Failed to open cache file for writing: %s\n", millis(), cachePath.c_str());
       return false;
     }
 
@@ -69,7 +69,8 @@ struct PixelCache {
     cacheFile.write(buffer, bytesPerRow * height);
     cacheFile.close();
 
-    LOG_DBG("IMG", "Cache written: %s (%dx%d, %d bytes)", cachePath.c_str(), width, height, 4 + bytesPerRow * height);
+    Serial.printf("[%lu] [IMG] Cache written: %s (%dx%d, %d bytes)\n", millis(), cachePath.c_str(), width, height,
+                  4 + bytesPerRow * height);
     return true;
   }
 
