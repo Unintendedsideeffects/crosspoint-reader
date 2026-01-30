@@ -383,14 +383,22 @@ void CrossPointWebServer::handleFileListData() const {
   // Get current path from query string (default to root)
   String currentPath = "/";
   if (server->hasArg("path")) {
-    currentPath = PathUtils::urlDecode(server->arg("path"));
+    const String rawArg = server->arg("path");
+    currentPath = PathUtils::urlDecode(rawArg);
+    Serial.printf("[%lu] [WEB] Files API - raw arg: '%s' (%d bytes), decoded: '%s' (%d bytes)\n", millis(),
+                  rawArg.c_str(), rawArg.length(), currentPath.c_str(), currentPath.length());
 
     // Validate path against traversal attacks
     if (!PathUtils::isValidSdPath(currentPath)) {
-      Serial.printf("[%lu] [WEB] Path validation failed for: %s\n", millis(), currentPath.c_str());
-      server->send(400, "text/plain", "Invalid path");
+      Serial.printf("[%lu] [WEB] Path validation FAILED for: '%s'\n", millis(), currentPath.c_str());
+      // TODO: TEMPORARY DEBUG - remove after fixing 400 error issue
+      const String reason = PathUtils::getValidationFailureReason(currentPath);
+      String debugMsg = "Invalid path - reason: " + reason + ", raw: '" + rawArg + "' (" + String(rawArg.length()) +
+                        " bytes), decoded: '" + currentPath + "' (" + String(currentPath.length()) + " bytes)";
+      server->send(400, "text/plain", debugMsg);
       return;
     }
+    Serial.printf("[%lu] [WEB] Path validation OK\n", millis());
 
     currentPath = PathUtils::normalizePath(currentPath);
   }

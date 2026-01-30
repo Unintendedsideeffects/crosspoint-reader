@@ -57,4 +57,7 @@ String urlDecode(const String& path);
  */
 bool isValidFilename(const String& filename);
 
+// TODO: TEMPORARY DEBUG - remove after fixing 400 error issue
+String getValidationFailureReason(const String& path);
+
 }  // namespace PathUtils
