@@ -122,8 +122,9 @@ void SleepActivity::renderCustomSleepScreen() const {
       randomFileIndex = (randomFileIndex + 1 + random(numFiles - 1)) % numFiles;
     }
     // Only save to file if the selection actually changed
-    if (APP_STATE.lastSleepImage != randomFileIndex) {
-      APP_STATE.lastSleepImage = randomFileIndex;
+    const bool selectionChanged = (APP_STATE.lastSleepImage != randomFileIndex);
+    APP_STATE.lastSleepImage = randomFileIndex;
+    if (selectionChanged) {
       APP_STATE.saveToFile();
     }
     const auto filename = "/sleep/" + sleepBmpCache.validFiles[randomFileIndex];
