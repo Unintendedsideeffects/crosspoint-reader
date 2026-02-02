@@ -1,11 +1,12 @@
 #include "MarkdownReaderActivity.h"
 
-#include <algorithm>
 #include <Epub/Page.h>
 #include <GfxRenderer.h>
 #include <MarkdownRenderer.h>
 #include <SDCardManager.h>
 #include <esp_task_wdt.h>
+
+#include <algorithm>
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
@@ -77,8 +78,7 @@ void MarkdownReaderActivity::onEnter() {
   loadProgress();
   updateRequired = true;
 
-  xTaskCreate(&MarkdownReaderActivity::taskTrampoline, "MarkdownReaderActivityTask",
-              8192, this, 1, &displayTaskHandle);
+  xTaskCreate(&MarkdownReaderActivity::taskTrampoline, "MarkdownReaderActivityTask", 8192, this, 1, &displayTaskHandle);
 }
 
 void MarkdownReaderActivity::onExit() {
@@ -223,16 +223,15 @@ void MarkdownReaderActivity::renderScreen() {
     const bool showProgressBar = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR ||
                                  SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::ONLY_PROGRESS_BAR;
     orientedMarginBottom += statusBarMargin - SETTINGS.screenMargin +
-                            (showProgressBar ? (ScreenComponents::BOOK_PROGRESS_BAR_HEIGHT + progressBarMarginTop)
-                                             : 0);
+                            (showProgressBar ? (ScreenComponents::BOOK_PROGRESS_BAR_HEIGHT + progressBarMarginTop) : 0);
   }
 
   if (!section) {
     const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
     const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
 
-    section.reset(new HtmlSection(markdown->getHtmlPath(), markdown->getCachePath(), markdown->getContentBasePath(),
-                                  renderer));
+    section.reset(
+        new HtmlSection(markdown->getHtmlPath(), markdown->getCachePath(), markdown->getContentBasePath(), renderer));
 
     bool sectionLoaded = false;
     {
@@ -264,7 +263,8 @@ void MarkdownReaderActivity::renderScreen() {
       renderer.displayBuffer();
       pagesUntilFullRefresh = 0;
 
-      auto progressSetup = [this, boxXWithBar, boxWidthWithBar, boxHeightWithBar, boxY, barX, barY, barWidth, barHeight] {
+      auto progressSetup = [this, boxXWithBar, boxWidthWithBar, boxHeightWithBar, boxY, barX, barY, barWidth,
+                            barHeight] {
         renderer.fillRect(boxXWithBar, boxY, boxWidthWithBar, boxHeightWithBar, false);
         renderer.drawText(UI_12_FONT_ID, boxXWithBar + boxMargin, boxY + boxMargin, "Indexing...");
         renderer.drawRect(boxXWithBar + 5, boxY + 5, boxWidthWithBar - 10, boxHeightWithBar - 10);
@@ -278,11 +278,10 @@ void MarkdownReaderActivity::renderScreen() {
         renderer.displayBuffer(HalDisplay::FAST_REFRESH);
       };
 
-      if (!section->createSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
-                                      SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
-                                      viewportHeight, SETTINGS.hyphenationEnabled,
-                                      static_cast<uint32_t>(markdown->getFileSize()), progressSetup,
-                                      progressCallback)) {
+      if (!section->createSectionFile(
+              SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(), SETTINGS.extraParagraphSpacing,
+              SETTINGS.paragraphAlignment, viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled,
+              static_cast<uint32_t>(markdown->getFileSize()), progressSetup, progressCallback)) {
         Serial.printf("[%lu] [MDR] Failed to build markdown cache\n", millis());
         section.reset();
         return;

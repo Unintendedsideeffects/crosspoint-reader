@@ -1,11 +1,12 @@
 #pragma once
 
-#include <atomic>
 #include <HtmlSection.h>
 #include <Markdown.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
+
+#include <atomic>
 
 #include "activities/ActivityWithSubactivity.h"
 
@@ -43,8 +44,8 @@ class MarkdownReaderActivity final : public ActivityWithSubactivity {
 
  public:
   explicit MarkdownReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                 std::unique_ptr<Markdown> markdown, const std::function<void()>& onGoBack,
-                                 const std::function<void()>& onGoHome)
+                                  std::unique_ptr<Markdown> markdown, const std::function<void()>& onGoBack,
+                                  const std::function<void()>& onGoHome)
       : ActivityWithSubactivity("MarkdownReader", renderer, mappedInput),
         markdown(std::move(markdown)),
         onGoBack(onGoBack),

@@ -16,11 +16,10 @@ class HtmlSection {
   ~HtmlSection() = default;
 
   bool loadSectionFile(int fontId, float lineCompression, bool extraParagraphSpacing, uint8_t paragraphAlignment,
-                       uint16_t viewportWidth, uint16_t viewportHeight, bool hyphenationEnabled,
-                       uint32_t sourceSize);
+                       uint16_t viewportWidth, uint16_t viewportHeight, bool hyphenationEnabled, uint32_t sourceSize);
   bool createSectionFile(int fontId, float lineCompression, bool extraParagraphSpacing, uint8_t paragraphAlignment,
-                         uint16_t viewportWidth, uint16_t viewportHeight, bool hyphenationEnabled,
-                         uint32_t sourceSize, const std::function<void()>& progressSetupFn = nullptr,
+                         uint16_t viewportWidth, uint16_t viewportHeight, bool hyphenationEnabled, uint32_t sourceSize,
+                         const std::function<void()>& progressSetupFn = nullptr,
                          const std::function<void(int)>& progressFn = nullptr);
   std::unique_ptr<Page> loadPageFromSectionFile();
   bool clearCache() const;

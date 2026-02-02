@@ -5,8 +5,9 @@
 #include <HardwareSerial.h>
 #include <ImageConverter.h>
 #include <SDCardManager.h>
-#include <cstring>
 #include <expat.h>
+
+#include <cstring>
 
 #include "../../Epub.h"
 #include "../Page.h"
