@@ -4,7 +4,7 @@ template <typename T>
 class MdOptional {
  public:
   MdOptional() : hasValue(false), value_() {}
-  MdOptional(const T& value) : hasValue(true), value_(value) {}
+  explicit MdOptional(const T& value) : hasValue(true), value_(value) {}
 
   MdOptional& operator=(const T& value) {
     hasValue = true;
