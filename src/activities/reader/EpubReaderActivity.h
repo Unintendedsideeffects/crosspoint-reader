@@ -7,6 +7,7 @@
 
 #include <atomic>
 
+#include "EpubReaderMenuActivity.h"
 #include "activities/ActivityWithSubactivity.h"
 
 class EpubReaderActivity final : public ActivityWithSubactivity {
@@ -32,6 +33,9 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
                       int orientedMarginBottom, int orientedMarginLeft);
   void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
+  void saveProgress(int spineIndex, int currentPage, int pageCount);
+  void onReaderMenuBack();
+  void onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action);
 
  public:
   explicit EpubReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::unique_ptr<Epub> epub,
