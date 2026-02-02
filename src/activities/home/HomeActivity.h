@@ -1,50 +1,52 @@
 #pragma once
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
+
+#include <atomic>
 #include <functional>
-#include <vector>
 
 #include "../Activity.h"
-#include "./MyLibraryActivity.h"
-#include "util/ButtonNavigator.h"
-
-struct RecentBook;
-struct Rect;
 
 class HomeActivity final : public Activity {
-  ButtonNavigator buttonNavigator;
+  TaskHandle_t displayTaskHandle = nullptr;
+  SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   int selectorIndex = 0;
-  bool recentsLoading = false;
-  bool recentsLoaded = false;
-  bool firstRenderDone = false;
+  bool updateRequired = false;
+  bool hasContinueReading = false;
   bool hasOpdsUrl = false;
+  bool hasCoverImage = false;
   bool coverRendered = false;      // Track if cover has been rendered once
   bool coverBufferStored = false;  // Track if cover buffer is stored
   uint8_t* coverBuffer = nullptr;  // HomeActivity's own buffer for cover image
-  std::vector<RecentBook> recentBooks;
-  const std::function<void(const std::string& path)> onSelectBook;
+  std::string lastBookTitle;
+  std::string lastBookAuthor;
+  std::string coverBmpPath;
+  const std::function<void()> onContinueReading;
   const std::function<void()> onMyLibraryOpen;
-  const std::function<void()> onRecentsOpen;
   const std::function<void()> onSettingsOpen;
   const std::function<void()> onFileTransferOpen;
   const std::function<void()> onOpdsBrowserOpen;
   const std::function<void()> onTodoOpen;
 
+  static void taskTrampoline(void* param);
+  void displayTaskLoop();
+  void render();
   int getMenuItemCount() const;
   bool storeCoverBuffer();    // Store frame buffer for cover image
   bool restoreCoverBuffer();  // Restore frame buffer from stored cover
   void freeCoverBuffer();     // Free the stored cover buffer
-  void loadRecentBooks(int maxBooks);
-  void loadRecentCovers(int coverHeight);
 
  public:
   explicit HomeActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                        const std::function<void(const std::string& path)>& onSelectBook,
-                        const std::function<void()>& onMyLibraryOpen, const std::function<void()>& onRecentsOpen,
+                        const std::function<void()>& onContinueReading, const std::function<void()>& onMyLibraryOpen,
                         const std::function<void()>& onSettingsOpen, const std::function<void()>& onFileTransferOpen,
                         const std::function<void()>& onOpdsBrowserOpen, const std::function<void()>& onTodoOpen)
       : Activity("Home", renderer, mappedInput),
-        onSelectBook(onSelectBook),
+        onContinueReading(onContinueReading),
         onMyLibraryOpen(onMyLibraryOpen),
-        onRecentsOpen(onRecentsOpen),
         onSettingsOpen(onSettingsOpen),
         onFileTransferOpen(onFileTransferOpen),
         onOpdsBrowserOpen(onOpdsBrowserOpen),
@@ -52,5 +54,4 @@ class HomeActivity final : public Activity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
 };

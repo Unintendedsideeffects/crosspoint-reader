@@ -1,22 +1,32 @@
 #pragma once
 #include <Xtc.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
+#include <atomic>
 #include <memory>
 
 #include "../Activity.h"
-#include "util/ButtonNavigator.h"
 
 class XtcReaderChapterSelectionActivity final : public Activity {
   std::shared_ptr<Xtc> xtc;
-  ButtonNavigator buttonNavigator;
+  TaskHandle_t displayTaskHandle = nullptr;
+  SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   uint32_t currentPage = 0;
   int selectorIndex = 0;
-
+  bool updateRequired = false;
   const std::function<void()> onGoBack;
   const std::function<void(uint32_t newPage)> onSelectPage;
 
   int getPageItems() const;
   int findChapterIndexForPage(uint32_t page) const;
+
+  static void taskTrampoline(void* param);
+  void displayTaskLoop();
+  void renderScreen();
 
  public:
   explicit XtcReaderChapterSelectionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
@@ -31,5 +41,4 @@ class XtcReaderChapterSelectionActivity final : public Activity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
 };

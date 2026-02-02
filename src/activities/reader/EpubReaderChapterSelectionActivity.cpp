@@ -1,28 +1,59 @@
 #include "EpubReaderChapterSelectionActivity.h"
 
 #include <GfxRenderer.h>
-#include <I18n.h>
 
+#include "KOReaderCredentialStore.h"
+#include "KOReaderSyncActivity.h"
 #include "MappedInputManager.h"
-#include "components/UITheme.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
-int EpubReaderChapterSelectionActivity::getTotalItems() const { return epub->getTocItemsCount(); }
+namespace {
+// Time threshold for treating a long press as a page-up/page-down
+constexpr int SKIP_PAGE_MS = 700;
+}  // namespace
+
+bool EpubReaderChapterSelectionActivity::hasSyncOption() const { return KOREADER_STORE.hasCredentials(); }
+
+int EpubReaderChapterSelectionActivity::getTotalItems() const {
+  // Add 2 for sync options (top and bottom) if credentials are configured
+  const int syncCount = hasSyncOption() ? 2 : 0;
+  return epub->getTocItemsCount() + syncCount;
+}
+
+bool EpubReaderChapterSelectionActivity::isSyncItem(int index) const {
+  if (!hasSyncOption()) return false;
+  // First item and last item are sync options
+  return index == 0 || index == getTotalItems() - 1;
+}
+
+int EpubReaderChapterSelectionActivity::tocIndexFromItemIndex(int itemIndex) const {
+  // Account for the sync option at the top
+  const int offset = hasSyncOption() ? 1 : 0;
+  return itemIndex - offset;
+}
 
 int EpubReaderChapterSelectionActivity::getPageItems() const {
   // Layout constants used in renderScreen
+  constexpr int startY = 60;
   constexpr int lineHeight = 30;
 
   const int screenHeight = renderer.getScreenHeight();
-  const auto orientation = renderer.getOrientation();
-  // In inverted portrait, the button hints are drawn near the logical top.
-  // Reserve vertical space so list items do not collide with the hints.
-  const bool isPortraitInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
-  const int hintGutterHeight = isPortraitInverted ? 50 : 0;
-  const int startY = 60 + hintGutterHeight;
-  const int availableHeight = screenHeight - startY - lineHeight;
-  // Clamp to at least one item to avoid division by zero and empty paging.
-  return std::max(1, availableHeight / lineHeight);
+  const int endY = screenHeight - lineHeight;
+
+  const int availableHeight = endY - startY;
+  int items = availableHeight / lineHeight;
+
+  // Ensure we always have at least one item per page to avoid division by zero
+  if (items < 1) {
+    items = 1;
+  }
+  return items;
+}
+
+void EpubReaderChapterSelectionActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<EpubReaderChapterSelectionActivity*>(param);
+  self->displayTaskLoop();
 }
 
 void EpubReaderChapterSelectionActivity::onEnter() {
@@ -32,16 +63,53 @@ void EpubReaderChapterSelectionActivity::onEnter() {
     return;
   }
 
+  renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
+
+  // Account for sync option offset when finding current TOC index
+  const int syncOffset = hasSyncOption() ? 1 : 0;
   selectorIndex = epub->getTocIndexForSpineIndex(currentSpineIndex);
   if (selectorIndex == -1) {
     selectorIndex = 0;
   }
+  selectorIndex += syncOffset;  // Offset for top sync option
 
   // Trigger first update
-  requestUpdate();
+  updateRequired = true;
+  xTaskCreate(&EpubReaderChapterSelectionActivity::taskTrampoline, "EpubReaderChapterSelectionActivityTask",
+              4096,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
 }
 
-void EpubReaderChapterSelectionActivity::onExit() { ActivityWithSubactivity::onExit(); }
+void EpubReaderChapterSelectionActivity::onExit() {
+  ActivityWithSubactivity::onExit();
+
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
+  vSemaphoreDelete(renderingMutex);
+  renderingMutex = nullptr;
+}
+
+void EpubReaderChapterSelectionActivity::launchSyncActivity() {
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  exitActivity();
+  enterNewActivity(new KOReaderSyncActivity(
+      renderer, mappedInput, epub, epubPath, currentSpineIndex, currentPage, totalPagesInSpine,
+      [this]() {
+        // On cancel
+        exitActivity();
+        updateRequired = true;
+      },
+      [this](int newSpineIndex, int newPage) {
+        // On sync complete
+        exitActivity();
+        onSyncPosition(newSpineIndex, newPage);
+      }));
+  xSemaphoreGive(renderingMutex);
+}
 
 void EpubReaderChapterSelectionActivity::loop() {
   if (subActivity) {
@@ -49,11 +117,25 @@ void EpubReaderChapterSelectionActivity::loop() {
     return;
   }
 
+  const bool prevReleased = mappedInput.wasReleased(MappedInputManager::Button::Up) ||
+                            mappedInput.wasReleased(MappedInputManager::Button::Left);
+  const bool nextReleased = mappedInput.wasReleased(MappedInputManager::Button::Down) ||
+                            mappedInput.wasReleased(MappedInputManager::Button::Right);
+
+  const bool skipPage = mappedInput.getHeldTime() > SKIP_PAGE_MS;
   const int pageItems = getPageItems();
   const int totalItems = getTotalItems();
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    const auto newSpineIndex = epub->getSpineIndexForTocIndex(selectorIndex);
+    // Check if sync option is selected (first or last item)
+    if (isSyncItem(selectorIndex)) {
+      launchSyncActivity();
+      return;
+    }
+
+    // Get TOC index (account for top sync offset)
+    const int tocIndex = tocIndexFromItemIndex(selectorIndex);
+    const auto newSpineIndex = epub->getSpineIndexForTocIndex(tocIndex);
     if (newSpineIndex == -1) {
       onGoBack();
     } else {
@@ -61,75 +143,76 @@ void EpubReaderChapterSelectionActivity::loop() {
     }
   } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     onGoBack();
+  } else if (prevReleased) {
+    if (skipPage) {
+      selectorIndex = ((selectorIndex / pageItems - 1) * pageItems + totalItems) % totalItems;
+    } else {
+      selectorIndex = (selectorIndex + totalItems - 1) % totalItems;
+    }
+    updateRequired = true;
+  } else if (nextReleased) {
+    if (skipPage) {
+      selectorIndex = ((selectorIndex / pageItems + 1) * pageItems) % totalItems;
+    } else {
+      selectorIndex = (selectorIndex + 1) % totalItems;
+    }
+    updateRequired = true;
   }
-
-  buttonNavigator.onNextRelease([this, totalItems] {
-    selectorIndex = ButtonNavigator::nextIndex(selectorIndex, totalItems);
-    requestUpdate();
-  });
-
-  buttonNavigator.onPreviousRelease([this, totalItems] {
-    selectorIndex = ButtonNavigator::previousIndex(selectorIndex, totalItems);
-    requestUpdate();
-  });
-
-  buttonNavigator.onNextContinuous([this, totalItems, pageItems] {
-    selectorIndex = ButtonNavigator::nextPageIndex(selectorIndex, totalItems, pageItems);
-    requestUpdate();
-  });
-
-  buttonNavigator.onPreviousContinuous([this, totalItems, pageItems] {
-    selectorIndex = ButtonNavigator::previousPageIndex(selectorIndex, totalItems, pageItems);
-    requestUpdate();
-  });
 }
 
-void EpubReaderChapterSelectionActivity::render(Activity::RenderLock&&) {
+void EpubReaderChapterSelectionActivity::displayTaskLoop() {
+  while (!exitTaskRequested.load()) {
+    if (updateRequired && !subActivity) {
+      updateRequired = false;
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      if (!exitTaskRequested.load()) {
+        renderScreen();
+      }
+      xSemaphoreGive(renderingMutex);
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
+}
+
+void EpubReaderChapterSelectionActivity::renderScreen() {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
-  const auto orientation = renderer.getOrientation();
-  // Landscape orientation: reserve a horizontal gutter for button hints.
-  const bool isLandscapeCw = orientation == GfxRenderer::Orientation::LandscapeClockwise;
-  const bool isLandscapeCcw = orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
-  // Inverted portrait: reserve vertical space for hints at the top.
-  const bool isPortraitInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
-  const int hintGutterWidth = (isLandscapeCw || isLandscapeCcw) ? 30 : 0;
-  // Landscape CW places hints on the left edge; CCW keeps them on the right.
-  const int contentX = isLandscapeCw ? hintGutterWidth : 0;
-  const int contentWidth = pageWidth - hintGutterWidth;
-  const int hintGutterHeight = isPortraitInverted ? 50 : 0;
-  const int contentY = hintGutterHeight;
   const int pageItems = getPageItems();
   const int totalItems = getTotalItems();
 
-  // Manual centering to honor content gutters.
-  const int titleX =
-      contentX + (contentWidth - renderer.getTextWidth(UI_12_FONT_ID, tr(STR_SELECT_CHAPTER), EpdFontFamily::BOLD)) / 2;
-  renderer.drawText(UI_12_FONT_ID, titleX, 15 + contentY, tr(STR_SELECT_CHAPTER), true, EpdFontFamily::BOLD);
+  const std::string title =
+      renderer.truncatedText(UI_12_FONT_ID, epub->getTitle().c_str(), pageWidth - 40, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, title.c_str(), true, EpdFontFamily::BOLD);
 
   const auto pageStartIndex = selectorIndex / pageItems * pageItems;
-  // Highlight only the content area, not the hint gutters.
-  renderer.fillRect(contentX, 60 + contentY + (selectorIndex % pageItems) * 30 - 2, contentWidth - 1, 30);
+  renderer.fillRect(0, 60 + (selectorIndex % pageItems) * 30 - 2, pageWidth - 1, 30);
 
   for (int i = 0; i < pageItems; i++) {
     int itemIndex = pageStartIndex + i;
     if (itemIndex >= totalItems) break;
-    const int displayY = 60 + contentY + i * 30;
+    const int displayY = 60 + i * 30;
     const bool isSelected = (itemIndex == selectorIndex);
 
-    auto item = epub->getTocItem(itemIndex);
+    if (isSyncItem(itemIndex)) {
+      renderer.drawText(UI_10_FONT_ID, 20, displayY, ">> Sync Progress", !isSelected);
+    } else {
+      const int tocIndex = tocIndexFromItemIndex(itemIndex);
+      auto item = epub->getTocItem(tocIndex);
 
-    // Indent per TOC level while keeping content within the gutter-safe region.
-    const int indentSize = contentX + 20 + (item.level - 1) * 15;
-    const std::string chapterName =
-        renderer.truncatedText(UI_10_FONT_ID, item.title.c_str(), contentWidth - 40 - indentSize);
+      const int indentSize = 20 + (item.level - 1) * 15;
+      const std::string chapterName =
+          renderer.truncatedText(UI_10_FONT_ID, item.title.c_str(), pageWidth - 40 - indentSize);
 
-    renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
+      renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
+    }
   }
 
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  const auto labels = mappedInput.mapLabels("« Back", "Select", "Up", "Down");
+  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }

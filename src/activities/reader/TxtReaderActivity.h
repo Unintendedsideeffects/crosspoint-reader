@@ -1,7 +1,11 @@
 #pragma once
 
 #include <Txt.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
+#include <atomic>
 #include <vector>
 
 #include "CrossPointSettings.h"
@@ -9,11 +13,14 @@
 
 class TxtReaderActivity final : public ActivityWithSubactivity {
   std::unique_ptr<Txt> txt;
-
+  TaskHandle_t displayTaskHandle = nullptr;
+  SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   int currentPage = 0;
   int totalPages = 1;
   int pagesUntilFullRefresh = 0;
-
+  bool updateRequired = false;
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;
 
@@ -29,6 +36,9 @@ class TxtReaderActivity final : public ActivityWithSubactivity {
   int cachedScreenMargin = 0;
   uint8_t cachedParagraphAlignment = CrossPointSettings::LEFT_ALIGN;
 
+  static void taskTrampoline(void* param);
+  void displayTaskLoop();
+  void renderScreen();
   void renderPage();
   void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
 
@@ -50,5 +60,4 @@ class TxtReaderActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
 };

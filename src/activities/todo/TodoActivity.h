@@ -5,6 +5,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -36,6 +37,8 @@ class TodoActivity final : public ActivityWithSubactivity {
 
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;
 
   void loadTasks();
@@ -45,7 +48,7 @@ class TodoActivity final : public ActivityWithSubactivity {
   void showDeleteConfirmation();
 
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void render();
   void renderItem(int y, const TodoItem& item, bool isSelected) const;
 };

@@ -1,5 +1,10 @@
 #pragma once
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
+
+#include <atomic>
 #include <functional>
 
 #include "activities/ActivityWithSubactivity.h"
@@ -13,16 +18,23 @@ class ClearCacheActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
 
  private:
   enum State { WARNING, CLEARING, SUCCESS, FAILED };
 
   State state = WARNING;
-
+  TaskHandle_t displayTaskHandle = nullptr;
+  SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
+  bool updateRequired = false;
   const std::function<void()> goBack;
 
   int clearedCount = 0;
   int failedCount = 0;
+
+  static void taskTrampoline(void* param);
+  void displayTaskLoop();
+  void render();
   void clearCache();
 };

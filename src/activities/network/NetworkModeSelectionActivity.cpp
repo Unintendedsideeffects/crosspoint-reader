@@ -1,27 +1,54 @@
 #include "NetworkModeSelectionActivity.h"
 
 #include <GfxRenderer.h>
-#include <I18n.h>
 
 #include "MappedInputManager.h"
-#include "components/UITheme.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
 namespace {
 constexpr int MENU_ITEM_COUNT = 3;
+const char* MENU_ITEMS[MENU_ITEM_COUNT] = {"Join a Network", "Connect to Calibre", "Create Hotspot"};
+const char* MENU_DESCRIPTIONS[MENU_ITEM_COUNT] = {
+    "Connect to an existing WiFi network",
+    "Use Calibre wireless device transfers",
+    "Create a WiFi network others can join",
+};
 }  // namespace
+
+void NetworkModeSelectionActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<NetworkModeSelectionActivity*>(param);
+  self->displayTaskLoop();
+}
 
 void NetworkModeSelectionActivity::onEnter() {
   Activity::onEnter();
+
+  renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   // Reset selection
   selectedIndex = 0;
 
   // Trigger first update
-  requestUpdate();
+  updateRequired = true;
+
+  xTaskCreate(&NetworkModeSelectionActivity::taskTrampoline, "NetworkModeTask",
+              2048,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
 }
 
-void NetworkModeSelectionActivity::onExit() { Activity::onExit(); }
+void NetworkModeSelectionActivity::onExit() {
+  Activity::onExit();
+
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
+  vSemaphoreDelete(renderingMutex);
+  renderingMutex = nullptr;
+}
 
 void NetworkModeSelectionActivity::loop() {
   // Handle back button - cancel (use wasReleased for power button SELECT mode support)
@@ -43,34 +70,48 @@ void NetworkModeSelectionActivity::loop() {
   }
 
   // Handle navigation
-  buttonNavigator.onNext([this] {
-    selectedIndex = ButtonNavigator::nextIndex(selectedIndex, MENU_ITEM_COUNT);
-    requestUpdate();
-  });
+  const bool prevPressed = mappedInput.wasPressed(MappedInputManager::Button::Up) ||
+                           mappedInput.wasPressed(MappedInputManager::Button::Left);
+  const bool nextPressed = mappedInput.wasPressed(MappedInputManager::Button::Down) ||
+                           mappedInput.wasPressed(MappedInputManager::Button::Right);
 
-  buttonNavigator.onPrevious([this] {
-    selectedIndex = ButtonNavigator::previousIndex(selectedIndex, MENU_ITEM_COUNT);
-    requestUpdate();
-  });
+  if (prevPressed) {
+    selectedIndex = (selectedIndex + MENU_ITEM_COUNT - 1) % MENU_ITEM_COUNT;
+    updateRequired = true;
+  } else if (nextPressed) {
+    selectedIndex = (selectedIndex + 1) % MENU_ITEM_COUNT;
+    updateRequired = true;
+  }
 }
 
-void NetworkModeSelectionActivity::render(Activity::RenderLock&&) {
+void NetworkModeSelectionActivity::displayTaskLoop() {
+  while (!exitTaskRequested.load()) {
+    if (updateRequired) {
+      updateRequired = false;
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      if (!exitTaskRequested.load()) {
+        render();
+      }
+      xSemaphoreGive(renderingMutex);
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
+}
+
+void NetworkModeSelectionActivity::render() const {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
   // Draw header
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, tr(STR_FILE_TRANSFER), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, "File Transfer", true, EpdFontFamily::BOLD);
 
   // Draw subtitle
-  renderer.drawCenteredText(UI_10_FONT_ID, 50, tr(STR_HOW_CONNECT));
-
-  // Menu items and descriptions
-  static constexpr StrId menuItems[MENU_ITEM_COUNT] = {StrId::STR_JOIN_NETWORK, StrId::STR_CALIBRE_WIRELESS,
-                                                       StrId::STR_CREATE_HOTSPOT};
-  static constexpr StrId menuDescs[MENU_ITEM_COUNT] = {StrId::STR_JOIN_DESC, StrId::STR_CALIBRE_DESC,
-                                                       StrId::STR_HOTSPOT_DESC};
+  renderer.drawCenteredText(UI_10_FONT_ID, 50, "How would you like to connect?");
 
   // Draw menu items centered on screen
   constexpr int itemHeight = 50;  // Height for each menu item (including description)
@@ -87,13 +128,13 @@ void NetworkModeSelectionActivity::render(Activity::RenderLock&&) {
 
     // Draw text: black=false (white text) when selected (on black background)
     //            black=true (black text) when not selected (on white background)
-    renderer.drawText(UI_10_FONT_ID, 30, itemY, I18N.get(menuItems[i]), /*black=*/!isSelected);
-    renderer.drawText(SMALL_FONT_ID, 30, itemY + 22, I18N.get(menuDescs[i]), /*black=*/!isSelected);
+    renderer.drawText(UI_10_FONT_ID, 30, itemY, MENU_ITEMS[i], /*black=*/!isSelected);
+    renderer.drawText(SMALL_FONT_ID, 30, itemY + 22, MENU_DESCRIPTIONS[i], /*black=*/!isSelected);
   }
 
   // Draw help text at bottom
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  const auto labels = mappedInput.mapLabels("« Back", "Select", "", "");
+  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }

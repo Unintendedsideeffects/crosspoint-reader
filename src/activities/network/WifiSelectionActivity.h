@@ -1,5 +1,9 @@
 #pragma once
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -7,7 +11,6 @@
 #include <vector>
 
 #include "activities/ActivityWithSubactivity.h"
-#include "util/ButtonNavigator.h"
 
 // Structure to hold WiFi network information
 struct WifiNetworkInfo {
@@ -19,7 +22,6 @@ struct WifiNetworkInfo {
 
 // WiFi selection states
 enum class WifiSelectionState {
-  AUTO_CONNECTING,    // Trying to connect to the last known network
   SCANNING,           // Scanning for networks
   NETWORK_LIST,       // Displaying available networks
   PASSWORD_ENTRY,     // Entering password for selected network
@@ -42,8 +44,11 @@ enum class WifiSelectionState {
  * The onComplete callback receives true if connected successfully, false if cancelled.
  */
 class WifiSelectionActivity final : public ActivityWithSubactivity {
-  ButtonNavigator buttonNavigator;
-
+  TaskHandle_t displayTaskHandle = nullptr;
+  SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
+  bool updateRequired = false;
   WifiSelectionState state = WifiSelectionState::SCANNING;
   int selectedNetworkIndex = 0;
   std::vector<WifiNetworkInfo> networks;
@@ -66,12 +71,6 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   // Whether network was connected using a saved password (skip save prompt)
   bool usedSavedPassword = false;
 
-  // Whether to attempt auto-connect on entry
-  const bool allowAutoConnect;
-
-  // Whether we are attempting to auto-connect
-  bool autoConnecting = false;
-
   // Save/forget prompt selection (0 = Yes, 1 = No)
   int savePromptSelection = 0;
   int forgetPromptSelection = 0;
@@ -80,6 +79,9 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   static constexpr unsigned long CONNECTION_TIMEOUT_MS = 15000;
   unsigned long connectionStartTime = 0;
 
+  static void taskTrampoline(void* param);
+  void displayTaskLoop();
+  void render() const;
   void renderNetworkList() const;
   void renderPasswordEntry() const;
   void renderConnecting() const;
@@ -97,14 +99,11 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
 
  public:
   explicit WifiSelectionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                 const std::function<void(bool connected)>& onComplete, bool autoConnect = true)
-      : ActivityWithSubactivity("WifiSelection", renderer, mappedInput),
-        onComplete(onComplete),
-        allowAutoConnect(autoConnect) {}
+                                 const std::function<void(bool connected)>& onComplete)
+      : ActivityWithSubactivity("WifiSelection", renderer, mappedInput), onComplete(onComplete) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
 
   // Get the IP address after successful connection
   const std::string& getConnectedIP() const { return connectedIP; }
