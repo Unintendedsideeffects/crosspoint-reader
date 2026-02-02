@@ -21,6 +21,8 @@ MarkdownRenderer::MarkdownRenderer(GfxRenderer& renderer, int fontId, int viewpo
       hyphenationEnabled(hyphenationEnabled),
       contentBasePath(contentBasePath) {}
 
+MarkdownRenderer::~MarkdownRenderer() = default;
+
 bool MarkdownRenderer::render(const MdNode& root, const PageCallback& pageCallback,
                               const ProgressCallback& progressCallback) {
   // Initialize state
