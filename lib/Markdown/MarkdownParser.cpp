@@ -5,10 +5,6 @@
 #include <algorithm>
 #include <cctype>
 
-extern "C" {
-#include <md4c.h>
-}
-
 // Helper to extract string from MD_ATTRIBUTE
 static std::string attributeToString(const MD_ATTRIBUTE& attr) {
   if (attr.text == nullptr || attr.size == 0) {
@@ -115,31 +111,31 @@ void MarkdownParser::popNode() {
 }
 
 // Static callback trampolines
-int MarkdownParser::enterBlockCallback(unsigned type, void* detail, void* userdata) {
+int MarkdownParser::enterBlockCallback(MD_BLOCKTYPE type, void* detail, void* userdata) {
   return static_cast<MarkdownParser*>(userdata)->onEnterBlock(type, detail);
 }
 
-int MarkdownParser::leaveBlockCallback(unsigned type, void* detail, void* userdata) {
+int MarkdownParser::leaveBlockCallback(MD_BLOCKTYPE type, void* detail, void* userdata) {
   return static_cast<MarkdownParser*>(userdata)->onLeaveBlock(type, detail);
 }
 
-int MarkdownParser::enterSpanCallback(unsigned type, void* detail, void* userdata) {
+int MarkdownParser::enterSpanCallback(MD_SPANTYPE type, void* detail, void* userdata) {
   return static_cast<MarkdownParser*>(userdata)->onEnterSpan(type, detail);
 }
 
-int MarkdownParser::leaveSpanCallback(unsigned type, void* detail, void* userdata) {
+int MarkdownParser::leaveSpanCallback(MD_SPANTYPE type, void* detail, void* userdata) {
   return static_cast<MarkdownParser*>(userdata)->onLeaveSpan(type, detail);
 }
 
-int MarkdownParser::textCallback(unsigned type, const char* text, unsigned size, void* userdata) {
+int MarkdownParser::textCallback(MD_TEXTTYPE type, const MD_CHAR* text, MD_SIZE size, void* userdata) {
   return static_cast<MarkdownParser*>(userdata)->onText(type, text, size);
 }
 
-int MarkdownParser::onEnterBlock(unsigned type, void* detail) {
+int MarkdownParser::onEnterBlock(MD_BLOCKTYPE type, void* detail) {
   if (limitExceeded) {
     return -1;
   }
-  switch (static_cast<MD_BLOCKTYPE>(type)) {
+  switch (type) {
     case MD_BLOCK_DOC:
       // Document already created as root
       break;
@@ -257,14 +253,14 @@ int MarkdownParser::onEnterBlock(unsigned type, void* detail) {
   return 0;
 }
 
-int MarkdownParser::onLeaveBlock(unsigned type, void* detail) {
+int MarkdownParser::onLeaveBlock(MD_BLOCKTYPE type, void* detail) {
   (void)detail;
 
   if (limitExceeded) {
     return -1;
   }
 
-  switch (static_cast<MD_BLOCKTYPE>(type)) {
+  switch (type) {
     case MD_BLOCK_DOC:
       // Don't pop root
       break;
@@ -293,11 +289,11 @@ int MarkdownParser::onLeaveBlock(unsigned type, void* detail) {
   return 0;
 }
 
-int MarkdownParser::onEnterSpan(unsigned type, void* detail) {
+int MarkdownParser::onEnterSpan(MD_SPANTYPE type, void* detail) {
   if (limitExceeded) {
     return -1;
   }
-  switch (static_cast<MD_SPANTYPE>(type)) {
+  switch (type) {
     case MD_SPAN_EM:
       if (!pushNode(MdNode::createEmphasis())) {
         return -1;
@@ -371,14 +367,14 @@ int MarkdownParser::onEnterSpan(unsigned type, void* detail) {
   return 0;
 }
 
-int MarkdownParser::onLeaveSpan(unsigned type, void* detail) {
+int MarkdownParser::onLeaveSpan(MD_SPANTYPE type, void* detail) {
   (void)detail;
 
   if (limitExceeded) {
     return -1;
   }
 
-  switch (static_cast<MD_SPANTYPE>(type)) {
+  switch (type) {
     case MD_SPAN_EM:
     case MD_SPAN_STRONG:
     case MD_SPAN_A:
@@ -398,7 +394,7 @@ int MarkdownParser::onLeaveSpan(unsigned type, void* detail) {
   return 0;
 }
 
-int MarkdownParser::onText(unsigned type, const char* text, unsigned size) {
+int MarkdownParser::onText(MD_TEXTTYPE type, const char* text, MD_SIZE size) {
   MdNode* current = currentNode();
   if (!current) {
     return 0;
@@ -409,7 +405,7 @@ int MarkdownParser::onText(unsigned type, const char* text, unsigned size) {
 
   std::string content(text, size);
 
-  switch (static_cast<MD_TEXTTYPE>(type)) {
+  switch (type) {
     case MD_TEXT_NORMAL:
       if (!appendTextNode(current, std::move(content))) {
         return -1;
