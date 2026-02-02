@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 
+extern "C" {
+#include <md4c.h>
+}
+
 #include "MarkdownAST.h"
 
 class MarkdownParser {
@@ -27,18 +31,18 @@ class MarkdownParser {
   bool limitExceeded = false;
 
   // md4c callback trampolines (static to match C callback signature)
-  static int enterBlockCallback(unsigned type, void* detail, void* userdata);
-  static int leaveBlockCallback(unsigned type, void* detail, void* userdata);
-  static int enterSpanCallback(unsigned type, void* detail, void* userdata);
-  static int leaveSpanCallback(unsigned type, void* detail, void* userdata);
-  static int textCallback(unsigned type, const char* text, unsigned size, void* userdata);
+  static int enterBlockCallback(MD_BLOCKTYPE type, void* detail, void* userdata);
+  static int leaveBlockCallback(MD_BLOCKTYPE type, void* detail, void* userdata);
+  static int enterSpanCallback(MD_SPANTYPE type, void* detail, void* userdata);
+  static int leaveSpanCallback(MD_SPANTYPE type, void* detail, void* userdata);
+  static int textCallback(MD_TEXTTYPE type, const MD_CHAR* text, MD_SIZE size, void* userdata);
 
   // Instance methods called by trampolines
-  int onEnterBlock(unsigned type, void* detail);
-  int onLeaveBlock(unsigned type, void* detail);
-  int onEnterSpan(unsigned type, void* detail);
-  int onLeaveSpan(unsigned type, void* detail);
-  int onText(unsigned type, const char* text, unsigned size);
+  int onEnterBlock(MD_BLOCKTYPE type, void* detail);
+  int onLeaveBlock(MD_BLOCKTYPE type, void* detail);
+  int onEnterSpan(MD_SPANTYPE type, void* detail);
+  int onLeaveSpan(MD_SPANTYPE type, void* detail);
+  int onText(MD_TEXTTYPE type, const char* text, MD_SIZE size);
 
   // Helper to get current node (top of stack)
   MdNode* currentNode();
