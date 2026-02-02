@@ -1,11 +1,11 @@
 #pragma once
 
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <vector>
 
 #include "MarkdownAST.h"
+#include "MarkdownOptional.h"
 
 // Table of contents entry
 struct TocEntry {
@@ -47,16 +47,16 @@ class MarkdownNavigation {
   void updatePageNumbers(const std::vector<size_t>& nodeToPage);
 
   // Navigation helpers
-  std::optional<size_t> findNextHeading(size_t currentPage) const;
-  std::optional<size_t> findPrevHeading(size_t currentPage) const;
-  std::optional<size_t> findHeadingPage(size_t tocIndex) const;
+  MdOptional<size_t> findNextHeading(size_t currentPage) const;
+  MdOptional<size_t> findPrevHeading(size_t currentPage) const;
+  MdOptional<size_t> findHeadingPage(size_t tocIndex) const;
 
   // Link resolution
-  std::optional<size_t> resolveInternalLink(const std::string& href) const;
+  MdOptional<size_t> resolveInternalLink(const std::string& href) const;
 
   // Get heading at specific level or higher
-  std::optional<size_t> findNextHeadingAtLevel(size_t currentPage, uint8_t maxLevel) const;
-  std::optional<size_t> findPrevHeadingAtLevel(size_t currentPage, uint8_t maxLevel) const;
+  MdOptional<size_t> findNextHeadingAtLevel(size_t currentPage, uint8_t maxLevel) const;
+  MdOptional<size_t> findPrevHeadingAtLevel(size_t currentPage, uint8_t maxLevel) const;
 
   // Statistics
   size_t getTotalHeadings() const { return toc.size(); }
