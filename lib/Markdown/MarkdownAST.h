@@ -67,8 +67,8 @@ struct MdCodeBlockDetail {
 
 struct MdListDetail {
   bool tight = false;
-  char marker = '-';     // '-', '+', '*' for UL; '.' or ')' for OL
-  uint32_t start = 1;    // Starting number for OL
+  char marker = '-';   // '-', '+', '*' for UL; '.' or ')' for OL
+  uint32_t start = 1;  // Starting number for OL
 };
 
 struct MdListItemDetail {
@@ -127,9 +127,7 @@ struct MdNode {
   explicit MdNode(MdNodeType t) : type(t) {}
 
   // Helper factory methods for common node types
-  static std::unique_ptr<MdNode> createDocument() {
-    return std::make_unique<MdNode>(MdNodeType::Document);
-  }
+  static std::unique_ptr<MdNode> createDocument() { return std::make_unique<MdNode>(MdNodeType::Document); }
 
   static std::unique_ptr<MdNode> createHeading(uint8_t level) {
     auto node = std::make_unique<MdNode>(MdNodeType::Heading);
@@ -138,9 +136,7 @@ struct MdNode {
     return node;
   }
 
-  static std::unique_ptr<MdNode> createParagraph() {
-    return std::make_unique<MdNode>(MdNodeType::Paragraph);
-  }
+  static std::unique_ptr<MdNode> createParagraph() { return std::make_unique<MdNode>(MdNodeType::Paragraph); }
 
   static std::unique_ptr<MdNode> createCodeBlock(const std::string& lang = "", char fence = '\0') {
     auto node = std::make_unique<MdNode>(MdNodeType::CodeBlock);
@@ -175,9 +171,7 @@ struct MdNode {
     return node;
   }
 
-  static std::unique_ptr<MdNode> createBlockquote() {
-    return std::make_unique<MdNode>(MdNodeType::Blockquote);
-  }
+  static std::unique_ptr<MdNode> createBlockquote() { return std::make_unique<MdNode>(MdNodeType::Blockquote); }
 
   static std::unique_ptr<MdNode> createTable(uint16_t cols, uint16_t headRows, uint16_t bodyRows) {
     auto node = std::make_unique<MdNode>(MdNodeType::Table);
@@ -188,17 +182,11 @@ struct MdNode {
     return node;
   }
 
-  static std::unique_ptr<MdNode> createTableHead() {
-    return std::make_unique<MdNode>(MdNodeType::TableHead);
-  }
+  static std::unique_ptr<MdNode> createTableHead() { return std::make_unique<MdNode>(MdNodeType::TableHead); }
 
-  static std::unique_ptr<MdNode> createTableBody() {
-    return std::make_unique<MdNode>(MdNodeType::TableBody);
-  }
+  static std::unique_ptr<MdNode> createTableBody() { return std::make_unique<MdNode>(MdNodeType::TableBody); }
 
-  static std::unique_ptr<MdNode> createTableRow() {
-    return std::make_unique<MdNode>(MdNodeType::TableRow);
-  }
+  static std::unique_ptr<MdNode> createTableRow() { return std::make_unique<MdNode>(MdNodeType::TableRow); }
 
   static std::unique_ptr<MdNode> createTableCell(MdAlign align, bool isHeader) {
     auto node = std::make_unique<MdNode>(MdNodeType::TableCell);
@@ -208,9 +196,7 @@ struct MdNode {
     return node;
   }
 
-  static std::unique_ptr<MdNode> createHorizontalRule() {
-    return std::make_unique<MdNode>(MdNodeType::HorizontalRule);
-  }
+  static std::unique_ptr<MdNode> createHorizontalRule() { return std::make_unique<MdNode>(MdNodeType::HorizontalRule); }
 
   static std::unique_ptr<MdNode> createHtmlBlock(const std::string& html) {
     auto node = std::make_unique<MdNode>(MdNodeType::HtmlBlock);
@@ -224,23 +210,16 @@ struct MdNode {
     return node;
   }
 
-  static std::unique_ptr<MdNode> createSoftBreak() {
-    return std::make_unique<MdNode>(MdNodeType::SoftBreak);
-  }
+  static std::unique_ptr<MdNode> createSoftBreak() { return std::make_unique<MdNode>(MdNodeType::SoftBreak); }
 
-  static std::unique_ptr<MdNode> createHardBreak() {
-    return std::make_unique<MdNode>(MdNodeType::HardBreak);
-  }
+  static std::unique_ptr<MdNode> createHardBreak() { return std::make_unique<MdNode>(MdNodeType::HardBreak); }
 
-  static std::unique_ptr<MdNode> createEmphasis() {
-    return std::make_unique<MdNode>(MdNodeType::Emphasis);
-  }
+  static std::unique_ptr<MdNode> createEmphasis() { return std::make_unique<MdNode>(MdNodeType::Emphasis); }
 
-  static std::unique_ptr<MdNode> createStrong() {
-    return std::make_unique<MdNode>(MdNodeType::Strong);
-  }
+  static std::unique_ptr<MdNode> createStrong() { return std::make_unique<MdNode>(MdNodeType::Strong); }
 
-  static std::unique_ptr<MdNode> createLink(const std::string& href, const std::string& title = "", bool autolink = false) {
+  static std::unique_ptr<MdNode> createLink(const std::string& href, const std::string& title = "",
+                                            bool autolink = false) {
     auto node = std::make_unique<MdNode>(MdNodeType::Link);
     node->link = std::make_unique<MdLinkDetail>();
     node->link->href = href;
@@ -263,9 +242,7 @@ struct MdNode {
     return node;
   }
 
-  static std::unique_ptr<MdNode> createStrikethrough() {
-    return std::make_unique<MdNode>(MdNodeType::Strikethrough);
-  }
+  static std::unique_ptr<MdNode> createStrikethrough() { return std::make_unique<MdNode>(MdNodeType::Strikethrough); }
 
   static std::unique_ptr<MdNode> createWikiLink(const std::string& target, const std::string& alias = "") {
     auto node = std::make_unique<MdNode>(MdNodeType::WikiLink);
@@ -275,9 +252,7 @@ struct MdNode {
     return node;
   }
 
-  static std::unique_ptr<MdNode> createHighlight() {
-    return std::make_unique<MdNode>(MdNodeType::Highlight);
-  }
+  static std::unique_ptr<MdNode> createHighlight() { return std::make_unique<MdNode>(MdNodeType::Highlight); }
 
   static std::unique_ptr<MdNode> createLatexMath(const std::string& content, bool display = false) {
     auto node = std::make_unique<MdNode>(display ? MdNodeType::LatexMathDisplay : MdNodeType::LatexMath);
@@ -286,9 +261,7 @@ struct MdNode {
   }
 
   // Utility methods
-  void appendChild(std::unique_ptr<MdNode> child) {
-    children.push_back(std::move(child));
-  }
+  void appendChild(std::unique_ptr<MdNode> child) { children.push_back(std::move(child)); }
 
   bool isBlock() const {
     switch (type) {
@@ -314,9 +287,7 @@ struct MdNode {
     }
   }
 
-  bool isInline() const {
-    return !isBlock();
-  }
+  bool isInline() const { return !isBlock(); }
 
   // Get plain text content (recursively extracts text from all descendants)
   std::string getPlainText() const {

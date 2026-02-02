@@ -23,13 +23,9 @@ bool ReaderActivity::isXtcFile(const std::string& path) {
   return StringUtils::checkFileExtension(path, ".xtc") || StringUtils::checkFileExtension(path, ".xtch");
 }
 
-bool ReaderActivity::isTxtFile(const std::string& path) {
-  return StringUtils::checkFileExtension(path, ".txt");
-}
+bool ReaderActivity::isTxtFile(const std::string& path) { return StringUtils::checkFileExtension(path, ".txt"); }
 
-bool ReaderActivity::isMarkdownFile(const std::string& path) {
-  return StringUtils::checkFileExtension(path, ".md");
-}
+bool ReaderActivity::isMarkdownFile(const std::string& path) { return StringUtils::checkFileExtension(path, ".md"); }
 
 std::unique_ptr<Epub> ReaderActivity::loadEpub(const std::string& path) {
   if (!SdMan.exists(path.c_str())) {

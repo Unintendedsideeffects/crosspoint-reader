@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "Epub/Page.h"
-#include "SpiBusMutex.h"
 #include "Epub/parsers/ChapterHtmlSlimParser.h"
+#include "SpiBusMutex.h"
 
 namespace {
 constexpr uint8_t SECTION_FILE_VERSION = 1;
@@ -50,9 +50,9 @@ void HtmlSection::writeSectionFileHeader(int fontId, float lineCompression, bool
   }
 
   static_assert(HEADER_SIZE == sizeof(SECTION_FILE_VERSION) + sizeof(fontId) + sizeof(lineCompression) +
-                                   sizeof(extraParagraphSpacing) + sizeof(paragraphAlignment) +
-                                   sizeof(viewportWidth) + sizeof(viewportHeight) + sizeof(hyphenationEnabled) +
-                                   sizeof(sourceSize) + sizeof(pageCount) + sizeof(uint32_t),
+                                   sizeof(extraParagraphSpacing) + sizeof(paragraphAlignment) + sizeof(viewportWidth) +
+                                   sizeof(viewportHeight) + sizeof(hyphenationEnabled) + sizeof(sourceSize) +
+                                   sizeof(pageCount) + sizeof(uint32_t),
                 "Header size mismatch");
 
   serialization::writePod(file, SECTION_FILE_VERSION);
@@ -64,7 +64,7 @@ void HtmlSection::writeSectionFileHeader(int fontId, float lineCompression, bool
   serialization::writePod(file, viewportHeight);
   serialization::writePod(file, hyphenationEnabled);
   serialization::writePod(file, sourceSize);
-  serialization::writePod(file, pageCount);  // Placeholder
+  serialization::writePod(file, pageCount);                 // Placeholder
   serialization::writePod(file, static_cast<uint32_t>(0));  // Placeholder for LUT offset
 }
 
@@ -166,8 +166,8 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
   ChapterHtmlSlimParser visitor(
       htmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
       viewportHeight, hyphenationEnabled,
-      [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
-      progressFn, nullptr, contentBasePath);
+      [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); }, progressFn,
+      nullptr, contentBasePath);
 
   bool success = visitor.parseAndBuildPages();
   if (!success) {

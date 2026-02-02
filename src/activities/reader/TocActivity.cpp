@@ -107,11 +107,11 @@ void TocActivity::loop() {
   const bool skipPage = mappedInput.getHeldTime() > SKIP_PAGE_MS;
 
   if (prevReleased) {
-    selectedIndex = skipPage ? wrapIndex(selectedIndex - visibleItems, totalItems)
-                             : wrapIndex(selectedIndex - 1, totalItems);
+    selectedIndex =
+        skipPage ? wrapIndex(selectedIndex - visibleItems, totalItems) : wrapIndex(selectedIndex - 1, totalItems);
   } else if (nextReleased) {
-    selectedIndex = skipPage ? wrapIndex(selectedIndex + visibleItems, totalItems)
-                             : wrapIndex(selectedIndex + 1, totalItems);
+    selectedIndex =
+        skipPage ? wrapIndex(selectedIndex + visibleItems, totalItems) : wrapIndex(selectedIndex + 1, totalItems);
   }
 
   ensureSelectionVisible(visibleItems);
@@ -173,8 +173,7 @@ void TocActivity::renderScreen() {
 
     const std::string title = entry.title.empty() ? "Untitled" : entry.title;
     const int maxWidth = pageWidth - indent - RIGHT_MARGIN;
-    const std::string truncated =
-        maxWidth > 0 ? renderer.truncatedText(UI_10_FONT_ID, title.c_str(), maxWidth) : "";
+    const std::string truncated = maxWidth > 0 ? renderer.truncatedText(UI_10_FONT_ID, title.c_str(), maxWidth) : "";
 
     renderer.drawText(UI_10_FONT_ID, indent, textY, truncated.c_str(), !isSelected);
   }

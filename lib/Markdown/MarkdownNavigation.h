@@ -9,19 +9,19 @@
 
 // Table of contents entry
 struct TocEntry {
-  uint8_t level;           // Heading level 1-6
-  std::string title;       // Plain text of heading
-  size_t nodeIndex;        // Index in flattened node list (for navigation)
-  size_t estimatedPage;    // Estimated page number (set after rendering)
+  uint8_t level;         // Heading level 1-6
+  std::string title;     // Plain text of heading
+  size_t nodeIndex;      // Index in flattened node list (for navigation)
+  size_t estimatedPage;  // Estimated page number (set after rendering)
 };
 
 // Link entry for tracking document links
 struct LinkEntry {
-  std::string text;        // Display text
-  std::string href;        // Link target
-  bool isInternal;         // True for wikilinks and relative paths
-  bool isImage;            // True if this is an image reference
-  size_t nodeIndex;        // Index in flattened node list
+  std::string text;  // Display text
+  std::string href;  // Link target
+  bool isInternal;   // True for wikilinks and relative paths
+  bool isImage;      // True if this is an image reference
+  size_t nodeIndex;  // Index in flattened node list
 };
 
 // Heading reference for page-based navigation

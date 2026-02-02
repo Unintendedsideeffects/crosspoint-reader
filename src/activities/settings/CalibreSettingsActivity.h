@@ -23,11 +23,11 @@ class CalibreSettingsActivity final : public ActivityWithSubactivity {
   void loop() override;
 
  private:
- TaskHandle_t displayTaskHandle = nullptr;
- SemaphoreHandle_t renderingMutex = nullptr;
- std::atomic<bool> exitTaskRequested{false};
- std::atomic<bool> taskHasExited{false};
- bool updateRequired = false;
+  TaskHandle_t displayTaskHandle = nullptr;
+  SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
+  bool updateRequired = false;
 
   int selectedIndex = 0;
   const std::function<void()> onBack;
