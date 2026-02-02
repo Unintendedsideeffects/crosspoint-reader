@@ -26,6 +26,7 @@ class MarkdownRenderer {
   MarkdownRenderer(GfxRenderer& renderer, int fontId, int viewportWidth, int viewportHeight, float lineCompression,
                    bool extraParagraphSpacing, uint8_t paragraphAlignment, bool hyphenationEnabled,
                    const std::string& contentBasePath);
+  ~MarkdownRenderer();
 
   // Render AST to pages, calling pageCallback for each completed page
   // Returns true on success
