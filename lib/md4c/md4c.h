@@ -299,16 +299,17 @@ typedef struct MD_SPAN_WIKILINK {
  * By default (when MD_PARSER::flags == 0), we follow CommonMark specification.
  * The following flags may allow some extensions or deviations from it.
  */
-#define MD_FLAG_COLLAPSEWHITESPACE 0x0001       /* In MD_TEXT_NORMAL, collapse non-trivial whitespace into single ' ' */
-#define MD_FLAG_PERMISSIVEATXHEADERS 0x0002     /* Do not require space in ATX headers ( ###header ) */
-#define MD_FLAG_PERMISSIVEURLAUTOLINKS 0x0004   /* Recognize URLs as autolinks even without '<', '>' */
-#define MD_FLAG_PERMISSIVEEMAILAUTOLINKS 0x0008 /* Recognize e-mails as autolinks even without '<', '>' and 'mailto:' \
-                                                 */
-#define MD_FLAG_NOINDENTEDCODEBLOCKS 0x0010     /* Disable indented code blocks. (Only fenced code works.) */
-#define MD_FLAG_NOHTMLBLOCKS 0x0020             /* Disable raw HTML blocks. */
-#define MD_FLAG_NOHTMLSPANS 0x0040              /* Disable raw HTML (inline). */
-#define MD_FLAG_TABLES 0x0100                   /* Enable tables extension. */
-#define MD_FLAG_STRIKETHROUGH 0x0200            /* Enable strikethrough extension. */
+#define MD_FLAG_COLLAPSEWHITESPACE 0x0001     /* In MD_TEXT_NORMAL, collapse non-trivial whitespace into single ' ' */
+#define MD_FLAG_PERMISSIVEATXHEADERS 0x0002   /* Do not require space in ATX headers ( ###header ) */
+#define MD_FLAG_PERMISSIVEURLAUTOLINKS 0x0004 /* Recognize URLs as autolinks even without '<', '>' */
+#define MD_FLAG_PERMISSIVEEMAILAUTOLINKS                                                                          \
+  0x0008                                    /* Recognize e-mails as autolinks even without '<', '>' and 'mailto:' \
+                                             */
+#define MD_FLAG_NOINDENTEDCODEBLOCKS 0x0010 /* Disable indented code blocks. (Only fenced code works.) */
+#define MD_FLAG_NOHTMLBLOCKS 0x0020         /* Disable raw HTML blocks. */
+#define MD_FLAG_NOHTMLSPANS 0x0040          /* Disable raw HTML (inline). */
+#define MD_FLAG_TABLES 0x0100               /* Enable tables extension. */
+#define MD_FLAG_STRIKETHROUGH 0x0200        /* Enable strikethrough extension. */
 #define MD_FLAG_PERMISSIVEWWWAUTOLINKS \
   0x0400                         /* Enable WWW autolinks (even without any scheme prefix, if they begin with 'www.') */
 #define MD_FLAG_TASKLISTS 0x0800 /* Enable task list extension. */
