@@ -204,7 +204,9 @@ struct MdNode {
     return node;
   }
 
-  static std::unique_ptr<MdNode> createHorizontalRule() { return md_detail::make_unique<MdNode>(MdNodeType::HorizontalRule); }
+  static std::unique_ptr<MdNode> createHorizontalRule() {
+    return md_detail::make_unique<MdNode>(MdNodeType::HorizontalRule);
+  }
 
   static std::unique_ptr<MdNode> createHtmlBlock(const std::string& html) {
     auto node = md_detail::make_unique<MdNode>(MdNodeType::HtmlBlock);
@@ -250,7 +252,9 @@ struct MdNode {
     return node;
   }
 
-  static std::unique_ptr<MdNode> createStrikethrough() { return md_detail::make_unique<MdNode>(MdNodeType::Strikethrough); }
+  static std::unique_ptr<MdNode> createStrikethrough() {
+    return md_detail::make_unique<MdNode>(MdNodeType::Strikethrough);
+  }
 
   static std::unique_ptr<MdNode> createWikiLink(const std::string& target, const std::string& alias = "") {
     auto node = md_detail::make_unique<MdNode>(MdNodeType::WikiLink);
