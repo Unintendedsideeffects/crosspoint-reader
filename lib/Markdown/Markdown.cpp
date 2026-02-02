@@ -605,7 +605,7 @@ bool Markdown::parseToAst() {
   }
 
   // Build navigation data from AST
-  navigation = std::make_unique<MarkdownNavigation>(*ast);
+  navigation = md_detail::make_unique<MarkdownNavigation>(*ast);
 
   Serial.printf("[%lu] [MD ] Parsed to AST: %zu TOC entries, %zu links\n", millis(), navigation->getTotalHeadings(),
                 navigation->getTotalLinks());
