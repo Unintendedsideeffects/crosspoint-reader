@@ -4,6 +4,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <functional>
 
 #include "activities/ActivityWithSubactivity.h"
@@ -24,6 +25,8 @@ class ClearCacheActivity final : public ActivityWithSubactivity {
   State state = WARNING;
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;
   const std::function<void()> goBack;
 
@@ -31,7 +34,7 @@ class ClearCacheActivity final : public ActivityWithSubactivity {
   int failedCount = 0;
 
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void render();
   void clearCache();
 };

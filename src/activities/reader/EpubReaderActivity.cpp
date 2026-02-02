@@ -13,6 +13,7 @@
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
 #include "SpiBusMutex.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
 namespace {
@@ -61,6 +62,8 @@ void EpubReaderActivity::onEnter() {
   }
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   epub->setupCacheDir();
 
@@ -115,13 +118,7 @@ void EpubReaderActivity::onExit() {
   // Reset orientation back to portrait for the rest of the UI
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);
 
-  // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
-  waitForRenderingMutex();
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
-  xSemaphoreGive(renderingMutex);
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
   section.reset();
@@ -255,15 +252,20 @@ void EpubReaderActivity::loop() {
 }
 
 void EpubReaderActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired) {
       updateRequired = false;
       waitForRenderingMutex();
-      renderScreen();
+      if (!exitTaskRequested.load()) {
+        renderScreen();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 // TODO: Failure handling

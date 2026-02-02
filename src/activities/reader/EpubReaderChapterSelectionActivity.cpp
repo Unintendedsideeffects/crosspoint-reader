@@ -5,6 +5,7 @@
 #include "KOReaderCredentialStore.h"
 #include "KOReaderSyncActivity.h"
 #include "MappedInputManager.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
 namespace {
@@ -63,6 +64,8 @@ void EpubReaderChapterSelectionActivity::onEnter() {
   }
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   // Account for sync option offset when finding current TOC index
   const int syncOffset = hasSyncOption() ? 1 : 0;
@@ -85,12 +88,7 @@ void EpubReaderChapterSelectionActivity::onEnter() {
 void EpubReaderChapterSelectionActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
-  // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
 }
@@ -163,15 +161,20 @@ void EpubReaderChapterSelectionActivity::loop() {
 }
 
 void EpubReaderChapterSelectionActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired && !subActivity) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      renderScreen();
+      if (!exitTaskRequested.load()) {
+        renderScreen();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void EpubReaderChapterSelectionActivity::renderScreen() {

@@ -3,6 +3,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <functional>
 
 #include "activities/ActivityWithSubactivity.h"
@@ -27,6 +28,8 @@ class KOReaderAuthActivity final : public ActivityWithSubactivity {
 
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;
 
   State state = WIFI_SELECTION;
@@ -39,6 +42,6 @@ class KOReaderAuthActivity final : public ActivityWithSubactivity {
   void performAuthentication();
 
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void render();
 };

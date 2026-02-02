@@ -4,6 +4,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <memory>
 
 #include "../ActivityWithSubactivity.h"
@@ -13,6 +14,8 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   std::string epubPath;
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   int currentSpineIndex = 0;
   int currentPage = 0;
   int totalPagesInSpine = 0;
@@ -39,7 +42,7 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   int tocIndexFromItemIndex(int itemIndex) const;
 
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void renderScreen();
   void launchSyncActivity();
 

@@ -3,6 +3,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <functional>
 
 #include "../Activity.h"
@@ -10,6 +11,8 @@
 class HomeActivity final : public Activity {
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   int selectorIndex = 0;
   bool updateRequired = false;
   bool hasContinueReading = false;
@@ -29,7 +32,7 @@ class HomeActivity final : public Activity {
   const std::function<void()> onTodoOpen;
 
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void render();
   int getMenuItemCount() const;
   bool storeCoverBuffer();    // Store frame buffer for cover image

@@ -4,6 +4,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <functional>
 #include <string>
 #include <utility>
@@ -65,6 +66,8 @@ class KeyboardEntryActivity : public Activity {
   bool isPassword;
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;
 
   // Keyboard state
@@ -90,7 +93,7 @@ class KeyboardEntryActivity : public Activity {
   static constexpr int DONE_COL = 9;
 
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   char getSelectedChar() const;
   void handleKeyPress();
   int getRowLength(int row) const;

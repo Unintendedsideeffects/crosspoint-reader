@@ -17,6 +17,7 @@
 #include "RecentBooksStore.h"
 #include "SpiBusMutex.h"
 #include "XtcReaderChapterSelectionActivity.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
 namespace {
@@ -37,6 +38,8 @@ void XtcReaderActivity::onEnter() {
   }
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   xtc->setupCacheDir();
 
@@ -62,12 +65,7 @@ void XtcReaderActivity::onEnter() {
 void XtcReaderActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
-  // Wait until not rendering to delete task
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
   xtc.reset();
@@ -157,15 +155,20 @@ void XtcReaderActivity::loop() {
 }
 
 void XtcReaderActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      renderScreen();
+      if (!exitTaskRequested.load()) {
+        renderScreen();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void XtcReaderActivity::renderScreen() {

@@ -3,6 +3,8 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
+
 #include "activities/ActivityWithSubactivity.h"
 #include "network/OtaUpdater.h"
 
@@ -23,6 +25,8 @@ class OtaUpdateActivity : public ActivityWithSubactivity {
 
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;
   const std::function<void()> goBack;
   State state = WIFI_SELECTION;
@@ -31,7 +35,7 @@ class OtaUpdateActivity : public ActivityWithSubactivity {
 
   void onWifiSelectionComplete(bool success);
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void render();
 
  public:

@@ -3,6 +3,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <functional>
 #include <string>
 #include <vector>
@@ -15,6 +16,8 @@ struct SettingInfo;
 class SettingsActivity final : public ActivityWithSubactivity {
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;
   int selectedCategoryIndex = 0;  // Currently selected category
   const std::function<void()> onGoHome;
@@ -23,7 +26,7 @@ class SettingsActivity final : public ActivityWithSubactivity {
   static const char* categoryNames[categoryCount];
 
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void render() const;
   void enterCategory(int categoryIndex);
 
