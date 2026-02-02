@@ -6,6 +6,7 @@
 #include "CategorySettingsActivity.h"
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
 const char* SettingsActivity::categoryNames[categoryCount] = {"Display", "Reader", "Controls", "System"};
@@ -69,6 +70,8 @@ void SettingsActivity::taskTrampoline(void* param) {
 void SettingsActivity::onEnter() {
   Activity::onEnter();
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   // Reset selection to first category
   selectedCategoryIndex = 0;
@@ -87,12 +90,7 @@ void SettingsActivity::onEnter() {
 void SettingsActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
-  // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
 }
@@ -168,15 +166,20 @@ void SettingsActivity::enterCategory(int categoryIndex) {
 }
 
 void SettingsActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired && !subActivity) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      render();
+      if (!exitTaskRequested.load()) {
+        render();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void SettingsActivity::render() const {

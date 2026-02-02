@@ -14,6 +14,30 @@
 #include "util/StringUtils.h"
 
 namespace {
+namespace SleepCacheMutex {
+StaticSemaphore_t mutexBuffer;
+SemaphoreHandle_t get() {
+  static SemaphoreHandle_t mutex = xSemaphoreCreateRecursiveMutexStatic(&mutexBuffer);
+  return mutex;
+}
+void lock() {
+  auto mutex = get();
+  if (mutex) {
+    xSemaphoreTakeRecursive(mutex, portMAX_DELAY);
+  }
+}
+void unlock() {
+  auto mutex = get();
+  if (mutex) {
+    xSemaphoreGiveRecursive(mutex);
+  }
+}
+struct Guard {
+  Guard() { lock(); }
+  ~Guard() { unlock(); }
+};
+}  // namespace SleepCacheMutex
+
 struct SleepBmpCache {
   bool scanned = false;
   bool sleepDirFound = false;
@@ -23,6 +47,7 @@ struct SleepBmpCache {
 SleepBmpCache sleepBmpCache;
 
 void validateSleepBmpsOnce() {
+  SleepCacheMutex::Guard guard;
   if (sleepBmpCache.scanned) {
     return;
   }
@@ -66,6 +91,7 @@ void validateSleepBmpsOnce() {
 }  // namespace
 
 void invalidateSleepBmpCache() {
+  SleepCacheMutex::Guard guard;
   sleepBmpCache.scanned = false;
   sleepBmpCache.sleepDirFound = false;
   sleepBmpCache.validFiles.clear();
@@ -107,6 +133,7 @@ void SleepActivity::renderPopup(const char* message) const {
 
 void SleepActivity::renderCustomSleepScreen() const {
   SpiBusMutex::Guard guard;
+  SleepCacheMutex::Guard cacheGuard;
   validateSleepBmpsOnce();
   if (sleepBmpCache.sleepDirFound) {
     const auto numFiles = sleepBmpCache.validFiles.size();

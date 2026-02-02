@@ -1,6 +1,7 @@
 #include "KeyboardEntryActivity.h"
 
 #include "MappedInputManager.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
 // Keyboard layouts - lowercase
@@ -19,21 +20,28 @@ void KeyboardEntryActivity::taskTrampoline(void* param) {
 }
 
 void KeyboardEntryActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      render();
+      if (!exitTaskRequested.load()) {
+        render();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void KeyboardEntryActivity::onEnter() {
   Activity::onEnter();
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   // Trigger first update
   updateRequired = true;
@@ -49,12 +57,7 @@ void KeyboardEntryActivity::onEnter() {
 void KeyboardEntryActivity::onExit() {
   Activity::onExit();
 
-  // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
 }

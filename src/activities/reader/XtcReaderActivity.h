@@ -12,12 +12,16 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
+
 #include "activities/ActivityWithSubactivity.h"
 
 class XtcReaderActivity final : public ActivityWithSubactivity {
   std::shared_ptr<Xtc> xtc;
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   uint32_t currentPage = 0;
   int pagesUntilFullRefresh = 0;
   bool updateRequired = false;
@@ -25,7 +29,7 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   const std::function<void()> onGoHome;
 
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void renderScreen();
   void renderPage();
   void saveProgress() const;

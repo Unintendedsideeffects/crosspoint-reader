@@ -4,6 +4,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <memory>
 
 #include "../Activity.h"
@@ -12,6 +13,8 @@ class XtcReaderChapterSelectionActivity final : public Activity {
   std::shared_ptr<Xtc> xtc;
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
   uint32_t currentPage = 0;
   int selectorIndex = 0;
   bool updateRequired = false;
@@ -22,7 +25,7 @@ class XtcReaderChapterSelectionActivity final : public Activity {
   int findChapterIndexForPage(uint32_t page) const;
 
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void renderScreen();
 
  public:

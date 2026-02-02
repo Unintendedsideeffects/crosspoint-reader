@@ -6,6 +6,7 @@
 
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
+#include "activities/TaskShutdown.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "fontIds.h"
 
@@ -23,6 +24,8 @@ void CalibreSettingsActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
   selectedIndex = 0;
   updateRequired = true;
 
@@ -37,11 +40,7 @@ void CalibreSettingsActivity::onEnter() {
 void CalibreSettingsActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
 }
@@ -136,15 +135,20 @@ void CalibreSettingsActivity::handleSelection() {
 }
 
 void CalibreSettingsActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired && !subActivity) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      render();
+      if (!exitTaskRequested.load()) {
+        render();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void CalibreSettingsActivity::render() {

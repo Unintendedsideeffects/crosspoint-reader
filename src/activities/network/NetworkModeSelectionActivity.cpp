@@ -3,6 +3,7 @@
 #include <GfxRenderer.h>
 
 #include "MappedInputManager.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
 namespace {
@@ -24,6 +25,8 @@ void NetworkModeSelectionActivity::onEnter() {
   Activity::onEnter();
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   // Reset selection
   selectedIndex = 0;
@@ -42,12 +45,7 @@ void NetworkModeSelectionActivity::onEnter() {
 void NetworkModeSelectionActivity::onExit() {
   Activity::onExit();
 
-  // Wait until not rendering to delete task
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
 }
@@ -87,15 +85,20 @@ void NetworkModeSelectionActivity::loop() {
 }
 
 void NetworkModeSelectionActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      render();
+      if (!exitTaskRequested.load()) {
+        render();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void NetworkModeSelectionActivity::render() const {

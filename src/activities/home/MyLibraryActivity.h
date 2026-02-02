@@ -3,6 +3,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <functional>
 #include <string>
 #include <vector>
@@ -14,9 +15,11 @@ class MyLibraryActivity final : public Activity {
  public:
   enum class Tab { Recent, Files };
 
- private:
+private:
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
 
   Tab currentTab = Tab::Recent;
   int selectorIndex = 0;
@@ -46,7 +49,7 @@ class MyLibraryActivity final : public Activity {
 
   // Rendering
   static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
+  void displayTaskLoop();
   void render() const;
   void renderRecentTab() const;
   void renderFilesTab() const;

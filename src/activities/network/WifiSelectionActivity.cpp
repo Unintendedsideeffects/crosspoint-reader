@@ -7,6 +7,7 @@
 
 #include "MappedInputManager.h"
 #include "WifiCredentialStore.h"
+#include "activities/TaskShutdown.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "fontIds.h"
 
@@ -19,6 +20,8 @@ void WifiSelectionActivity::onEnter() {
   Activity::onEnter();
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   // Load saved WiFi credentials - SD card operations need lock as we use SPI for both
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
@@ -72,20 +75,9 @@ void WifiSelectionActivity::onExit() {
   // Note: We do NOT disconnect WiFi here - the parent activity (CrossPointWebServerActivity)
   // manages WiFi connection state. We just clean up the scan and task.
 
-  // Acquire mutex before deleting task to ensure task isn't using it
-  // This prevents hangs/crashes if the task holds the mutex when deleted
-  Serial.printf("[%lu] [WIFI] Acquiring rendering mutex before task deletion...\n", millis());
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  Serial.printf("[%lu] [WIFI] Signaling display task to exit...\n", millis());
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
 
-  // Delete the display task (we now hold the mutex, so task is blocked if it needs it)
-  Serial.printf("[%lu] [WIFI] Deleting display task...\n", millis());
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-    Serial.printf("[%lu] [WIFI] Display task deleted\n", millis());
-  }
-
-  // Now safe to delete the mutex since we own it
   Serial.printf("[%lu] [WIFI] Deleting mutex...\n", millis());
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
@@ -454,7 +446,7 @@ std::string WifiSelectionActivity::getSignalStrengthIndicator(const int32_t rssi
 }
 
 void WifiSelectionActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     // If a subactivity is active, yield CPU time but don't render
     if (subActivity) {
       vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -471,11 +463,16 @@ void WifiSelectionActivity::displayTaskLoop() {
     if (updateRequired) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      render();
+      if (!exitTaskRequested.load()) {
+        render();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void WifiSelectionActivity::render() const {

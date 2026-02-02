@@ -6,6 +6,7 @@
 #include "KOReaderCredentialStore.h"
 #include "KOReaderDocumentId.h"
 #include "MappedInputManager.h"
+#include "activities/TaskShutdown.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "fontIds.h"
 #include "util/TimeSync.h"
@@ -143,6 +144,8 @@ void KOReaderSyncActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
 
   xTaskCreate(&KOReaderSyncActivity::taskTrampoline, "KOSyncTask",
               4096,               // Stack size (larger for network operations)
@@ -201,26 +204,26 @@ void KOReaderSyncActivity::onExit() {
   WiFi.mode(WIFI_OFF);
   delay(100);
 
-  // Wait until not rendering to delete task
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
 }
 
 void KOReaderSyncActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      render();
+      if (!exitTaskRequested.load()) {
+        render();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void KOReaderSyncActivity::render() {

@@ -5,6 +5,7 @@
 #include <HardwareSerial.h>
 #include <ImageConverter.h>
 #include <SDCardManager.h>
+#include <cstring>
 #include <expat.h>
 
 #include "../../Epub.h"
@@ -208,7 +209,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     }
 
     // Try to process the actual image
-    if (!src.empty() && self->epub) {
+    if (!src.empty()) {
       self->processImage(src.c_str(), alt.c_str());
     } else {
       // Fallback to placeholder text
@@ -545,9 +546,21 @@ void ChapterHtmlSlimParser::addImageToPage(std::shared_ptr<PageImage> image) {
 void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
   Serial.printf("[%lu] [EHP] Processing image: %s\n", millis(), src);
 
+  if (strncmp(src, "http://", 7) == 0 || strncmp(src, "https://", 8) == 0) {
+    Serial.printf("[%lu] [EHP] Remote image unsupported: %s\n", millis(), src);
+    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    std::string placeholder = "[Image: " + std::string(alt) + "]";
+    currentTextBlock->addWord(placeholder.c_str(), EpdFontFamily::ITALIC);
+    return;
+  }
+
   // Resolve relative path against content base path
-  // Combine base path with src and normalize to handle .. components
-  std::string imagePath = FsHelpers::normalisePath(contentBasePath + src);
+  std::string imagePath;
+  if (src[0] == '/') {
+    imagePath = src;
+  } else {
+    imagePath = FsHelpers::normalisePath(contentBasePath + src);
+  }
   Serial.printf("[%lu] [EHP] Resolved image path: %s\n", millis(), imagePath.c_str());
 
   // Detect format
@@ -555,17 +568,6 @@ void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
   if (format == ImageConverter::FORMAT_UNKNOWN) {
     // Unsupported format - show placeholder
     Serial.printf("[%lu] [EHP] Unsupported image format: %s\n", millis(), src);
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
-    std::string placeholder = "[Image: " + std::string(alt) + "]";
-    currentTextBlock->addWord(placeholder.c_str(), EpdFontFamily::ITALIC);
-    return;
-  }
-
-  // Read image data from EPUB
-  size_t imageDataSize = 0;
-  uint8_t* imageData = epub->readItemContentsToBytes(imagePath, &imageDataSize);
-  if (!imageData || imageDataSize == 0) {
-    Serial.printf("[%lu] [EHP] Failed to read image from EPUB: %s\n", millis(), imagePath.c_str());
     startNewTextBlock(TextBlock::CENTER_ALIGN);
     std::string placeholder = "[Image: " + std::string(alt) + "]";
     currentTextBlock->addWord(placeholder.c_str(), EpdFontFamily::ITALIC);
@@ -589,28 +591,47 @@ void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
   const int maxWidth = viewportWidth;
   const int maxHeight = viewportHeight / 2;
 
-  // Write image data to a temp file for the converter
-  // This is necessary because the converters expect FsFile
-  const std::string tempImagePath = epub->getCachePath() + "/.tmp_image";
   FsFile tempImage;
-  if (!SdMan.openFileForWrite("EHP", tempImagePath, tempImage)) {
-    Serial.printf("[%lu] [EHP] Failed to create temp image file\n", millis());
-    free(imageData);
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
-    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
-    return;
-  }
-  tempImage.write(imageData, imageDataSize);
-  tempImage.close();
-  free(imageData);
+  std::string tempImagePath;
+  if (epub) {
+    // Read image data from EPUB into a temp file (converter expects FsFile)
+    size_t imageDataSize = 0;
+    uint8_t* imageData = epub->readItemContentsToBytes(imagePath, &imageDataSize);
+    if (!imageData || imageDataSize == 0) {
+      Serial.printf("[%lu] [EHP] Failed to read image from EPUB: %s\n", millis(), imagePath.c_str());
+      startNewTextBlock(TextBlock::CENTER_ALIGN);
+      std::string placeholder = "[Image: " + std::string(alt) + "]";
+      currentTextBlock->addWord(placeholder.c_str(), EpdFontFamily::ITALIC);
+      return;
+    }
 
-  // Reopen for reading
-  if (!SdMan.openFileForRead("EHP", tempImagePath, tempImage)) {
-    Serial.printf("[%lu] [EHP] Failed to open temp image file for reading\n", millis());
-    SdMan.remove(tempImagePath.c_str());
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
-    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
-    return;
+    tempImagePath = epub->getCachePath() + "/.tmp_image";
+    if (!SdMan.openFileForWrite("EHP", tempImagePath, tempImage)) {
+      Serial.printf("[%lu] [EHP] Failed to create temp image file\n", millis());
+      free(imageData);
+      startNewTextBlock(TextBlock::CENTER_ALIGN);
+      currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
+      return;
+    }
+    tempImage.write(imageData, imageDataSize);
+    tempImage.close();
+    free(imageData);
+
+    if (!SdMan.openFileForRead("EHP", tempImagePath, tempImage)) {
+      Serial.printf("[%lu] [EHP] Failed to open temp image file for reading\n", millis());
+      SdMan.remove(tempImagePath.c_str());
+      startNewTextBlock(TextBlock::CENTER_ALIGN);
+      currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
+      return;
+    }
+  } else {
+    if (!SdMan.openFileForRead("EHP", imagePath, tempImage)) {
+      Serial.printf("[%lu] [EHP] Failed to open image file: %s\n", millis(), imagePath.c_str());
+      startNewTextBlock(TextBlock::CENTER_ALIGN);
+      std::string placeholder = "[Image: " + std::string(alt) + "]";
+      currentTextBlock->addWord(placeholder.c_str(), EpdFontFamily::ITALIC);
+      return;
+    }
   }
 
   // Convert to 1-bit BMP for raw rendering
@@ -619,7 +640,9 @@ void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
 
   bool success = ImageConverter::convertTo1BitBmpStream(tempImage, format, bmpOut, maxWidth, maxHeight);
   tempImage.close();
-  SdMan.remove(tempImagePath.c_str());
+  if (epub && !tempImagePath.empty()) {
+    SdMan.remove(tempImagePath.c_str());
+  }
 
   if (!success || bmpData.size() < 54) {
     Serial.printf("[%lu] [EHP] Failed to convert image to 1-bit BMP\n", millis());

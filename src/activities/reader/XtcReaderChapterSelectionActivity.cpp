@@ -3,6 +3,7 @@
 #include <GfxRenderer.h>
 
 #include "MappedInputManager.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
 namespace {
@@ -51,6 +52,8 @@ void XtcReaderChapterSelectionActivity::onEnter() {
   }
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
   selectorIndex = findChapterIndexForPage(currentPage);
 
   updateRequired = true;
@@ -65,11 +68,7 @@ void XtcReaderChapterSelectionActivity::onEnter() {
 void XtcReaderChapterSelectionActivity::onExit() {
   Activity::onExit();
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
 }
@@ -116,15 +115,20 @@ void XtcReaderChapterSelectionActivity::loop() {
 }
 
 void XtcReaderChapterSelectionActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      renderScreen();
+      if (!exitTaskRequested.load()) {
+        renderScreen();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void XtcReaderChapterSelectionActivity::renderScreen() {

@@ -9,6 +9,7 @@
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "ScreenComponents.h"
+#include "activities/TaskShutdown.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "fontIds.h"
 #include "network/HttpDownloader.h"
@@ -29,6 +30,8 @@ void OpdsBookBrowserActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
   renderingMutex = xSemaphoreCreateMutex();
+  exitTaskRequested.store(false);
+  taskHasExited.store(false);
   state = BrowserState::CHECK_WIFI;
   entries.clear();
   navigationHistory.clear();
@@ -55,11 +58,7 @@ void OpdsBookBrowserActivity::onExit() {
   // Turn off WiFi when exiting
   WiFi.mode(WIFI_OFF);
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
+  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
   entries.clear();
@@ -154,15 +153,20 @@ void OpdsBookBrowserActivity::loop() {
 }
 
 void OpdsBookBrowserActivity::displayTaskLoop() {
-  while (true) {
+  while (!exitTaskRequested.load()) {
     if (updateRequired) {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      render();
+      if (!exitTaskRequested.load()) {
+        render();
+      }
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  taskHasExited.store(true);
+  vTaskDelete(nullptr);
 }
 
 void OpdsBookBrowserActivity::render() const {
