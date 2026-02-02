@@ -1,7 +1,8 @@
 #include "MarkdownNavigation.h"
 
-#include <algorithm>
 #include <Arduino.h>
+
+#include <algorithm>
 
 MarkdownNavigation::MarkdownNavigation(const MdNode& root) {
   size_t nodeIndex = 0;

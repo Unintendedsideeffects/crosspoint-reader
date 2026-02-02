@@ -1,9 +1,9 @@
 #include "MarkdownParser.h"
 
+#include <Arduino.h>
+
 #include <algorithm>
 #include <cctype>
-
-#include <Arduino.h>
 
 extern "C" {
 #include <md4c.h>
@@ -20,10 +20,14 @@ static std::string attributeToString(const MD_ATTRIBUTE& attr) {
 // Convert md4c alignment to our enum
 static MdAlign convertAlign(MD_ALIGN align) {
   switch (align) {
-    case MD_ALIGN_LEFT: return MdAlign::Left;
-    case MD_ALIGN_CENTER: return MdAlign::Center;
-    case MD_ALIGN_RIGHT: return MdAlign::Right;
-    default: return MdAlign::Default;
+    case MD_ALIGN_LEFT:
+      return MdAlign::Left;
+    case MD_ALIGN_CENTER:
+      return MdAlign::Center;
+    case MD_ALIGN_RIGHT:
+      return MdAlign::Right;
+    default:
+      return MdAlign::Default;
   }
 }
 
@@ -308,8 +312,7 @@ int MarkdownParser::onEnterSpan(unsigned type, void* detail) {
 
     case MD_SPAN_A: {
       auto* d = static_cast<MD_SPAN_A_DETAIL*>(detail);
-      if (!pushNode(MdNode::createLink(attributeToString(d->href), attributeToString(d->title),
-                                       d->is_autolink != 0))) {
+      if (!pushNode(MdNode::createLink(attributeToString(d->href), attributeToString(d->title), d->is_autolink != 0))) {
         return -1;
       }
       break;

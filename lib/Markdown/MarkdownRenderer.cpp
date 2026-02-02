@@ -631,7 +631,8 @@ void MarkdownRenderer::startNewTextBlock(uint8_t style) {
     flushTextBlock();
   }
 
-  currentTextBlock.reset(new ParsedText(static_cast<TextBlock::Style>(style), extraParagraphSpacing, hyphenationEnabled && !isPreformatted));
+  currentTextBlock.reset(new ParsedText(static_cast<TextBlock::Style>(style), extraParagraphSpacing,
+                                        hyphenationEnabled && !isPreformatted));
 }
 
 void MarkdownRenderer::flushTextBlock() {

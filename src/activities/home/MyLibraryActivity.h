@@ -15,7 +15,7 @@ class MyLibraryActivity final : public Activity {
  public:
   enum class Tab { Recent, Files };
 
-private:
+ private:
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};

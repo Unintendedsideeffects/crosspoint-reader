@@ -136,9 +136,7 @@ void Markdown::setupCacheDir() const {
   }
 }
 
-std::string Markdown::getHtmlPath() const {
-  return cachePath + "/content.xhtml";
-}
+std::string Markdown::getHtmlPath() const { return cachePath + "/content.xhtml"; }
 
 std::string Markdown::getContentBasePath() const {
   const auto lastSlash = filepath.find_last_of('/');
@@ -267,8 +265,8 @@ bool Markdown::renderToHtmlFile(const std::string& htmlPath) const {
 
   const unsigned parserFlags = MD_DIALECT_GITHUB | MD_FLAG_LATEXMATHSPANS | MD_FLAG_WIKILINKS;
   const unsigned rendererFlags = MD_HTML_FLAG_XHTML | MD_HTML_FLAG_SKIP_UTF8_BOM;
-  const int result = md_html(output.c_str(), static_cast<MD_SIZE>(output.size()), writeHtmlChunk, &htmlOut,
-                             parserFlags, rendererFlags);
+  const int result = md_html(output.c_str(), static_cast<MD_SIZE>(output.size()), writeHtmlChunk, &htmlOut, parserFlags,
+                             rendererFlags);
 
   htmlFile.write(reinterpret_cast<const uint8_t*>(kHtmlClose), sizeof(kHtmlClose) - 1);
   htmlFile.close();
@@ -609,8 +607,8 @@ bool Markdown::parseToAst() {
   // Build navigation data from AST
   navigation = std::make_unique<MarkdownNavigation>(*ast);
 
-  Serial.printf("[%lu] [MD ] Parsed to AST: %zu TOC entries, %zu links\n", millis(),
-                navigation->getTotalHeadings(), navigation->getTotalLinks());
+  Serial.printf("[%lu] [MD ] Parsed to AST: %zu TOC entries, %zu links\n", millis(), navigation->getTotalHeadings(),
+                navigation->getTotalLinks());
 
   return true;
 }

@@ -23,14 +23,13 @@ class MarkdownRenderer {
   // Callback for progress updates (0-100)
   using ProgressCallback = std::function<void(int)>;
 
-  MarkdownRenderer(GfxRenderer& renderer, int fontId, int viewportWidth, int viewportHeight,
-                   float lineCompression, bool extraParagraphSpacing, uint8_t paragraphAlignment,
-                   bool hyphenationEnabled, const std::string& contentBasePath);
+  MarkdownRenderer(GfxRenderer& renderer, int fontId, int viewportWidth, int viewportHeight, float lineCompression,
+                   bool extraParagraphSpacing, uint8_t paragraphAlignment, bool hyphenationEnabled,
+                   const std::string& contentBasePath);
 
   // Render AST to pages, calling pageCallback for each completed page
   // Returns true on success
-  bool render(const MdNode& root, const PageCallback& pageCallback,
-              const ProgressCallback& progressCallback = nullptr);
+  bool render(const MdNode& root, const PageCallback& pageCallback, const ProgressCallback& progressCallback = nullptr);
 
   // Get mapping of node indices to page numbers (call after render)
   const std::vector<size_t>& getNodeToPageMap() const { return nodeToPage; }
