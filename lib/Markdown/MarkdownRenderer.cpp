@@ -3,10 +3,11 @@
 #include <Arduino.h>
 #include <EpdFontFamily.h>
 #include <GfxRenderer.h>
-#include <Page.h>
-#include <ParsedText.h>
-#include <TextBlock.h>
 #include <esp_task_wdt.h>
+
+#include "Epub/Page.h"
+#include "Epub/ParsedText.h"
+#include "Epub/blocks/TextBlock.h"
 
 MarkdownRenderer::MarkdownRenderer(GfxRenderer& renderer, int fontId, int viewportWidth, int viewportHeight,
                                    float lineCompression, bool extraParagraphSpacing, uint8_t paragraphAlignment,
