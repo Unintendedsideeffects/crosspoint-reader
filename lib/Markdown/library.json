@@ -1,0 +1,9 @@
+{
+  "name": "Markdown",
+  "version": "1.0.0",
+  "dependencies": {
+    "Epub": "*",
+    "md4c": "*",
+    "GfxRenderer": "*"
+  }
+}
