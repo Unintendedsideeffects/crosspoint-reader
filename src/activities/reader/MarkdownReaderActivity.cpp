@@ -298,7 +298,7 @@ void MarkdownReaderActivity::renderScreen() {
       hasSavedPage = false;
     }
 
-    if (astReady && markdown && markdown->getAst()) {
+    if (astReady && markdown->getAst()) {
       auto* nav = markdown->getNavigation();
       if (nav) {
         MarkdownRenderer mdRenderer(renderer, SETTINGS.getReaderFontId(), viewportWidth, viewportHeight,
