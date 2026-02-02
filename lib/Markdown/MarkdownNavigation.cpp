@@ -152,17 +152,17 @@ void MarkdownNavigation::updatePageNumbers(const std::vector<size_t>& nodeToPage
   }
 }
 
-std::optional<size_t> MarkdownNavigation::findNextHeading(size_t currentPage) const {
+MdOptional<size_t> MarkdownNavigation::findNextHeading(size_t currentPage) const {
   for (const auto& ref : headingRefs) {
     if (ref.pageNumber > currentPage) {
-      return ref.pageNumber;
+      return MdOptional<size_t>(ref.pageNumber);
     }
   }
-  return std::nullopt;
+  return MdOptional<size_t>();
 }
 
-std::optional<size_t> MarkdownNavigation::findPrevHeading(size_t currentPage) const {
-  std::optional<size_t> result;
+MdOptional<size_t> MarkdownNavigation::findPrevHeading(size_t currentPage) const {
+  MdOptional<size_t> result;
   for (const auto& ref : headingRefs) {
     if (ref.pageNumber < currentPage) {
       result = ref.pageNumber;
@@ -173,16 +173,16 @@ std::optional<size_t> MarkdownNavigation::findPrevHeading(size_t currentPage) co
   return result;
 }
 
-std::optional<size_t> MarkdownNavigation::findHeadingPage(size_t tocIndex) const {
+MdOptional<size_t> MarkdownNavigation::findHeadingPage(size_t tocIndex) const {
   if (tocIndex >= toc.size()) {
-    return std::nullopt;
+    return MdOptional<size_t>();
   }
-  return toc[tocIndex].estimatedPage;
+  return MdOptional<size_t>(toc[tocIndex].estimatedPage);
 }
 
-std::optional<size_t> MarkdownNavigation::resolveInternalLink(const std::string& href) const {
+MdOptional<size_t> MarkdownNavigation::resolveInternalLink(const std::string& href) const {
   if (href.empty()) {
-    return std::nullopt;
+    return MdOptional<size_t>();
   }
 
   // Handle fragment links (#heading-slug)
@@ -200,27 +200,27 @@ std::optional<size_t> MarkdownNavigation::resolveInternalLink(const std::string&
         }
       }
       if (titleSlug == slug) {
-        return toc[i].estimatedPage;
+        return MdOptional<size_t>(toc[i].estimatedPage);
       }
     }
   }
 
   // For file links, we can't resolve them within the same document
   // This would need external handling (opening another file)
-  return std::nullopt;
+  return MdOptional<size_t>();
 }
 
-std::optional<size_t> MarkdownNavigation::findNextHeadingAtLevel(size_t currentPage, uint8_t maxLevel) const {
+MdOptional<size_t> MarkdownNavigation::findNextHeadingAtLevel(size_t currentPage, uint8_t maxLevel) const {
   for (const auto& ref : headingRefs) {
     if (ref.pageNumber > currentPage && ref.level <= maxLevel) {
-      return ref.pageNumber;
+      return MdOptional<size_t>(ref.pageNumber);
     }
   }
-  return std::nullopt;
+  return MdOptional<size_t>();
 }
 
-std::optional<size_t> MarkdownNavigation::findPrevHeadingAtLevel(size_t currentPage, uint8_t maxLevel) const {
-  std::optional<size_t> result;
+MdOptional<size_t> MarkdownNavigation::findPrevHeadingAtLevel(size_t currentPage, uint8_t maxLevel) const {
+  MdOptional<size_t> result;
   for (const auto& ref : headingRefs) {
     if (ref.pageNumber >= currentPage) {
       break;
