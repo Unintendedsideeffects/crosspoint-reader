@@ -11,8 +11,7 @@ class ImageConverter {
   static Format detectFormat(const char* filepath);
 
   // Convert image to BMP stream with scaling
-  static bool convertToBmpStream(FsFile& imageFile, Format format, Print& bmpOut, int targetWidth, int targetHeight,
-                                 bool crop = true);
+  static bool convertToBmpStream(FsFile& imageFile, Format format, Print& bmpOut, int targetWidth, int targetHeight);
 
   // Convert image to 1-bit BMP stream (for thumbnails)
   static bool convertTo1BitBmpStream(FsFile& imageFile, Format format, Print& bmpOut, int targetWidth,

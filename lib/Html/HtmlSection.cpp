@@ -166,8 +166,10 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
   ChapterHtmlSlimParser visitor(
       htmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
       viewportHeight, hyphenationEnabled,
-      [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); }, nullptr,
-      nullptr, contentBasePath);
+      [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
+      nullptr,  // popupFn - not used for standalone HTML
+      nullptr,  // epub - not applicable for standalone HTML
+      contentBasePath);
 
   bool success = visitor.parseAndBuildPages();
   if (!success) {
@@ -204,6 +206,12 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
 std::unique_ptr<Page> HtmlSection::loadPageFromSectionFile() {
   SpiBusMutex::Guard guard;
   if (!SdMan.openFileForRead("HSC", filePath, file)) {
+    return nullptr;
+  }
+
+  if (currentPage < 0 || static_cast<uint16_t>(currentPage) >= pageCount) {
+    Serial.printf("[%lu] [HSC] Invalid page index %d (pageCount=%d)\n", millis(), currentPage, pageCount);
+    file.close();
     return nullptr;
   }
 

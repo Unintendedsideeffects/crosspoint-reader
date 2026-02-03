@@ -422,7 +422,7 @@ bool Epub::generateCoverBmp(bool cropped) const {
   constexpr int TARGET_MAX_WIDTH = 480;
   constexpr int TARGET_MAX_HEIGHT = 800;
   const bool success =
-      ImageConverter::convertToBmpStream(coverImage, format, coverBmp, TARGET_MAX_WIDTH, TARGET_MAX_HEIGHT, cropped);
+      ImageConverter::convertToBmpStream(coverImage, format, coverBmp, TARGET_MAX_WIDTH, TARGET_MAX_HEIGHT);
 
   coverImage.close();
   coverBmp.close();
