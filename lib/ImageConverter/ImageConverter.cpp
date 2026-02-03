@@ -4,7 +4,19 @@
 #include <PngToBmpConverter.h>
 #include <SdFat.h>
 
+#include <algorithm>
+#include <cctype>
 #include <cstring>
+#include <string>
+
+namespace {
+// Portable case-insensitive extension comparison
+bool extEquals(const char* ext, const char* target) {
+  std::string extLower(ext);
+  std::transform(extLower.begin(), extLower.end(), extLower.begin(), [](unsigned char c) { return std::tolower(c); });
+  return extLower == target;
+}
+}  // namespace
 
 ImageConverter::Format ImageConverter::detectFormat(const char* filepath) {
   const char* ext = strrchr(filepath, '.');
@@ -13,12 +25,11 @@ ImageConverter::Format ImageConverter::detectFormat(const char* filepath) {
   // Skip the dot
   ext++;
 
-  // Case-insensitive comparison
-  if (strcasecmp(ext, "jpg") == 0 || strcasecmp(ext, "jpeg") == 0) {
+  if (extEquals(ext, "jpg") || extEquals(ext, "jpeg")) {
     return FORMAT_JPEG;
   }
 
-  if (strcasecmp(ext, "png") == 0) {
+  if (extEquals(ext, "png")) {
     return FORMAT_PNG;
   }
 
@@ -26,7 +37,7 @@ ImageConverter::Format ImageConverter::detectFormat(const char* filepath) {
 }
 
 bool ImageConverter::convertToBmpStream(FsFile& imageFile, Format format, Print& bmpOut, int targetWidth,
-                                        int targetHeight, bool crop) {
+                                        int targetHeight) {
   switch (format) {
     case FORMAT_JPEG:
       return JpegToBmpConverter::jpegFileToBmpStreamWithSize(imageFile, bmpOut, targetWidth, targetHeight);

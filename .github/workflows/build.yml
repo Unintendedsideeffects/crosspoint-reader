@@ -2,10 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [master, fork-drift]
+    branches: ['**']
     tags: ["v*"]
   pull_request:
-    branches: [master, fork-drift]
   workflow_dispatch:
 
 concurrency:
