@@ -178,6 +178,9 @@ void CategorySettingsActivity::toggleCurrentSetting() {
       xSemaphoreGive(renderingMutex);
     } else if (strcmp(setting.name, "Set Manual Time") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      // Note: exitActivity() here calls ActivityWithSubactivity::exitActivity() which only
+      // clears the current subactivity - it does NOT delete 'this' (the parent activity).
+      // The captured 'this' in callbacks below remains valid.
       exitActivity();
       const std::string prefill = formatTimeForInput();
       enterNewActivity(new KeyboardEntryActivity(

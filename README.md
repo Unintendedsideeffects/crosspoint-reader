@@ -74,7 +74,7 @@ See [Development](#development) below.
 
 * **PlatformIO Core** (`pio`) or **VS Code + PlatformIO IDE**
 * **uv** (for repo-local venv builds)
-* Python 3.8+
+* Python 3.11+
 * USB-C cable for flashing the ESP32-C3
 * Xteink X4
 

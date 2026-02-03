@@ -34,7 +34,7 @@ void TodoActivity::onEnter() {
   taskHasExited.store(false);
 
   loadTasks();
-  updateRequired = true;
+  updateRequired.store(true);
 
   xTaskCreate(&TodoActivity::taskTrampoline, "TodoActivityTask", 4096, this, 1, &displayTaskHandle);
 }
@@ -54,8 +54,8 @@ void TodoActivity::taskTrampoline(void* param) {
 
 void TodoActivity::displayTaskLoop() {
   while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
+    if (updateRequired.load()) {
+      updateRequired.store(false);
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       if (!exitTaskRequested.load()) {
         render();
@@ -81,13 +81,21 @@ void TodoActivity::loop() {
     return;
   }
 
-  // Navigation (Up/Down only)
+  // Capture input state before acquiring mutex
   const bool upPressed = mappedInput.wasPressed(MappedInputManager::Button::Up);
   const bool downPressed = mappedInput.wasPressed(MappedInputManager::Button::Down);
+  const bool leftPressed = mappedInput.wasPressed(MappedInputManager::Button::Left);
+  const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
+  const bool confirmReleased = mappedInput.wasReleased(MappedInputManager::Button::Confirm);
+
+  // Guard shared state modifications with mutex to prevent race with displayTaskLoop
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
 
   // +1 for the "Add New Task" button at the end
   const int totalItems = static_cast<int>(items.size()) + 1;
+  const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
 
+  // Navigation (Up/Down only)
   if (upPressed) {
     if (selectedIndex > 0) {
       selectedIndex--;
@@ -95,24 +103,20 @@ void TodoActivity::loop() {
       if (selectedIndex < scrollOffset) {
         scrollOffset = selectedIndex;
       }
-      updateRequired = true;
+      updateRequired.store(true);
     }
   } else if (downPressed) {
     if (selectedIndex < totalItems - 1) {
       selectedIndex++;
       // Adjust scroll if moving below view
-      const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
       if (selectedIndex >= scrollOffset + visibleItems) {
         scrollOffset = selectedIndex - visibleItems + 1;
       }
-      updateRequired = true;
+      updateRequired.store(true);
     }
   }
 
   // Reordering (Left/Right) - only for task items, not headers or "Add New"
-  const bool leftPressed = mappedInput.wasPressed(MappedInputManager::Button::Left);
-  const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
-
   if (selectedIndex < static_cast<int>(items.size()) && !items[selectedIndex].isHeader) {
     if (leftPressed) {
       // Move task UP in list (swap with previous item, skipping headers)
@@ -127,7 +131,7 @@ void TodoActivity::loop() {
           scrollOffset = selectedIndex;
         }
         saveTasks();
-        updateRequired = true;
+        updateRequired.store(true);
       }
     } else if (rightPressed) {
       // Move task DOWN in list (swap with next item, skipping headers)
@@ -138,23 +142,26 @@ void TodoActivity::loop() {
       if (targetIndex < static_cast<int>(items.size())) {
         std::swap(items[selectedIndex], items[targetIndex]);
         selectedIndex = targetIndex;
-        const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
         if (selectedIndex >= scrollOffset + visibleItems) {
           scrollOffset = selectedIndex - visibleItems + 1;
         }
         saveTasks();
-        updateRequired = true;
+        updateRequired.store(true);
       }
     }
   }
 
-  // Toggle / Select
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+  // Toggle / Select - handle inside mutex for toggleCurrentTask, release for addNewTask
+  if (confirmReleased) {
     if (selectedIndex < static_cast<int>(items.size())) {
       toggleCurrentTask();
+      xSemaphoreGive(renderingMutex);
     } else {
-      addNewTask();
+      xSemaphoreGive(renderingMutex);
+      addNewTask();  // addNewTask manages its own mutex
     }
+  } else {
+    xSemaphoreGive(renderingMutex);
   }
 }
 
@@ -230,11 +237,12 @@ void TodoActivity::saveTasks() {
 }
 
 void TodoActivity::toggleCurrentTask() {
+  // Note: Called with renderingMutex held by caller
   if (selectedIndex >= 0 && selectedIndex < static_cast<int>(items.size())) {
     if (!items[selectedIndex].isHeader) {
       items[selectedIndex].checked = !items[selectedIndex].checked;
       saveTasks();
-      updateRequired = true;
+      updateRequired.store(true);
     }
   }
 }
@@ -262,11 +270,11 @@ void TodoActivity::addNewTask() {
           }
         }
         exitActivity();  // Close keyboard
-        updateRequired = true;
+        updateRequired.store(true);
       },
       [this]() {
         exitActivity();  // Close keyboard
-        updateRequired = true;
+        updateRequired.store(true);
       }));
   xSemaphoreGive(renderingMutex);
 }
