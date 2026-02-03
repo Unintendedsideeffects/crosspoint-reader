@@ -95,58 +95,76 @@ bool PngToFramebufferConverter::getDimensionsStatic(const std::string& imagePath
   return true;
 }
 
-// Helper to get grayscale from PNG pixel data, with alpha blending to white background.
+// Convert entire source line to grayscale with alpha blending to white background.
 // For indexed PNGs with tRNS chunk, alpha values are stored at palette[768] onwards.
-static uint8_t getGrayFromPixel(uint8_t* pPixels, int x, int pixelType, uint8_t* palette, int hasAlpha) {
+// Processing the whole line at once improves cache locality and reduces per-pixel overhead.
+static void convertLineToGray(uint8_t* pPixels, uint8_t* grayLine, int width, int pixelType, uint8_t* palette,
+                              int hasAlpha) {
   switch (pixelType) {
     case PNG_PIXEL_GRAYSCALE:
-      return pPixels[x];
+      memcpy(grayLine, pPixels, width);
+      break;
 
-    case PNG_PIXEL_TRUECOLOR: {
-      uint8_t* p = &pPixels[x * 3];
-      return (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
-    }
-
-    case PNG_PIXEL_INDEXED: {
-      uint8_t paletteIndex = pPixels[x];
-      if (palette) {
-        uint8_t* p = &palette[paletteIndex * 3];
-        uint8_t gray = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
-        // Alpha values for indexed PNGs are stored after RGB data (at offset 768)
-        if (hasAlpha) {
-          uint8_t alpha = palette[768 + paletteIndex];
-          return (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
-        }
-        return gray;
+    case PNG_PIXEL_TRUECOLOR:
+      for (int x = 0; x < width; x++) {
+        uint8_t* p = &pPixels[x * 3];
+        grayLine[x] = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
       }
-      return paletteIndex;
-    }
+      break;
 
-    case PNG_PIXEL_GRAY_ALPHA: {
-      uint8_t gray = pPixels[x * 2];
-      uint8_t alpha = pPixels[x * 2 + 1];
-      return (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
-    }
+    case PNG_PIXEL_INDEXED:
+      if (palette) {
+        if (hasAlpha) {
+          for (int x = 0; x < width; x++) {
+            uint8_t idx = pPixels[x];
+            uint8_t* p = &palette[idx * 3];
+            uint8_t gray = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+            uint8_t alpha = palette[768 + idx];
+            grayLine[x] = (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
+          }
+        } else {
+          for (int x = 0; x < width; x++) {
+            uint8_t* p = &palette[pPixels[x] * 3];
+            grayLine[x] = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+          }
+        }
+      } else {
+        memcpy(grayLine, pPixels, width);
+      }
+      break;
 
-    case PNG_PIXEL_TRUECOLOR_ALPHA: {
-      uint8_t* p = &pPixels[x * 4];
-      uint8_t gray = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
-      uint8_t alpha = p[3];
-      return (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
-    }
+    case PNG_PIXEL_GRAY_ALPHA:
+      for (int x = 0; x < width; x++) {
+        uint8_t gray = pPixels[x * 2];
+        uint8_t alpha = pPixels[x * 2 + 1];
+        grayLine[x] = (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
+      }
+      break;
+
+    case PNG_PIXEL_TRUECOLOR_ALPHA:
+      for (int x = 0; x < width; x++) {
+        uint8_t* p = &pPixels[x * 4];
+        uint8_t gray = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+        uint8_t alpha = p[3];
+        grayLine[x] = (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
+      }
+      break;
 
     default:
-      return 128;
+      memset(grayLine, 128, width);
+      break;
   }
 }
+
+// Stack buffer for grayscale line conversion (max width from PNGdec)
+static uint8_t grayLineBuffer[PNG_MAX_BUFFERED_PIXELS / 2];
 
 int pngDrawCallback(PNGDRAW* pDraw) {
   PngContext* ctx = reinterpret_cast<PngContext*>(pDraw->pUser);
   if (!ctx || !ctx->config || !ctx->renderer) return 0;
 
   int srcY = pDraw->y;
-  uint8_t* pPixels = pDraw->pPixels;
-  int pixelType = pDraw->iPixelType;
+  int srcWidth = ctx->srcWidth;
 
   // Calculate destination Y with scaling
   int dstY = (int)(srcY * ctx->scale);
@@ -161,26 +179,41 @@ int pngDrawCallback(PNGDRAW* pDraw) {
   int outY = ctx->config->y + dstY;
   if (outY >= ctx->screenHeight) return 1;
 
-  // Render scaled row using nearest-neighbor sampling
-  for (int dstX = 0; dstX < ctx->dstWidth; dstX++) {
-    int outX = ctx->config->x + dstX;
-    if (outX >= ctx->screenWidth) continue;
+  // Convert entire source line to grayscale (improves cache locality)
+  convertLineToGray(pDraw->pPixels, grayLineBuffer, srcWidth, pDraw->iPixelType, pDraw->pPalette, pDraw->iHasAlpha);
 
-    // Map destination X back to source X
-    int srcX = (int)(dstX / ctx->scale);
-    if (srcX >= ctx->srcWidth) srcX = ctx->srcWidth - 1;
+  // Render scaled row using Bresenham-style integer stepping (no floating-point division)
+  int dstWidth = ctx->dstWidth;
+  int outXBase = ctx->config->x;
+  int screenWidth = ctx->screenWidth;
+  bool useDithering = ctx->config->useDithering;
+  bool caching = ctx->caching;
 
-    uint8_t gray = getGrayFromPixel(pPixels, srcX, pixelType, pDraw->pPalette, pDraw->iHasAlpha);
+  int srcX = 0;
+  int error = 0;
 
-    uint8_t ditheredGray;
-    if (ctx->config->useDithering) {
-      ditheredGray = applyBayerDither4Level(gray, outX, outY);
-    } else {
-      ditheredGray = gray / 85;
-      if (ditheredGray > 3) ditheredGray = 3;
+  for (int dstX = 0; dstX < dstWidth; dstX++) {
+    int outX = outXBase + dstX;
+    if (outX < screenWidth) {
+      uint8_t gray = grayLineBuffer[srcX];
+
+      uint8_t ditheredGray;
+      if (useDithering) {
+        ditheredGray = applyBayerDither4Level(gray, outX, outY);
+      } else {
+        ditheredGray = gray / 85;
+        if (ditheredGray > 3) ditheredGray = 3;
+      }
+      drawPixelWithRenderMode(*ctx->renderer, outX, outY, ditheredGray);
+      if (caching) ctx->cache.setPixel(outX, outY, ditheredGray);
     }
-    drawPixelWithRenderMode(*ctx->renderer, outX, outY, ditheredGray);
-    if (ctx->caching) ctx->cache.setPixel(outX, outY, ditheredGray);
+
+    // Bresenham-style stepping: advance srcX based on ratio srcWidth/dstWidth
+    error += srcWidth;
+    while (error >= dstWidth) {
+      error -= dstWidth;
+      srcX++;
+    }
   }
 
   return 1;
@@ -236,7 +269,9 @@ bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath
     }
   }
 
+  unsigned long decodeStart = millis();
   rc = png.decode(&ctx, 0);
+  unsigned long decodeTime = millis() - decodeStart;
   if (rc != PNG_SUCCESS) {
     Serial.printf("[%lu] [PNG] Decode failed: %d\n", millis(), rc);
     png.close();
@@ -244,7 +279,7 @@ bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath
   }
 
   png.close();
-  Serial.printf("[%lu] [PNG] PNG decoding complete\n", millis());
+  Serial.printf("[%lu] [PNG] PNG decoding complete - render time: %lu ms\n", millis(), decodeTime);
 
   // Write cache file if caching was enabled and buffer was allocated
   if (ctx.caching) {
