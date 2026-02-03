@@ -95,8 +95,9 @@ bool PngToFramebufferConverter::getDimensionsStatic(const std::string& imagePath
   return true;
 }
 
-// Helper to get grayscale from PNG pixel data
-static uint8_t getGrayFromPixel(uint8_t* pPixels, int x, int pixelType, uint8_t* palette) {
+// Helper to get grayscale from PNG pixel data, with alpha blending to white background.
+// For indexed PNGs with tRNS chunk, alpha values are stored at palette[768] onwards.
+static uint8_t getGrayFromPixel(uint8_t* pPixels, int x, int pixelType, uint8_t* palette, int hasAlpha) {
   switch (pixelType) {
     case PNG_PIXEL_GRAYSCALE:
       return pPixels[x];
@@ -110,17 +111,28 @@ static uint8_t getGrayFromPixel(uint8_t* pPixels, int x, int pixelType, uint8_t*
       uint8_t paletteIndex = pPixels[x];
       if (palette) {
         uint8_t* p = &palette[paletteIndex * 3];
-        return (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+        uint8_t gray = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+        // Alpha values for indexed PNGs are stored after RGB data (at offset 768)
+        if (hasAlpha) {
+          uint8_t alpha = palette[768 + paletteIndex];
+          return (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
+        }
+        return gray;
       }
       return paletteIndex;
     }
 
-    case PNG_PIXEL_GRAY_ALPHA:
-      return pPixels[x * 2];
+    case PNG_PIXEL_GRAY_ALPHA: {
+      uint8_t gray = pPixels[x * 2];
+      uint8_t alpha = pPixels[x * 2 + 1];
+      return (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
+    }
 
     case PNG_PIXEL_TRUECOLOR_ALPHA: {
       uint8_t* p = &pPixels[x * 4];
-      return (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+      uint8_t gray = (uint8_t)((p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8);
+      uint8_t alpha = p[3];
+      return (uint8_t)((gray * alpha + 255 * (255 - alpha)) / 255);
     }
 
     default:
@@ -158,7 +170,7 @@ int pngDrawCallback(PNGDRAW* pDraw) {
     int srcX = (int)(dstX / ctx->scale);
     if (srcX >= ctx->srcWidth) srcX = ctx->srcWidth - 1;
 
-    uint8_t gray = getGrayFromPixel(pPixels, srcX, pixelType, pDraw->pPalette);
+    uint8_t gray = getGrayFromPixel(pPixels, srcX, pixelType, pDraw->pPalette, pDraw->iHasAlpha);
 
     uint8_t ditheredGray;
     if (ctx->config->useDithering) {
@@ -213,10 +225,6 @@ bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath
 
   if (png.getBpp() != 8) {
     warnUnsupportedFeature("bit depth (" + std::to_string(png.getBpp()) + "bpp)", imagePath);
-  }
-
-  if (png.hasAlpha()) {
-    warnUnsupportedFeature("alpha channel", imagePath);
   }
 
   // Allocate cache buffer using SCALED dimensions
