@@ -3,6 +3,7 @@
 #include <SDCardManager.h>
 #include <Serialization.h>
 
+#include <cmath>
 #include <vector>
 
 #include "Epub/Page.h"
@@ -15,6 +16,9 @@ constexpr uint32_t HEADER_SIZE = sizeof(uint8_t) + sizeof(int) + sizeof(float) +
                                  sizeof(uint16_t) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint32_t) +
                                  sizeof(uint16_t) + sizeof(uint32_t);
 constexpr uint32_t MIN_SIZE_FOR_PROGRESS = 50 * 1024;
+constexpr float LINE_COMPRESSION_EPSILON = 0.0001f;
+
+bool nearlyEqual(const float a, const float b) { return std::fabs(a - b) <= LINE_COMPRESSION_EPSILON; }
 }  // namespace
 
 HtmlSection::HtmlSection(const std::string& htmlPath, const std::string& cachePath, const std::string& contentBasePath,
@@ -24,6 +28,15 @@ HtmlSection::HtmlSection(const std::string& htmlPath, const std::string& cachePa
       contentBasePath(contentBasePath),
       renderer(renderer),
       filePath(cachePath + "/section.bin") {}
+
+HtmlSection::~HtmlSection() { closeSectionFile(); }
+
+void HtmlSection::closeSectionFile() {
+  if (file) {
+    file.close();
+  }
+  fileOpenForReading = false;
+}
 
 uint32_t HtmlSection::onPageComplete(std::unique_ptr<Page> page) {
   if (!file) {
@@ -72,6 +85,7 @@ bool HtmlSection::loadSectionFile(int fontId, float lineCompression, bool extraP
                                   uint8_t paragraphAlignment, uint16_t viewportWidth, uint16_t viewportHeight,
                                   bool hyphenationEnabled, uint32_t sourceSize) {
   SpiBusMutex::Guard guard;
+  closeSectionFile();
   if (!SdMan.openFileForRead("HSC", filePath, file)) {
     return false;
   }
@@ -102,7 +116,7 @@ bool HtmlSection::loadSectionFile(int fontId, float lineCompression, bool extraP
   serialization::readPod(file, fileHyphenationEnabled);
   serialization::readPod(file, fileSourceSize);
 
-  if (fontId != fileFontId || lineCompression != fileLineCompression ||
+  if (fontId != fileFontId || !nearlyEqual(lineCompression, fileLineCompression) ||
       extraParagraphSpacing != fileExtraParagraphSpacing || paragraphAlignment != fileParagraphAlignment ||
       viewportWidth != fileViewportWidth || viewportHeight != fileViewportHeight ||
       hyphenationEnabled != fileHyphenationEnabled || sourceSize != fileSourceSize) {
@@ -120,6 +134,7 @@ bool HtmlSection::loadSectionFile(int fontId, float lineCompression, bool extraP
 
 bool HtmlSection::clearCache() const {
   SpiBusMutex::Guard guard;
+  const_cast<HtmlSection*>(this)->closeSectionFile();
   if (!SdMan.exists(filePath.c_str())) {
     return true;
   }
@@ -136,6 +151,7 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
                                     const std::function<void()>& progressSetupFn,
                                     const std::function<void(int)>& progressFn) {
   SpiBusMutex::Guard guard;
+  closeSectionFile();
 
   if (!SdMan.exists(cachePath.c_str())) {
     SdMan.mkdir(cachePath.c_str());
@@ -205,13 +221,16 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
 
 std::unique_ptr<Page> HtmlSection::loadPageFromSectionFile() {
   SpiBusMutex::Guard guard;
-  if (!SdMan.openFileForRead("HSC", filePath, file)) {
-    return nullptr;
+  if (!fileOpenForReading) {
+    if (!SdMan.openFileForRead("HSC", filePath, file)) {
+      return nullptr;
+    }
+    fileOpenForReading = true;
   }
 
   if (currentPage < 0 || static_cast<uint16_t>(currentPage) >= pageCount) {
     Serial.printf("[%lu] [HSC] Invalid page index %d (pageCount=%d)\n", millis(), currentPage, pageCount);
-    file.close();
+    closeSectionFile();
     return nullptr;
   }
 
@@ -224,6 +243,5 @@ std::unique_ptr<Page> HtmlSection::loadPageFromSectionFile() {
   file.seek(pagePos);
 
   auto page = Page::deserialize(file);
-  file.close();
   return page;
 }
