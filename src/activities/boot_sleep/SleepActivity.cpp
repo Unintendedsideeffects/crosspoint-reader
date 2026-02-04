@@ -57,6 +57,8 @@ void validateSleepBmpsOnce() {
   auto dir = SdMan.open("/sleep");
   if (!(dir && dir.isDirectory())) {
     if (dir) dir.close();
+    sleepBmpCache.scanned = true;
+    sleepBmpCache.sleepDirFound = false;
     return;
   }
 
@@ -75,6 +77,7 @@ void validateSleepBmpsOnce() {
       continue;
     }
 
+    // StringUtils::checkFileExtension is case-insensitive.
     if (!StringUtils::checkFileExtension(filename, ".bmp")) {
       Serial.printf("[%lu] [SLP] Skipping non-.bmp file name: %s\n", millis(), name);
       file.close();
@@ -129,9 +132,9 @@ void SleepActivity::renderCustomSleepScreen() const {
   if (sleepBmpCache.sleepDirFound && numFiles > 0) {
     // Generate a random number between 1 and numFiles
     auto randomFileIndex = random(numFiles);
-    // If we picked the same image as last time, pick a different index deterministically.
+    // If we picked the same image as last time, pick the next one.
     if (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
-      randomFileIndex = (randomFileIndex + 1 + random(numFiles - 1)) % numFiles;
+      randomFileIndex = (randomFileIndex + 1) % numFiles;
     }
     // Only save to file if the selection actually changed
     const bool selectionChanged = (APP_STATE.lastSleepImage != randomFileIndex);
