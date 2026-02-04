@@ -57,6 +57,8 @@ void validateSleepBmpsOnce() {
   auto dir = SdMan.open("/sleep");
   if (!(dir && dir.isDirectory())) {
     if (dir) dir.close();
+    sleepBmpCache.scanned = true;
+    sleepBmpCache.sleepDirFound = false;
     return;
   }
 
@@ -75,15 +77,19 @@ void validateSleepBmpsOnce() {
       continue;
     }
 
-    if (filename.length() > 4 && filename.substr(filename.length() - 4) == ".bmp") {
-      Bitmap bitmap(file, true);
-      const auto err = bitmap.parseHeaders();
-      if (err == BmpReaderError::Ok) {
-        sleepBmpCache.validFiles.emplace_back(filename);
-      } else {
-        Serial.printf("[SLP] Invalid BMP in /sleep: %s (%s)\n", filename.c_str(), Bitmap::errorToString(err));
-      }
+    // StringUtils::checkFileExtension is case-insensitive.
+    if (!StringUtils::checkFileExtension(filename, ".bmp")) {
+      Serial.printf("[%lu] [SLP] Skipping non-.bmp file name: %s\n", millis(), name);
+      file.close();
+      continue;
     }
+    Bitmap bitmap(file);
+    if (bitmap.parseHeaders() != BmpReaderError::Ok) {
+      Serial.printf("[%lu] [SLP] Skipping invalid BMP file: %s\n", millis(), name);
+      file.close();
+      continue;
+    }
+    sleepBmpCache.validFiles.emplace_back(filename);
     file.close();
   }
   dir.close();
@@ -100,7 +106,8 @@ void invalidateSleepBmpCache() {
 
 void SleepActivity::onEnter() {
   Activity::onEnter();
-  renderPopup("Entering Sleep...");
+  // Skip the "Entering Sleep..." popup to avoid unnecessary screen refresh
+  // The sleep screen will be displayed immediately anyway
 
   if (SETTINGS.sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::BLANK) {
     return renderBlankSleepScreen();
@@ -117,59 +124,35 @@ void SleepActivity::onEnter() {
   renderDefaultSleepScreen();
 }
 
-void SleepActivity::renderPopup(const char* message) const {
-  const int textWidth = renderer.getTextWidth(UI_12_FONT_ID, message, EpdFontFamily::BOLD);
-  constexpr int margin = 20;
-  const int x = (renderer.getScreenWidth() - textWidth - margin * 2) / 2;
-  constexpr int y = 117;
-  const int w = textWidth + margin * 2;
-  const int h = renderer.getLineHeight(UI_12_FONT_ID) + margin * 2;
-  // renderer.clearScreen();
-  renderer.fillRect(x - 5, y - 5, w + 10, h + 10, true);
-  renderer.fillRect(x + 5, y + 5, w - 10, h - 10, false);
-  renderer.drawText(UI_12_FONT_ID, x + margin, y + margin, message, true, EpdFontFamily::BOLD);
-  renderer.displayBuffer();
-}
-
 void SleepActivity::renderCustomSleepScreen() const {
   SpiBusMutex::Guard guard;
   SleepCacheMutex::Guard cacheGuard;
   validateSleepBmpsOnce();
-  if (sleepBmpCache.sleepDirFound) {
-    if (!sleepBmpCache.validFiles.empty() && APP_STATE.lastSleepImage >= sleepBmpCache.validFiles.size()) {
-      APP_STATE.lastSleepImage = 0;
+  const auto numFiles = sleepBmpCache.validFiles.size();
+  if (sleepBmpCache.sleepDirFound && numFiles > 0) {
+    // Generate a random number between 0 and numFiles-1
+    auto randomFileIndex = random(numFiles);
+    // If we picked the same image as last time, pick the next one.
+    if (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
+      randomFileIndex = (randomFileIndex + 1) % numFiles;
     }
-
-    while (!sleepBmpCache.validFiles.empty()) {
-      const auto numFiles = sleepBmpCache.validFiles.size();
-      // Generate a random number between 0 and numFiles-1
-      auto randomFileIndex = random(numFiles);
-      // If we picked the same image as last time, reroll
-      while (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
-        randomFileIndex = random(numFiles);
-      }
-
-      const auto filename = "/sleep/" + sleepBmpCache.validFiles[randomFileIndex];
-      FsFile file;
-      if (!SdMan.openFileForRead("SLP", filename, file)) {
-        Serial.printf("[%lu] [SLP] Failed to open BMP: %s\n", millis(), filename.c_str());
-        sleepBmpCache.validFiles.erase(sleepBmpCache.validFiles.begin() + randomFileIndex);
-        continue;
-      }
-
-      Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), filename.c_str());
+    // Only save to file if the selection actually changed
+    const bool selectionChanged = (APP_STATE.lastSleepImage != randomFileIndex);
+    APP_STATE.lastSleepImage = randomFileIndex;
+    if (selectionChanged) {
+      APP_STATE.saveToFile();
+    }
+    const auto filename = "/sleep/" + sleepBmpCache.validFiles[randomFileIndex];
+    FsFile file;
+    if (SdMan.openFileForRead("SLP", filename, file)) {
+      Serial.printf("[%lu] [SLP] Randomly loading: /sleep/%s\n", millis(),
+                    sleepBmpCache.validFiles[randomFileIndex].c_str());
       Bitmap bitmap(file, true);
       if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-        APP_STATE.lastSleepImage = randomFileIndex;
-        APP_STATE.saveToFile();
         renderBitmapSleepScreen(bitmap);
         return;
       }
-
-      Serial.printf("[%lu] [SLP] Invalid BMP: %s\n", millis(), filename.c_str());
-      sleepBmpCache.validFiles.erase(sleepBmpCache.validFiles.begin() + randomFileIndex);
     }
-    return renderDefaultSleepScreen();
   }
 
   // Look for sleep.bmp on the root of the sd card to determine if we should
