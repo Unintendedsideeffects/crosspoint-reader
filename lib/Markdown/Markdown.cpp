@@ -16,7 +16,29 @@ extern "C" {
 
 namespace {
 constexpr uint32_t META_MAGIC = 0x4D44544D;  // "MDTM"
-constexpr uint8_t META_VERSION = 1;
+constexpr uint8_t META_VERSION = 2;
+
+uint32_t hashFileContents(const std::string& path) {
+  FsFile file;
+  if (!SdMan.openFileForRead("MD ", path, file)) {
+    return 0;
+  }
+
+  uint32_t hash = 2166136261u;  // FNV-1a
+  uint8_t buffer[512];
+  while (file.available()) {
+    const size_t readSize = file.read(buffer, sizeof(buffer));
+    if (readSize == 0) {
+      break;
+    }
+    for (size_t i = 0; i < readSize; i++) {
+      hash ^= buffer[i];
+      hash *= 16777619u;
+    }
+  }
+  file.close();
+  return hash;
+}
 
 struct HtmlOutput {
   FsFile* file;
@@ -163,12 +185,17 @@ bool Markdown::ensureHtml() {
       uint32_t magic = 0;
       uint8_t version = 0;
       uint32_t cachedSize = 0;
+      uint32_t cachedHash = 0;
       serialization::readPod(metaFile, magic);
       serialization::readPod(metaFile, version);
       serialization::readPod(metaFile, cachedSize);
+      serialization::readPod(metaFile, cachedHash);
       metaFile.close();
-      if (magic == META_MAGIC && version == META_VERSION && cachedSize == fileSize) {
-        needsRender = false;
+      if (magic == META_MAGIC && version == META_VERSION && cachedSize == fileSize && cachedHash != 0) {
+        const uint32_t currentHash = hashFileContents(filepath);
+        if (currentHash != 0 && currentHash == cachedHash) {
+          needsRender = false;
+        }
       }
     }
   }
@@ -187,6 +214,7 @@ bool Markdown::ensureHtml() {
     serialization::writePod(metaFile, META_MAGIC);
     serialization::writePod(metaFile, META_VERSION);
     serialization::writePod(metaFile, static_cast<uint32_t>(fileSize));
+    serialization::writePod(metaFile, hashFileContents(filepath));
     metaFile.close();
   }
 
@@ -501,6 +529,7 @@ std::string Markdown::processInline(const std::string& line) {
       const size_t end = line.find('^', i + 1);
       if (end != std::string::npos && end > i + 1) {
         std::string inner = line.substr(i + 1, end - (i + 1));
+        // Superscript requires non-empty content (subscript already gated by end > i + 1).
         if (!inner.empty() && inner.find(' ') == std::string::npos) {
           out.append("<sup>");
           out.append(inner);
