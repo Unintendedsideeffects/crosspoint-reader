@@ -172,7 +172,7 @@ struct MdNode {
   }
 
   static std::unique_ptr<MdNode> createListItem(bool isTask = false, bool checked = false) {
-    auto node = md_detail::make_unique<MdNode>(MdNodeType::ListItem);
+    auto node = md_detail::make_unique<MdNode>(isTask ? MdNodeType::TaskListItem : MdNodeType::ListItem);
     node->listItem = md_detail::make_unique<MdListItemDetail>();
     node->listItem->isTask = isTask;
     node->listItem->taskChecked = checked;

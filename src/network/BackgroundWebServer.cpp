@@ -251,14 +251,18 @@ void BackgroundWebServer::loop(const bool usbConnected, const bool allowRun) {
   }
 
   ensureCredentialsLoaded();
+  static bool warnedEmpty = false;
   if (credentials.empty()) {
-    static bool warnedEmpty = false;
     if (!warnedEmpty) {
       Serial.printf("[%lu] [BWS] No saved WiFi credentials - background server disabled\n", millis());
       warnedEmpty = true;
     }
+    if (state != State::IDLE) {
+      stopAll();
+    }
     return;
   }
+  warnedEmpty = false;
 
   if (state == State::IDLE) {
     if (WiFi.status() == WL_CONNECTED) {

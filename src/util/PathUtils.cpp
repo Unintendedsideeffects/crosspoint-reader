@@ -78,6 +78,10 @@ bool isValidSdPath(const String& path) {
       Serial.printf("[PathUtils] REJECT: null at %d\n", i);
       return false;
     }
+    if (path[i] == '\\') {
+      Serial.printf("[PathUtils] REJECT: backslash at %d\n", i);
+      return false;
+    }
   }
 
   return true;
@@ -184,54 +188,6 @@ bool isValidFilename(const String& filename) {
   }
 
   return true;
-}
-
-// TODO: TEMPORARY DEBUG - remove after fixing 400 error issue
-String getValidationFailureReason(const String& path) {
-  if (path.isEmpty()) {
-    return "empty path";
-  }
-  if (path.length() > 255) {
-    return "path too long: " + String(path.length()) + " chars";
-  }
-
-  // Check traversal patterns (don't use indexOf('\0') - it finds the C-string terminator)
-  if (path.indexOf("/../") >= 0) {
-    return "contains /../";
-  }
-  if (path.endsWith("/..")) {
-    return "ends with /..";
-  }
-  if (path.startsWith("../")) {
-    return "starts with ../";
-  }
-  if (path == "..") {
-    return "path is ..";
-  }
-
-  String lower = path;
-  lower.toLowerCase();
-  if (lower.indexOf("%2e%2e%2f") >= 0) {
-    return "contains %2e%2e%2f";
-  }
-  if (lower.indexOf("%2f%2e%2e") >= 0) {
-    return "contains %2f%2e%2e";
-  }
-  if (lower.indexOf("..%2f") >= 0) {
-    return "contains ..%2f";
-  }
-  if (lower.indexOf("%2f..") >= 0) {
-    return "contains %2f..";
-  }
-
-  // Check for null bytes
-  for (size_t i = 0; i < path.length(); i++) {
-    if (path[i] == '\0') {
-      return "null byte at position " + String(i);
-    }
-  }
-
-  return "unknown reason";
 }
 
 }  // namespace PathUtils

@@ -3,6 +3,31 @@
 #include <Arduino.h>
 
 #include <algorithm>
+#include <cctype>
+
+namespace {
+std::string normalizeSlug(const std::string& input) {
+  std::string slug;
+  bool prevHyphen = false;
+  for (char c : input) {
+    if (c == ' ' || c == '-' || c == '_') {
+      if (!slug.empty() && !prevHyphen) {
+        slug.push_back('-');
+        prevHyphen = true;
+      }
+      continue;
+    }
+    if (isalnum(static_cast<unsigned char>(c))) {
+      slug.push_back(static_cast<char>(tolower(static_cast<unsigned char>(c))));
+      prevHyphen = false;
+    }
+  }
+  while (!slug.empty() && slug.back() == '-') {
+    slug.pop_back();
+  }
+  return slug;
+}
+}  // namespace
 
 MarkdownNavigation::MarkdownNavigation(const MdNode& root) {
   size_t nodeIndex = 0;
@@ -172,7 +197,7 @@ MdOptional<size_t> MarkdownNavigation::findPrevHeading(size_t currentPage) const
   for (const auto& ref : headingRefs) {
     if (ref.pageNumber < currentPage) {
       result = ref.pageNumber;
-    } else {
+    } else if (ref.pageNumber > currentPage) {
       break;
     }
   }
@@ -193,18 +218,10 @@ MdOptional<size_t> MarkdownNavigation::resolveInternalLink(const std::string& hr
 
   // Handle fragment links (#heading-slug)
   if (href[0] == '#') {
-    std::string slug = href.substr(1);
+    std::string slug = normalizeSlug(href.substr(1));
     // Convert slug back to approximate heading match
-    // Slugs are typically lowercase with hyphens for spaces
     for (size_t i = 0; i < toc.size(); i++) {
-      std::string titleSlug;
-      for (char c : toc[i].title) {
-        if (c == ' ') {
-          titleSlug += '-';
-        } else if (isalnum(static_cast<unsigned char>(c))) {
-          titleSlug += static_cast<char>(tolower(static_cast<unsigned char>(c)));
-        }
-      }
+      std::string titleSlug = normalizeSlug(toc[i].title);
       if (titleSlug == slug) {
         return MdOptional<size_t>(toc[i].estimatedPage);
       }

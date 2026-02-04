@@ -51,13 +51,13 @@ bool ImageConverter::convertToBmpStream(FsFile& imageFile, Format format, Print&
 }
 
 bool ImageConverter::convertTo1BitBmpStream(FsFile& imageFile, Format format, Print& bmpOut, int targetWidth,
-                                            int targetHeight) {
+                                            int targetHeight, bool crop) {
   switch (format) {
     case FORMAT_JPEG:
-      return JpegToBmpConverter::jpegFileTo1BitBmpStreamWithSize(imageFile, bmpOut, targetWidth, targetHeight);
+      return JpegToBmpConverter::jpegFileTo1BitBmpStreamWithSize(imageFile, bmpOut, targetWidth, targetHeight, crop);
 
     case FORMAT_PNG:
-      return PngToBmpConverter::pngFileTo1BitBmpStreamWithSize(imageFile, bmpOut, targetWidth, targetHeight);
+      return PngToBmpConverter::pngFileTo1BitBmpStreamWithSize(imageFile, bmpOut, targetWidth, targetHeight, crop);
 
     default:
       return false;
