@@ -1,5 +1,6 @@
 #include "TodoActivity.h"
 
+#include <Arduino.h>
 #include <SDCardManager.h>
 
 #include <algorithm>
@@ -30,21 +31,36 @@ TodoActivity::TodoActivity(GfxRenderer& renderer, MappedInputManager& mappedInpu
 void TodoActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
   renderingMutex = xSemaphoreCreateMutex();
+  if (renderingMutex == nullptr) {
+    Serial.printf("[%lu] [TODO] Failed to create rendering mutex\n", millis());
+    onBack();
+    return;
+  }
   exitTaskRequested.store(false);
   taskHasExited.store(false);
 
   loadTasks();
   updateRequired.store(true);
 
-  xTaskCreate(&TodoActivity::taskTrampoline, "TodoActivityTask", 4096, this, 1, &displayTaskHandle);
+  if (xTaskCreate(&TodoActivity::taskTrampoline, "TodoActivityTask", 4096, this, 1, &displayTaskHandle) != pdPASS) {
+    Serial.printf("[%lu] [TODO] Failed to create display task\n", millis());
+    vSemaphoreDelete(renderingMutex);
+    renderingMutex = nullptr;
+    displayTaskHandle = nullptr;
+    onBack();
+  }
 }
 
 void TodoActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
+  if (displayTaskHandle != nullptr) {
+    TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
+  }
+  if (renderingMutex != nullptr) {
+    vSemaphoreDelete(renderingMutex);
+    renderingMutex = nullptr;
+  }
 }
 
 void TodoActivity::taskTrampoline(void* param) {
@@ -215,8 +231,11 @@ void TodoActivity::saveTasks() {
   SpiBusMutex::Guard guard;
 
   // Ensure directory exists
-  std::string dirPath = filePath.substr(0, filePath.find_last_of('/'));
-  SdMan.mkdir(dirPath.c_str());
+  const auto slashPos = filePath.find_last_of('/');
+  if (slashPos != std::string::npos && slashPos > 0) {
+    std::string dirPath = filePath.substr(0, slashPos);
+    SdMan.mkdir(dirPath.c_str());
+  }
 
   FsFile file = SdMan.open(filePath.c_str(), FILE_WRITE | O_TRUNC);
   if (!file) {

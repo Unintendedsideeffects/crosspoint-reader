@@ -53,7 +53,6 @@ void validateSleepBmpsOnce() {
     return;
   }
 
-  sleepBmpCache.scanned = true;
   sleepBmpCache.validFiles.clear();
 
   auto dir = SdMan.open("/sleep");
@@ -62,6 +61,7 @@ void validateSleepBmpsOnce() {
     return;
   }
 
+  sleepBmpCache.scanned = true;
   sleepBmpCache.sleepDirFound = true;
   char name[500];
   for (auto file = dir.openNextFile(); file; file = dir.openNextFile()) {
@@ -124,27 +124,38 @@ void SleepActivity::renderCustomSleepScreen() const {
   SleepCacheMutex::Guard cacheGuard;
   validateSleepBmpsOnce();
   if (sleepBmpCache.sleepDirFound) {
-    const auto numFiles = sleepBmpCache.validFiles.size();
-    if (numFiles > 0) {
+    if (!sleepBmpCache.validFiles.empty() && APP_STATE.lastSleepImage >= sleepBmpCache.validFiles.size()) {
+      APP_STATE.lastSleepImage = 0;
+    }
+
+    while (!sleepBmpCache.validFiles.empty()) {
+      const auto numFiles = sleepBmpCache.validFiles.size();
       // Generate a random number between 0 and numFiles-1
       auto randomFileIndex = random(numFiles);
       // If we picked the same image as last time, reroll
       while (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
         randomFileIndex = random(numFiles);
       }
-      APP_STATE.lastSleepImage = randomFileIndex;
-      APP_STATE.saveToFile();
+
       const auto filename = "/sleep/" + sleepBmpCache.validFiles[randomFileIndex];
       FsFile file;
-      if (SdMan.openFileForRead("SLP", filename, file)) {
-        Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), filename.c_str());
-        Bitmap bitmap(file, true);
-        if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-          renderBitmapSleepScreen(bitmap);
-          return;
-        }
-        Serial.printf("[%lu] [SLP] Invalid BMP: %s\n", millis(), filename.c_str());
+      if (!SdMan.openFileForRead("SLP", filename, file)) {
+        Serial.printf("[%lu] [SLP] Failed to open BMP: %s\n", millis(), filename.c_str());
+        sleepBmpCache.validFiles.erase(sleepBmpCache.validFiles.begin() + randomFileIndex);
+        continue;
       }
+
+      Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), filename.c_str());
+      Bitmap bitmap(file, true);
+      if (bitmap.parseHeaders() == BmpReaderError::Ok) {
+        APP_STATE.lastSleepImage = randomFileIndex;
+        APP_STATE.saveToFile();
+        renderBitmapSleepScreen(bitmap);
+        return;
+      }
+
+      Serial.printf("[%lu] [SLP] Invalid BMP: %s\n", millis(), filename.c_str());
+      sleepBmpCache.validFiles.erase(sleepBmpCache.validFiles.begin() + randomFileIndex);
     }
     return renderDefaultSleepScreen();
   }

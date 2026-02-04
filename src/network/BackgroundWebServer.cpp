@@ -4,6 +4,8 @@
 #include <ESPmDNS.h>
 #include <HardwareSerial.h>
 #include <WiFi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #include <algorithm>
 
@@ -12,6 +14,11 @@
 
 namespace {
 constexpr const char* MDNS_HOSTNAME = "crosspoint";
+
+void ntpSyncTask(void* /*param*/) {
+  TimeSync::syncTimeWithNtpLowMemory();
+  vTaskDelete(nullptr);
+}
 
 bool findBestCredential(const std::vector<WifiCredential>& credentials, const int16_t scanCount, std::string& outSsid,
                         std::string& outPassword) {
@@ -108,7 +115,9 @@ void BackgroundWebServer::startServer() {
     scheduleRetry("low heap");
     return;
   }
-  TimeSync::syncTimeWithNtpLowMemory();
+  if (xTaskCreate(ntpSyncTask, "TimeSyncTask", 4096, nullptr, 1, nullptr) != pdPASS) {
+    TimeSync::syncTimeWithNtpLowMemory();
+  }
   if (!server) {
     server.reset(new CrossPointWebServer());
   }

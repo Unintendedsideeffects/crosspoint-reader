@@ -277,9 +277,12 @@ void CrossPointWebServer::handleNotFound() const {
 void CrossPointWebServer::handleStatus() const {
   // Get correct IP based on AP vs STA mode
   const String ipAddr = apMode ? WiFi.softAPIP().toString() : WiFi.localIP().toString();
+  const bool staConnected = WiFi.status() == WL_CONNECTED;
+  const String wifiStatus = apMode ? "AP Mode" : (staConnected ? "Connected" : "Disconnected");
 
   JsonDocument doc;
   doc["version"] = CROSSPOINT_VERSION;
+  doc["wifiStatus"] = wifiStatus;
   doc["ip"] = ipAddr;
   doc["mode"] = apMode ? "AP" : "STA";
   doc["rssi"] = apMode ? 0 : WiFi.RSSI();
@@ -914,14 +917,14 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       Serial.printf("[%lu] [WS] Text from client %u: %s\n", millis(), num, msg.c_str());
 
       if (msg.startsWith("START:")) {
-        // Parse: START:<filename>:<size>:<path>
+        // Parse: START:<filename>:<size>:<path> (filename/path URL-encoded)
         int firstColon = msg.indexOf(':', 6);
         int secondColon = msg.indexOf(':', firstColon + 1);
 
         if (firstColon > 0 && secondColon > 0) {
-          wsUploadFileName = msg.substring(6, firstColon);
+          wsUploadFileName = PathUtils::urlDecode(msg.substring(6, firstColon));
           wsUploadSize = msg.substring(firstColon + 1, secondColon).toInt();
-          wsUploadPath = msg.substring(secondColon + 1);
+          wsUploadPath = PathUtils::urlDecode(msg.substring(secondColon + 1));
           wsUploadReceived = 0;
           wsUploadStartTime = millis();
 

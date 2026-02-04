@@ -679,10 +679,11 @@
   }
 
   function formatFileSize(bytes) {
-    if (bytes === 0) return '0 B';
+    if (bytes <= 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
+    if (i >= sizes.length) return '>1 YB';
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)).toLocaleString() + ' ' + sizes[i];
   }
 
@@ -760,7 +761,7 @@
           fileTableContent += `<td><span class="file-icon">📁</span><a href="/files?path=${encodeURIComponent(folderPath)}" class="folder-link">${escapeHtml(file.name)}</a><span class="folder-badge">FOLDER</span></td>`;
           fileTableContent += '<td>Folder</td>';
           fileTableContent += '<td>-</td>';
-          fileTableContent += `<td class="actions-col"><button class="delete-btn" onclick="openDeleteModal('${file.name.replaceAll("'", "\\'")}', '${folderPath.replaceAll("'", "\\'")}', true)" title="Delete folder">🗑️</button></td>`;
+          fileTableContent += `<td class="actions-col"><button class="delete-btn" data-name="${encodeURIComponent(file.name)}" data-path="${encodeURIComponent(folderPath)}" data-is-folder="true" title="Delete folder">🗑️</button></td>`;
           fileTableContent += '</tr>';
         } else {
           let filePath = currentPath;
@@ -771,15 +772,24 @@
           fileTableContent += `<td><span class="file-icon">${file.isEpub ? '📗' : '📄'}</span>${escapeHtml(file.name)}`;
           if (file.isEpub) fileTableContent += '<span class="epub-badge">EPUB</span>';
           fileTableContent += '</td>';
-          fileTableContent += `<td>${file.name.split('.').pop().toUpperCase()}</td>`;
+          fileTableContent += `<td>${escapeHtml(file.name.split('.').pop().toUpperCase())}</td>`;
           fileTableContent += `<td>${formatFileSize(file.size)}</td>`;
-          fileTableContent += `<td class="actions-col"><button class="delete-btn" onclick="openDeleteModal('${file.name.replaceAll("'", "\\'")}', '${filePath.replaceAll("'", "\\'")}', false)" title="Delete file">🗑️</button></td>`;
+          fileTableContent += `<td class="actions-col"><button class="delete-btn" data-name="${encodeURIComponent(file.name)}" data-path="${encodeURIComponent(filePath)}" data-is-folder="false" title="Delete file">🗑️</button></td>`;
           fileTableContent += '</tr>';
         }
       });
 
       fileTableContent += '</table>';
       fileTable.innerHTML = fileTableContent;
+      fileTable.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openDeleteModal(
+            decodeURIComponent(btn.dataset.name || ''),
+            decodeURIComponent(btn.dataset.path || ''),
+            btn.dataset.isFolder === 'true'
+          );
+        });
+      });
     }
   }
 
@@ -837,8 +847,8 @@ function uploadFileWebSocket(file, onProgress, onComplete, onError) {
 
     ws.onopen = function() {
       console.log('[WS] Connected, starting upload:', file.name);
-      // Send start message: START:<filename>:<size>:<path>
-      ws.send(`START:${file.name}:${file.size}:${currentPath}`);
+      // Send start message with URL-encoded values to handle special characters
+      ws.send(`START:${encodeURIComponent(file.name)}:${file.size}:${encodeURIComponent(currentPath)}`);
     };
 
     ws.onmessage = async function(event) {

@@ -543,6 +543,12 @@ void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
     currentTextBlock->addWord(placeholder.c_str(), EpdFontFamily::ITALIC);
     return;
   }
+  if (strncmp(src, "data:", 5) == 0) {
+    Serial.printf("[%lu] [EHP] Data URL image unsupported\n", millis());
+    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    currentTextBlock->addWord("[Embedded image]", EpdFontFamily::ITALIC);
+    return;
+  }
 
   // Resolve relative path against content base path
   std::string imagePath;
@@ -603,7 +609,16 @@ void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
       currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
       return;
     }
-    tempImage.write(imageData, imageDataSize);
+    const size_t bytesWritten = tempImage.write(imageData, imageDataSize);
+    if (bytesWritten != imageDataSize) {
+      Serial.printf("[%lu] [EHP] Failed to write temp image data\n", millis());
+      tempImage.close();
+      free(imageData);
+      SdMan.remove(tempImagePath.c_str());
+      startNewTextBlock(TextBlock::CENTER_ALIGN);
+      currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
+      return;
+    }
     tempImage.close();
     free(imageData);
 

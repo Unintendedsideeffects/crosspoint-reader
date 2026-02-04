@@ -18,6 +18,7 @@ class MarkdownReaderActivity final : public ActivityWithSubactivity {
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> taskShouldExit{false};
+  std::atomic<bool> taskHasExited{false};
   int pagesUntilFullRefresh = 0;
   bool updateRequired = false;
   bool htmlReady = false;
@@ -29,7 +30,7 @@ class MarkdownReaderActivity final : public ActivityWithSubactivity {
 
   static void taskTrampoline(void* param);
   void displayTaskLoop();
-  void waitForRenderingMutex();
+  bool waitForRenderingMutex();
   void renderScreen();
   void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
                       int orientedMarginBottom, int orientedMarginLeft);

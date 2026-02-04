@@ -37,13 +37,13 @@ ImageConverter::Format ImageConverter::detectFormat(const char* filepath) {
 }
 
 bool ImageConverter::convertToBmpStream(FsFile& imageFile, Format format, Print& bmpOut, int targetWidth,
-                                        int targetHeight) {
+                                        int targetHeight, bool crop) {
   switch (format) {
     case FORMAT_JPEG:
-      return JpegToBmpConverter::jpegFileToBmpStreamWithSize(imageFile, bmpOut, targetWidth, targetHeight);
+      return JpegToBmpConverter::jpegFileToBmpStreamWithSize(imageFile, bmpOut, targetWidth, targetHeight, crop);
 
     case FORMAT_PNG:
-      return PngToBmpConverter::pngFileToBmpStreamWithSize(imageFile, bmpOut, targetWidth, targetHeight);
+      return PngToBmpConverter::pngFileToBmpStreamWithSize(imageFile, bmpOut, targetWidth, targetHeight, crop);
 
     default:
       return false;
