@@ -2,12 +2,79 @@
 
 #include <Arduino.h>
 #include <EpdFontFamily.h>
+#include <FsHelpers.h>
 #include <GfxRenderer.h>
+#include <ImageConverter.h>
+#include <SDCardManager.h>
 #include <esp_task_wdt.h>
+
+#include <cstring>
 
 #include "Epub/Page.h"
 #include "Epub/ParsedText.h"
 #include "Epub/blocks/TextBlock.h"
+
+namespace {
+class MemoryPrint : public Print {
+  std::vector<uint8_t>& buffer;
+
+ public:
+  explicit MemoryPrint(std::vector<uint8_t>& buf) : buffer(buf) {}
+  size_t write(uint8_t b) override {
+    buffer.push_back(b);
+    return 1;
+  }
+  size_t write(const uint8_t* buf, size_t size) override {
+    buffer.insert(buffer.end(), buf, buf + size);
+    return size;
+  }
+};
+
+bool decode1BitBmpToRaw(const std::vector<uint8_t>& bmpData, std::vector<uint8_t>& rawData, uint16_t& outWidth,
+                        uint16_t& outHeight) {
+  if (bmpData.size() < 54) {
+    return false;
+  }
+  if (bmpData[0] != 'B' || bmpData[1] != 'M') {
+    return false;
+  }
+
+  const uint32_t pixelOffset = bmpData[10] | (bmpData[11] << 8) | (bmpData[12] << 16) | (bmpData[13] << 24);
+  const int32_t width = static_cast<int32_t>(bmpData[18]) | (static_cast<int32_t>(bmpData[19]) << 8) |
+                        (static_cast<int32_t>(bmpData[20]) << 16) | (static_cast<int32_t>(bmpData[21]) << 24);
+  int32_t height = static_cast<int32_t>(bmpData[22]) | (static_cast<int32_t>(bmpData[23]) << 8) |
+                   (static_cast<int32_t>(bmpData[24]) << 16) | (static_cast<int32_t>(bmpData[25]) << 24);
+  const bool topDown = height < 0;
+  if (height < 0) {
+    height = -height;
+  }
+
+  const uint16_t bitsPerPixel = bmpData[28] | (bmpData[29] << 8);
+  if (bitsPerPixel != 1 || width <= 0 || height <= 0) {
+    return false;
+  }
+
+  const uint32_t rowBytesBmp = ((static_cast<uint32_t>(width) + 31) / 32) * 4;
+  const uint32_t rowBytesRaw = (static_cast<uint32_t>(width) + 7) / 8;
+  const uint64_t requiredSize =
+      static_cast<uint64_t>(pixelOffset) + static_cast<uint64_t>(rowBytesBmp) * static_cast<uint64_t>(height);
+  if (requiredSize > bmpData.size()) {
+    return false;
+  }
+
+  rawData.assign(rowBytesRaw * static_cast<uint32_t>(height), 0);
+  for (int32_t row = 0; row < height; row++) {
+    const uint32_t srcRow = static_cast<uint32_t>(topDown ? row : (height - 1 - row));
+    const uint32_t srcOffset = pixelOffset + srcRow * rowBytesBmp;
+    const uint32_t dstOffset = static_cast<uint32_t>(row) * rowBytesRaw;
+    memcpy(rawData.data() + dstOffset, bmpData.data() + srcOffset, rowBytesRaw);
+  }
+
+  outWidth = static_cast<uint16_t>(width);
+  outHeight = static_cast<uint16_t>(height);
+  return true;
+}
+}  // namespace
 
 MarkdownRenderer::MarkdownRenderer(GfxRenderer& renderer, int fontId, int viewportWidth, int viewportHeight,
                                    float lineCompression, bool extraParagraphSpacing, uint8_t paragraphAlignment,
@@ -28,6 +95,7 @@ bool MarkdownRenderer::render(const MdNode& root, const PageCallback& pageCallba
                               const ProgressCallback& progressCallback) {
   // Initialize state
   onPageComplete = pageCallback;
+  onProgress = progressCallback;
   currentPage.reset();
   currentTextBlock.reset();
   currentPageNextY = 0;
@@ -41,9 +109,11 @@ bool MarkdownRenderer::render(const MdNode& root, const PageCallback& pageCallba
   blockquoteDepth = 0;
   nodeToPage.clear();
   currentNodeIndex = 0;
+  totalNodes = 0;
+  lastProgress = -1;
 
   // Count total nodes for progress (rough estimate) - iterative to avoid stack overflow
-  size_t totalNodes = 0;
+  totalNodes = 0;
   {
     std::vector<const MdNode*> countStack;
     countStack.reserve(64);
@@ -60,6 +130,8 @@ bool MarkdownRenderer::render(const MdNode& root, const PageCallback& pageCallba
 
   // Reserve space for node mapping
   nodeToPage.reserve(totalNodes);
+
+  updateProgress();
 
   // Render the document
   renderNode(root);
@@ -88,6 +160,7 @@ void MarkdownRenderer::renderNode(const MdNode& node) {
   // Record which page this node starts on
   nodeToPage.push_back(static_cast<size_t>(pageCount));
   currentNodeIndex++;
+  updateProgress();
   if (currentNodeIndex % 100 == 0) {
     esp_task_wdt_reset();
   }
@@ -538,16 +611,24 @@ void MarkdownRenderer::renderLink(const MdNode& node) {
 }
 
 void MarkdownRenderer::renderImage(const MdNode& node) {
-  // For now, show image placeholder
-  // TODO: Implement actual image rendering like ChapterHtmlSlimParser
-  if (!currentTextBlock) {
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
+  std::string src;
+  std::string alt = node.getPlainText();
+  if (alt.empty()) {
+    alt = "Image";
+  }
+  if (node.image) {
+    src = node.image->src;
   }
 
-  std::string alt = "Image";
-  if (node.image && !node.image->src.empty()) {
-    // Extract filename from path
-    std::string src = node.image->src;
+  if (src.empty()) {
+    if (!currentTextBlock) {
+      startNewTextBlock(TextBlock::CENTER_ALIGN);
+    }
+    currentTextBlock->addWord("[Image]", EpdFontFamily::ITALIC);
+    return;
+  }
+
+  if (alt == "Image") {
     size_t lastSlash = src.find_last_of('/');
     if (lastSlash != std::string::npos) {
       alt = src.substr(lastSlash + 1);
@@ -556,8 +637,79 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
     }
   }
 
-  currentTextBlock->addWord("[Image:", EpdFontFamily::ITALIC);
-  currentTextBlock->addWord(alt + "]", EpdFontFamily::ITALIC);
+  if (src.rfind("http://", 0) == 0 || src.rfind("https://", 0) == 0) {
+    if (!currentTextBlock) {
+      startNewTextBlock(TextBlock::CENTER_ALIGN);
+    }
+    currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
+    return;
+  }
+  if (src.rfind("data:", 0) == 0) {
+    if (!currentTextBlock) {
+      startNewTextBlock(TextBlock::CENTER_ALIGN);
+    }
+    currentTextBlock->addWord("[Embedded image]", EpdFontFamily::ITALIC);
+    return;
+  }
+
+  // Resolve relative path against content base path
+  std::string imagePath;
+  if (!src.empty() && src[0] == '/') {
+    imagePath = src;
+  } else {
+    imagePath = FsHelpers::normalisePath(contentBasePath + src);
+  }
+
+  auto format = ImageConverter::detectFormat(imagePath.c_str());
+  if (format == ImageConverter::FORMAT_UNKNOWN) {
+    if (!currentTextBlock) {
+      startNewTextBlock(TextBlock::CENTER_ALIGN);
+    }
+    currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
+    return;
+  }
+
+  if (currentTextBlock && !currentTextBlock->isEmpty()) {
+    flushTextBlock();
+  }
+
+  if (!currentPage) {
+    currentPage.reset(new Page());
+    currentPageNextY = 0;
+  }
+
+  const int maxWidth = viewportWidth;
+  const int maxHeight = viewportHeight / 2;
+
+  FsFile imageFile;
+  if (!SdMan.openFileForRead("MDR", imagePath, imageFile)) {
+    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
+    return;
+  }
+
+  std::vector<uint8_t> bmpData;
+  MemoryPrint bmpOut(bmpData);
+  const bool success = ImageConverter::convertTo1BitBmpStream(imageFile, format, bmpOut, maxWidth, maxHeight, false);
+  imageFile.close();
+
+  if (!success || bmpData.size() < 54) {
+    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
+    return;
+  }
+
+  std::vector<uint8_t> rawData;
+  uint16_t bmpWidth = 0;
+  uint16_t bmpHeight = 0;
+  if (!decode1BitBmpToRaw(bmpData, rawData, bmpWidth, bmpHeight)) {
+    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
+    return;
+  }
+
+  auto pageImage = std::make_shared<PageImage>(std::move(rawData), bmpWidth, bmpHeight, 0, 0);
+  addImageToPage(pageImage);
 }
 
 void MarkdownRenderer::renderCode(const MdNode& node) {
@@ -677,6 +829,25 @@ void MarkdownRenderer::addLineToPage(std::shared_ptr<TextBlock> line) {
   currentPageNextY += lineHeight;
 }
 
+void MarkdownRenderer::addImageToPage(std::shared_ptr<PageImage> image) {
+  const int imageHeight = image->getHeight();
+
+  if (currentPageNextY + imageHeight > viewportHeight) {
+    finalizePage();
+    currentPage.reset(new Page());
+    currentPageNextY = 0;
+  }
+
+  const int16_t xPos = (viewportWidth - image->getWidth()) / 2;
+  image->xPos = xPos;
+  image->yPos = currentPageNextY;
+  currentPage->elements.push_back(image);
+  currentPageNextY += imageHeight;
+
+  const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
+  currentPageNextY += lineHeight / 2;
+}
+
 void MarkdownRenderer::finalizePage() {
   if (currentPage && onPageComplete) {
     pageCount++;
@@ -716,4 +887,15 @@ std::string MarkdownRenderer::createIndentPrefix() const {
   }
 
   return prefix;
+}
+
+void MarkdownRenderer::updateProgress() {
+  if (!onProgress || totalNodes == 0) {
+    return;
+  }
+  int progress = static_cast<int>((currentNodeIndex * 100) / totalNodes);
+  if (progress != lastProgress) {
+    lastProgress = progress;
+    onProgress(progress);
+  }
 }

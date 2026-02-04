@@ -1,5 +1,6 @@
 #include "Markdown.h"
 
+#include <FsHelpers.h>
 #include <SDCardManager.h>
 #include <Serialization.h>
 #include <ctype.h>
@@ -7,6 +8,7 @@
 #include <algorithm>
 #include <functional>
 #include <string>
+#include <vector>
 
 #include "MarkdownParser.h"
 
@@ -17,6 +19,8 @@ extern "C" {
 namespace {
 constexpr uint32_t META_MAGIC = 0x4D44544D;  // "MDTM"
 constexpr uint8_t META_VERSION = 2;
+constexpr int MAX_EMBED_DEPTH = 3;
+constexpr size_t MAX_EMBED_BYTES = 256 * 1024;
 
 uint32_t hashFileContents(const std::string& path) {
   FsFile file;
@@ -65,6 +69,13 @@ bool hasImageExtension(const std::string& target) {
   return ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "bmp" || ext == "gif" || ext == "webp";
 }
 
+std::string formatLinkTarget(const std::string& target) {
+  if (target.find(' ') != std::string::npos) {
+    return "<" + target + ">";
+  }
+  return target;
+}
+
 bool isFenceStart(const std::string& line, std::string& fence) {
   size_t i = 0;
   while (i < line.size() && (line[i] == ' ' || line[i] == '\t')) {
@@ -105,6 +116,199 @@ bool isFenceEnd(const std::string& line, const std::string& fence) {
     }
   }
   return true;
+}
+
+std::string normalizeSlug(const std::string& input) {
+  std::string slug;
+  bool prevHyphen = false;
+  for (char c : input) {
+    if (c == ' ' || c == '-' || c == '_') {
+      if (!slug.empty() && !prevHyphen) {
+        slug.push_back('-');
+        prevHyphen = true;
+      }
+      continue;
+    }
+    if (isalnum(static_cast<unsigned char>(c))) {
+      slug.push_back(static_cast<char>(tolower(static_cast<unsigned char>(c))));
+      prevHyphen = false;
+    }
+  }
+  while (!slug.empty() && slug.back() == '-') {
+    slug.pop_back();
+  }
+  return slug;
+}
+
+bool readFileToString(const std::string& path, std::string& out, size_t maxBytes) {
+  FsFile file;
+  if (!SdMan.openFileForRead("MD ", path, file)) {
+    return false;
+  }
+
+  const size_t size = file.size();
+  if (size == 0 || size > maxBytes) {
+    file.close();
+    return false;
+  }
+
+  out.clear();
+  out.reserve(size + 1);
+  uint8_t buffer[1024];
+  while (file.available()) {
+    const size_t readSize = file.read(buffer, sizeof(buffer));
+    if (readSize == 0) {
+      break;
+    }
+    out.append(reinterpret_cast<const char*>(buffer), readSize);
+  }
+  file.close();
+  return true;
+}
+
+std::string stripHeadingMarkup(const std::string& line, uint8_t level) {
+  size_t i = 0;
+  while (i < line.size() && line[i] == ' ') {
+    i++;
+  }
+  for (uint8_t c = 0; c < level && i < line.size(); c++) {
+    if (line[i] == '#') {
+      i++;
+    }
+  }
+  while (i < line.size() && (line[i] == ' ' || line[i] == '\t')) {
+    i++;
+  }
+  return line.substr(i);
+}
+
+bool isHeadingLine(const std::string& line, uint8_t& outLevel, std::string& outText) {
+  size_t i = 0;
+  while (i < line.size() && line[i] == ' ') {
+    i++;
+  }
+  size_t hashStart = i;
+  while (i < line.size() && line[i] == '#') {
+    i++;
+  }
+  const size_t hashCount = i - hashStart;
+  if (hashCount == 0 || hashCount > 6) {
+    return false;
+  }
+  if (i < line.size() && line[i] != ' ' && line[i] != '\t') {
+    return false;
+  }
+  outLevel = static_cast<uint8_t>(hashCount);
+  outText = stripHeadingMarkup(line, outLevel);
+  return true;
+}
+
+bool findBlockLine(const std::vector<std::string>& lines, const std::string& blockId, std::string& outLine) {
+  if (blockId.empty()) {
+    return false;
+  }
+  const std::string needle = "^" + blockId;
+  for (const auto& line : lines) {
+    const size_t pos = line.find(needle);
+    if (pos == std::string::npos) {
+      continue;
+    }
+    if (pos > 0) {
+      char prev = line[pos - 1];
+      if (prev != ' ' && prev != '\t') {
+        continue;
+      }
+    }
+    outLine = line;
+    if (!outLine.empty()) {
+      size_t caret = outLine.find_last_of('^');
+      if (caret != std::string::npos && caret > 0) {
+        if (isspace(static_cast<unsigned char>(outLine[caret - 1]))) {
+          size_t i = caret + 1;
+          while (i < outLine.size()) {
+            char c = outLine[i];
+            if (c == ' ' || c == '\t' || c == '\r') {
+              break;
+            }
+            if (!isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-') {
+              break;
+            }
+            i++;
+          }
+          size_t end = i;
+          while (end < outLine.size() && (outLine[end] == ' ' || outLine[end] == '\t' || outLine[end] == '\r')) {
+            end++;
+          }
+          size_t trim = caret - 1;
+          while (trim > 0 && outLine[trim - 1] == ' ') {
+            trim--;
+          }
+          outLine = outLine.substr(0, trim) + outLine.substr(end);
+        }
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+std::string extractSectionByHeading(const std::string& content, const std::string& heading) {
+  if (heading.empty()) {
+    return content;
+  }
+
+  std::vector<std::string> lines;
+  lines.reserve(256);
+  size_t start = 0;
+  while (start <= content.size()) {
+    const size_t end = content.find('\n', start);
+    const bool hasNewline = end != std::string::npos;
+    const size_t lineLen = hasNewline ? (end - start) : (content.size() - start);
+    lines.emplace_back(content.substr(start, lineLen));
+    if (!hasNewline) {
+      break;
+    }
+    start = end + 1;
+  }
+
+  const std::string targetSlug = normalizeSlug(heading);
+  size_t startIndex = std::string::npos;
+  uint8_t targetLevel = 0;
+  for (size_t i = 0; i < lines.size(); i++) {
+    uint8_t level = 0;
+    std::string text;
+    if (!isHeadingLine(lines[i], level, text)) {
+      continue;
+    }
+    if (normalizeSlug(text) == targetSlug) {
+      startIndex = i;
+      targetLevel = level;
+      break;
+    }
+  }
+
+  if (startIndex == std::string::npos) {
+    return "";
+  }
+
+  size_t endIndex = lines.size();
+  for (size_t i = startIndex + 1; i < lines.size(); i++) {
+    uint8_t level = 0;
+    std::string text;
+    if (isHeadingLine(lines[i], level, text) && level <= targetLevel) {
+      endIndex = i;
+      break;
+    }
+  }
+
+  std::string out;
+  for (size_t i = startIndex; i < endIndex; i++) {
+    out.append(lines[i]);
+    if (i + 1 < endIndex) {
+      out.push_back('\n');
+    }
+  }
+  return out;
 }
 }  // namespace
 
@@ -239,47 +443,9 @@ bool Markdown::renderToHtmlFile(const std::string& htmlPath) const {
   }
   file.close();
 
-  std::string processed = stripFrontmatter(content);
-  processed = stripComments(processed);
-
-  std::string output;
-  output.reserve(processed.size() + 64);
-
-  bool inFence = false;
-  std::string fence;
-
-  size_t start = 0;
-  while (start <= processed.size()) {
-    const size_t end = processed.find('\n', start);
-    const bool hasNewline = end != std::string::npos;
-    const size_t lineLen = hasNewline ? (end - start) : (processed.size() - start);
-    std::string line = processed.substr(start, lineLen);
-
-    if (!inFence) {
-      std::string newFence;
-      if (isFenceStart(line, newFence)) {
-        inFence = true;
-        fence = newFence;
-        output.append(line);
-      } else {
-        std::string processedLine = processLine(line);
-        output.append(processedLine);
-      }
-    } else {
-      output.append(line);
-      if (isFenceEnd(line, fence)) {
-        inFence = false;
-        fence.clear();
-      }
-    }
-
-    if (hasNewline) {
-      output.push_back('\n');
-      start = end + 1;
-    } else {
-      break;
-    }
-  }
+  std::vector<std::string> stack;
+  stack.push_back(filepath);
+  const std::string output = preprocessContent(content, 0, stack);
 
   FsFile htmlFile;
   if (!SdMan.openFileForWrite("MD ", htmlPath, htmlFile)) {
@@ -456,14 +622,14 @@ std::string Markdown::processInline(const std::string& line) {
           out.append("![");
           out.append(alias);
           out.append("](");
-          out.append(target);
+          out.append(formatLinkTarget(target));
           out.append(")");
         } else {
           const std::string& label = alias.empty() ? target : alias;
           out.append("[");
           out.append(label);
           out.append("](");
-          out.append(target);
+          out.append(formatLinkTarget(target));
           out.append(")");
         }
         i = end + 2;
@@ -486,7 +652,7 @@ std::string Markdown::processInline(const std::string& line) {
         out.append("[");
         out.append(label);
         out.append("](");
-        out.append(target);
+        out.append(formatLinkTarget(target));
         out.append(")");
         i = end + 2;
         continue;
@@ -615,6 +781,210 @@ std::string Markdown::getContent() const {
   return content;
 }
 
+std::string Markdown::preprocessContent(const std::string& content, int depth, std::vector<std::string>& stack) const {
+  if (depth > MAX_EMBED_DEPTH) {
+    return "[Embedded note omitted]";
+  }
+
+  std::string processed = stripFrontmatter(content);
+  processed = stripComments(processed);
+
+  std::string output;
+  output.reserve(processed.size() + 64);
+
+  bool inFence = false;
+  std::string fence;
+
+  size_t start = 0;
+  while (start <= processed.size()) {
+    const size_t end = processed.find('\n', start);
+    const bool hasNewline = end != std::string::npos;
+    const size_t lineLen = hasNewline ? (end - start) : (processed.size() - start);
+    std::string line = processed.substr(start, lineLen);
+
+    if (!inFence) {
+      std::string newFence;
+      if (isFenceStart(line, newFence)) {
+        inFence = true;
+        fence = newFence;
+        output.append(line);
+      } else {
+        std::string trimmed = line;
+        const size_t firstNonSpace = trimmed.find_first_not_of(" \t");
+        if (firstNonSpace == std::string::npos) {
+          trimmed.clear();
+        } else {
+          const size_t lastNonSpace = trimmed.find_last_not_of(" \t");
+          trimmed = trimmed.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+        }
+
+        bool handled = false;
+        if (trimmed.rfind("![[", 0) == 0 && trimmed.size() >= 5 && trimmed.substr(trimmed.size() - 2) == "]]") {
+          const std::string inner = trimmed.substr(3, trimmed.size() - 5);
+
+          std::string target = inner;
+          const size_t pipePos = target.find('|');
+          if (pipePos != std::string::npos) {
+            target = target.substr(0, pipePos);
+          }
+
+          // Split target into file part and anchor
+          std::string filePart = target;
+          std::string heading;
+          std::string blockId;
+          const size_t hashPos = target.find('#');
+          if (hashPos != std::string::npos) {
+            filePart = target.substr(0, hashPos);
+            std::string anchor = target.substr(hashPos + 1);
+            if (!anchor.empty() && anchor[0] == '^') {
+              blockId = anchor.substr(1);
+            } else {
+              heading = anchor;
+            }
+          } else {
+            const size_t caretPos = target.find('^');
+            if (caretPos != std::string::npos) {
+              filePart = target.substr(0, caretPos);
+              blockId = target.substr(caretPos + 1);
+            }
+          }
+
+          if (filePart.empty() && heading.empty() && blockId.empty()) {
+            handled = false;
+          } else {
+            bool isImage = false;
+            std::string resolvedPath;
+
+            std::string fileTrimmed = filePart;
+            const size_t fileFirst = fileTrimmed.find_first_not_of(" \t");
+            if (fileFirst == std::string::npos) {
+              fileTrimmed.clear();
+            } else {
+              const size_t fileLast = fileTrimmed.find_last_not_of(" \t");
+              fileTrimmed = fileTrimmed.substr(fileFirst, fileLast - fileFirst + 1);
+            }
+
+            if (!fileTrimmed.empty() && hasImageExtension(fileTrimmed)) {
+              isImage = true;
+            }
+
+            if (isImage) {
+              output.append(processLine(line));
+              handled = true;
+            } else {
+              // Resolve markdown file path
+              std::string pathPart = fileTrimmed;
+              if (pathPart.empty()) {
+                resolvedPath = filepath;
+              } else {
+                size_t dot = pathPart.find_last_of('.');
+                const size_t slash = pathPart.find_last_of('/');
+                const bool hasExt = (dot != std::string::npos && (slash == std::string::npos || dot > slash));
+                if (!hasExt) {
+                  pathPart += ".md";
+                }
+
+                if (!pathPart.empty() && pathPart[0] == '/') {
+                  resolvedPath = pathPart;
+                } else {
+                  resolvedPath = FsHelpers::normalisePath(getContentBasePath() + pathPart);
+                }
+              }
+
+              if (!resolvedPath.empty()) {
+                std::string cycleKey = resolvedPath;
+                if (!heading.empty()) {
+                  cycleKey += "#";
+                  cycleKey += heading;
+                }
+                if (!blockId.empty()) {
+                  cycleKey += "^";
+                  cycleKey += blockId;
+                }
+
+                if (std::find(stack.begin(), stack.end(), cycleKey) != stack.end()) {
+                  output.append("[Embedded note omitted]");
+                  handled = true;
+                } else {
+                  std::string embeddedContent;
+                  if (readFileToString(resolvedPath, embeddedContent, MAX_EMBED_BYTES)) {
+                    std::string selected = embeddedContent;
+                    if (!blockId.empty()) {
+                      std::vector<std::string> lines;
+                      lines.reserve(256);
+                      size_t s = 0;
+                      while (s <= embeddedContent.size()) {
+                        const size_t e = embeddedContent.find('\n', s);
+                        const bool nl = e != std::string::npos;
+                        const size_t len = nl ? (e - s) : (embeddedContent.size() - s);
+                        lines.emplace_back(embeddedContent.substr(s, len));
+                        if (!nl) {
+                          break;
+                        }
+                        s = e + 1;
+                      }
+                      std::string blockLine;
+                      if (findBlockLine(lines, blockId, blockLine)) {
+                        selected = blockLine;
+                      } else {
+                        selected.clear();
+                      }
+                    } else if (!heading.empty()) {
+                      selected = extractSectionByHeading(embeddedContent, heading);
+                    }
+
+                    if (!selected.empty()) {
+                      stack.push_back(cycleKey);
+                      const std::string expanded = preprocessContent(selected, depth + 1, stack);
+                      stack.pop_back();
+                      output.append(expanded);
+                      handled = true;
+                    } else {
+                      output.append("[Embedded note not found]");
+                      handled = true;
+                    }
+                  } else {
+                    output.append("[Embedded note not found]");
+                    handled = true;
+                  }
+                }
+              } else {
+                output.append("[Embedded note not found]");
+                handled = true;
+              }
+            }
+          }
+        }
+
+        if (!handled) {
+          std::string processedLine = processLine(line);
+          output.append(processedLine);
+        }
+      }
+    } else {
+      output.append(line);
+      if (isFenceEnd(line, fence)) {
+        inFence = false;
+        fence.clear();
+      }
+    }
+
+    if (output.size() >= MarkdownParser::MAX_INPUT_SIZE) {
+      output.resize(MarkdownParser::MAX_INPUT_SIZE);
+      break;
+    }
+
+    if (hasNewline) {
+      output.push_back('\n');
+      start = end + 1;
+    } else {
+      break;
+    }
+  }
+
+  return output;
+}
+
 bool Markdown::parseToAst() {
   if (!loaded) {
     return false;
@@ -626,7 +996,10 @@ bool Markdown::parseToAst() {
   }
 
   MarkdownParser parser;
-  ast = parser.parseWithPreprocessing(content);
+  std::vector<std::string> stack;
+  stack.push_back(filepath);
+  const std::string processed = preprocessContent(content, 0, stack);
+  ast = parser.parse(processed);
 
   if (!ast) {
     Serial.printf("[%lu] [MD ] Failed to parse markdown to AST\n", millis());
