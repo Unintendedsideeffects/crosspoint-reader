@@ -70,10 +70,12 @@ void MarkdownReaderActivity::onEnter() {
   taskHasExited.store(false);
 
   markdown->setupCacheDir();
-  htmlReady.store(markdown->ensureHtml());
-
-  // Parse AST for navigation features (non-blocking, best effort)
+  // Parse AST for Obsidian rendering and navigation (best effort)
   astReady.store(markdown->parseToAst());
+  useAstRenderer.store(astReady.load());
+  if (!useAstRenderer.load()) {
+    htmlReady.store(markdown->ensureHtml());
+  }
 
   APP_STATE.openEpubPath = markdown->getPath();
   APP_STATE.saveToFile();
@@ -101,7 +103,8 @@ void MarkdownReaderActivity::onExit() {
     vSemaphoreDelete(renderingMutex);
     renderingMutex = nullptr;
   }
-  section.reset();
+  mdSection.reset();
+  htmlSection.reset();
   markdown.reset();
 }
 
@@ -168,16 +171,19 @@ void MarkdownReaderActivity::loop() {
     return;
   }
 
-  if (!section || section->pageCount == 0) {
+  if (!hasActiveSection() || getActivePageCount() == 0) {
     updateRequired = true;
     return;
   }
 
-  if (prevTriggered && section->currentPage > 0) {
-    section->currentPage--;
+  const int currentPage = getActiveCurrentPage();
+  const uint16_t pageCount = getActivePageCount();
+
+  if (prevTriggered && currentPage > 0) {
+    setActiveCurrentPage(currentPage - 1);
     updateRequired = true;
-  } else if (nextTriggered && section->currentPage < section->pageCount - 1) {
-    section->currentPage++;
+  } else if (nextTriggered && currentPage < static_cast<int>(pageCount - 1)) {
+    setActiveCurrentPage(currentPage + 1);
     updateRequired = true;
   }
 }
@@ -206,7 +212,14 @@ void MarkdownReaderActivity::renderScreen() {
     return;
   }
 
-  if (!htmlReady.load()) {
+  if (useAstRenderer.load()) {
+    if (!astReady.load() || !markdown->getAst()) {
+      renderer.clearScreen();
+      renderer.drawCenteredText(UI_12_FONT_ID, 300, "Markdown error", true, EpdFontFamily::BOLD);
+      renderer.displayBuffer();
+      return;
+    }
+  } else if (!htmlReady.load()) {
     renderer.clearScreen();
     renderer.drawCenteredText(UI_12_FONT_ID, 300, "Markdown error", true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
@@ -228,101 +241,185 @@ void MarkdownReaderActivity::renderScreen() {
                             (showProgressBar ? (ScreenComponents::BOOK_PROGRESS_BAR_HEIGHT + progressBarMarginTop) : 0);
   }
 
-  if (!section) {
-    const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
-    const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
+  const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
+  const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
 
-    section.reset(
-        new HtmlSection(markdown->getHtmlPath(), markdown->getCachePath(), markdown->getContentBasePath(), renderer));
+  bool sectionInitialized = false;
 
-    bool sectionLoaded = false;
-    {
-      SpiBusMutex::Guard guard;
-      sectionLoaded = section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
-                                               SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment,
-                                               viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled,
-                                               static_cast<uint32_t>(markdown->getFileSize()));
+  auto progressSetup = [this] {
+    constexpr int barWidth = 200;
+    constexpr int barHeight = 10;
+    constexpr int boxMargin = 20;
+    const int textWidth = renderer.getTextWidth(UI_12_FONT_ID, "Indexing...");
+    const int boxWidthWithBar = (barWidth > textWidth ? barWidth : textWidth) + boxMargin * 2;
+    const int boxHeightWithBar = renderer.getLineHeight(UI_12_FONT_ID) + barHeight + boxMargin * 3;
+    const int boxXWithBar = (renderer.getScreenWidth() - boxWidthWithBar) / 2;
+    constexpr int boxY = 50;
+    const int barX = boxXWithBar + (boxWidthWithBar - barWidth) / 2;
+    const int barY = boxY + renderer.getLineHeight(UI_12_FONT_ID) + boxMargin * 2;
+
+    renderer.fillRect(boxXWithBar, boxY, boxWidthWithBar, boxHeightWithBar, false);
+    renderer.drawText(UI_12_FONT_ID, boxXWithBar + boxMargin, boxY + boxMargin, "Indexing...");
+    renderer.drawRect(boxXWithBar + 5, boxY + 5, boxWidthWithBar - 10, boxHeightWithBar - 10);
+    renderer.drawRect(barX, barY, barWidth, barHeight);
+    renderer.displayBuffer();
+  };
+
+  auto progressCallback = [this](int progress) {
+    constexpr int barWidth = 200;
+    constexpr int barHeight = 10;
+    constexpr int boxMargin = 20;
+    const int textWidth = renderer.getTextWidth(UI_12_FONT_ID, "Indexing...");
+    const int boxWidthWithBar = (barWidth > textWidth ? barWidth : textWidth) + boxMargin * 2;
+    const int boxXWithBar = (renderer.getScreenWidth() - boxWidthWithBar) / 2;
+    constexpr int boxY = 50;
+    const int barX = boxXWithBar + (boxWidthWithBar - barWidth) / 2;
+    const int barY = boxY + renderer.getLineHeight(UI_12_FONT_ID) + boxMargin * 2;
+
+    const int fillWidth = (barWidth - 2) * progress / 100;
+    renderer.fillRect(barX + 1, barY + 1, fillWidth, barHeight - 2, true);
+    renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+  };
+
+  if (useAstRenderer.load()) {
+    if (!mdSection) {
+      sectionInitialized = true;
+      mdSection.reset(new MarkdownSection(markdown->getCachePath(), markdown->getContentBasePath(), renderer));
+
+      bool sectionLoaded = false;
+      {
+        SpiBusMutex::Guard guard;
+        sectionLoaded = mdSection->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
+                                                   SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment,
+                                                   viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled,
+                                                   static_cast<uint32_t>(markdown->getFileSize()));
+      }
+
+      if (!sectionLoaded) {
+        renderer.fillRect(0, 0, renderer.getScreenWidth(), renderer.getScreenHeight(), false);
+        renderer.displayBuffer();
+        pagesUntilFullRefresh = 0;
+
+        if (!mdSection->createSectionFile(*markdown->getAst(), SETTINGS.getReaderFontId(),
+                                          SETTINGS.getReaderLineCompression(), SETTINGS.extraParagraphSpacing,
+                                          SETTINGS.paragraphAlignment, viewportWidth, viewportHeight,
+                                          SETTINGS.hyphenationEnabled, static_cast<uint32_t>(markdown->getFileSize()),
+                                          progressSetup, progressCallback)) {
+          Serial.printf("[%lu] [MDR] Failed to build markdown AST cache, falling back to HTML\n", millis());
+          mdSection.reset();
+          useAstRenderer.store(false);
+        }
+      }
     }
 
-    if (!sectionLoaded) {
-      constexpr int barWidth = 200;
-      constexpr int barHeight = 10;
-      constexpr int boxMargin = 20;
-      const int textWidth = renderer.getTextWidth(UI_12_FONT_ID, "Indexing...");
-      const int boxWidthWithBar = (barWidth > textWidth ? barWidth : textWidth) + boxMargin * 2;
-      const int boxWidthNoBar = textWidth + boxMargin * 2;
-      const int boxHeightWithBar = renderer.getLineHeight(UI_12_FONT_ID) + barHeight + boxMargin * 3;
-      const int boxHeightNoBar = renderer.getLineHeight(UI_12_FONT_ID) + boxMargin * 2;
-      const int boxXWithBar = (renderer.getScreenWidth() - boxWidthWithBar) / 2;
-      const int boxXNoBar = (renderer.getScreenWidth() - boxWidthNoBar) / 2;
-      constexpr int boxY = 50;
-      const int barX = boxXWithBar + (boxWidthWithBar - barWidth) / 2;
-      const int barY = boxY + renderer.getLineHeight(UI_12_FONT_ID) + boxMargin * 2;
+    if (useAstRenderer.load() && mdSection) {
+      if (hasSavedPage) {
+        if (mdSection->pageCount > 0) {
+          mdSection->currentPage = std::min(savedPage, static_cast<int>(mdSection->pageCount - 1));
+        } else {
+          mdSection->currentPage = 0;
+        }
+        hasSavedPage = false;
+      }
 
-      renderer.fillRect(boxXNoBar, boxY, boxWidthNoBar, boxHeightNoBar, false);
-      renderer.drawText(UI_12_FONT_ID, boxXNoBar + boxMargin, boxY + boxMargin, "Indexing...");
-      renderer.drawRect(boxXNoBar + 5, boxY + 5, boxWidthNoBar - 10, boxHeightNoBar - 10);
-      renderer.displayBuffer();
-      pagesUntilFullRefresh = 0;
+      if (sectionInitialized && astReady.load()) {
+        auto* nav = markdown->getNavigation();
+        if (nav) {
+          if (mdSection->hasNodeToPageMap()) {
+            nav->updatePageNumbers(mdSection->getNodeToPageMap());
+          } else {
+            MarkdownRenderer mdRenderer(renderer, SETTINGS.getReaderFontId(), viewportWidth, viewportHeight,
+                                        SETTINGS.getReaderLineCompression(), SETTINGS.extraParagraphSpacing,
+                                        SETTINGS.paragraphAlignment, SETTINGS.hyphenationEnabled,
+                                        markdown->getContentBasePath());
+            {
+              SpiBusMutex::Guard guard;
+              mdRenderer.render(*markdown->getAst(), [](std::unique_ptr<Page> page) { (void)page; });
+            }
+            nav->updatePageNumbers(mdRenderer.getNodeToPageMap());
+          }
+        }
+      }
+    }
+  }
 
-      auto progressSetup = [this, boxXWithBar, boxWidthWithBar, boxHeightWithBar, boxY, barX, barY, barWidth,
-                            barHeight] {
-        renderer.fillRect(boxXWithBar, boxY, boxWidthWithBar, boxHeightWithBar, false);
-        renderer.drawText(UI_12_FONT_ID, boxXWithBar + boxMargin, boxY + boxMargin, "Indexing...");
-        renderer.drawRect(boxXWithBar + 5, boxY + 5, boxWidthWithBar - 10, boxHeightWithBar - 10);
-        renderer.drawRect(barX, barY, barWidth, barHeight);
+  if (!useAstRenderer.load()) {
+    if (!htmlReady.load()) {
+      htmlReady.store(markdown->ensureHtml());
+      if (!htmlReady.load()) {
+        renderer.clearScreen();
+        renderer.drawCenteredText(UI_12_FONT_ID, 300, "Markdown error", true, EpdFontFamily::BOLD);
         renderer.displayBuffer();
-      };
-
-      auto progressCallback = [this, barX, barY, barWidth, barHeight](int progress) {
-        const int fillWidth = (barWidth - 2) * progress / 100;
-        renderer.fillRect(barX + 1, barY + 1, fillWidth, barHeight - 2, true);
-        renderer.displayBuffer(HalDisplay::FAST_REFRESH);
-      };
-
-      if (!section->createSectionFile(
-              SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(), SETTINGS.extraParagraphSpacing,
-              SETTINGS.paragraphAlignment, viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled,
-              static_cast<uint32_t>(markdown->getFileSize()), progressSetup, progressCallback)) {
-        Serial.printf("[%lu] [MDR] Failed to build markdown cache\n", millis());
-        section.reset();
         return;
       }
     }
 
-    if (hasSavedPage) {
-      if (section->pageCount > 0) {
-        section->currentPage = std::min(savedPage, static_cast<int>(section->pageCount - 1));
-      } else {
-        section->currentPage = 0;
-      }
-      hasSavedPage = false;
-    }
+    if (!htmlSection) {
+      sectionInitialized = true;
+      htmlSection.reset(
+          new HtmlSection(markdown->getHtmlPath(), markdown->getCachePath(), markdown->getContentBasePath(), renderer));
 
-    if (astReady.load() && markdown->getAst()) {
-      auto* nav = markdown->getNavigation();
-      if (nav) {
-        MarkdownRenderer mdRenderer(renderer, SETTINGS.getReaderFontId(), viewportWidth, viewportHeight,
-                                    SETTINGS.getReaderLineCompression(), SETTINGS.extraParagraphSpacing,
-                                    SETTINGS.paragraphAlignment, SETTINGS.hyphenationEnabled,
-                                    markdown->getContentBasePath());
-        // Full render is required to compute accurate node->page mapping based on layout.
-        mdRenderer.render(*markdown->getAst(), [](std::unique_ptr<Page> page) { (void)page; });
-        nav->updatePageNumbers(mdRenderer.getNodeToPageMap());
+      bool sectionLoaded = false;
+      {
+        SpiBusMutex::Guard guard;
+        sectionLoaded = htmlSection->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
+                                                     SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment,
+                                                     viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled,
+                                                     static_cast<uint32_t>(markdown->getFileSize()));
+      }
+
+      if (!sectionLoaded) {
+        renderer.fillRect(0, 0, renderer.getScreenWidth(), renderer.getScreenHeight(), false);
+        renderer.displayBuffer();
+        pagesUntilFullRefresh = 0;
+
+        if (!htmlSection->createSectionFile(
+                SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(), SETTINGS.extraParagraphSpacing,
+                SETTINGS.paragraphAlignment, viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled,
+                static_cast<uint32_t>(markdown->getFileSize()), progressSetup, progressCallback)) {
+          Serial.printf("[%lu] [MDR] Failed to build markdown cache\n", millis());
+          htmlSection.reset();
+          return;
+        }
+      }
+
+      if (hasSavedPage) {
+        if (htmlSection->pageCount > 0) {
+          htmlSection->currentPage = std::min(savedPage, static_cast<int>(htmlSection->pageCount - 1));
+        } else {
+          htmlSection->currentPage = 0;
+        }
+        hasSavedPage = false;
+      }
+
+      if (sectionInitialized && astReady.load() && markdown->getAst()) {
+        auto* nav = markdown->getNavigation();
+        if (nav) {
+          MarkdownRenderer mdRenderer(renderer, SETTINGS.getReaderFontId(), viewportWidth, viewportHeight,
+                                      SETTINGS.getReaderLineCompression(), SETTINGS.extraParagraphSpacing,
+                                      SETTINGS.paragraphAlignment, SETTINGS.hyphenationEnabled,
+                                      markdown->getContentBasePath());
+          // Full render is required to compute accurate node->page mapping based on layout.
+          {
+            SpiBusMutex::Guard guard;
+            mdRenderer.render(*markdown->getAst(), [](std::unique_ptr<Page> page) { (void)page; });
+          }
+          nav->updatePageNumbers(mdRenderer.getNodeToPageMap());
+        }
       }
     }
   }
 
   renderer.clearScreen();
 
-  if (!section || section->pageCount == 0) {
+  if (!hasActiveSection() || getActivePageCount() == 0) {
     renderer.drawCenteredText(UI_12_FONT_ID, 300, "Empty document", true, EpdFontFamily::BOLD);
     renderStatusBar(orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
     renderer.displayBuffer();
     return;
   }
 
-  if (section->currentPage < 0 || section->currentPage >= section->pageCount) {
+  if (getActiveCurrentPage() < 0 || getActiveCurrentPage() >= static_cast<int>(getActivePageCount())) {
     renderer.drawCenteredText(UI_12_FONT_ID, 300, "Out of bounds", true, EpdFontFamily::BOLD);
     renderStatusBar(orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
     renderer.displayBuffer();
@@ -332,12 +429,17 @@ void MarkdownReaderActivity::renderScreen() {
   std::unique_ptr<Page> page;
   {
     SpiBusMutex::Guard guard;
-    page = section->loadPageFromSectionFile();
+    page = loadActivePage();
   }
 
   if (!page) {
-    section->clearCache();
-    section.reset();
+    if (useAstRenderer.load() && mdSection) {
+      mdSection->clearCache();
+      mdSection.reset();
+    } else if (htmlSection) {
+      htmlSection->clearCache();
+      htmlSection.reset();
+    }
     return;
   }
 
@@ -399,18 +501,19 @@ void MarkdownReaderActivity::renderStatusBar(int orientedMarginRight, int orient
   int progressTextWidth = 0;
 
   float progress = 0.0f;
-  if (section && section->pageCount > 0) {
-    progress = static_cast<float>(section->currentPage + 1) / static_cast<float>(section->pageCount) * 100.0f;
+  const uint16_t pageCount = getActivePageCount();
+  const int currentPage = getActiveCurrentPage();
+  const int displayPage = (pageCount > 0 && currentPage >= 0) ? (currentPage + 1) : 0;
+  if (pageCount > 0 && currentPage >= 0) {
+    progress = static_cast<float>(currentPage + 1) / static_cast<float>(pageCount) * 100.0f;
   }
 
   if (showProgressText || showProgressPercentage) {
     char progressStr[32];
     if (showProgressPercentage) {
-      snprintf(progressStr, sizeof(progressStr), "%d/%d  %.0f%%", section ? section->currentPage + 1 : 0,
-               section ? section->pageCount : 0, progress);
+      snprintf(progressStr, sizeof(progressStr), "%d/%d  %.0f%%", displayPage, pageCount, progress);
     } else {
-      snprintf(progressStr, sizeof(progressStr), "%d/%d", section ? section->currentPage + 1 : 0,
-               section ? section->pageCount : 0);
+      snprintf(progressStr, sizeof(progressStr), "%d/%d", displayPage, pageCount);
     }
 
     progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progressStr);
@@ -443,15 +546,16 @@ void MarkdownReaderActivity::renderStatusBar(int orientedMarginRight, int orient
 }
 
 void MarkdownReaderActivity::saveProgress() const {
-  if (!markdown || !section) {
+  if (!markdown || !hasActiveSection()) {
     return;
   }
+  const int currentPage = getActiveCurrentPage();
   SpiBusMutex::Guard guard;
   FsFile f;
   if (SdMan.openFileForWrite("MDR", markdown->getCachePath() + "/progress.bin", f)) {
     uint8_t data[4];
-    data[0] = section->currentPage & 0xFF;
-    data[1] = (section->currentPage >> 8) & 0xFF;
+    data[0] = currentPage & 0xFF;
+    data[1] = (currentPage >> 8) & 0xFF;
     data[2] = 0;
     data[3] = 0;
     f.write(data, 4);
@@ -476,8 +580,48 @@ void MarkdownReaderActivity::loadProgress() {
   }
 }
 
+bool MarkdownReaderActivity::hasActiveSection() const {
+  if (useAstRenderer.load()) {
+    return mdSection != nullptr;
+  }
+  return htmlSection != nullptr;
+}
+
+uint16_t MarkdownReaderActivity::getActivePageCount() const {
+  if (useAstRenderer.load()) {
+    return mdSection ? mdSection->pageCount : 0;
+  }
+  return htmlSection ? htmlSection->pageCount : 0;
+}
+
+int MarkdownReaderActivity::getActiveCurrentPage() const {
+  if (useAstRenderer.load()) {
+    return mdSection ? mdSection->currentPage : 0;
+  }
+  return htmlSection ? htmlSection->currentPage : 0;
+}
+
+void MarkdownReaderActivity::setActiveCurrentPage(int page) {
+  if (useAstRenderer.load()) {
+    if (mdSection) {
+      mdSection->currentPage = page;
+    }
+    return;
+  }
+  if (htmlSection) {
+    htmlSection->currentPage = page;
+  }
+}
+
+std::unique_ptr<Page> MarkdownReaderActivity::loadActivePage() {
+  if (useAstRenderer.load()) {
+    return mdSection ? mdSection->loadPageFromSectionFile() : nullptr;
+  }
+  return htmlSection ? htmlSection->loadPageFromSectionFile() : nullptr;
+}
+
 void MarkdownReaderActivity::jumpToNextHeading() {
-  if (!astReady.load() || !markdown || !section) {
+  if (!astReady.load() || !markdown || !hasActiveSection()) {
     return;
   }
 
@@ -486,15 +630,15 @@ void MarkdownReaderActivity::jumpToNextHeading() {
     return;
   }
 
-  auto nextPage = nav->findNextHeading(static_cast<size_t>(section->currentPage));
-  if (nextPage.has_value() && nextPage.value() < static_cast<size_t>(section->pageCount)) {
-    section->currentPage = static_cast<int>(nextPage.value());
+  auto nextPage = nav->findNextHeading(static_cast<size_t>(getActiveCurrentPage()));
+  if (nextPage.has_value() && nextPage.value() < static_cast<size_t>(getActivePageCount())) {
+    setActiveCurrentPage(static_cast<int>(nextPage.value()));
     updateRequired = true;
   }
 }
 
 void MarkdownReaderActivity::jumpToPrevHeading() {
-  if (!astReady.load() || !markdown || !section) {
+  if (!astReady.load() || !markdown || !hasActiveSection()) {
     return;
   }
 
@@ -503,15 +647,15 @@ void MarkdownReaderActivity::jumpToPrevHeading() {
     return;
   }
 
-  auto prevPage = nav->findPrevHeading(static_cast<size_t>(section->currentPage));
+  auto prevPage = nav->findPrevHeading(static_cast<size_t>(getActiveCurrentPage()));
   if (prevPage.has_value()) {
-    section->currentPage = static_cast<int>(prevPage.value());
+    setActiveCurrentPage(static_cast<int>(prevPage.value()));
     updateRequired = true;
   }
 }
 
 void MarkdownReaderActivity::showTableOfContents() {
-  if (!astReady.load() || !markdown || !section) {
+  if (!astReady.load() || !markdown || !hasActiveSection()) {
     return;
   }
 
@@ -531,13 +675,11 @@ void MarkdownReaderActivity::showTableOfContents() {
         updateRequired = true;
       },
       [this, nav](size_t tocIndex) {
-        if (section) {
-          auto page = nav->findHeadingPage(tocIndex);
-          if (page.has_value() && page.value() < static_cast<size_t>(section->pageCount)) {
-            section->currentPage = static_cast<int>(page.value());
-          } else if (section->pageCount > 0) {
-            section->currentPage = 0;
-          }
+        auto page = nav->findHeadingPage(tocIndex);
+        if (page.has_value() && page.value() < static_cast<size_t>(getActivePageCount())) {
+          setActiveCurrentPage(static_cast<int>(page.value()));
+        } else if (getActivePageCount() > 0) {
+          setActiveCurrentPage(0);
         }
         exitActivity();
         updateRequired = true;

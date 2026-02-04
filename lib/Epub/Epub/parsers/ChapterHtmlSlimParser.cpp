@@ -70,7 +70,7 @@ constexpr int NUM_BLOCK_TAGS = sizeof(BLOCK_TAGS) / sizeof(BLOCK_TAGS[0]);
 const char* BOLD_TAGS[] = {"b", "strong"};
 constexpr int NUM_BOLD_TAGS = sizeof(BOLD_TAGS) / sizeof(BOLD_TAGS[0]);
 
-const char* ITALIC_TAGS[] = {"i", "em"};
+const char* ITALIC_TAGS[] = {"i", "em", "mark"};
 constexpr int NUM_ITALIC_TAGS = sizeof(ITALIC_TAGS) / sizeof(ITALIC_TAGS[0]);
 
 const char* IMAGE_TAGS[] = {"img"};

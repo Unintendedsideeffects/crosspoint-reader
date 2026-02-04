@@ -27,6 +27,23 @@ static MdAlign convertAlign(MD_ALIGN align) {
   }
 }
 
+static bool hasImageExtension(const std::string& target) {
+  const auto dot = target.find_last_of('.');
+  if (dot == std::string::npos) {
+    return false;
+  }
+  std::string ext = target.substr(dot + 1);
+  std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
+  return ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "bmp" || ext == "gif" || ext == "webp";
+}
+
+static std::string formatLinkTarget(const std::string& target) {
+  if (target.find(' ') != std::string::npos) {
+    return "<" + target + ">";
+  }
+  return target;
+}
+
 std::unique_ptr<MdNode> MarkdownParser::parse(const std::string& markdown) {
   if (markdown.size() > MAX_INPUT_SIZE) {
     Serial.printf("[%lu] [MD ] Parse failed: input size %zu exceeds limit %zu\n", millis(), markdown.size(),
@@ -348,7 +365,14 @@ int MarkdownParser::onEnterSpan(MD_SPANTYPE type, void* detail) {
 
     case MD_SPAN_WIKILINK: {
       auto* d = static_cast<MD_SPAN_WIKILINK_DETAIL*>(detail);
-      if (!pushNode(MdNode::createWikiLink(attributeToString(d->target)))) {
+      std::string target = attributeToString(d->target);
+      std::string alias;
+      const size_t pipePos = target.find('|');
+      if (pipePos != std::string::npos) {
+        alias = target.substr(pipePos + 1);
+        target = target.substr(0, pipePos);
+      }
+      if (!pushNode(MdNode::createWikiLink(target, alias))) {
         return -1;
       }
       break;
@@ -404,6 +428,24 @@ int MarkdownParser::onText(MD_TEXTTYPE type, const char* text, MD_SIZE size) {
   }
 
   std::string content(text, size);
+
+  if (type == MD_TEXT_HTML && (!current || current->type != MdNodeType::HtmlBlock)) {
+    if (content == "<mark>") {
+      if (!pushNode(MdNode::createHighlight())) {
+        return -1;
+      }
+      return 0;
+    }
+    if (content == "</mark>") {
+      if (current && current->type == MdNodeType::Highlight) {
+        popNode();
+      }
+      return 0;
+    }
+    if (content == "<sub>" || content == "</sub>" || content == "<sup>" || content == "</sup>") {
+      return 0;
+    }
+  }
 
   switch (type) {
     case MD_TEXT_NORMAL:
@@ -720,6 +762,58 @@ std::string MarkdownParser::processInline(const std::string& line) {
       out.push_back(line[i]);
       i++;
       continue;
+    }
+
+    if (i + 2 < line.size() && line[i] == '!' && line[i + 1] == '[' && line[i + 2] == '[') {
+      const size_t end = line.find("]]", i + 3);
+      if (end != std::string::npos) {
+        std::string inner = line.substr(i + 3, end - (i + 3));
+        std::string target = inner;
+        std::string alias;
+        const size_t pipePos = inner.find('|');
+        if (pipePos != std::string::npos) {
+          target = inner.substr(0, pipePos);
+          alias = inner.substr(pipePos + 1);
+        }
+        if (hasImageExtension(target)) {
+          out.append("![");
+          out.append(alias);
+          out.append("](");
+          out.append(formatLinkTarget(target));
+          out.append(")");
+        } else {
+          const std::string& label = alias.empty() ? target : alias;
+          out.append("[");
+          out.append(label);
+          out.append("](");
+          out.append(formatLinkTarget(target));
+          out.append(")");
+        }
+        i = end + 2;
+        continue;
+      }
+    }
+
+    if (i + 1 < line.size() && line[i] == '[' && line[i + 1] == '[') {
+      const size_t end = line.find("]]", i + 2);
+      if (end != std::string::npos) {
+        std::string inner = line.substr(i + 2, end - (i + 2));
+        std::string target = inner;
+        std::string alias;
+        const size_t pipePos = inner.find('|');
+        if (pipePos != std::string::npos) {
+          target = inner.substr(0, pipePos);
+          alias = inner.substr(pipePos + 1);
+        }
+        const std::string& label = alias.empty() ? target : alias;
+        out.append("[");
+        out.append(label);
+        out.append("](");
+        out.append(formatLinkTarget(target));
+        out.append(")");
+        i = end + 2;
+        continue;
+      }
     }
 
     // ==highlight== -> <mark>highlight</mark>

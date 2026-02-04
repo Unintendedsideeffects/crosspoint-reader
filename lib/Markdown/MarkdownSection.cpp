@@ -1,0 +1,244 @@
+#include "MarkdownSection.h"
+
+#include <Arduino.h>
+#include <SDCardManager.h>
+#include <Serialization.h>
+
+#include <cmath>
+#include <vector>
+
+#include "Epub/Page.h"
+#include "MarkdownRenderer.h"
+#include "SpiBusMutex.h"
+
+namespace {
+constexpr uint8_t SECTION_FILE_VERSION = 1;
+constexpr uint32_t HEADER_SIZE = sizeof(uint8_t) + sizeof(int) + sizeof(float) + sizeof(bool) + sizeof(uint8_t) +
+                                 sizeof(uint16_t) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint32_t) +
+                                 sizeof(uint16_t) + sizeof(uint32_t);
+constexpr uint32_t MIN_SIZE_FOR_PROGRESS = 50 * 1024;
+constexpr float LINE_COMPRESSION_EPSILON = 0.0001f;
+
+bool nearlyEqual(const float a, const float b) { return std::fabs(a - b) <= LINE_COMPRESSION_EPSILON; }
+}  // namespace
+
+MarkdownSection::MarkdownSection(const std::string& cachePath, const std::string& contentBasePath,
+                                 GfxRenderer& renderer)
+    : cachePath(cachePath),
+      contentBasePath(contentBasePath),
+      renderer(renderer),
+      filePath(cachePath + "/md_section.bin") {}
+
+MarkdownSection::~MarkdownSection() { closeSectionFile(); }
+
+void MarkdownSection::closeSectionFile() {
+  if (file) {
+    file.close();
+  }
+  fileOpenForReading = false;
+}
+
+uint32_t MarkdownSection::onPageComplete(std::unique_ptr<Page> page) {
+  if (!file) {
+    Serial.printf("[%lu] [MSC] File not open for writing page %d\n", millis(), pageCount);
+    return 0;
+  }
+
+  const uint32_t position = file.position();
+  if (!page->serialize(file)) {
+    Serial.printf("[%lu] [MSC] Failed to serialize page %d\n", millis(), pageCount);
+    return 0;
+  }
+
+  pageCount++;
+  return position;
+}
+
+void MarkdownSection::writeSectionFileHeader(int fontId, float lineCompression, bool extraParagraphSpacing,
+                                             uint8_t paragraphAlignment, uint16_t viewportWidth,
+                                             uint16_t viewportHeight, bool hyphenationEnabled, uint32_t sourceSize) {
+  if (!file) {
+    Serial.printf("[%lu] [MSC] File not open for writing header\n", millis());
+    return;
+  }
+
+  static_assert(HEADER_SIZE == sizeof(SECTION_FILE_VERSION) + sizeof(fontId) + sizeof(lineCompression) +
+                                   sizeof(extraParagraphSpacing) + sizeof(paragraphAlignment) + sizeof(viewportWidth) +
+                                   sizeof(viewportHeight) + sizeof(hyphenationEnabled) + sizeof(sourceSize) +
+                                   sizeof(pageCount) + sizeof(uint32_t),
+                "Header size mismatch");
+
+  serialization::writePod(file, SECTION_FILE_VERSION);
+  serialization::writePod(file, fontId);
+  serialization::writePod(file, lineCompression);
+  serialization::writePod(file, extraParagraphSpacing);
+  serialization::writePod(file, paragraphAlignment);
+  serialization::writePod(file, viewportWidth);
+  serialization::writePod(file, viewportHeight);
+  serialization::writePod(file, hyphenationEnabled);
+  serialization::writePod(file, sourceSize);
+  serialization::writePod(file, pageCount);                 // Placeholder
+  serialization::writePod(file, static_cast<uint32_t>(0));  // Placeholder for LUT offset
+}
+
+bool MarkdownSection::loadSectionFile(int fontId, float lineCompression, bool extraParagraphSpacing,
+                                      uint8_t paragraphAlignment, uint16_t viewportWidth, uint16_t viewportHeight,
+                                      bool hyphenationEnabled, uint32_t sourceSize) {
+  SpiBusMutex::Guard guard;
+  nodeToPageMap.clear();
+  closeSectionFile();
+  if (!SdMan.openFileForRead("MSC", filePath, file)) {
+    return false;
+  }
+
+  uint8_t version;
+  serialization::readPod(file, version);
+  if (version != SECTION_FILE_VERSION) {
+    file.close();
+    Serial.printf("[%lu] [MSC] Deserialization failed: Unknown version %u\n", millis(), version);
+    clearCache();
+    return false;
+  }
+
+  int fileFontId;
+  uint16_t fileViewportWidth, fileViewportHeight;
+  float fileLineCompression;
+  bool fileExtraParagraphSpacing;
+  uint8_t fileParagraphAlignment;
+  bool fileHyphenationEnabled;
+  uint32_t fileSourceSize;
+
+  serialization::readPod(file, fileFontId);
+  serialization::readPod(file, fileLineCompression);
+  serialization::readPod(file, fileExtraParagraphSpacing);
+  serialization::readPod(file, fileParagraphAlignment);
+  serialization::readPod(file, fileViewportWidth);
+  serialization::readPod(file, fileViewportHeight);
+  serialization::readPod(file, fileHyphenationEnabled);
+  serialization::readPod(file, fileSourceSize);
+
+  if (fontId != fileFontId || !nearlyEqual(lineCompression, fileLineCompression) ||
+      extraParagraphSpacing != fileExtraParagraphSpacing || paragraphAlignment != fileParagraphAlignment ||
+      viewportWidth != fileViewportWidth || viewportHeight != fileViewportHeight ||
+      hyphenationEnabled != fileHyphenationEnabled || sourceSize != fileSourceSize) {
+    file.close();
+    Serial.printf("[%lu] [MSC] Deserialization failed: Parameters do not match\n", millis());
+    clearCache();
+    return false;
+  }
+
+  serialization::readPod(file, pageCount);
+  file.close();
+  Serial.printf("[%lu] [MSC] Deserialization succeeded: %d pages\n", millis(), pageCount);
+  return true;
+}
+
+bool MarkdownSection::clearCache() const {
+  SpiBusMutex::Guard guard;
+  const_cast<MarkdownSection*>(this)->closeSectionFile();
+  if (!SdMan.exists(filePath.c_str())) {
+    return true;
+  }
+  if (!SdMan.remove(filePath.c_str())) {
+    Serial.printf("[%lu] [MSC] Failed to clear cache\n", millis());
+    return false;
+  }
+  return true;
+}
+
+bool MarkdownSection::createSectionFile(const MdNode& root, int fontId, float lineCompression,
+                                        bool extraParagraphSpacing, uint8_t paragraphAlignment, uint16_t viewportWidth,
+                                        uint16_t viewportHeight, bool hyphenationEnabled, uint32_t sourceSize,
+                                        const std::function<void()>& progressSetupFn,
+                                        const std::function<void(int)>& progressFn) {
+  SpiBusMutex::Guard guard;
+  closeSectionFile();
+
+  if (!SdMan.exists(cachePath.c_str())) {
+    SdMan.mkdir(cachePath.c_str());
+  }
+
+  if (!SdMan.openFileForWrite("MSC", filePath, file)) {
+    return false;
+  }
+
+  writeSectionFileHeader(fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
+                         viewportHeight, hyphenationEnabled, sourceSize);
+
+  if (progressSetupFn && sourceSize >= MIN_SIZE_FOR_PROGRESS) {
+    progressSetupFn();
+  }
+
+  std::vector<uint32_t> lut = {};
+
+  MarkdownRenderer mdRenderer(renderer, fontId, viewportWidth, viewportHeight, lineCompression, extraParagraphSpacing,
+                              paragraphAlignment, hyphenationEnabled, contentBasePath);
+
+  const bool success = mdRenderer.render(
+      root, [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
+      progressFn);
+
+  if (!success) {
+    Serial.printf("[%lu] [MSC] Failed to render markdown pages\n", millis());
+    file.close();
+    SdMan.remove(filePath.c_str());
+    return false;
+  }
+
+  nodeToPageMap = mdRenderer.getNodeToPageMap();
+
+  const uint32_t lutOffset = file.position();
+  bool hasFailedLutRecords = false;
+  for (const uint32_t& pos : lut) {
+    if (pos == 0) {
+      hasFailedLutRecords = true;
+      break;
+    }
+    serialization::writePod(file, pos);
+  }
+
+  if (hasFailedLutRecords) {
+    Serial.printf("[%lu] [MSC] Failed to write LUT due to invalid page positions\n", millis());
+    file.close();
+    SdMan.remove(filePath.c_str());
+    return false;
+  }
+
+  file.seek(HEADER_SIZE - sizeof(uint32_t) - sizeof(pageCount));
+  serialization::writePod(file, pageCount);
+  serialization::writePod(file, lutOffset);
+  file.close();
+  return true;
+}
+
+std::unique_ptr<Page> MarkdownSection::loadPageFromSectionFile() {
+  SpiBusMutex::Guard guard;
+  if (!fileOpenForReading) {
+    if (!SdMan.openFileForRead("MSC", filePath, file)) {
+      return nullptr;
+    }
+    fileOpenForReading = true;
+  }
+
+  if (currentPage < 0 || static_cast<uint16_t>(currentPage) >= pageCount) {
+    Serial.printf("[%lu] [MSC] Invalid page index %d (pageCount=%d)\n", millis(), currentPage, pageCount);
+    closeSectionFile();
+    return nullptr;
+  }
+
+  file.seek(HEADER_SIZE - sizeof(uint32_t));
+  uint32_t lutOffset;
+  serialization::readPod(file, lutOffset);
+  file.seek(lutOffset + sizeof(uint32_t) * currentPage);
+  uint32_t pageOffset;
+  serialization::readPod(file, pageOffset);
+  file.seek(pageOffset);
+
+  auto page = std::unique_ptr<Page>(new Page());
+  if (!page->deserialize(file)) {
+    Serial.printf("[%lu] [MSC] Failed to deserialize page %d\n", millis(), currentPage);
+    closeSectionFile();
+    return nullptr;
+  }
+  return page;
+}
