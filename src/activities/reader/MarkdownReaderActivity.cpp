@@ -70,10 +70,10 @@ void MarkdownReaderActivity::onEnter() {
   taskHasExited.store(false);
 
   markdown->setupCacheDir();
-  htmlReady = markdown->ensureHtml();
+  htmlReady.store(markdown->ensureHtml());
 
   // Parse AST for navigation features (non-blocking, best effort)
-  astReady = markdown->parseToAst();
+  astReady.store(markdown->parseToAst());
 
   APP_STATE.openEpubPath = markdown->getPath();
   APP_STATE.saveToFile();
@@ -127,7 +127,7 @@ void MarkdownReaderActivity::loop() {
   }
 
   // Long press for heading navigation (when enabled and AST is available)
-  if (SETTINGS.longPressChapterSkip && astReady) {
+  if (SETTINGS.longPressChapterSkip && astReady.load()) {
     constexpr unsigned long headingSkipMs = 500;
     const bool leftHeld = mappedInput.isPressed(MappedInputManager::Button::Left) ||
                           mappedInput.isPressed(MappedInputManager::Button::PageBack);
@@ -206,7 +206,7 @@ void MarkdownReaderActivity::renderScreen() {
     return;
   }
 
-  if (!htmlReady) {
+  if (!htmlReady.load()) {
     renderer.clearScreen();
     renderer.drawCenteredText(UI_12_FONT_ID, 300, "Markdown error", true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
@@ -299,13 +299,14 @@ void MarkdownReaderActivity::renderScreen() {
       hasSavedPage = false;
     }
 
-    if (astReady && markdown->getAst()) {
+    if (astReady.load() && markdown->getAst()) {
       auto* nav = markdown->getNavigation();
       if (nav) {
         MarkdownRenderer mdRenderer(renderer, SETTINGS.getReaderFontId(), viewportWidth, viewportHeight,
                                     SETTINGS.getReaderLineCompression(), SETTINGS.extraParagraphSpacing,
                                     SETTINGS.paragraphAlignment, SETTINGS.hyphenationEnabled,
                                     markdown->getContentBasePath());
+        // Full render is required to compute accurate node->page mapping based on layout.
         mdRenderer.render(*markdown->getAst(), [](std::unique_ptr<Page> page) { (void)page; });
         nav->updatePageNumbers(mdRenderer.getNodeToPageMap());
       }
@@ -476,7 +477,7 @@ void MarkdownReaderActivity::loadProgress() {
 }
 
 void MarkdownReaderActivity::jumpToNextHeading() {
-  if (!astReady || !markdown || !section) {
+  if (!astReady.load() || !markdown || !section) {
     return;
   }
 
@@ -493,7 +494,7 @@ void MarkdownReaderActivity::jumpToNextHeading() {
 }
 
 void MarkdownReaderActivity::jumpToPrevHeading() {
-  if (!astReady || !markdown || !section) {
+  if (!astReady.load() || !markdown || !section) {
     return;
   }
 
@@ -510,7 +511,7 @@ void MarkdownReaderActivity::jumpToPrevHeading() {
 }
 
 void MarkdownReaderActivity::showTableOfContents() {
-  if (!astReady || !markdown || !section) {
+  if (!astReady.load() || !markdown || !section) {
     return;
   }
 

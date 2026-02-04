@@ -80,11 +80,15 @@ struct PngDecodeContext {
   bool hasPaletteAlpha;
 };
 
-inline uint32_t readBigEndian32(FsFile& f) {
+inline bool readBigEndian32(FsFile& f, uint32_t& value) {
   uint8_t buf[4];
-  f.read(buf, 4);
-  return (static_cast<uint32_t>(buf[0]) << 24) | (static_cast<uint32_t>(buf[1]) << 16) |
-         (static_cast<uint32_t>(buf[2]) << 8) | buf[3];
+  const size_t read = f.read(buf, 4);
+  if (read != 4) {
+    return false;
+  }
+  value = (static_cast<uint32_t>(buf[0]) << 24) | (static_cast<uint32_t>(buf[1]) << 16) |
+          (static_cast<uint32_t>(buf[2]) << 8) | buf[3];
+  return true;
 }
 
 inline void write16(Print& out, const uint16_t value) {
@@ -329,8 +333,12 @@ static bool refillInflateBuffer(PngDecodeContext& ctx) {
 
       // Look for next IDAT chunk
       while (true) {
-        uint32_t chunkLen = readBigEndian32(ctx.file);
-        uint32_t chunkType = readBigEndian32(ctx.file);
+        uint32_t chunkLen = 0;
+        uint32_t chunkType = 0;
+        if (!readBigEndian32(ctx.file, chunkLen) || !readBigEndian32(ctx.file, chunkType)) {
+          ctx.allIdatProcessed = true;
+          return ctx.inflateInFilled > 0;
+        }
 
         if (chunkType == CHUNK_IDAT) {
           ctx.idatRemaining = chunkLen;
@@ -417,16 +425,22 @@ static bool parsePngHeaders(PngDecodeContext& ctx) {
   }
 
   // Read IHDR chunk
-  uint32_t chunkLen = readBigEndian32(ctx.file);
-  uint32_t chunkType = readBigEndian32(ctx.file);
+  uint32_t chunkLen = 0;
+  uint32_t chunkType = 0;
+  if (!readBigEndian32(ctx.file, chunkLen) || !readBigEndian32(ctx.file, chunkType)) {
+    Serial.printf("[%lu] [PNG] Failed to read IHDR chunk header\n", millis());
+    return false;
+  }
 
   if (chunkType != CHUNK_IHDR || chunkLen != 13) {
     Serial.printf("[%lu] [PNG] Expected IHDR chunk\n", millis());
     return false;
   }
 
-  ctx.width = readBigEndian32(ctx.file);
-  ctx.height = readBigEndian32(ctx.file);
+  if (!readBigEndian32(ctx.file, ctx.width) || !readBigEndian32(ctx.file, ctx.height)) {
+    Serial.printf("[%lu] [PNG] Failed to read IHDR dimensions\n", millis());
+    return false;
+  }
   ctx.bitDepth = ctx.file.read();
   ctx.colorType = ctx.file.read();
   uint8_t compression = ctx.file.read();
@@ -490,8 +504,10 @@ static bool parsePngHeaders(PngDecodeContext& ctx) {
   memset(ctx.paletteAlpha, 255, sizeof(ctx.paletteAlpha));
 
   while (true) {
-    chunkLen = readBigEndian32(ctx.file);
-    chunkType = readBigEndian32(ctx.file);
+    if (!readBigEndian32(ctx.file, chunkLen) || !readBigEndian32(ctx.file, chunkType)) {
+      Serial.printf("[%lu] [PNG] Failed to read chunk header\n", millis());
+      return false;
+    }
 
     if (chunkType == CHUNK_IDAT) {
       // Found first IDAT - rewind so main loop can process it
@@ -888,6 +904,6 @@ bool PngToBmpConverter::pngFileToBmpStreamWithSize(FsFile& pngFile, Print& bmpOu
 }
 
 bool PngToBmpConverter::pngFileTo1BitBmpStreamWithSize(FsFile& pngFile, Print& bmpOut, int targetMaxWidth,
-                                                       int targetMaxHeight) {
-  return pngFileToBmpStreamInternal(pngFile, bmpOut, targetMaxWidth, targetMaxHeight, true);
+                                                       int targetMaxHeight, bool crop) {
+  return pngFileToBmpStreamInternal(pngFile, bmpOut, targetMaxWidth, targetMaxHeight, true, crop);
 }
