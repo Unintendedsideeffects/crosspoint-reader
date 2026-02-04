@@ -33,6 +33,7 @@ String wsUploadFileName;
 String wsUploadPath;
 size_t wsUploadSize = 0;
 size_t wsUploadReceived = 0;
+size_t wsLastProgressSent = 0;
 unsigned long wsUploadStartTime = 0;
 bool wsUploadInProgress = false;
 String wsLastCompleteName;
@@ -393,12 +394,9 @@ void CrossPointWebServer::handleFileListData() const {
 
     // Validate path against traversal attacks
     if (!PathUtils::isValidSdPath(currentPath)) {
-      Serial.printf("[%lu] [WEB] Path validation FAILED for: '%s'\n", millis(), currentPath.c_str());
-      // TODO: TEMPORARY DEBUG - remove after fixing 400 error issue
-      const String reason = PathUtils::getValidationFailureReason(currentPath);
-      String debugMsg = "Invalid path - reason: " + reason + ", raw: '" + rawArg + "' (" + String(rawArg.length()) +
-                        " bytes), decoded: '" + currentPath + "' (" + String(currentPath.length()) + " bytes)";
-      server->send(400, "text/plain", debugMsg);
+      Serial.printf("[%lu] [WEB] Path validation FAILED. raw='%s' (%d bytes) decoded='%s' (%d bytes)\n", millis(),
+                    rawArg.c_str(), rawArg.length(), currentPath.c_str(), currentPath.length());
+      server->send(400, "text/plain", "Invalid path");
       return;
     }
     Serial.printf("[%lu] [WEB] Path validation OK\n", millis());
@@ -447,13 +445,19 @@ void CrossPointWebServer::handleDownload() const {
     return;
   }
 
-  String itemPath = PathUtils::urlDecode(server->arg("path"));
-  if (itemPath.isEmpty() || itemPath == "/") {
+  const String rawArg = server->arg("path");
+  String itemPath = PathUtils::urlDecode(rawArg);
+  if (!PathUtils::isValidSdPath(itemPath)) {
+    Serial.printf("[%lu] [WEB] Download rejected - invalid path. raw='%s' decoded='%s'\n", millis(), rawArg.c_str(),
+                  itemPath.c_str());
     server->send(400, "text/plain", "Invalid path");
     return;
   }
-  if (!itemPath.startsWith("/")) {
-    itemPath = "/" + itemPath;
+
+  itemPath = PathUtils::normalizePath(itemPath);
+  if (itemPath.isEmpty() || itemPath == "/") {
+    server->send(400, "text/plain", "Invalid path");
+    return;
   }
 
   const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
@@ -853,10 +857,16 @@ void CrossPointWebServer::handleDelete() const {
         dir.close();
       }
     }
-    success = SdMan.rmdir(itemPath.c_str());
+    {
+      SpiBusMutex::Guard guard;
+      success = SdMan.rmdir(itemPath.c_str());
+    }
   } else {
     // For files, use remove
-    success = SdMan.remove(itemPath.c_str());
+    {
+      SpiBusMutex::Guard guard;
+      success = SdMan.remove(itemPath.c_str());
+    }
   }
 
   if (success) {
@@ -903,6 +913,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       wsUploadPath.clear();
       wsUploadSize = 0;
       wsUploadReceived = 0;
+      wsLastProgressSent = 0;
       wsUploadStartTime = 0;
       break;
 
@@ -926,6 +937,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
           wsUploadSize = msg.substring(firstColon + 1, secondColon).toInt();
           wsUploadPath = PathUtils::urlDecode(msg.substring(secondColon + 1));
           wsUploadReceived = 0;
+          wsLastProgressSent = 0;
           wsUploadStartTime = millis();
 
           // Validate filename against traversal attacks
@@ -1002,11 +1014,10 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       wsUploadReceived += written;
 
       // Send progress update (every 64KB or at end)
-      static size_t lastProgressSent = 0;
-      if (wsUploadReceived - lastProgressSent >= 65536 || wsUploadReceived >= wsUploadSize) {
+      if (wsUploadReceived - wsLastProgressSent >= 65536 || wsUploadReceived >= wsUploadSize) {
         String progress = "PROGRESS:" + String(wsUploadReceived) + ":" + String(wsUploadSize);
         wsServer->sendTXT(num, progress);
-        lastProgressSent = wsUploadReceived;
+        wsLastProgressSent = wsUploadReceived;
       }
 
       // Check if upload complete
@@ -1035,7 +1046,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
         invalidateSleepCacheIfNeeded(filePath);
 
         wsServer->sendTXT(num, "DONE");
-        lastProgressSent = 0;
+        wsLastProgressSent = 0;
       }
       break;
     }

@@ -654,7 +654,7 @@ void ChapterHtmlSlimParser::processImage(const char* src, const char* alt) {
   std::vector<uint8_t> bmpData;
   MemoryPrint bmpOut(bmpData);
 
-  bool success = ImageConverter::convertTo1BitBmpStream(tempImage, format, bmpOut, maxWidth, maxHeight);
+  bool success = ImageConverter::convertTo1BitBmpStream(tempImage, format, bmpOut, maxWidth, maxHeight, false);
   tempImage.close();
   if (epub && !tempImagePath.empty()) {
     SdMan.remove(tempImagePath.c_str());
