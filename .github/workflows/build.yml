@@ -141,11 +141,9 @@ jobs:
           cp "$FIRMWARE_BIN" firmware.bin
 
           PARTITIONS_BIN="$(find firmware -type f -name 'partitions.bin' -print -quit)"
-          if [ -z "$PARTITIONS_BIN" ]; then
-            echo "ERROR: partitions.bin not found in downloaded artifact"
-            exit 1
+          if [ -n "$PARTITIONS_BIN" ]; then
+            cp "$PARTITIONS_BIN" partitions.bin
           fi
-          cp "$PARTITIONS_BIN" partitions.bin
 
       - name: Remove existing CI assets (if any)
         env:
@@ -171,4 +169,4 @@ jobs:
           generate_release_notes: false
           files: |
             firmware.bin
-            partitions.bin
+            partitions.bin*

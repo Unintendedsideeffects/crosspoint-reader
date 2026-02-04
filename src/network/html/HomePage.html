@@ -88,7 +88,7 @@
       </div>
       <div class="info-row">
         <span class="label">WiFi Status</span>
-        <span class="status">Connected</span>
+        <span class="status" id="wifi-status">Loading...</span>
       </div>
       <div class="info-row">
         <span class="label">IP Address</span>
@@ -114,6 +114,7 @@
         }
         const data = await response.json();
         document.getElementById('version').textContent = data.version || 'N/A';
+        document.getElementById('wifi-status').textContent = data.wifiStatus || 'Unknown';
         document.getElementById('ip-address').textContent = data.ip || 'N/A';
         document.getElementById('free-heap').textContent = data.freeHeap
           ? data.freeHeap.toLocaleString() + ' bytes'

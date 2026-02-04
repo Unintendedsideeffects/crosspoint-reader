@@ -15,6 +15,7 @@
 #include "ScreenComponents.h"
 #include "SpiBusMutex.h"
 #include "TocActivity.h"
+#include "activities/TaskShutdown.h"
 #include "fontIds.h"
 
 namespace {
@@ -23,15 +24,16 @@ constexpr int statusBarMargin = 19;
 constexpr int progressBarMarginTop = 1;
 }  // namespace
 
-void MarkdownReaderActivity::waitForRenderingMutex() {
+bool MarkdownReaderActivity::waitForRenderingMutex() {
   int retries = 0;
   while (xSemaphoreTake(renderingMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
     if (++retries >= 50 || taskShouldExit.load()) {
       Serial.printf("[%lu] [MDR] Mutex timeout after %d retries\n", millis(), retries);
-      return;
+      return false;
     }
     esp_task_wdt_reset();
   }
+  return true;
 }
 
 void MarkdownReaderActivity::taskTrampoline(void* param) {
@@ -64,6 +66,8 @@ void MarkdownReaderActivity::onEnter() {
   }
 
   renderingMutex = xSemaphoreCreateMutex();
+  taskShouldExit.store(false);
+  taskHasExited.store(false);
 
   markdown->setupCacheDir();
   htmlReady = markdown->ensureHtml();
@@ -87,17 +91,10 @@ void MarkdownReaderActivity::onExit() {
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);
 
   // Signal task to exit gracefully
-  taskShouldExit.store(true);
-
-  // Wait for task to self-delete (with timeout)
-  if (displayTaskHandle) {
-    for (int i = 0; i < 100; i++) {  // 1 second timeout
-      if (eTaskGetState(displayTaskHandle) == eDeleted) {
-        break;
-      }
-      vTaskDelay(pdMS_TO_TICKS(10));
-    }
-    displayTaskHandle = nullptr;
+  if (displayTaskHandle != nullptr) {
+    TaskShutdown::requestExit(taskShouldExit, taskHasExited, displayTaskHandle);
+  } else {
+    taskShouldExit.store(true);
   }
 
   if (renderingMutex) {
@@ -189,13 +186,18 @@ void MarkdownReaderActivity::displayTaskLoop() {
   while (!taskShouldExit.load()) {
     if (updateRequired) {
       updateRequired = false;
-      waitForRenderingMutex();
-      if (taskShouldExit.load()) break;  // Check again after acquiring mutex
+      if (!waitForRenderingMutex()) {
+        if (taskShouldExit.load()) {
+          break;
+        }
+        continue;
+      }
       renderScreen();
       xSemaphoreGive(renderingMutex);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+  taskHasExited.store(true);
   vTaskDelete(nullptr);  // Self-delete when signaled to exit
 }
 
@@ -517,7 +519,9 @@ void MarkdownReaderActivity::showTableOfContents() {
     return;
   }
 
-  waitForRenderingMutex();
+  if (!waitForRenderingMutex()) {
+    return;
+  }
   exitActivity();
   enterNewActivity(new TocActivity(
       renderer, mappedInput, nav->getToc(),

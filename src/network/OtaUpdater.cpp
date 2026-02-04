@@ -215,10 +215,6 @@ bool OtaUpdater::isUpdateNewer() const {
     return false;
   }
 
-  if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL) {
-    return true;
-  }
-
   if (latestVersion == CROSSPOINT_VERSION) {
     return false;
   }
