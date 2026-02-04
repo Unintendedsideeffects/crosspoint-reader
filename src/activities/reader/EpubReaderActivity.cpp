@@ -257,7 +257,9 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
       const int spineIdx = currentSpineIndex;
       const std::string path = epub->getPath();
 
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      if (!waitForRenderingMutex()) {
+        return;
+      }
 
       // 1. Close the menu
       exitActivity();
@@ -300,13 +302,15 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
       break;
     }
     case EpubReaderMenuActivity::MenuAction::DELETE_CACHE: {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      if (!waitForRenderingMutex()) {
+        return;
+      }
       if (epub) {
         // 2. BACKUP: Read current progress
         // We use the current variables that track our position
         uint16_t backupSpine = currentSpineIndex;
-        uint16_t backupPage = section->currentPage;
-        uint16_t backupPageCount = section->pageCount;
+        uint16_t backupPage = section ? section->currentPage : 0;
+        uint16_t backupPageCount = section ? section->pageCount : 0;
 
         section.reset();
         // 3. WIPE: Clear the cache directory

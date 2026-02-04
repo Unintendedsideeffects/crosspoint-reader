@@ -6,7 +6,7 @@
 #include <atomic>
 
 namespace TaskShutdown {
-constexpr int kExitTimeoutMs = 500;
+constexpr int kExitTimeoutMs = 2000;
 constexpr int kExitPollMs = 10;
 
 inline void requestExit(std::atomic<bool>& exitRequested, std::atomic<bool>& taskHasExited, TaskHandle_t& taskHandle) {

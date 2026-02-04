@@ -727,7 +727,6 @@ constexpr char FilesPageHtml[] PROGMEM = R"rawliteral(<!DOCTYPE html><html><head
   }
 
 let failedUploadsGlobal = [];
-let wsConnection = null;
 const WS_PORT = 81;
 const WS_CHUNK_SIZE = 4096; // 4KB chunks - smaller for ESP32 stability
 

@@ -21,8 +21,8 @@ class MarkdownReaderActivity final : public ActivityWithSubactivity {
   std::atomic<bool> taskHasExited{false};
   int pagesUntilFullRefresh = 0;
   bool updateRequired = false;
-  bool htmlReady = false;
-  bool astReady = false;  // AST parsed for navigation
+  std::atomic<bool> htmlReady{false};
+  std::atomic<bool> astReady{false};  // AST parsed for navigation
   int savedPage = 0;
   bool hasSavedPage = false;
   const std::function<void()> onGoBack;
