@@ -25,10 +25,16 @@ constexpr int progressBarMarginTop = 1;
 
 }  // namespace
 
-void EpubReaderActivity::waitForRenderingMutex() {
+bool EpubReaderActivity::waitForRenderingMutex() {
+  int retries = 0;
   while (xSemaphoreTake(renderingMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+    if (exitTaskRequested.load() || ++retries >= 50) {
+      Serial.printf("[%lu] [ERS] Mutex timeout after %d retries\n", millis(), retries);
+      return false;
+    }
     esp_task_wdt_reset();
   }
+  return true;
 }
 
 void EpubReaderActivity::taskTrampoline(void* param) {
@@ -135,7 +141,9 @@ void EpubReaderActivity::loop() {
   // Enter chapter selection activity
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     // Don't start activity transition while rendering
-    waitForRenderingMutex();
+    if (!waitForRenderingMutex()) {
+      return;
+    }
     const int currentPage = section ? section->currentPage : 0;
     const int totalPages = section ? section->pageCount : 0;
     exitActivity();
@@ -187,7 +195,9 @@ void EpubReaderActivity::loop() {
 
   if (skipChapter) {
     // We don't want to delete the section mid-render, so grab the semaphore
-    waitForRenderingMutex();
+    if (!waitForRenderingMutex()) {
+      return;
+    }
     nextPageNumber = 0;
     currentSpineIndex = nextTriggered ? currentSpineIndex + 1 : currentSpineIndex - 1;
     section.reset();
@@ -207,7 +217,9 @@ void EpubReaderActivity::loop() {
       section->currentPage--;
     } else {
       // We don't want to delete the section mid-render, so grab the semaphore
-      waitForRenderingMutex();
+      if (!waitForRenderingMutex()) {
+        return;
+      }
       nextPageNumber = UINT16_MAX;
       currentSpineIndex--;
       section.reset();
@@ -219,7 +231,9 @@ void EpubReaderActivity::loop() {
       section->currentPage++;
     } else {
       // We don't want to delete the section mid-render, so grab the semaphore
-      waitForRenderingMutex();
+      if (!waitForRenderingMutex()) {
+        return;
+      }
       nextPageNumber = 0;
       currentSpineIndex++;
       section.reset();
@@ -316,7 +330,12 @@ void EpubReaderActivity::displayTaskLoop() {
   while (!exitTaskRequested.load()) {
     if (updateRequired) {
       updateRequired = false;
-      waitForRenderingMutex();
+      if (!waitForRenderingMutex()) {
+        if (exitTaskRequested.load()) {
+          break;
+        }
+        continue;
+      }
       if (!exitTaskRequested.load()) {
         renderScreen();
       }

@@ -5,7 +5,7 @@ description = "Add your description here"
 authors = [
     { name = "Unintendedsideeffects", email = "malcolmcosenza@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = [
     "clang-format>=21.1.8",
     "platformio>=6.1.18",

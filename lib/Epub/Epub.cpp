@@ -405,16 +405,22 @@ bool Epub::generateCoverBmp(bool cropped) const {
   if (!SdMan.openFileForWrite("EBP", coverTempPath, coverImage)) {
     return false;
   }
-  readItemContentsToStream(coverImageHref, coverImage, 1024);
+  if (!readItemContentsToStream(coverImageHref, coverImage, 1024)) {
+    coverImage.close();
+    SdMan.remove(coverTempPath.c_str());
+    return false;
+  }
   coverImage.close();
 
   if (!SdMan.openFileForRead("EBP", coverTempPath, coverImage)) {
+    SdMan.remove(coverTempPath.c_str());
     return false;
   }
 
   FsFile coverBmp;
   if (!SdMan.openFileForWrite("EBP", getCoverBmpPath(cropped), coverBmp)) {
     coverImage.close();
+    SdMan.remove(coverTempPath.c_str());
     return false;
   }
 
@@ -471,16 +477,22 @@ bool Epub::generateThumbBmp() const {
   if (!SdMan.openFileForWrite("EBP", coverTempPath, coverImage)) {
     return false;
   }
-  readItemContentsToStream(coverImageHref, coverImage, 1024);
+  if (!readItemContentsToStream(coverImageHref, coverImage, 1024)) {
+    coverImage.close();
+    SdMan.remove(coverTempPath.c_str());
+    return false;
+  }
   coverImage.close();
 
   if (!SdMan.openFileForRead("EBP", coverTempPath, coverImage)) {
+    SdMan.remove(coverTempPath.c_str());
     return false;
   }
 
   FsFile thumbBmp;
   if (!SdMan.openFileForWrite("EBP", getThumbBmpPath(), thumbBmp)) {
     coverImage.close();
+    SdMan.remove(coverTempPath.c_str());
     return false;
   }
 

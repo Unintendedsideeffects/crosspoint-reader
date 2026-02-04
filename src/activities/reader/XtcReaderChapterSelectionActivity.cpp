@@ -68,9 +68,13 @@ void XtcReaderChapterSelectionActivity::onEnter() {
 void XtcReaderChapterSelectionActivity::onExit() {
   Activity::onExit();
 
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
+  if (displayTaskHandle != nullptr) {
+    TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
+  }
+  if (renderingMutex != nullptr) {
+    vSemaphoreDelete(renderingMutex);
+    renderingMutex = nullptr;
+  }
 }
 
 void XtcReaderChapterSelectionActivity::loop() {

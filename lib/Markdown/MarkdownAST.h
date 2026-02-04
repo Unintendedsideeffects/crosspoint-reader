@@ -294,9 +294,22 @@ struct MdNode {
       case MdNodeType::HtmlBlock:
       case MdNodeType::TaskListItem:
         return true;
-      default:
+      case MdNodeType::Text:
+      case MdNodeType::SoftBreak:
+      case MdNodeType::HardBreak:
+      case MdNodeType::Emphasis:
+      case MdNodeType::Strong:
+      case MdNodeType::Link:
+      case MdNodeType::Image:
+      case MdNodeType::Code:
+      case MdNodeType::Strikethrough:
+      case MdNodeType::WikiLink:
+      case MdNodeType::Highlight:
+      case MdNodeType::LatexMath:
+      case MdNodeType::LatexMathDisplay:
         return false;
     }
+    return false;
   }
 
   bool isInline() const { return !isBlock(); }

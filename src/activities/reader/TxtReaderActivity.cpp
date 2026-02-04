@@ -245,25 +245,29 @@ void TxtReaderActivity::buildPageIndex() {
 }
 
 bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>& outLines, size_t& nextOffset) {
-  SpiBusMutex::Guard guard;
   outLines.clear();
-  const size_t fileSize = txt->getFileSize();
-
-  if (offset >= fileSize) {
-    return false;
-  }
-
-  // Read a chunk from file
-  size_t chunkSize = std::min(CHUNK_SIZE, fileSize - offset);
-  auto* buffer = static_cast<uint8_t*>(malloc(chunkSize + 1));
+  size_t fileSize = 0;
+  size_t chunkSize = 0;
+  auto* buffer = static_cast<uint8_t*>(malloc(CHUNK_SIZE + 1));
   if (!buffer) {
-    Serial.printf("[%lu] [TRS] Failed to allocate %zu bytes\n", millis(), chunkSize);
+    Serial.printf("[%lu] [TRS] Failed to allocate %d bytes\n", millis(), CHUNK_SIZE + 1);
     return false;
   }
 
-  if (!txt->readContent(buffer, offset, chunkSize)) {
-    free(buffer);
-    return false;
+  {
+    SpiBusMutex::Guard guard;
+    fileSize = txt->getFileSize();
+    if (offset >= fileSize) {
+      free(buffer);
+      return false;
+    }
+
+    // Read a chunk from file
+    chunkSize = std::min(CHUNK_SIZE, fileSize - offset);
+    if (!txt->readContent(buffer, offset, chunkSize)) {
+      free(buffer);
+      return false;
+    }
   }
   buffer[chunkSize] = '\0';
 
