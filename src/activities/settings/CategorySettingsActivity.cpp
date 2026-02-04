@@ -14,11 +14,34 @@
 #include "KOReaderSettingsActivity.h"
 #include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
+#include "ScreenComponents.h"
 #include "activities/TaskShutdown.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "fontIds.h"
 
 namespace {
+bool isLeapYear(const int year) {
+  if (year % 4 != 0) {
+    return false;
+  }
+  if (year % 100 != 0) {
+    return true;
+  }
+  return (year % 400 == 0);
+}
+
+bool isValidDay(const int year, const int month, const int day) {
+  static const int daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  if (month < 1 || month > 12 || day < 1) {
+    return false;
+  }
+  int maxDay = daysInMonth[month - 1];
+  if (month == 2 && isLeapYear(year)) {
+    maxDay = 29;
+  }
+  return day <= maxDay;
+}
+
 std::string formatTimeForInput() {
   const std::time_t now = std::time(nullptr);
   if (now <= 0) {
@@ -42,7 +65,7 @@ bool parseManualTime(const std::string& text, std::tm& out) {
   if (matched < 3) {
     return false;
   }
-  if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31) {
+  if (year < 1970 || !isValidDay(year, month, day)) {
     return false;
   }
   if (matched >= 5 && (hour < 0 || hour > 23 || minute < 0 || minute > 59)) {
@@ -128,6 +151,16 @@ void CategorySettingsActivity::toggleCurrentSetting() {
     const bool currentValue = SETTINGS.*(setting.valuePtr);
     SETTINGS.*(setting.valuePtr) = !currentValue;
   } else if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
+    if (strcmp(setting.name, "Short Power Button Click") == 0 &&
+        SETTINGS.frontButtonLayout == CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT) {
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      ScreenComponents::drawPopup(renderer, "SELECT required in dual-side");
+      xSemaphoreGive(renderingMutex);
+      vTaskDelay(pdMS_TO_TICKS(800));
+      updateRequired = true;
+      return;
+    }
+
     const uint8_t currentValue = SETTINGS.*(setting.valuePtr);
     SETTINGS.*(setting.valuePtr) = (currentValue + 1) % static_cast<uint8_t>(setting.enumValues.size());
 
@@ -152,38 +185,37 @@ void CategorySettingsActivity::toggleCurrentSetting() {
       SETTINGS.*(setting.valuePtr) = currentValue + setting.valueRange.step;
     }
   } else if (setting.type == SettingType::ACTION) {
+    auto openSubActivity = [this](Activity* activity) {
+      ActivityWithSubactivity::exitActivity();
+      ActivityWithSubactivity::enterNewActivity(activity);
+    };
+
     if (strcmp(setting.name, "KOReader Sync") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      exitActivity();
-      enterNewActivity(new KOReaderSettingsActivity(renderer, mappedInput, [this] {
+      openSubActivity(new KOReaderSettingsActivity(renderer, mappedInput, [this] {
         exitActivity();
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
     } else if (strcmp(setting.name, "OPDS Browser") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      exitActivity();
-      enterNewActivity(new CalibreSettingsActivity(renderer, mappedInput, [this] {
+      openSubActivity(new CalibreSettingsActivity(renderer, mappedInput, [this] {
         exitActivity();
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
     } else if (strcmp(setting.name, "Clear Cache") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      exitActivity();
-      enterNewActivity(new ClearCacheActivity(renderer, mappedInput, [this] {
+      openSubActivity(new ClearCacheActivity(renderer, mappedInput, [this] {
         exitActivity();
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
     } else if (strcmp(setting.name, "Set Manual Time") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      // Note: exitActivity() here calls ActivityWithSubactivity::exitActivity() which only
-      // clears the current subactivity - it does NOT delete 'this' (the parent activity).
-      // The captured 'this' in callbacks below remains valid.
-      exitActivity();
+      // Close any existing subactivity before launching the keyboard.
       const std::string prefill = formatTimeForInput();
-      enterNewActivity(new KeyboardEntryActivity(
+      openSubActivity(new KeyboardEntryActivity(
           renderer, mappedInput, "Manual Time (YYYY-MM-DD HH:MM)", prefill, 10,
           16,     // maxLength
           false,  // not password
@@ -217,8 +249,7 @@ void CategorySettingsActivity::toggleCurrentSetting() {
       xSemaphoreGive(renderingMutex);
     } else if (strcmp(setting.name, "Check for updates") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      exitActivity();
-      enterNewActivity(new OtaUpdateActivity(renderer, mappedInput, [this] {
+      openSubActivity(new OtaUpdateActivity(renderer, mappedInput, [this] {
         exitActivity();
         updateRequired = true;
       }));

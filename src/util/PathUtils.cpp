@@ -158,6 +158,14 @@ bool isValidFilename(const String& filename) {
     return false;
   }
 
+  // Reject filesystem-invalid characters
+  for (size_t i = 0; i < filename.length(); i++) {
+    const char c = filename[i];
+    if (c == '"' || c == '*' || c == ':' || c == '<' || c == '>' || c == '?' || c == '|') {
+      return false;
+    }
+  }
+
   // Must not be a traversal attempt
   if (filename == "." || filename == "..") {
     return false;

@@ -128,6 +128,12 @@ bool MarkdownNavigation::isInternalLink(const std::string& href) {
   if (href.compare(0, 4, "tel:") == 0) {
     return false;
   }
+  if (href.compare(0, 5, "data:") == 0) {
+    return false;
+  }
+  if (href.compare(0, 11, "javascript:") == 0) {
+    return false;
+  }
 
   // Fragment-only links are internal
   if (href[0] == '#') {
