@@ -2,6 +2,7 @@
 
 #include <HtmlSection.h>
 #include <Markdown.h>
+#include <MarkdownSection.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
@@ -14,7 +15,9 @@ class Page;
 
 class MarkdownReaderActivity final : public ActivityWithSubactivity {
   std::unique_ptr<Markdown> markdown;
-  std::unique_ptr<HtmlSection> section;
+  std::unique_ptr<MarkdownSection> mdSection;
+  std::unique_ptr<HtmlSection> htmlSection;
+  std::atomic<bool> useAstRenderer{false};
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> taskShouldExit{false};
@@ -37,6 +40,11 @@ class MarkdownReaderActivity final : public ActivityWithSubactivity {
   void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
   void saveProgress() const;
   void loadProgress();
+  bool hasActiveSection() const;
+  uint16_t getActivePageCount() const;
+  int getActiveCurrentPage() const;
+  void setActiveCurrentPage(int page);
+  std::unique_ptr<Page> loadActivePage();
 
   // Navigation helpers
   void jumpToNextHeading();

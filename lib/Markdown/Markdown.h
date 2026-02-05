@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "MarkdownAST.h"
 #include "MarkdownNavigation.h"
@@ -50,4 +51,5 @@ class Markdown {
   static std::string processInline(const std::string& line);
   static std::string stripBlockId(const std::string& line);
   static std::string formatCalloutLine(const std::string& line);
+  std::string preprocessContent(const std::string& content, int depth, std::vector<std::string>& stack) const;
 };

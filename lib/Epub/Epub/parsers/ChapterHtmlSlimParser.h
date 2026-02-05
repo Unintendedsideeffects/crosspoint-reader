@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "../ParsedText.h"
-#include "../blocks/ImageBlock.h"
 #include "../blocks/TextBlock.h"
 
 class Epub;
@@ -18,8 +17,9 @@ class GfxRenderer;
 #define MAX_WORD_SIZE 200
 
 class ChapterHtmlSlimParser {
-  std::shared_ptr<Epub> epub;
   const std::string& filepath;
+  std::string contentBasePath;  // Base path for resolving relative URLs
+  std::shared_ptr<Epub> epub;   // Epub for reading image data (may be null)
   GfxRenderer& renderer;
   std::function<void(std::unique_ptr<Page>)> completePageFn;
   std::function<void()> popupFn;  // Popup callback
@@ -42,25 +42,28 @@ class ChapterHtmlSlimParser {
   uint16_t viewportWidth;
   uint16_t viewportHeight;
   bool hyphenationEnabled;
-  int imageCounter = 0;
 
   void startNewTextBlock(TextBlock::Style style);
   void flushPartWordBuffer();
   void makePages();
+  void processImage(const char* src, const char* alt);
+  void addImageToPage(std::shared_ptr<PageImage> image);
   // XML callbacks
   static void XMLCALL startElement(void* userData, const XML_Char* name, const XML_Char** atts);
   static void XMLCALL characterData(void* userData, const XML_Char* s, int len);
   static void XMLCALL endElement(void* userData, const XML_Char* name);
 
  public:
-  explicit ChapterHtmlSlimParser(std::shared_ptr<Epub> epub, const std::string& filepath, GfxRenderer& renderer,
-                                 const int fontId, const float lineCompression, const bool extraParagraphSpacing,
+  explicit ChapterHtmlSlimParser(const std::string& filepath, GfxRenderer& renderer, const int fontId,
+                                 const float lineCompression, const bool extraParagraphSpacing,
                                  const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                  const uint16_t viewportHeight, const bool hyphenationEnabled,
                                  const std::function<void(std::unique_ptr<Page>)>& completePageFn,
-                                 const std::function<void()>& popupFn = nullptr)
-      : epub(epub),
-        filepath(filepath),
+                                 const std::function<void()>& popupFn = nullptr,
+                                 const std::shared_ptr<Epub>& epub = nullptr, const std::string& contentBasePath = "")
+      : filepath(filepath),
+        contentBasePath(contentBasePath),
+        epub(epub),
         renderer(renderer),
         fontId(fontId),
         lineCompression(lineCompression),

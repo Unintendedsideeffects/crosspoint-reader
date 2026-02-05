@@ -9,6 +9,7 @@
 
 class GfxRenderer;
 class Page;
+class PageImage;
 class ParsedText;
 class TextBlock;
 
@@ -64,9 +65,12 @@ class MarkdownRenderer {
   // Node to page mapping
   std::vector<size_t> nodeToPage;
   size_t currentNodeIndex = 0;
+  size_t totalNodes = 0;
+  int lastProgress = -1;
 
   // Callbacks (set during render)
   PageCallback onPageComplete;
+  ProgressCallback onProgress;
 
   // Rendering methods by node type
   void renderNode(const MdNode& node);
@@ -95,16 +99,20 @@ class MarkdownRenderer {
   void renderHardBreak(const MdNode& node);
   void renderWikiLink(const MdNode& node);
   void renderHighlight(const MdNode& node);
+  void renderSubscript(const MdNode& node);
+  void renderSuperscript(const MdNode& node);
   void renderLatexMath(const MdNode& node);
 
   // Page management
   void startNewTextBlock(uint8_t style);
   void flushTextBlock();
   void addLineToPage(std::shared_ptr<TextBlock> line);
+  void addImageToPage(std::shared_ptr<PageImage> image);
   void finalizePage();
 
   // Helpers
   uint8_t getCurrentFontStyle() const;
   int getIndentWidth() const;
   std::string createIndentPrefix() const;
+  void updateProgress();
 };
