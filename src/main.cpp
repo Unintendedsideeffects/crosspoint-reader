@@ -37,6 +37,11 @@ MappedInputManager mappedInputManager(gpio);
 GfxRenderer renderer(display);
 Activity* currentActivity;
 
+// Feature flags - default to enabled unless build system overrides
+#ifndef ENABLE_EXTENDED_FONTS
+#define ENABLE_EXTENDED_FONTS 1
+#endif
+
 // Fonts
 EpdFont bookerly14RegularFont(&bookerly_14_regular);
 EpdFont bookerly14BoldFont(&bookerly_14_bold);
@@ -44,7 +49,7 @@ EpdFont bookerly14ItalicFont(&bookerly_14_italic);
 EpdFont bookerly14BoldItalicFont(&bookerly_14_bolditalic);
 EpdFontFamily bookerly14FontFamily(&bookerly14RegularFont, &bookerly14BoldFont, &bookerly14ItalicFont,
                                    &bookerly14BoldItalicFont);
-#ifndef OMIT_FONTS
+#if ENABLE_EXTENDED_FONTS
 EpdFont bookerly12RegularFont(&bookerly_12_regular);
 EpdFont bookerly12BoldFont(&bookerly_12_bold);
 EpdFont bookerly12ItalicFont(&bookerly_12_italic);
@@ -113,7 +118,7 @@ EpdFont opendyslexic14ItalicFont(&opendyslexic_14_italic);
 EpdFont opendyslexic14BoldItalicFont(&opendyslexic_14_bolditalic);
 EpdFontFamily opendyslexic14FontFamily(&opendyslexic14RegularFont, &opendyslexic14BoldFont, &opendyslexic14ItalicFont,
                                        &opendyslexic14BoldItalicFont);
-#endif  // OMIT_FONTS
+#endif  // ENABLE_EXTENDED_FONTS
 
 EpdFont smallFont(&notosans_8_regular);
 EpdFontFamily smallFontFamily(&smallFont);
@@ -252,12 +257,14 @@ void onGoToTodo() {
     return;
   }
 
+#if ENABLE_MARKDOWN
   // 1. Try markdown (.md)
   const std::string todoMdPath = "/daily/" + today + ".md";
   if (SdMan.exists(todoMdPath.c_str())) {
     enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
     return;
   }
+#endif
 
   // 2. Try text (.txt)
   const std::string todoTxtPath = "/daily/" + today + ".txt";
@@ -274,8 +281,13 @@ void onGoToTodo() {
     return;
   }
 
-  // 4. Default: Create/Open new MD list
+  // 4. Default: Create/Open new list
+#if ENABLE_MARKDOWN
   enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
+#else
+  // When markdown disabled, default to TXT format
+  enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoTxtPath, today, onGoHome));
+#endif
 }
 
 void onGoHome() {
@@ -288,7 +300,7 @@ void setupDisplayAndFonts() {
   display.begin();
   Serial.printf("[%lu] [   ] Display initialized\n", millis());
   renderer.insertFont(BOOKERLY_14_FONT_ID, bookerly14FontFamily);
-#ifndef OMIT_FONTS
+#if ENABLE_EXTENDED_FONTS
   renderer.insertFont(BOOKERLY_12_FONT_ID, bookerly12FontFamily);
   renderer.insertFont(BOOKERLY_16_FONT_ID, bookerly16FontFamily);
   renderer.insertFont(BOOKERLY_18_FONT_ID, bookerly18FontFamily);
@@ -301,7 +313,7 @@ void setupDisplayAndFonts() {
   renderer.insertFont(OPENDYSLEXIC_10_FONT_ID, opendyslexic10FontFamily);
   renderer.insertFont(OPENDYSLEXIC_12_FONT_ID, opendyslexic12FontFamily);
   renderer.insertFont(OPENDYSLEXIC_14_FONT_ID, opendyslexic14FontFamily);
-#endif  // OMIT_FONTS
+#endif  // ENABLE_EXTENDED_FONTS
   renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
   renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
   renderer.insertFont(SMALL_FONT_ID, smallFontFamily);

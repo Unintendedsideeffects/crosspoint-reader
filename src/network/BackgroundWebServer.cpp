@@ -12,6 +12,11 @@
 #include "CrossPointWebServer.h"
 #include "util/TimeSync.h"
 
+// Feature flag for background web server
+#ifndef ENABLE_BACKGROUND_SERVER
+#define ENABLE_BACKGROUND_SERVER 1
+#endif
+
 namespace {
 constexpr const char* MDNS_HOSTNAME = "crosspoint";
 
@@ -213,6 +218,11 @@ bool BackgroundWebServer::hasSessionExpired() const {
 }
 
 void BackgroundWebServer::loop(const bool usbConnected, const bool allowRun) {
+#if !ENABLE_BACKGROUND_SERVER
+  // Background server feature disabled at compile time
+  return;
+#endif
+
   usbConnectedCached = usbConnected;
   allowRunCached = allowRun;
 

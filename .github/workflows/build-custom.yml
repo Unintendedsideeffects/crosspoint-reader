@@ -1,0 +1,155 @@
+name: Build Custom Firmware
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: 'Feature Preset'
+        required: true
+        type: choice
+        default: 'custom'
+        options:
+          - custom
+          - minimal
+          - standard
+          - full
+      extended_fonts:
+        description: 'Extended Fonts (12/16/18pt + OpenDyslexic, ~300K)'
+        required: false
+        type: boolean
+        default: true
+      image_sleep:
+        description: 'PNG/JPEG Sleep Images (~140K)'
+        required: false
+        type: boolean
+        default: true
+      markdown:
+        description: 'Markdown/Obsidian Support (~560K)'
+        required: false
+        type: boolean
+        default: true
+      background_server:
+        description: 'Background Web Server (~5K)'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build-custom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
+          restore-keys: ${{ runner.os }}-platformio-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Generate custom build configuration
+        id: config
+        run: |
+          # Build the command based on preset or individual features
+          if [ "${{ inputs.preset }}" != "custom" ]; then
+            echo "Using preset: ${{ inputs.preset }}"
+            python scripts/generate_build_config.py --preset "${{ inputs.preset }}"
+          else
+            echo "Using custom feature selection"
+            CMD="python scripts/generate_build_config.py"
+
+            # Add enabled features
+            if [ "${{ inputs.extended_fonts }}" == "true" ]; then
+              CMD="$CMD --enable extended_fonts"
+            fi
+            if [ "${{ inputs.image_sleep }}" == "true" ]; then
+              CMD="$CMD --enable image_sleep"
+            fi
+            if [ "${{ inputs.markdown }}" == "true" ]; then
+              CMD="$CMD --enable markdown"
+            fi
+            if [ "${{ inputs.background_server }}" == "true" ]; then
+              CMD="$CMD --enable background_server"
+            fi
+
+            # Execute the command
+            eval $CMD
+          fi
+
+          # Show generated configuration
+          echo "Generated configuration:"
+          cat platformio-custom.ini
+
+      - name: Build custom firmware
+        run: pio run -e custom
+
+      - name: Report firmware size
+        run: |
+          echo "### Custom Firmware Build" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ inputs.preset }}" != "custom" ]; then
+            echo "**Preset:** ${{ inputs.preset }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Preset:** Custom" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Features:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Extended Fonts: ${{ inputs.extended_fonts }}" >> $GITHUB_STEP_SUMMARY
+            echo "- PNG/JPEG Sleep: ${{ inputs.image_sleep }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Markdown/Obsidian: ${{ inputs.markdown }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Background Server: ${{ inputs.background_server }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Firmware Size" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ -f ".pio/build/custom/firmware.bin" ]; then
+            SIZE=$(stat -c%s ".pio/build/custom/firmware.bin")
+            SIZE_MB=$(echo "scale=2; $SIZE / 1024 / 1024" | bc)
+            ls -lh ".pio/build/custom/firmware.bin" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Firmware size: ${SIZE_MB}MB / 6.4MB available" >> $GITHUB_STEP_SUMMARY
+
+            # Calculate percentage
+            PERCENT=$(echo "scale=1; $SIZE_MB * 100 / 6.4" | bc)
+            echo "Flash usage: ${PERCENT}%" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ERROR: No firmware.bin found!" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Configuration" >> $GITHUB_STEP_SUMMARY
+          echo '```ini' >> $GITHUB_STEP_SUMMARY
+          cat platformio-custom.ini >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload custom firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-firmware
+          path: |
+            .pio/build/custom/firmware.bin
+            .pio/build/custom/partitions.bin
+            platformio-custom.ini
+          retention-days: 30
+
+      - name: Build summary
+        run: |
+          echo "✅ Custom firmware build complete!"
+          echo ""
+          echo "Download the artifact from the Actions tab to get your custom firmware."
+          echo "Flash using: esptool.py write_flash 0x10000 firmware.bin"
