@@ -165,6 +165,8 @@ class CrossPointSettings {
   uint8_t longPressChapterSkip = 1;
   // UI Theme
   uint8_t uiTheme = LYRA;
+  // Sunlight fading compensation
+  uint8_t fadingFix = 0;
 
   ~CrossPointSettings() = default;
 

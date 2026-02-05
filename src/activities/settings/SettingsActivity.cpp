@@ -17,7 +17,7 @@ const char* SettingsActivity::categoryNames[categoryCount] = {"Display", "Reader
 
 namespace {
 constexpr int changeTabsMs = 700;
-constexpr int displaySettingsCount = 7;
+constexpr int displaySettingsCount = 8;
 const SettingInfo displaySettings[displaySettingsCount] = {
     // Should match with SLEEP_SCREEN_MODE
     SettingInfo::Enum("Sleep Screen", &CrossPointSettings::sleepScreen,
@@ -31,6 +31,7 @@ const SettingInfo displaySettings[displaySettingsCount] = {
     SettingInfo::Enum("Refresh Frequency", &CrossPointSettings::refreshFrequency,
                       {"1 page", "5 pages", "10 pages", "15 pages", "30 pages"}),
     SettingInfo::Enum("UI Theme", &CrossPointSettings::uiTheme, {"Classic", "Lyra"}),
+    SettingInfo::Toggle("Sunlight Fading Fix", &CrossPointSettings::fadingFix),
 };
 
 constexpr int readerSettingsCount = 9;
