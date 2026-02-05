@@ -4,7 +4,6 @@
 #include <utility>
 #include <vector>
 
-#include "blocks/ImageBlock.h"
 #include "blocks/TextBlock.h"
 
 enum PageElementTag : uint8_t {
@@ -37,17 +36,22 @@ class PageLine final : public PageElement {
   static std::unique_ptr<PageLine> deserialize(FsFile& file);
 };
 
-// an image element
+// an inline image element
 class PageImage final : public PageElement {
-  std::shared_ptr<ImageBlock> imageBlock;
+  std::vector<uint8_t> bmpData;  // Inline BMP data (rendered at deserialize time)
+  uint16_t imageWidth;
+  uint16_t imageHeight;
 
  public:
-  PageImage(std::shared_ptr<ImageBlock> block, const int16_t xPos, const int16_t yPos)
-      : PageElement(xPos, yPos), imageBlock(std::move(block)) {}
+  PageImage(std::vector<uint8_t>&& data, uint16_t width, uint16_t height, int16_t xPos, int16_t yPos)
+      : PageElement(xPos, yPos), bmpData(std::move(data)), imageWidth(width), imageHeight(height) {}
   void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) override;
   bool serialize(FsFile& file) override;
   PageElementTag getTag() const override { return TAG_PageImage; }
   static std::unique_ptr<PageImage> deserialize(FsFile& file);
+
+  uint16_t getWidth() const { return imageWidth; }
+  uint16_t getHeight() const { return imageHeight; }
 };
 
 class Page {

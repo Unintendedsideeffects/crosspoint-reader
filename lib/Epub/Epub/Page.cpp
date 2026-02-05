@@ -28,16 +28,30 @@ std::unique_ptr<PageLine> PageLine::deserialize(FsFile& file) {
 }
 
 void PageImage::render(GfxRenderer& renderer, const int fontId, const int xOffset, const int yOffset) {
-  // Images don't use fontId or text rendering
-  imageBlock->render(renderer, xPos + xOffset, yPos + yOffset);
+  if (bmpData.empty()) {
+    return;
+  }
+
+  const int x = xPos + xOffset;
+  const int y = yPos + yOffset;
+  // bmpData contains raw 1-bit image data (packed by row, MSB first).
+  renderer.drawImage(bmpData.data(), x, y, imageWidth, imageHeight);
 }
 
 bool PageImage::serialize(FsFile& file) {
   serialization::writePod(file, xPos);
   serialization::writePod(file, yPos);
+  serialization::writePod(file, imageWidth);
+  serialization::writePod(file, imageHeight);
 
-  // serialize ImageBlock
-  return imageBlock->serialize(file);
+  // Write BMP data length and data
+  const uint32_t dataLen = bmpData.size();
+  serialization::writePod(file, dataLen);
+  if (dataLen > 0) {
+    file.write(bmpData.data(), dataLen);
+  }
+
+  return true;
 }
 
 std::unique_ptr<PageImage> PageImage::deserialize(FsFile& file) {
@@ -46,12 +60,29 @@ std::unique_ptr<PageImage> PageImage::deserialize(FsFile& file) {
   serialization::readPod(file, xPos);
   serialization::readPod(file, yPos);
 
-  auto ib = ImageBlock::deserialize(file);
-  if (!ib) {
-    Serial.printf("[%lu] [PGE] Failed to deserialize ImageBlock\n", millis());
+  uint16_t width;
+  uint16_t height;
+  serialization::readPod(file, width);
+  serialization::readPod(file, height);
+
+  uint32_t dataLen;
+  serialization::readPod(file, dataLen);
+
+  // Sanity check - images shouldn't be huge
+  if (dataLen > 1024 * 1024) {  // 1MB max
+    Serial.printf("[%lu] [PGE] Image data too large: %u bytes\n", millis(), dataLen);
     return nullptr;
   }
-  return std::unique_ptr<PageImage>(new PageImage(std::move(ib), xPos, yPos));
+
+  std::vector<uint8_t> data(dataLen);
+  if (dataLen > 0) {
+    if (file.read(data.data(), dataLen) != dataLen) {
+      Serial.printf("[%lu] [PGE] Failed to read image data\n", millis());
+      return nullptr;
+    }
+  }
+
+  return std::unique_ptr<PageImage>(new PageImage(std::move(data), width, height, xPos, yPos));
 }
 
 void Page::render(GfxRenderer& renderer, const int fontId, const int xOffset, const int yOffset) const {
