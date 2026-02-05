@@ -265,7 +265,7 @@ void SleepActivity::renderCoverSleepScreen() const {
   if (SdMan.openFileForRead("SLP", coverBmpPath, file)) {
     Bitmap bitmap(file);
     if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-      Serial.printf("[SLP] Rendering sleep cover: %s\n", coverBmpPath);
+      Serial.printf("[SLP] Rendering sleep cover: %s\n", coverBmpPath.c_str());
       renderBitmapSleepScreen(bitmap);
       return;
     }
