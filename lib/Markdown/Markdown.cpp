@@ -795,6 +795,208 @@ std::string Markdown::preprocessContent(const std::string& content, int depth, s
   bool inFence = false;
   std::string fence;
 
+  auto trimSpaces = [](const std::string& value) -> std::string {
+    const size_t firstNonSpace = value.find_first_not_of(" \t");
+    if (firstNonSpace == std::string::npos) {
+      return "";
+    }
+    const size_t lastNonSpace = value.find_last_not_of(" \t");
+    return value.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+  };
+
+  auto resolveEmbed = [&](const std::string& inner, std::string& expansion) -> bool {
+    std::string target = inner;
+    const size_t pipePos = target.find('|');
+    if (pipePos != std::string::npos) {
+      target = target.substr(0, pipePos);
+    }
+
+    std::string filePart = target;
+    std::string heading;
+    std::string blockId;
+    const size_t hashPos = target.find('#');
+    if (hashPos != std::string::npos) {
+      filePart = target.substr(0, hashPos);
+      std::string anchor = target.substr(hashPos + 1);
+      if (!anchor.empty() && anchor[0] == '^') {
+        blockId = anchor.substr(1);
+      } else {
+        heading = anchor;
+      }
+    } else {
+      const size_t caretPos = target.find('^');
+      if (caretPos != std::string::npos) {
+        filePart = target.substr(0, caretPos);
+        blockId = target.substr(caretPos + 1);
+      }
+    }
+
+    if (filePart.empty() && heading.empty() && blockId.empty()) {
+      return false;
+    }
+
+    const std::string fileTrimmed = trimSpaces(filePart);
+    if (!fileTrimmed.empty() && hasImageExtension(fileTrimmed)) {
+      return false;
+    }
+
+    std::string resolvedPath;
+    std::string pathPart = fileTrimmed;
+    if (pathPart.empty()) {
+      resolvedPath = filepath;
+    } else {
+      size_t dot = pathPart.find_last_of('.');
+      const size_t slash = pathPart.find_last_of('/');
+      const bool hasExt = (dot != std::string::npos && (slash == std::string::npos || dot > slash));
+      if (!hasExt) {
+        pathPart += ".md";
+      }
+
+      if (!pathPart.empty() && pathPart[0] == '/') {
+        resolvedPath = pathPart;
+      } else {
+        resolvedPath = FsHelpers::normalisePath(getContentBasePath() + pathPart);
+      }
+    }
+
+    if (resolvedPath.empty()) {
+      expansion = "[Embedded note not found]";
+      return true;
+    }
+
+    std::string cycleKey = resolvedPath;
+    if (!heading.empty()) {
+      cycleKey += "#";
+      cycleKey += heading;
+    }
+    if (!blockId.empty()) {
+      cycleKey += "^";
+      cycleKey += blockId;
+    }
+
+    if (std::find(stack.begin(), stack.end(), cycleKey) != stack.end()) {
+      expansion = "[Embedded note omitted]";
+      return true;
+    }
+
+    std::string embeddedContent;
+    if (!readFileToString(resolvedPath, embeddedContent, MAX_EMBED_BYTES)) {
+      expansion = "[Embedded note not found]";
+      return true;
+    }
+
+    std::string selected = embeddedContent;
+    if (!blockId.empty()) {
+      std::vector<std::string> lines;
+      lines.reserve(256);
+      size_t s = 0;
+      while (s <= embeddedContent.size()) {
+        const size_t e = embeddedContent.find('\n', s);
+        const bool nl = e != std::string::npos;
+        const size_t len = nl ? (e - s) : (embeddedContent.size() - s);
+        lines.emplace_back(embeddedContent.substr(s, len));
+        if (!nl) {
+          break;
+        }
+        s = e + 1;
+      }
+      std::string blockLine;
+      if (findBlockLine(lines, blockId, blockLine)) {
+        selected = blockLine;
+      } else {
+        selected.clear();
+      }
+    } else if (!heading.empty()) {
+      selected = extractSectionByHeading(embeddedContent, heading);
+    }
+
+    if (selected.empty()) {
+      expansion = "[Embedded note not found]";
+      return true;
+    }
+
+    stack.push_back(cycleKey);
+    expansion = preprocessContent(selected, depth + 1, stack);
+    stack.pop_back();
+    return true;
+  };
+
+  auto expandEmbedsInLine = [&](const std::string& line, std::string& expandedLine) -> bool {
+    bool found = false;
+    bool inCode = false;
+    size_t codeFence = 0;
+    size_t segmentStart = 0;
+    bool pendingBreak = false;
+
+    size_t i = 0;
+    while (i < line.size()) {
+      if (line[i] == '`') {
+        size_t tickCount = 0;
+        while (i + tickCount < line.size() && line[i + tickCount] == '`') {
+          tickCount++;
+        }
+        if (!inCode) {
+          inCode = true;
+          codeFence = tickCount;
+        } else if (tickCount == codeFence) {
+          inCode = false;
+          codeFence = 0;
+        }
+        i += tickCount;
+        continue;
+      }
+
+      if (!inCode && i + 2 < line.size() && line[i] == '!' && line[i + 1] == '[' && line[i + 2] == '[') {
+        const size_t end = line.find("]]", i + 3);
+        if (end == std::string::npos) {
+          i++;
+          continue;
+        }
+
+        const std::string inner = line.substr(i + 3, end - (i + 3));
+        std::string expansion;
+        if (resolveEmbed(inner, expansion)) {
+          found = true;
+          if (i > segmentStart) {
+            const std::string segment = processLine(line.substr(segmentStart, i - segmentStart));
+            if (segment.find_first_not_of(" \t\r") != std::string::npos) {
+              if (pendingBreak && !expandedLine.empty() && expandedLine.back() != '\n') {
+                expandedLine.push_back('\n');
+              }
+              expandedLine.append(segment);
+            }
+          }
+
+          if (!expandedLine.empty() && expandedLine.back() != '\n') {
+            expandedLine.push_back('\n');
+          }
+          expandedLine.append(expansion);
+          pendingBreak = true;
+          i = end + 2;
+          segmentStart = i;
+          continue;
+        }
+
+        i = end + 2;
+        continue;
+      }
+
+      i++;
+    }
+
+    if (found && segmentStart < line.size()) {
+      const std::string segment = processLine(line.substr(segmentStart));
+      if (segment.find_first_not_of(" \t\r") != std::string::npos) {
+        if (pendingBreak && !expandedLine.empty() && expandedLine.back() != '\n') {
+          expandedLine.push_back('\n');
+        }
+        expandedLine.append(segment);
+      }
+    }
+
+    return found;
+  };
+
   size_t start = 0;
   while (start <= processed.size()) {
     const size_t end = processed.find('\n', start);
@@ -809,154 +1011,10 @@ std::string Markdown::preprocessContent(const std::string& content, int depth, s
         fence = newFence;
         output.append(line);
       } else {
-        std::string trimmed = line;
-        const size_t firstNonSpace = trimmed.find_first_not_of(" \t");
-        if (firstNonSpace == std::string::npos) {
-          trimmed.clear();
+        std::string expandedLine;
+        if (expandEmbedsInLine(line, expandedLine)) {
+          output.append(expandedLine);
         } else {
-          const size_t lastNonSpace = trimmed.find_last_not_of(" \t");
-          trimmed = trimmed.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
-        }
-
-        bool handled = false;
-        if (trimmed.rfind("![[", 0) == 0 && trimmed.size() >= 5 && trimmed.substr(trimmed.size() - 2) == "]]") {
-          const std::string inner = trimmed.substr(3, trimmed.size() - 5);
-
-          std::string target = inner;
-          const size_t pipePos = target.find('|');
-          if (pipePos != std::string::npos) {
-            target = target.substr(0, pipePos);
-          }
-
-          // Split target into file part and anchor
-          std::string filePart = target;
-          std::string heading;
-          std::string blockId;
-          const size_t hashPos = target.find('#');
-          if (hashPos != std::string::npos) {
-            filePart = target.substr(0, hashPos);
-            std::string anchor = target.substr(hashPos + 1);
-            if (!anchor.empty() && anchor[0] == '^') {
-              blockId = anchor.substr(1);
-            } else {
-              heading = anchor;
-            }
-          } else {
-            const size_t caretPos = target.find('^');
-            if (caretPos != std::string::npos) {
-              filePart = target.substr(0, caretPos);
-              blockId = target.substr(caretPos + 1);
-            }
-          }
-
-          if (filePart.empty() && heading.empty() && blockId.empty()) {
-            handled = false;
-          } else {
-            bool isImage = false;
-            std::string resolvedPath;
-
-            std::string fileTrimmed = filePart;
-            const size_t fileFirst = fileTrimmed.find_first_not_of(" \t");
-            if (fileFirst == std::string::npos) {
-              fileTrimmed.clear();
-            } else {
-              const size_t fileLast = fileTrimmed.find_last_not_of(" \t");
-              fileTrimmed = fileTrimmed.substr(fileFirst, fileLast - fileFirst + 1);
-            }
-
-            if (!fileTrimmed.empty() && hasImageExtension(fileTrimmed)) {
-              isImage = true;
-            }
-
-            if (isImage) {
-              output.append(processLine(line));
-              handled = true;
-            } else {
-              // Resolve markdown file path
-              std::string pathPart = fileTrimmed;
-              if (pathPart.empty()) {
-                resolvedPath = filepath;
-              } else {
-                size_t dot = pathPart.find_last_of('.');
-                const size_t slash = pathPart.find_last_of('/');
-                const bool hasExt = (dot != std::string::npos && (slash == std::string::npos || dot > slash));
-                if (!hasExt) {
-                  pathPart += ".md";
-                }
-
-                if (!pathPart.empty() && pathPart[0] == '/') {
-                  resolvedPath = pathPart;
-                } else {
-                  resolvedPath = FsHelpers::normalisePath(getContentBasePath() + pathPart);
-                }
-              }
-
-              if (!resolvedPath.empty()) {
-                std::string cycleKey = resolvedPath;
-                if (!heading.empty()) {
-                  cycleKey += "#";
-                  cycleKey += heading;
-                }
-                if (!blockId.empty()) {
-                  cycleKey += "^";
-                  cycleKey += blockId;
-                }
-
-                if (std::find(stack.begin(), stack.end(), cycleKey) != stack.end()) {
-                  output.append("[Embedded note omitted]");
-                  handled = true;
-                } else {
-                  std::string embeddedContent;
-                  if (readFileToString(resolvedPath, embeddedContent, MAX_EMBED_BYTES)) {
-                    std::string selected = embeddedContent;
-                    if (!blockId.empty()) {
-                      std::vector<std::string> lines;
-                      lines.reserve(256);
-                      size_t s = 0;
-                      while (s <= embeddedContent.size()) {
-                        const size_t e = embeddedContent.find('\n', s);
-                        const bool nl = e != std::string::npos;
-                        const size_t len = nl ? (e - s) : (embeddedContent.size() - s);
-                        lines.emplace_back(embeddedContent.substr(s, len));
-                        if (!nl) {
-                          break;
-                        }
-                        s = e + 1;
-                      }
-                      std::string blockLine;
-                      if (findBlockLine(lines, blockId, blockLine)) {
-                        selected = blockLine;
-                      } else {
-                        selected.clear();
-                      }
-                    } else if (!heading.empty()) {
-                      selected = extractSectionByHeading(embeddedContent, heading);
-                    }
-
-                    if (!selected.empty()) {
-                      stack.push_back(cycleKey);
-                      const std::string expanded = preprocessContent(selected, depth + 1, stack);
-                      stack.pop_back();
-                      output.append(expanded);
-                      handled = true;
-                    } else {
-                      output.append("[Embedded note not found]");
-                      handled = true;
-                    }
-                  } else {
-                    output.append("[Embedded note not found]");
-                    handled = true;
-                  }
-                }
-              } else {
-                output.append("[Embedded note not found]");
-                handled = true;
-              }
-            }
-          }
-        }
-
-        if (!handled) {
           std::string processedLine = processLine(line);
           output.append(processedLine);
         }
