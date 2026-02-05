@@ -1,10 +1,12 @@
 #pragma once
+#include <string>
+
 #include "../Activity.h"
 
 class Bitmap;
 
-// Call this when /sleep/ folder or /sleep.bmp is modified via web interface
-void invalidateSleepBmpCache();
+// Call this when /sleep/ folder or sleep images are modified via web interface
+void invalidateSleepImageCache();
 
 class SleepActivity final : public Activity {
  public:
@@ -17,5 +19,6 @@ class SleepActivity final : public Activity {
   void renderCustomSleepScreen() const;
   void renderCoverSleepScreen() const;
   void renderBitmapSleepScreen(const Bitmap& bitmap) const;
+  void renderImageSleepScreen(const std::string& imagePath) const;
   void renderBlankSleepScreen() const;
 };
