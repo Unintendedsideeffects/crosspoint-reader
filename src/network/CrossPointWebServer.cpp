@@ -49,12 +49,13 @@ void clearEpubCacheIfNeeded(const String& filePath) {
   }
 }
 
-// Helper to invalidate sleep BMP cache when /sleep/ or /sleep.bmp is modified
+// Helper to invalidate sleep image cache when /sleep/ or sleep images are modified
 void invalidateSleepCacheIfNeeded(const String& filePath) {
   String lowerPath = filePath;
   lowerPath.toLowerCase();
-  if (lowerPath.equals("/sleep.bmp") || lowerPath.startsWith("/sleep/") || lowerPath.equals("/sleep")) {
-    invalidateSleepBmpCache();
+  if (lowerPath.equals("/sleep.bmp") || lowerPath.equals("/sleep.png") || lowerPath.equals("/sleep.jpg") ||
+      lowerPath.equals("/sleep.jpeg") || lowerPath.startsWith("/sleep/") || lowerPath.equals("/sleep")) {
+    invalidateSleepImageCache();
   }
 }
 }  // namespace
