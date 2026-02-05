@@ -8,6 +8,8 @@
 #include <SDCardManager.h>
 #include <esp_task_wdt.h>
 
+#include <algorithm>
+#include <cctype>
 #include <cstring>
 
 #include "Epub/Page.h"
@@ -72,6 +74,78 @@ bool decode1BitBmpToRaw(const std::vector<uint8_t>& bmpData, std::vector<uint8_t
 
   outWidth = static_cast<uint16_t>(width);
   outHeight = static_cast<uint16_t>(height);
+  return true;
+}
+
+std::string trimWhitespace(const std::string& value) {
+  size_t start = 0;
+  while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start]))) {
+    start++;
+  }
+  if (start >= value.size()) {
+    return "";
+  }
+  size_t end = value.size();
+  while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1]))) {
+    end--;
+  }
+  return value.substr(start, end - start);
+}
+
+bool parseDimensionToken(const std::string& token, int& outWidth, int& outHeight) {
+  outWidth = 0;
+  outHeight = 0;
+
+  const std::string trimmed = trimWhitespace(token);
+  if (trimmed.empty()) {
+    return false;
+  }
+
+  auto parseInt = [](const std::string& value, int& out) -> bool {
+    if (value.empty()) {
+      return false;
+    }
+    int result = 0;
+    for (char c : value) {
+      if (!std::isdigit(static_cast<unsigned char>(c))) {
+        return false;
+      }
+      result = (result * 10) + (c - '0');
+    }
+    out = result;
+    return result > 0;
+  };
+
+  size_t xPos = trimmed.find('x');
+  if (xPos == std::string::npos) {
+    xPos = trimmed.find('X');
+  }
+
+  if (xPos == std::string::npos) {
+    return parseInt(trimmed, outWidth);
+  }
+
+  const std::string widthToken = trimmed.substr(0, xPos);
+  const std::string heightToken = trimmed.substr(xPos + 1);
+  if (!parseInt(widthToken, outWidth)) {
+    return false;
+  }
+  if (!heightToken.empty() && !parseInt(heightToken, outHeight)) {
+    return false;
+  }
+  return true;
+}
+
+bool extractAltDimensions(const std::string& altText, std::string& outAlt, int& outWidth, int& outHeight) {
+  const size_t pipePos = altText.rfind('|');
+  if (pipePos == std::string::npos) {
+    return false;
+  }
+  const std::string dimToken = altText.substr(pipePos + 1);
+  if (!parseDimensionToken(dimToken, outWidth, outHeight)) {
+    return false;
+  }
+  outAlt = trimWhitespace(altText.substr(0, pipePos));
   return true;
 }
 }  // namespace
@@ -230,6 +304,12 @@ void MarkdownRenderer::renderNode(const MdNode& node) {
       break;
     case MdNodeType::Highlight:
       renderHighlight(node);
+      break;
+    case MdNodeType::Subscript:
+      renderSubscript(node);
+      break;
+    case MdNodeType::Superscript:
+      renderSuperscript(node);
       break;
     case MdNodeType::LatexMath:
     case MdNodeType::LatexMathDisplay:
@@ -612,7 +692,19 @@ void MarkdownRenderer::renderLink(const MdNode& node) {
 
 void MarkdownRenderer::renderImage(const MdNode& node) {
   std::string src;
-  std::string alt = node.getPlainText();
+  int requestedWidth = 0;
+  int requestedHeight = 0;
+  if (node.image && !node.image->title.empty()) {
+    parseDimensionToken(node.image->title, requestedWidth, requestedHeight);
+  }
+
+  std::string alt = trimWhitespace(node.getPlainText());
+  if (requestedWidth == 0 && requestedHeight == 0) {
+    std::string altWithoutDims;
+    if (extractAltDimensions(alt, altWithoutDims, requestedWidth, requestedHeight)) {
+      alt = altWithoutDims;
+    }
+  }
   if (alt.empty()) {
     alt = "Image";
   }
@@ -678,8 +770,20 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
     currentPageNextY = 0;
   }
 
-  const int maxWidth = viewportWidth;
-  const int maxHeight = viewportHeight / 2;
+  int maxWidth = viewportWidth;
+  int maxHeight = viewportHeight / 2;
+  if (requestedWidth > 0) {
+    maxWidth = std::min(maxWidth, requestedWidth);
+  }
+  if (requestedHeight > 0) {
+    maxHeight = std::min(maxHeight, requestedHeight);
+  }
+  if (maxWidth <= 0) {
+    maxWidth = viewportWidth;
+  }
+  if (maxHeight <= 0) {
+    maxHeight = viewportHeight / 2;
+  }
 
   FsFile imageFile;
   if (!SdMan.openFileForRead("MDR", imagePath, imageFile)) {
@@ -761,6 +865,22 @@ void MarkdownRenderer::renderWikiLink(const MdNode& node) {
 
 void MarkdownRenderer::renderHighlight(const MdNode& node) {
   // Highlight not supported visually, render children with emphasis
+  bool wasItalic = isItalic;
+  isItalic = true;
+  renderInlineChildren(node);
+  isItalic = wasItalic;
+}
+
+void MarkdownRenderer::renderSubscript(const MdNode& node) {
+  // Subscript not supported visually, render children with emphasis
+  bool wasItalic = isItalic;
+  isItalic = true;
+  renderInlineChildren(node);
+  isItalic = wasItalic;
+}
+
+void MarkdownRenderer::renderSuperscript(const MdNode& node) {
+  // Superscript not supported visually, render children with emphasis
   bool wasItalic = isItalic;
   isItalic = true;
   renderInlineChildren(node);

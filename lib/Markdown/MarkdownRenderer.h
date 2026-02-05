@@ -99,6 +99,8 @@ class MarkdownRenderer {
   void renderHardBreak(const MdNode& node);
   void renderWikiLink(const MdNode& node);
   void renderHighlight(const MdNode& node);
+  void renderSubscript(const MdNode& node);
+  void renderSuperscript(const MdNode& node);
   void renderLatexMath(const MdNode& node);
 
   // Page management

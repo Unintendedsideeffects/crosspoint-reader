@@ -47,6 +47,8 @@ enum class MdNodeType : uint8_t {
   TaskListItem,
   WikiLink,
   Highlight,
+  Subscript,
+  Superscript,
   LatexMath,
   LatexMathDisplay,
 };
@@ -266,6 +268,10 @@ struct MdNode {
 
   static std::unique_ptr<MdNode> createHighlight() { return md_detail::make_unique<MdNode>(MdNodeType::Highlight); }
 
+  static std::unique_ptr<MdNode> createSubscript() { return md_detail::make_unique<MdNode>(MdNodeType::Subscript); }
+
+  static std::unique_ptr<MdNode> createSuperscript() { return md_detail::make_unique<MdNode>(MdNodeType::Superscript); }
+
   static std::unique_ptr<MdNode> createLatexMath(const std::string& content, bool display = false) {
     auto node = md_detail::make_unique<MdNode>(display ? MdNodeType::LatexMathDisplay : MdNodeType::LatexMath);
     node->text = content;
@@ -305,6 +311,8 @@ struct MdNode {
       case MdNodeType::Strikethrough:
       case MdNodeType::WikiLink:
       case MdNodeType::Highlight:
+      case MdNodeType::Subscript:
+      case MdNodeType::Superscript:
       case MdNodeType::LatexMath:
       case MdNodeType::LatexMathDisplay:
         return false;

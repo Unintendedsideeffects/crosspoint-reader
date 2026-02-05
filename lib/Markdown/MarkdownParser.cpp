@@ -442,7 +442,28 @@ int MarkdownParser::onText(MD_TEXTTYPE type, const char* text, MD_SIZE size) {
       }
       return 0;
     }
-    if (content == "<sub>" || content == "</sub>" || content == "<sup>" || content == "</sup>") {
+    if (content == "<sub>") {
+      if (!pushNode(MdNode::createSubscript())) {
+        return -1;
+      }
+      return 0;
+    }
+    if (content == "</sub>") {
+      if (current && current->type == MdNodeType::Subscript) {
+        popNode();
+      }
+      return 0;
+    }
+    if (content == "<sup>") {
+      if (!pushNode(MdNode::createSuperscript())) {
+        return -1;
+      }
+      return 0;
+    }
+    if (content == "</sup>") {
+      if (current && current->type == MdNodeType::Superscript) {
+        popNode();
+      }
       return 0;
     }
   }
