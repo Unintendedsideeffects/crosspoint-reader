@@ -8,6 +8,9 @@
 #include <Txt.h>
 #include <Xtc.h>
 
+#include <algorithm>
+#include <cctype>
+
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "SpiBusMutex.h"
@@ -24,9 +27,8 @@ constexpr int NUM_SLEEP_IMAGE_EXTENSIONS = sizeof(SLEEP_IMAGE_EXTENSIONS) / size
 bool isSupportedSleepImage(const std::string& filename) {
   if (filename.length() < 4) return false;
   std::string lowerFilename = filename;
-  for (auto& c : lowerFilename) {
-    c = tolower(c);
-  }
+  std::transform(lowerFilename.begin(), lowerFilename.end(), lowerFilename.begin(),
+                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   for (int i = 0; i < NUM_SLEEP_IMAGE_EXTENSIONS; i++) {
     size_t extLen = strlen(SLEEP_IMAGE_EXTENSIONS[i]);
     if (lowerFilename.length() >= extLen &&
@@ -40,9 +42,8 @@ bool isSupportedSleepImage(const std::string& filename) {
 bool isBmpFile(const std::string& filename) {
   if (filename.length() < 4) return false;
   std::string lowerFilename = filename;
-  for (auto& c : lowerFilename) {
-    c = tolower(c);
-  }
+  std::transform(lowerFilename.begin(), lowerFilename.end(), lowerFilename.begin(),
+                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   return lowerFilename.substr(lowerFilename.length() - 4) == ".bmp";
 }
 
@@ -123,7 +124,7 @@ void validateSleepImagesOnce() {
       } else {
         // For PNG/JPEG, validate by checking if decoder can get dimensions
         std::string fullPath = "/sleep/" + filename;
-        ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(fullPath);
+        const ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(fullPath);
         if (decoder) {
           ImageDimensions dims = {0, 0};
           if (decoder->getDimensions(fullPath, dims) && dims.width > 0 && dims.height > 0) {
@@ -230,7 +231,7 @@ void SleepActivity::renderCustomSleepScreen() const {
       }
     } else {
       // Check if PNG/JPEG file exists and is valid
-      ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(sleepImagePath);
+      const ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(sleepImagePath);
       if (decoder) {
         ImageDimensions dims = {0, 0};
         if (decoder->getDimensions(sleepImagePath, dims) && dims.width > 0 && dims.height > 0) {
