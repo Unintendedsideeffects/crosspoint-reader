@@ -20,8 +20,17 @@
 
 namespace {
 
+// Feature flag for PNG/JPEG sleep image support
+#ifndef ENABLE_IMAGE_SLEEP
+#define ENABLE_IMAGE_SLEEP 1
+#endif
+
 // Supported image extensions for sleep images
+#if ENABLE_IMAGE_SLEEP
 const char* SLEEP_IMAGE_EXTENSIONS[] = {".bmp", ".png", ".jpg", ".jpeg"};
+#else
+const char* SLEEP_IMAGE_EXTENSIONS[] = {".bmp"};  // BMP only when PNG/JPEG disabled
+#endif
 constexpr int NUM_SLEEP_IMAGE_EXTENSIONS = sizeof(SLEEP_IMAGE_EXTENSIONS) / sizeof(SLEEP_IMAGE_EXTENSIONS[0]);
 
 bool isSupportedSleepImage(const std::string& filename) {

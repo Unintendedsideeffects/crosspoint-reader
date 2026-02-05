@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CrossPoint Reader Feature Picker</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&display=swap");
+
+      :root {
+        color-scheme: light;
+        --ink: #0f1115;
+        --ink-soft: #3e4656;
+        --paper: #f6f1ea;
+        --paper-2: #ffffff;
+        --accent: #f05d5e;
+        --accent-2: #0f7173;
+        --accent-3: #f5a623;
+        --border: #e3dcd2;
+        --shadow: 0 10px 30px rgba(15, 17, 21, 0.12);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(
+            1200px 600px at 10% 10%,
+            rgba(240, 93, 94, 0.08),
+            transparent 70%
+          ),
+          radial-gradient(
+            900px 500px at 90% 20%,
+            rgba(15, 113, 115, 0.1),
+            transparent 70%
+          ),
+          linear-gradient(135deg, #f6f1ea 0%, #eef3f4 100%);
+        min-height: 100vh;
+      }
+
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 48px 22px 80px;
+      }
+
+      header {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-bottom: 36px;
+      }
+
+      .eyebrow {
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: var(--accent-2);
+        font-weight: 600;
+      }
+
+      h1 {
+        font-family: "Fraunces", "Georgia", serif;
+        font-weight: 700;
+        font-size: clamp(2.2rem, 3.5vw, 3.2rem);
+        margin: 0;
+      }
+
+      .subtitle {
+        color: var(--ink-soft);
+        max-width: 760px;
+        font-size: 1.05rem;
+      }
+
+      .grid {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      @media (min-width: 960px) {
+        .grid {
+          grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+        }
+      }
+
+      .card {
+        background: var(--paper-2);
+        border-radius: var(--radius);
+        padding: 24px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+      }
+
+      .card h2 {
+        font-family: "Fraunces", "Georgia", serif;
+        margin: 0 0 18px;
+        font-size: 1.6rem;
+      }
+
+      .preset-row {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      }
+
+      .preset-btn {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px 16px;
+        background: var(--paper);
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border 0.15s;
+      }
+
+      .preset-btn span {
+        display: block;
+        color: var(--ink-soft);
+        font-weight: 500;
+        margin-top: 6px;
+        font-size: 0.9rem;
+      }
+
+      .preset-btn.active {
+        border-color: var(--accent);
+        box-shadow: 0 8px 18px rgba(240, 93, 94, 0.2);
+        transform: translateY(-1px);
+        background: #fff7f7;
+      }
+
+      .feature-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: #fbfaf8;
+      }
+
+      .feature-title {
+        font-weight: 600;
+        font-size: 1rem;
+      }
+
+      .feature-meta {
+        color: var(--ink-soft);
+        font-size: 0.9rem;
+        margin-top: 4px;
+      }
+
+      .feature-size {
+        color: var(--accent);
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .toggle {
+        margin-left: auto;
+        position: relative;
+        width: 52px;
+        height: 28px;
+      }
+
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        inset: 0;
+        background: #d2d6df;
+        border-radius: 999px;
+        transition: background 0.2s ease;
+      }
+
+      .slider::after {
+        content: "";
+        position: absolute;
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        top: 4px;
+        background: #fff;
+        border-radius: 50%;
+        transition: transform 0.2s ease;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .toggle input:checked + .slider {
+        background: var(--accent-2);
+      }
+
+      .toggle input:checked + .slider::after {
+        transform: translateX(24px);
+      }
+
+      .size-panel {
+        background: linear-gradient(145deg, #101418, #1d2530);
+        color: #f8f4ef;
+        border-radius: var(--radius);
+        padding: 24px;
+        box-shadow: var(--shadow);
+      }
+
+      .size-label {
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 0.75rem;
+        opacity: 0.7;
+      }
+
+      .size-value {
+        font-size: 2.6rem;
+        font-weight: 700;
+        margin: 10px 0 6px;
+      }
+
+      .size-bar {
+        height: 12px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .size-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #f05d5e, #f5a623);
+        width: 0;
+        transition: width 0.2s ease;
+      }
+
+      .size-context {
+        margin-top: 12px;
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .output {
+        display: grid;
+        gap: 14px;
+      }
+
+      .output textarea {
+        width: 100%;
+        min-height: 150px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 14px;
+        font-family: "SF Mono", "Fira Code", monospace;
+        background: #f8f6f2;
+        color: #2d323a;
+        resize: vertical;
+      }
+
+      .actions {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+
+      .btn {
+        border: none;
+        border-radius: 14px;
+        padding: 14px 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #f05d5e, #f68d58);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(240, 93, 94, 0.3);
+      }
+
+      .btn-secondary {
+        background: #f0ebe3;
+        color: #2e3643;
+        border: 1px solid var(--border);
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .note {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-left: 3px solid var(--accent-3);
+        background: #fff7e8;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        color: #5f4b2e;
+      }
+
+      .footer {
+        margin-top: 32px;
+        font-size: 0.9rem;
+        color: var(--ink-soft);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <div class="eyebrow">CrossPoint Reader</div>
+        <h1>Feature Picker</h1>
+        <div class="subtitle">
+          Build a firmware that fits your flash budget. Choose the features you
+          want, then trigger a custom build on GitHub Actions.
+        </div>
+      </header>
+
+      <div class="grid">
+        <section class="card">
+          <h2>Presets</h2>
+          <div class="preset-row">
+            <button class="preset-btn" data-preset="minimal">
+              Minimal
+              <span>Smallest footprint</span>
+            </button>
+            <button class="preset-btn active" data-preset="standard">
+              Standard
+              <span>Balanced defaults</span>
+            </button>
+            <button class="preset-btn" data-preset="full">
+              Full
+              <span>Everything enabled</span>
+            </button>
+          </div>
+
+          <h2 style="margin-top: 24px">Features</h2>
+          <div class="feature-list">
+            <div class="feature-item">
+              <div>
+                <div class="feature-title">Extended Fonts</div>
+                <div class="feature-meta">
+                  Adds more reading sizes + OpenDyslexic support.
+                </div>
+                <div class="feature-size">~300 KB</div>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  id="extended_fonts"
+                  checked
+                  data-feature="extended_fonts"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="feature-item">
+              <div>
+                <div class="feature-title">PNG/JPEG Sleep Images</div>
+                <div class="feature-meta">
+                  Enables PNG and JPEG sleep screens. BMP stays on.
+                </div>
+                <div class="feature-size">~140 KB</div>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  id="image_sleep"
+                  checked
+                  data-feature="image_sleep"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="feature-item">
+              <div>
+                <div class="feature-title">Markdown & Obsidian</div>
+                <div class="feature-meta">
+                  Full Markdown rendering and Obsidian compatibility.
+                </div>
+                <div class="feature-size">~560 KB</div>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  id="markdown"
+                  checked
+                  data-feature="markdown"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="feature-item">
+              <div>
+                <div class="feature-title">KOReader Sync</div>
+                <div class="feature-meta">
+                  Sync reading progress with KOReader.
+                </div>
+                <div class="feature-size">Size TBD</div>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  id="koreader_sync"
+                  data-feature="koreader_sync"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="feature-item">
+              <div>
+                <div class="feature-title">Calibre Sync</div>
+                <div class="feature-meta">
+                  Sync metadata and reading progress with Calibre.
+                </div>
+                <div class="feature-size">Size TBD</div>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  id="calibre_sync"
+                  data-feature="calibre_sync"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="feature-item">
+              <div>
+                <div class="feature-title">Background Web Server</div>
+                <div class="feature-meta">
+                  Keeps the file server alive while reading.
+                </div>
+                <div class="feature-size">~5 KB</div>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  id="background_server"
+                  checked
+                  data-feature="background_server"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="size-panel">
+            <div class="size-label">Estimated Firmware Size</div>
+            <div class="size-value" id="size-value">6.6 MB</div>
+            <div class="size-bar">
+              <div class="size-bar-fill" id="size-bar"></div>
+            </div>
+            <div class="size-context" id="size-context">
+              103% of 6.4 MB flash budget
+            </div>
+          </div>
+
+          <h2 style="margin-top: 26px">Build Outputs</h2>
+          <div class="output">
+            <label for="flags-output" class="feature-title"
+              >Build flags</label
+            >
+            <textarea id="flags-output" readonly></textarea>
+          </div>
+
+          <div class="output">
+            <label for="ini-output" class="feature-title"
+              >platformio-custom.ini</label
+            >
+            <textarea id="ini-output" readonly></textarea>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-secondary" id="copy-flags">
+              Copy build flags
+            </button>
+            <button class="btn btn-secondary" id="download-ini">
+              Download platformio-custom.ini
+            </button>
+            <a
+              class="btn btn-primary"
+              id="build-link"
+              href="#"
+              target="_blank"
+              rel="noopener"
+            >
+              Build on GitHub Actions
+            </a>
+          </div>
+
+          <div class="note">
+            OTA stays enabled in every build. The picker only controls optional
+            features that affect flash usage.
+          </div>
+        </section>
+      </div>
+
+      <div class="footer">
+        Future roadmap: this picker will live inside the OTA update menu.
+      </div>
+    </div>
+
+    <script>
+      const FEATURES = {
+        extended_fonts: {
+          sizeKb: 300,
+          flag: "ENABLE_EXTENDED_FONTS",
+          default: true,
+        },
+        image_sleep: {
+          sizeKb: 140,
+          flag: "ENABLE_IMAGE_SLEEP",
+          default: true,
+        },
+        markdown: {
+          sizeKb: 560,
+          flag: "ENABLE_MARKDOWN",
+          default: true,
+        },
+        koreader_sync: {
+          sizeKb: 0,
+          flag: "ENABLE_KOREADER_SYNC",
+          default: false,
+        },
+        calibre_sync: {
+          sizeKb: 0,
+          flag: "ENABLE_CALIBRE_SYNC",
+          default: false,
+        },
+        background_server: {
+          sizeKb: 5,
+          flag: "ENABLE_BACKGROUND_SERVER",
+          default: true,
+        },
+      };
+
+      const BASE_SIZE_MB = 5.5;
+      const MAX_FLASH_MB = 6.4;
+
+      const PRESETS = {
+        minimal: {},
+        standard: {
+          extended_fonts: true,
+          image_sleep: true,
+        },
+        full: {
+          extended_fonts: true,
+          image_sleep: true,
+          markdown: true,
+          koreader_sync: true,
+          calibre_sync: true,
+          background_server: true,
+        },
+      };
+
+      function getRepoInfo() {
+        const host = window.location.hostname;
+        const pathParts = window.location.pathname.split("/").filter(Boolean);
+        if (host.endsWith("github.io") && pathParts.length > 0) {
+          return { owner: host.split(".")[0], repo: pathParts[0] };
+        }
+        return { owner: "Unintendedsideeffects", repo: "crosspoint-reader" };
+      }
+
+      function applyPreset(name) {
+        const preset = PRESETS[name] || {};
+        document.querySelectorAll(".preset-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.preset === name);
+        });
+        Object.keys(FEATURES).forEach((feature) => {
+          const checkbox = document.getElementById(feature);
+          checkbox.checked = preset[feature] || false;
+        });
+        updateAll();
+      }
+
+      function readSelections() {
+        const selections = {};
+        Object.keys(FEATURES).forEach((feature) => {
+          selections[feature] = document.getElementById(feature).checked;
+        });
+        return selections;
+      }
+
+      function computeSize(selections) {
+        let size = BASE_SIZE_MB;
+        Object.keys(FEATURES).forEach((feature) => {
+          if (selections[feature]) {
+            size += FEATURES[feature].sizeKb / 1024;
+          }
+        });
+        return size;
+      }
+
+      function updateSizeDisplay(size) {
+        const percentage = (size / MAX_FLASH_MB) * 100;
+        const sizeValue = document.getElementById("size-value");
+        const sizeBar = document.getElementById("size-bar");
+        const sizeContext = document.getElementById("size-context");
+
+        sizeValue.textContent = `${size.toFixed(1)} MB`;
+        sizeBar.style.width = `${Math.min(percentage, 100)}%`;
+
+        if (size > MAX_FLASH_MB) {
+          sizeContext.textContent = `${percentage.toFixed(
+            0
+          )}% of 6.4 MB flash budget - Over capacity`;
+          sizeValue.style.color = "#ffb4b4";
+        } else {
+          const remaining = MAX_FLASH_MB - size;
+          sizeContext.textContent = `${percentage.toFixed(
+            0
+          )}% of 6.4 MB flash budget - ${remaining.toFixed(1)} MB free`;
+          sizeValue.style.color = "#f8f4ef";
+        }
+      }
+
+      function buildFlags(selections) {
+        const flags = [];
+        Object.keys(FEATURES).forEach((feature) => {
+          const flag = FEATURES[feature].flag;
+          flags.push(`-D${flag}=${selections[feature] ? 1 : 0}`);
+        });
+        return flags.join(" ");
+      }
+
+      function buildIni(selections) {
+        return `[env:custom]\nextends = env:esp32\nbuild_flags =\n  ${buildFlags(
+          selections
+        ).replace(/ -D/g, "\n  -D")}\n`;
+      }
+
+      function updateOutputs(selections) {
+        document.getElementById("flags-output").value = buildFlags(selections);
+        document.getElementById("ini-output").value = buildIni(selections);
+      }
+
+      function updateBuildLink(selections) {
+        const repo = getRepoInfo();
+        const workflow = "build-custom.yml";
+        const params = new URLSearchParams();
+        Object.keys(FEATURES).forEach((feature) => {
+          params.set(feature, selections[feature] ? "true" : "false");
+        });
+        const url = `https://github.com/${repo.owner}/${repo.repo}/actions/workflows/${workflow}?${params.toString()}`;
+        document.getElementById("build-link").href = url;
+      }
+
+      function updateAll() {
+        const selections = readSelections();
+        const size = computeSize(selections);
+        updateSizeDisplay(size);
+        updateOutputs(selections);
+        updateBuildLink(selections);
+      }
+
+      function setupEvents() {
+        document.querySelectorAll(".preset-btn").forEach((btn) => {
+          btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
+        });
+
+        document
+          .querySelectorAll("input[data-feature]")
+          .forEach((checkbox) => {
+            checkbox.addEventListener("change", updateAll);
+          });
+
+        document
+          .getElementById("copy-flags")
+          .addEventListener("click", async () => {
+            const text = document.getElementById("flags-output").value;
+            await navigator.clipboard.writeText(text);
+          });
+
+        document
+          .getElementById("download-ini")
+          .addEventListener("click", () => {
+            const content = document.getElementById("ini-output").value;
+            const blob = new Blob([content], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "platformio-custom.ini";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+          });
+      }
+
+      setupEvents();
+      applyPreset("standard");
+    </script>
+  </body>
+</html>

@@ -2,14 +2,22 @@
 
 #include "Epub.h"
 #include "EpubReaderActivity.h"
-#include "Markdown.h"
-#include "MarkdownReaderActivity.h"
 #include "Txt.h"
 #include "TxtReaderActivity.h"
 #include "Xtc.h"
 #include "XtcReaderActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
 #include "util/StringUtils.h"
+
+// Feature flag for Markdown/Obsidian support
+#ifndef ENABLE_MARKDOWN
+#define ENABLE_MARKDOWN 1
+#endif
+
+#if ENABLE_MARKDOWN
+#include "Markdown.h"
+#include "MarkdownReaderActivity.h"
+#endif
 
 std::string ReaderActivity::extractFolderPath(const std::string& filePath) {
   const auto lastSlash = filePath.find_last_of('/');
@@ -72,6 +80,7 @@ std::unique_ptr<Txt> ReaderActivity::loadTxt(const std::string& path) {
   return nullptr;
 }
 
+#if ENABLE_MARKDOWN
 std::unique_ptr<Markdown> ReaderActivity::loadMarkdown(const std::string& path) {
   if (!SdMan.exists(path.c_str())) {
     Serial.printf("[%lu] [   ] File does not exist: %s\n", millis(), path.c_str());
@@ -86,6 +95,7 @@ std::unique_ptr<Markdown> ReaderActivity::loadMarkdown(const std::string& path) 
   Serial.printf("[%lu] [   ] Failed to load Markdown\n", millis());
   return nullptr;
 }
+#endif  // ENABLE_MARKDOWN
 
 void ReaderActivity::goToLibrary(const std::string& fromBookPath) {
   // If coming from a book, start in that book's folder; otherwise start from root
@@ -117,6 +127,7 @@ void ReaderActivity::onGoToTxtReader(std::unique_ptr<Txt> txt) {
       renderer, mappedInput, std::move(txt), [this, txtPath] { goToLibrary(txtPath); }, [this] { onGoBack(); }));
 }
 
+#if ENABLE_MARKDOWN
 void ReaderActivity::onGoToMarkdownReader(std::unique_ptr<Markdown> markdown) {
   const auto mdPath = markdown->getPath();
   currentBookPath = mdPath;
@@ -124,6 +135,7 @@ void ReaderActivity::onGoToMarkdownReader(std::unique_ptr<Markdown> markdown) {
   enterNewActivity(new MarkdownReaderActivity(
       renderer, mappedInput, std::move(markdown), [this, mdPath] { goToLibrary(mdPath); }, [this] { onGoBack(); }));
 }
+#endif  // ENABLE_MARKDOWN
 
 void ReaderActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
@@ -146,6 +158,7 @@ void ReaderActivity::onEnter() {
     }
     onGoToXtcReader(std::move(xtc));
   } else if (isMarkdownFile(initialBookPath)) {
+#if ENABLE_MARKDOWN
     Serial.printf("[%lu] [RDR] Detected as Markdown file\n", millis());
     auto markdown = loadMarkdown(initialBookPath);
     if (!markdown) {
@@ -155,6 +168,14 @@ void ReaderActivity::onEnter() {
     }
     Serial.printf("[%lu] [RDR] Markdown loaded, opening reader\n", millis());
     onGoToMarkdownReader(std::move(markdown));
+#else
+    // Markdown support not compiled in this build
+    Serial.printf("[%lu] [RDR] Markdown support disabled in this build\n", millis());
+    exitActivity();
+    enterNewActivity(new FullScreenMessageActivity(renderer, mappedInput,
+                                                   "Markdown support\nnot available\nin this build",
+                                                   EpdFontFamily::BOLD, [this] { onGoBack(); }));
+#endif  // ENABLE_MARKDOWN
   } else if (isTxtFile(initialBookPath)) {
     Serial.printf("[%lu] [RDR] Detected as TXT file\n", millis());
     auto txt = loadTxt(initialBookPath);
