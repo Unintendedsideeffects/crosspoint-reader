@@ -38,14 +38,6 @@ jobs:
       - name: Static checks (cppcheck)
         run: pio check -e default
 
-      - name: Build firmware (dev)
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        run: pio run -e default
-
-      - name: Build firmware (release)
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        run: pio run -e gh_release
-
       - name: Set build environment
         id: build-env
         run: |
@@ -54,6 +46,15 @@ jobs:
           else
             echo "env=default" >> $GITHUB_OUTPUT
           fi
+
+      - name: Build firmware
+        run: pio run -e "${{ steps.build-env.outputs.env }}" | tee pio.log
+
+      - name: Enforce flash headroom
+        run: |
+          python scripts/check_flash_headroom.py \
+            --log pio.log \
+            --min-headroom-kb 80
 
       - name: Report firmware size
         run: |
@@ -67,6 +68,8 @@ jobs:
             exit 1
           fi
           echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Flash headroom threshold: 80 KiB" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4

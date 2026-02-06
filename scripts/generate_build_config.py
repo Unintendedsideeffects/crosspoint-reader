@@ -49,13 +49,13 @@ FEATURES = {
     'koreader_sync': Feature(
         name='KOReader Sync',
         flag='ENABLE_KOREADER_SYNC',
-        size_kb=0,
+        size_kb=2,
         description='Sync reading progress with KOReader'
     ),
     'calibre_sync': Feature(
         name='Calibre Sync',
         flag='ENABLE_CALIBRE_SYNC',
-        size_kb=0,
+        size_kb=15,
         description='Calibre OPDS browser and metadata sync settings'
     ),
     'background_server': Feature(

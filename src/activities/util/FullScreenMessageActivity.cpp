@@ -2,6 +2,7 @@
 
 #include <GfxRenderer.h>
 
+#include "MappedInputManager.h"
 #include "fontIds.h"
 
 void FullScreenMessageActivity::onEnter() {
@@ -13,4 +14,14 @@ void FullScreenMessageActivity::onEnter() {
   renderer.clearScreen();
   renderer.drawCenteredText(UI_10_FONT_ID, top, text.c_str(), true, style);
   renderer.displayBuffer(refreshMode);
+}
+
+void FullScreenMessageActivity::loop() {
+  if (!onDismiss) {
+    return;
+  }
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back) ||
+      mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+    onDismiss();
+  }
 }
