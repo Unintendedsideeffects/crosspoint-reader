@@ -5,6 +5,7 @@
 #include "FeatureFlags.h"
 #include "MappedInputManager.h"
 #include "activities/TaskShutdown.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC

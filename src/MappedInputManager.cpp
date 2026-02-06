@@ -19,17 +19,6 @@ struct SideLayoutMap {
   ButtonIndex pageForward;
 };
 
-// Order matches CrossPointSettings::FRONT_BUTTON_LAYOUT.
-constexpr FrontLayoutMap kFrontLayouts[] = {
-    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT},
-    {HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT, HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM},
-    {HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT, HalGPIO::BTN_BACK, HalGPIO::BTN_RIGHT},
-    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_RIGHT,
-     HalGPIO::BTN_LEFT},  // Index 3: BACK_CONFIRM_RIGHT_LEFT
-    {HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM, HalGPIO::BTN_LEFT,
-     HalGPIO::BTN_RIGHT},  // Index 4: LEFT_LEFT_RIGHT_RIGHT (placeholder)
-};
-
 // Order matches CrossPointSettings::SIDE_BUTTON_LAYOUT.
 constexpr SideLayoutMap kSideLayouts[] = {
     {HalGPIO::BTN_UP, HalGPIO::BTN_DOWN},
@@ -199,17 +188,22 @@ MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const
                                                          const char* next) const {
   const auto layout = static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout);
 
-  switch (layout) {
-    case CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT:
-      return {previous, previous, next, next};
-    case CrossPointSettings::LEFT_RIGHT_BACK_CONFIRM:
-      return {previous, next, back, confirm};
-    case CrossPointSettings::LEFT_BACK_CONFIRM_RIGHT:
-      return {previous, back, confirm, next};
-    case CrossPointSettings::BACK_CONFIRM_RIGHT_LEFT:
-      return {back, confirm, next, previous};  // Index 3 (Upstream)
-    case CrossPointSettings::BACK_CONFIRM_LEFT_RIGHT:
-    default:
-      return {back, confirm, previous, next};
+  return {labelForHardware(HalGPIO::BTN_BACK), labelForHardware(HalGPIO::BTN_CONFIRM),
+          labelForHardware(HalGPIO::BTN_LEFT), labelForHardware(HalGPIO::BTN_RIGHT)};
+}
+
+int MappedInputManager::getPressedFrontButton() const {
+  if (gpio.wasPressed(HalGPIO::BTN_BACK)) {
+    return HalGPIO::BTN_BACK;
   }
+  if (gpio.wasPressed(HalGPIO::BTN_CONFIRM)) {
+    return HalGPIO::BTN_CONFIRM;
+  }
+  if (gpio.wasPressed(HalGPIO::BTN_LEFT)) {
+    return HalGPIO::BTN_LEFT;
+  }
+  if (gpio.wasPressed(HalGPIO::BTN_RIGHT)) {
+    return HalGPIO::BTN_RIGHT;
+  }
+  return -1;
 }

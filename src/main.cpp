@@ -215,12 +215,14 @@ void enterDeepSleep() {
 }
 
 void onGoHome();
+void onGoToMyLibraryWithPath(const std::string& path);
 void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab);
 void onGoToTodo();
 void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
+  (void)fromTab;
   exitActivity();
   enterNewActivity(
-      new ReaderActivity(renderer, mappedInputManager, initialEpubPath, fromTab, onGoHome, onGoToMyLibraryWithTab));
+      new ReaderActivity(renderer, mappedInputManager, initialEpubPath, onGoHome, onGoToMyLibraryWithPath));
 }
 void onContinueReading() { onGoToReader(APP_STATE.openEpubPath, MyLibraryActivity::Tab::Recent); }
 
@@ -242,6 +244,12 @@ void onGoToMyLibrary() {
 void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab) {
   exitActivity();
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, tab, path));
+}
+
+void onGoToMyLibraryWithPath(const std::string& path) {
+  exitActivity();
+  enterNewActivity(
+      new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, MyLibraryActivity::Tab::Files, path));
 }
 
 void onGoToBrowser() {
@@ -282,8 +290,7 @@ void onGoToTodo() {
   // 3. Try EPUB (ReadOnly/ReaderActivity)
   const std::string todoEpubPath = "/daily/" + today + ".epub";
   if (SdMan.exists(todoEpubPath.c_str())) {
-    enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, MyLibraryActivity::Tab::Files,
-                                        onGoHome, onGoToMyLibraryWithTab));
+    enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, onGoHome, onGoToMyLibraryWithPath));
     return;
   }
 
@@ -360,10 +367,22 @@ void setup() {
 #endif
   WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
 
-  if (gpio.isWakeupByPowerButton()) {
-    // For normal wakeups, verify power button press duration
-    Serial.printf("[%lu] [   ] Verifying power button press duration\n", millis());
-    verifyPowerButtonDuration();
+  switch (gpio.getWakeupReason()) {
+    case HalGPIO::WakeupReason::PowerButton:
+      // For normal wakeups, verify power button press duration
+      Serial.printf("[%lu] [   ] Verifying power button press duration\n", millis());
+      verifyPowerButtonDuration();
+      break;
+    case HalGPIO::WakeupReason::AfterUSBPower:
+      // If USB power caused a cold boot, go back to sleep
+      Serial.printf("[%lu] [   ] Wakeup reason: After USB Power\n", millis());
+      gpio.startDeepSleep();
+      break;
+    case HalGPIO::WakeupReason::AfterFlash:
+      // After flashing, just proceed to boot
+    case HalGPIO::WakeupReason::Other:
+    default:
+      break;
   }
 
   // First serial output only here to avoid timing inconsistencies for power button press duration verification
@@ -383,7 +402,6 @@ void setup() {
     // Clear app state to avoid getting into a boot loop if the epub doesn't load
     const auto path = APP_STATE.openEpubPath;
     APP_STATE.openEpubPath = "";
-    APP_STATE.lastSleepImage = 0;
     APP_STATE.saveToFile();
     onGoToReader(path, MyLibraryActivity::Tab::Recent);
   }

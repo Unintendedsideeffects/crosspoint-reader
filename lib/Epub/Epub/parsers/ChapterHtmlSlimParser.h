@@ -7,17 +7,16 @@
 #include <memory>
 
 #include "../ParsedText.h"
-#include "../blocks/ImageBlock.h"
 #include "../blocks/TextBlock.h"
+#include "../css/CssParser.h"
+#include "../css/CssStyle.h"
 
 class Page;
 class GfxRenderer;
-class Epub;
 
 #define MAX_WORD_SIZE 200
 
 class ChapterHtmlSlimParser {
-  std::shared_ptr<Epub> epub;
   const std::string& filepath;
   GfxRenderer& renderer;
   std::function<void(std::unique_ptr<Page>)> completePageFn;
@@ -26,6 +25,7 @@ class ChapterHtmlSlimParser {
   int skipUntilDepth = INT_MAX;
   int boldUntilDepth = INT_MAX;
   int italicUntilDepth = INT_MAX;
+  int underlineUntilDepth = INT_MAX;
   // buffer for building up words from characters, will auto break if longer than this
   // leave one char at end for null pointer
   char partWordBuffer[MAX_WORD_SIZE + 1] = {};
@@ -40,9 +40,23 @@ class ChapterHtmlSlimParser {
   uint16_t viewportWidth;
   uint16_t viewportHeight;
   bool hyphenationEnabled;
-  int imageCounter = 0;
+  const CssParser* cssParser;
 
-  void startNewTextBlock(TextBlock::Style style);
+  // Style tracking (replaces depth-based approach)
+  struct StyleStackEntry {
+    int depth = 0;
+    bool hasBold = false, bold = false;
+    bool hasItalic = false, italic = false;
+    bool hasUnderline = false, underline = false;
+  };
+  std::vector<StyleStackEntry> inlineStyleStack;
+  CssStyle currentCssStyle;
+  bool effectiveBold = false;
+  bool effectiveItalic = false;
+  bool effectiveUnderline = false;
+
+  void updateEffectiveInlineStyle();
+  void startNewTextBlock(const BlockStyle& blockStyle);
   void flushPartWordBuffer();
   void makePages();
   // XML callbacks
@@ -51,14 +65,14 @@ class ChapterHtmlSlimParser {
   static void XMLCALL endElement(void* userData, const XML_Char* name);
 
  public:
-  explicit ChapterHtmlSlimParser(std::shared_ptr<Epub> epub, const std::string& filepath, GfxRenderer& renderer,
-                                 const int fontId, const float lineCompression, const bool extraParagraphSpacing,
+  explicit ChapterHtmlSlimParser(const std::string& filepath, GfxRenderer& renderer, const int fontId,
+                                 const float lineCompression, const bool extraParagraphSpacing,
                                  const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                  const uint16_t viewportHeight, const bool hyphenationEnabled,
                                  const std::function<void(std::unique_ptr<Page>)>& completePageFn,
-                                 const std::function<void()>& popupFn = nullptr)
-      : epub(epub),
-        filepath(filepath),
+                                 const std::function<void()>& popupFn = nullptr, const CssParser* cssParser = nullptr)
+
+      : filepath(filepath),
         renderer(renderer),
         fontId(fontId),
         lineCompression(lineCompression),
@@ -68,7 +82,9 @@ class ChapterHtmlSlimParser {
         viewportHeight(viewportHeight),
         hyphenationEnabled(hyphenationEnabled),
         completePageFn(completePageFn),
-        popupFn(popupFn) {}
+        popupFn(popupFn),
+        cssParser(cssParser) {}
+
   ~ChapterHtmlSlimParser() = default;
   bool parseAndBuildPages();
   void addLineToPage(std::shared_ptr<TextBlock> line);

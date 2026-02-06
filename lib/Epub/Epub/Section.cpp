@@ -4,7 +4,6 @@
 #include <Serialization.h>
 
 #include "Page.h"
-#include "SpiBusMutex.h"
 #include "hyphenation/Hyphenator.h"
 #include "parsers/ChapterHtmlSlimParser.h"
 
@@ -59,7 +58,6 @@ void Section::writeSectionFileHeader(const int fontId, const float lineCompressi
 bool Section::loadSectionFile(const int fontId, const float lineCompression, const bool extraParagraphSpacing,
                               const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                               const uint16_t viewportHeight, const bool hyphenationEnabled) {
-  SpiBusMutex::Guard guard;
   if (!SdMan.openFileForRead("SCT", filePath, file)) {
     return false;
   }
@@ -108,7 +106,6 @@ bool Section::loadSectionFile(const int fontId, const float lineCompression, con
 
 // Your updated class method (assuming you are using the 'SD' object, which is a wrapper for a specific filesystem)
 bool Section::clearCache() const {
-  SpiBusMutex::Guard guard;
   if (!SdMan.exists(filePath.c_str())) {
     Serial.printf("[%lu] [SCT] Cache does not exist, no action needed\n", millis());
     return true;
@@ -126,10 +123,7 @@ bool Section::clearCache() const {
 bool Section::createSectionFile(const int fontId, const float lineCompression, const bool extraParagraphSpacing,
                                 const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                 const uint16_t viewportHeight, const bool hyphenationEnabled,
-                                const std::function<void()>& progressSetupFn,
-                                const std::function<void(int)>& progressFn) {
-  SpiBusMutex::Guard guard;
-  constexpr uint32_t MIN_SIZE_FOR_PROGRESS = 50 * 1024;  // 50KB
+                                const std::function<void()>& popupFn) {
   const auto localPath = epub->getSpineItem(spineIndex).href;
   const auto tmpHtmlPath = epub->getCachePath() + "/.tmp_" + std::to_string(spineIndex) + ".html";
 
@@ -175,11 +169,6 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
 
   Serial.printf("[%lu] [SCT] Streamed temp HTML to %s (%d bytes)\n", millis(), tmpHtmlPath.c_str(), fileSize);
 
-  // Only show progress bar for larger chapters where rendering overhead is worth it
-  if (progressSetupFn && fileSize >= MIN_SIZE_FOR_PROGRESS) {
-    progressSetupFn();
-  }
-
   if (!SdMan.openFileForWrite("SCT", filePath, file)) {
     return false;
   }
@@ -187,14 +176,11 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
                          viewportHeight, hyphenationEnabled);
   std::vector<uint32_t> lut = {};
 
-  // Get content base path for resolving relative image URLs
-  const std::string contentBasePath = epub->getBasePath();
-
   ChapterHtmlSlimParser visitor(
-      epub, tmpHtmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
+      tmpHtmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
       viewportHeight, hyphenationEnabled,
-      [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); }, progressFn,
-      epub, contentBasePath);
+      [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); }, popupFn,
+      epub->getCssParser());
   Hyphenator::setPreferredLanguage(epub->getLanguage());
   success = visitor.parseAndBuildPages();
 
@@ -233,7 +219,6 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
 }
 
 std::unique_ptr<Page> Section::loadPageFromSectionFile() {
-  SpiBusMutex::Guard guard;
   if (!SdMan.openFileForRead("SCT", filePath, file)) {
     return nullptr;
   }

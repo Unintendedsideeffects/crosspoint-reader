@@ -291,7 +291,10 @@ void MyLibraryActivity::render() const {
   renderer.clearScreen();
 
   // Draw tab bar
-  std::vector<TabInfo> tabs = {{"Recent", currentTab == Tab::Recent}, {"Files", currentTab == Tab::Files}};
+  std::vector<ScreenComponents::TabInfo> tabs = {
+      {"Recent", currentTab == Tab::Recent},
+      {"Files", currentTab == Tab::Files},
+  };
   ScreenComponents::drawTabBar(renderer, TAB_BAR_Y, tabs);
 
   // Draw content based on current tab

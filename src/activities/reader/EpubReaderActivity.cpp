@@ -14,6 +14,7 @@
 #include "ScreenComponents.h"
 #include "SpiBusMutex.h"
 #include "activities/TaskShutdown.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 namespace {

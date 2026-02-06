@@ -97,6 +97,8 @@ class CrossPointSettings {
 
   // Hide battery percentage
   enum HIDE_BATTERY_PERCENTAGE { HIDE_NEVER = 0, HIDE_READER = 1, HIDE_ALWAYS = 2, HIDE_BATTERY_PERCENTAGE_COUNT };
+  // UI Theme
+  enum UI_THEME { CLASSIC = 0, LYRA = 1 };
 
   // TODO fallback cover options
   enum TODO_FALLBACK_COVER { TODO_FALLBACK_STANDARD = 0, TODO_FALLBACK_NONE = 1 };
@@ -150,8 +152,14 @@ class CrossPointSettings {
   char opdsPassword[64] = "";
   // Hide battery percentage
   uint8_t hideBatteryPercentage = HIDE_NEVER;
+  // UI theme
+  uint8_t uiTheme = LYRA;
+  // Sunlight fading compensation
+  uint8_t fadingFix = 0;
   // Long-press chapter skip on side buttons
   uint8_t longPressChapterSkip = 1;
+  // Use book's embedded CSS styles for EPUB rendering
+  uint8_t embeddedStyle = 1;
   // Background web server while charging (USB connected)
   uint8_t backgroundServerOnCharge = 0;
   // TODO fallback cover when daily file is missing

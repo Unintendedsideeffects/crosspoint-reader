@@ -109,6 +109,38 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
   }
 }
 
+void GfxRenderer::drawButtonHints(const int fontId, const char* btn1, const char* btn2, const char* btn3,
+                                  const char* btn4) const {
+  const char* labels[4] = {
+      btn1 ? btn1 : "",
+      btn2 ? btn2 : "",
+      btn3 ? btn3 : "",
+      btn4 ? btn4 : "",
+  };
+  const int screenWidth = getScreenWidth();
+  const int slotWidth = screenWidth / 4;
+  const int y = getScreenHeight() - getLineHeight(fontId) - 6;
+
+  for (int i = 0; i < 4; ++i) {
+    if (labels[i][0] == '\0') {
+      continue;
+    }
+    const int textWidth = getTextWidth(fontId, labels[i]);
+    const int x = i * slotWidth + (slotWidth - textWidth) / 2;
+    drawText(fontId, x, y, labels[i]);
+  }
+}
+
+void GfxRenderer::drawSideButtonHints(const int fontId, const char* topBtn, const char* bottomBtn) const {
+  const int x = getScreenWidth() - getLineHeight(fontId) - 2;
+  if (topBtn && topBtn[0] != '\0') {
+    drawTextRotated90CW(fontId, x, getScreenHeight() / 3, topBtn);
+  }
+  if (bottomBtn && bottomBtn[0] != '\0') {
+    drawTextRotated90CW(fontId, x, (getScreenHeight() * 2) / 3, bottomBtn);
+  }
+}
+
 void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const bool state) const {
   if (x1 == x2) {
     if (y2 < y1) {

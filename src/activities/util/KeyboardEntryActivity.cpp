@@ -2,6 +2,7 @@
 
 #include "MappedInputManager.h"
 #include "activities/TaskShutdown.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 // Keyboard layouts - lowercase
