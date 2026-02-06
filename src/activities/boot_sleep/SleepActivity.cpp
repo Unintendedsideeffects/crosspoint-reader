@@ -170,8 +170,16 @@ void SleepActivity::onEnter() {
   // Initialize image decoder factory
   ImageDecoderFactory::initialize();
 
-  if (SETTINGS.sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::BLANK) {
-    return renderBlankSleepScreen();
+  switch (SETTINGS.sleepScreen) {
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::BLANK):
+      return renderBlankSleepScreen();
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM):
+      return renderCustomSleepScreen();
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER):
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER_CUSTOM):
+      return renderCoverSleepScreen();
+    default:
+      return renderDefaultSleepScreen();
   }
 }
 
@@ -417,6 +425,16 @@ void SleepActivity::renderImageSleepScreen(const std::string& imagePath) const {
 }
 
 void SleepActivity::renderCoverSleepScreen() const {
+  void (SleepActivity::*renderNoCoverSleepScreen)() const;
+  switch (SETTINGS.sleepScreen) {
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER_CUSTOM):
+      renderNoCoverSleepScreen = &SleepActivity::renderCustomSleepScreen;
+      break;
+    default:
+      renderNoCoverSleepScreen = &SleepActivity::renderDefaultSleepScreen;
+      break;
+  }
+
   SpiBusMutex::Guard guard;
   if (APP_STATE.openEpubPath.empty()) {
     return (this->*renderNoCoverSleepScreen)();

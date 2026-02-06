@@ -93,7 +93,8 @@ void ScreenComponents::drawBookProgressBar(const GfxRenderer& renderer, const si
   renderer.fillRect(vieweableMarginLeft, progressBarY, barWidth, BOOK_PROGRESS_BAR_HEIGHT, true);
 }
 
-int ScreenComponents::drawTabBar(const GfxRenderer& renderer, const int y, const std::vector<TabInfo>& tabs) {
+int ScreenComponents::drawTabBar(const GfxRenderer& renderer, const int y,
+                                 const std::vector<ScreenComponents::TabInfo>& tabs) {
   constexpr int tabPadding = 20;      // Horizontal padding between tabs
   constexpr int leftMargin = 20;      // Left margin for first tab
   constexpr int underlineHeight = 2;  // Height of selection underline

@@ -183,9 +183,8 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
       htmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
       viewportHeight, hyphenationEnabled,
       [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
-      nullptr,  // popupFn - not used for standalone HTML
-      nullptr,  // epub - not applicable for standalone HTML
-      contentBasePath);
+      nullptr,   // popupFn - not used for standalone HTML
+      nullptr);  // cssParser - not used for standalone HTML
 
   bool success = visitor.parseAndBuildPages();
   if (!success) {

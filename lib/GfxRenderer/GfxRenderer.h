@@ -99,6 +99,9 @@ class GfxRenderer {
                         EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
   void drawText(int fontId, int x, int y, const char* text, bool black = true,
                 EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
+  // Legacy UI helpers kept for compatibility with older activity renderers.
+  void drawButtonHints(int fontId, const char* btn1, const char* btn2, const char* btn3, const char* btn4) const;
+  void drawSideButtonHints(int fontId, const char* topBtn, const char* bottomBtn) const;
   int getSpaceWidth(int fontId) const;
   int getTextAdvanceX(int fontId, const char* text) const;
   int getFontAscenderSize(int fontId) const;

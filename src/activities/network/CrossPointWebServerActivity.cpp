@@ -13,6 +13,7 @@
 #include "NetworkModeSelectionActivity.h"
 #include "ScreenComponents.h"
 #include "WifiSelectionActivity.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 namespace {

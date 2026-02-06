@@ -20,14 +20,12 @@
 #include "activities/boot_sleep/SleepActivity.h"
 #include "activities/home/HomeActivity.h"
 #include "activities/home/MyLibraryActivity.h"
-#include "activities/home/RecentBooksActivity.h"
 #include "activities/network/CrossPointWebServerActivity.h"
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
 #include "activities/todo/TodoActivity.h"
 #include "activities/todo/TodoFallbackActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
-#include "components/UITheme.h"
 #include "fontIds.h"
 #include "network/BackgroundWebServer.h"
 #include "util/DateUtils.h"
@@ -217,13 +215,16 @@ void enterDeepSleep() {
 }
 
 void onGoHome();
+void onGoToMyLibraryWithPath(const std::string& path);
 void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab);
 void onGoToTodo();
 void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
+  (void)fromTab;
   exitActivity();
   enterNewActivity(
       new ReaderActivity(renderer, mappedInputManager, initialEpubPath, onGoHome, onGoToMyLibraryWithPath));
 }
+void onContinueReading() { onGoToReader(APP_STATE.openEpubPath, MyLibraryActivity::Tab::Recent); }
 
 void onGoToFileTransfer() {
   exitActivity();
@@ -240,14 +241,15 @@ void onGoToMyLibrary() {
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
 }
 
-void onGoToRecentBooks() {
+void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab) {
   exitActivity();
-  enterNewActivity(new RecentBooksActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
+  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, tab, path));
 }
 
 void onGoToMyLibraryWithPath(const std::string& path) {
   exitActivity();
-  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, path));
+  enterNewActivity(
+      new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, MyLibraryActivity::Tab::Files, path));
 }
 
 void onGoToBrowser() {
@@ -288,8 +290,7 @@ void onGoToTodo() {
   // 3. Try EPUB (ReadOnly/ReaderActivity)
   const std::string todoEpubPath = "/daily/" + today + ".epub";
   if (SdMan.exists(todoEpubPath.c_str())) {
-    enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, MyLibraryActivity::Tab::Files,
-                                        onGoHome, onGoToMyLibraryWithTab));
+    enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, onGoHome, onGoToMyLibraryWithPath));
     return;
   }
 
@@ -395,17 +396,14 @@ void setup() {
   APP_STATE.loadFromFile();
   RECENT_BOOKS.loadFromFile();
 
-  // Boot to home screen directly when back button is held or when reader activity crashes 3 times
-  if (APP_STATE.openEpubPath.empty() || mappedInputManager.isPressed(MappedInputManager::Button::Back) ||
-      APP_STATE.readerActivityLoadCount > 0) {
+  if (APP_STATE.openEpubPath.empty()) {
     onGoHome();
   } else {
     // Clear app state to avoid getting into a boot loop if the epub doesn't load
     const auto path = APP_STATE.openEpubPath;
     APP_STATE.openEpubPath = "";
-    APP_STATE.readerActivityLoadCount++;
     APP_STATE.saveToFile();
-    onGoToReader(path);
+    onGoToReader(path, MyLibraryActivity::Tab::Recent);
   }
 
   // Ensure we're not still holding the power button before leaving setup
@@ -418,8 +416,6 @@ void loop() {
   static unsigned long lastMemPrint = 0;
 
   gpio.update();
-
-  renderer.setFadingFix(SETTINGS.fadingFix);
 
   if (Serial && millis() - lastMemPrint >= 10000) {
     Serial.printf("[%lu] [MEM] Free: %d bytes, Total: %d bytes, Min Free: %d bytes\n", millis(), ESP.getFreeHeap(),

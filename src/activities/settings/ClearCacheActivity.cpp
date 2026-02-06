@@ -7,6 +7,7 @@
 #include "MappedInputManager.h"
 #include "SpiBusMutex.h"
 #include "activities/TaskShutdown.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 void ClearCacheActivity::taskTrampoline(void* param) {

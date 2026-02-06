@@ -14,6 +14,7 @@
 
 #include "Epub/Page.h"
 #include "Epub/ParsedText.h"
+#include "Epub/blocks/BlockStyle.h"
 #include "Epub/blocks/TextBlock.h"
 
 namespace {
@@ -147,6 +148,19 @@ bool extractAltDimensions(const std::string& altText, std::string& outAlt, int& 
   }
   outAlt = trimWhitespace(altText.substr(0, pipePos));
   return true;
+}
+
+CssTextAlign normalizeAlignment(const uint8_t style) {
+  switch (static_cast<CssTextAlign>(style)) {
+    case CssTextAlign::Justify:
+    case CssTextAlign::Left:
+    case CssTextAlign::Center:
+    case CssTextAlign::Right:
+      return static_cast<CssTextAlign>(style);
+    case CssTextAlign::None:
+    default:
+      return CssTextAlign::Justify;
+  }
 }
 }  // namespace
 
@@ -349,7 +363,7 @@ void MarkdownRenderer::renderHeading(const MdNode& node) {
   flushTextBlock();
 
   // Headings are centered and bold
-  startNewTextBlock(TextBlock::CENTER_ALIGN);
+  startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
   isBold = true;
 
   renderInlineChildren(node);
@@ -391,7 +405,7 @@ void MarkdownRenderer::renderCodeBlock(const MdNode& node) {
       end = code.size();
     }
 
-    startNewTextBlock(TextBlock::LEFT_ALIGN);
+    startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Left));
     std::string line = code.substr(start, end - start);
 
     // Add indent
@@ -457,7 +471,7 @@ void MarkdownRenderer::renderOrderedList(const MdNode& node) {
 }
 
 void MarkdownRenderer::renderListItem(const MdNode& node, bool ordered, int number) {
-  startNewTextBlock(TextBlock::LEFT_ALIGN);
+  startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Left));
 
   // Add indent based on list depth
   for (int i = 1; i < listDepth; i++) {
@@ -530,7 +544,7 @@ void MarkdownRenderer::renderTable(const MdNode& node) {
   }
 
   if (colCount == 0) {
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     currentTextBlock->addWord("[Empty table]", EpdFontFamily::ITALIC);
     flushTextBlock();
     return;
@@ -550,7 +564,7 @@ void MarkdownRenderer::renderTable(const MdNode& node) {
         continue;
       }
 
-      startNewTextBlock(TextBlock::LEFT_ALIGN);
+      startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Left));
 
       int col = 0;
       for (const auto& cell : row->children) {
@@ -590,7 +604,7 @@ void MarkdownRenderer::renderTable(const MdNode& node) {
 
     // Add separator line after header
     if (section->type == MdNodeType::TableHead) {
-      startNewTextBlock(TextBlock::LEFT_ALIGN);
+      startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Left));
       // Cap column count to prevent unbounded string allocation
       constexpr uint16_t MAX_TABLE_COLS = 20;
       uint16_t safeCols = (colCount > MAX_TABLE_COLS) ? MAX_TABLE_COLS : colCount;
@@ -609,7 +623,7 @@ void MarkdownRenderer::renderHorizontalRule(const MdNode& node) {
   (void)node;
   flushTextBlock();
 
-  startNewTextBlock(TextBlock::CENTER_ALIGN);
+  startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
   // Create a line of dashes
   std::string rule(40, '-');
   currentTextBlock->addWord(rule, EpdFontFamily::REGULAR);
@@ -624,7 +638,7 @@ void MarkdownRenderer::renderHtmlBlock(const MdNode& node) {
   // For now, just show HTML as-is in a code-like block
   if (!node.text.empty()) {
     flushTextBlock();
-    startNewTextBlock(TextBlock::LEFT_ALIGN);
+    startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Left));
     currentTextBlock->addWord("[HTML:", EpdFontFamily::ITALIC);
     currentTextBlock->addWord(node.text.substr(0, 50), EpdFontFamily::REGULAR);
     if (node.text.length() > 50) {
@@ -714,7 +728,7 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
 
   if (src.empty()) {
     if (!currentTextBlock) {
-      startNewTextBlock(TextBlock::CENTER_ALIGN);
+      startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     }
     currentTextBlock->addWord("[Image]", EpdFontFamily::ITALIC);
     return;
@@ -731,14 +745,14 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
 
   if (src.rfind("http://", 0) == 0 || src.rfind("https://", 0) == 0) {
     if (!currentTextBlock) {
-      startNewTextBlock(TextBlock::CENTER_ALIGN);
+      startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     }
     currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
     return;
   }
   if (src.rfind("data:", 0) == 0) {
     if (!currentTextBlock) {
-      startNewTextBlock(TextBlock::CENTER_ALIGN);
+      startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     }
     currentTextBlock->addWord("[Embedded image]", EpdFontFamily::ITALIC);
     return;
@@ -755,7 +769,7 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
   auto format = ImageConverter::detectFormat(imagePath.c_str());
   if (format == ImageConverter::FORMAT_UNKNOWN) {
     if (!currentTextBlock) {
-      startNewTextBlock(TextBlock::CENTER_ALIGN);
+      startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     }
     currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
     return;
@@ -787,7 +801,7 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
 
   FsFile imageFile;
   if (!SdMan.openFileForRead("MDR", imagePath, imageFile)) {
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
     return;
   }
@@ -798,7 +812,7 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
   imageFile.close();
 
   if (!success || bmpData.size() < 54) {
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
     return;
   }
@@ -807,7 +821,7 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
   uint16_t bmpWidth = 0;
   uint16_t bmpHeight = 0;
   if (!decode1BitBmpToRaw(bmpData, rawData, bmpWidth, bmpHeight)) {
-    startNewTextBlock(TextBlock::CENTER_ALIGN);
+    startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
     return;
   }
@@ -906,8 +920,10 @@ void MarkdownRenderer::startNewTextBlock(uint8_t style) {
     flushTextBlock();
   }
 
-  currentTextBlock.reset(new ParsedText(static_cast<TextBlock::Style>(style), extraParagraphSpacing,
-                                        hyphenationEnabled && !isPreformatted));
+  BlockStyle blockStyle;
+  blockStyle.textAlignDefined = true;
+  blockStyle.alignment = normalizeAlignment(style);
+  currentTextBlock.reset(new ParsedText(extraParagraphSpacing, hyphenationEnabled && !isPreformatted, blockStyle));
 }
 
 void MarkdownRenderer::flushTextBlock() {

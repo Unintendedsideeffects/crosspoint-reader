@@ -11,17 +11,13 @@
 #include "../css/CssParser.h"
 #include "../css/CssStyle.h"
 
-class Epub;
 class Page;
-class PageImage;
 class GfxRenderer;
 
 #define MAX_WORD_SIZE 200
 
 class ChapterHtmlSlimParser {
   const std::string& filepath;
-  std::string contentBasePath;  // Base path for resolving relative URLs
-  std::shared_ptr<Epub> epub;   // Epub for reading image data (may be null)
   GfxRenderer& renderer;
   std::function<void(std::unique_ptr<Page>)> completePageFn;
   std::function<void()> popupFn;  // Popup callback
@@ -29,12 +25,11 @@ class ChapterHtmlSlimParser {
   int skipUntilDepth = INT_MAX;
   int boldUntilDepth = INT_MAX;
   int italicUntilDepth = INT_MAX;
-  int preUntilDepth = INT_MAX;
+  int underlineUntilDepth = INT_MAX;
   // buffer for building up words from characters, will auto break if longer than this
   // leave one char at end for null pointer
   char partWordBuffer[MAX_WORD_SIZE + 1] = {};
   int partWordBufferIndex = 0;
-  bool nextWordContinues = false;  // true when next flushed word attaches to previous (inline element boundary)
   std::unique_ptr<ParsedText> currentTextBlock = nullptr;
   std::unique_ptr<Page> currentPage = nullptr;
   int16_t currentPageNextY = 0;
@@ -46,7 +41,6 @@ class ChapterHtmlSlimParser {
   uint16_t viewportHeight;
   bool hyphenationEnabled;
   const CssParser* cssParser;
-  bool embeddedStyle;
 
   // Style tracking (replaces depth-based approach)
   struct StyleStackEntry {
@@ -65,8 +59,6 @@ class ChapterHtmlSlimParser {
   void startNewTextBlock(const BlockStyle& blockStyle);
   void flushPartWordBuffer();
   void makePages();
-  void processImage(const char* src, const char* alt);
-  void addImageToPage(std::shared_ptr<PageImage> image);
   // XML callbacks
   static void XMLCALL startElement(void* userData, const XML_Char* name, const XML_Char** atts);
   static void XMLCALL characterData(void* userData, const XML_Char* s, int len);
@@ -78,11 +70,9 @@ class ChapterHtmlSlimParser {
                                  const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                  const uint16_t viewportHeight, const bool hyphenationEnabled,
                                  const std::function<void(std::unique_ptr<Page>)>& completePageFn,
-                                 const std::function<void()>& popupFn = nullptr,
-                                 const std::shared_ptr<Epub>& epub = nullptr, const std::string& contentBasePath = "")
+                                 const std::function<void()>& popupFn = nullptr, const CssParser* cssParser = nullptr)
+
       : filepath(filepath),
-        contentBasePath(contentBasePath),
-        epub(epub),
         renderer(renderer),
         fontId(fontId),
         lineCompression(lineCompression),
@@ -93,8 +83,7 @@ class ChapterHtmlSlimParser {
         hyphenationEnabled(hyphenationEnabled),
         completePageFn(completePageFn),
         popupFn(popupFn),
-        cssParser(cssParser),
-        embeddedStyle(embeddedStyle) {}
+        cssParser(cssParser) {}
 
   ~ChapterHtmlSlimParser() = default;
   bool parseAndBuildPages();

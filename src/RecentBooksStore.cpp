@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "SpiBusMutex.h"
+#include "util/StringUtils.h"
 
 namespace {
 constexpr uint8_t RECENT_BOOKS_FILE_VERSION = 3;

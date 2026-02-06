@@ -8,8 +8,11 @@
 #include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
 #include "FeatureFlags.h"
+#include "KOReaderSettingsActivity.h"
 #include "MappedInputManager.h"
+#include "OtaUpdateActivity.h"
 #include "activities/TaskShutdown.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 const char* SettingsActivity::categoryNames[categoryCount] = {"Display", "Reader", "Controls", "System"};
@@ -186,6 +189,44 @@ void SettingsActivity::loop() {
         break;
     }
   }
+}
+
+void SettingsActivity::enterCategory(int categoryIndex) {
+  if (selectedSettingIndex > 0) {
+    toggleCurrentSetting();
+    updateRequired = true;
+    return;
+  }
+
+  if (categoryIndex < 0 || categoryIndex >= categoryCount) {
+    return;
+  }
+
+  selectedCategoryIndex = categoryIndex;
+  selectedSettingIndex = 1;
+
+  switch (selectedCategoryIndex) {
+    case 0:  // Display
+      settingsList = displaySettings;
+      settingsCount = displaySettingsCount;
+      break;
+    case 1:  // Reader
+      settingsList = readerSettings;
+      settingsCount = readerSettingsCount;
+      break;
+    case 2:  // Controls
+      settingsList = controlsSettings;
+      settingsCount = controlsSettingsCount;
+      break;
+    case 3:  // System
+      settingsList = systemSettings;
+      settingsCount = systemSettingsCount;
+      break;
+    default:
+      break;
+  }
+
+  updateRequired = true;
 }
 
 void SettingsActivity::toggleCurrentSetting() {
