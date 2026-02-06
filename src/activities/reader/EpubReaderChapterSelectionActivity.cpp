@@ -32,9 +32,14 @@ int EpubReaderChapterSelectionActivity::getTotalItems() const {
 }
 
 bool EpubReaderChapterSelectionActivity::isSyncItem(int index) const {
-  if (!hasSyncOption()) return false;
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  if (!KOREADER_STORE.hasCredentials()) return false;
   // First item and last item are sync options
   return index == 0 || index == getTotalItems() - 1;
+#else
+  (void)index;
+  return false;
+#endif
 }
 
 int EpubReaderChapterSelectionActivity::tocIndexFromItemIndex(int itemIndex) const {
