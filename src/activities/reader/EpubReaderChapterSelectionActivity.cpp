@@ -146,11 +146,13 @@ void EpubReaderChapterSelectionActivity::loop() {
   const int totalItems = getTotalItems();
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
     // Check if sync option is selected (first or last item)
     if (isSyncItem(selectorIndex)) {
       launchSyncActivity();
       return;
     }
+#endif
 
     // Get TOC index (account for top sync offset)
     const int tocIndex = tocIndexFromItemIndex(selectorIndex);
@@ -214,9 +216,11 @@ void EpubReaderChapterSelectionActivity::renderScreen() {
     const int displayY = 60 + i * 30;
     const bool isSelected = (itemIndex == selectorIndex);
 
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
     if (isSyncItem(itemIndex)) {
       renderer.drawText(UI_10_FONT_ID, 20, displayY, ">> Sync Progress", !isSelected);
     } else {
+#endif
       const int tocIndex = tocIndexFromItemIndex(itemIndex);
       auto item = epub->getTocItem(tocIndex);
 
@@ -225,7 +229,9 @@ void EpubReaderChapterSelectionActivity::renderScreen() {
           renderer.truncatedText(UI_10_FONT_ID, item.title.c_str(), pageWidth - 40 - indentSize);
 
       renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
     }
+#endif
   }
 
   // Skip button hints in landscape CW mode (they overlap content)
