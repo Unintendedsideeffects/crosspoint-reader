@@ -8,16 +8,23 @@
 #include <cstring>
 #include <ctime>
 
-#include "CalibreSettingsActivity.h"
 #include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
-#include "KOReaderSettingsActivity.h"
+#include "FeatureFlags.h"
 #include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
 #include "ScreenComponents.h"
 #include "activities/TaskShutdown.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "fontIds.h"
+
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+#include "CalibreSettingsActivity.h"
+#endif
+
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+#include "KOReaderSettingsActivity.h"
+#endif
 
 namespace {
 bool isLeapYear(const int year) {
@@ -190,6 +197,7 @@ void CategorySettingsActivity::toggleCurrentSetting() {
       ActivityWithSubactivity::enterNewActivity(activity);
     };
 
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
     if (strcmp(setting.name, "KOReader Sync") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       openSubActivity(new KOReaderSettingsActivity(renderer, mappedInput, [this] {
@@ -197,21 +205,36 @@ void CategorySettingsActivity::toggleCurrentSetting() {
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
-    } else if (strcmp(setting.name, "OPDS Browser") == 0) {
+      SETTINGS.saveToFile();
+      return;
+    }
+#endif
+
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+    if (strcmp(setting.name, "OPDS Browser") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       openSubActivity(new CalibreSettingsActivity(renderer, mappedInput, [this] {
         exitActivity();
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
-    } else if (strcmp(setting.name, "Clear Cache") == 0) {
+      SETTINGS.saveToFile();
+      return;
+    }
+#endif
+
+    if (strcmp(setting.name, "Clear Cache") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       openSubActivity(new ClearCacheActivity(renderer, mappedInput, [this] {
         exitActivity();
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
-    } else if (strcmp(setting.name, "Set Manual Time") == 0) {
+      SETTINGS.saveToFile();
+      return;
+    }
+
+    if (strcmp(setting.name, "Set Manual Time") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       // Close any existing subactivity before launching the keyboard.
       const std::string prefill = formatTimeForInput();
@@ -247,13 +270,19 @@ void CategorySettingsActivity::toggleCurrentSetting() {
             updateRequired = true;
           }));
       xSemaphoreGive(renderingMutex);
-    } else if (strcmp(setting.name, "Check for updates") == 0) {
+      SETTINGS.saveToFile();
+      return;
+    }
+
+    if (strcmp(setting.name, "Check for updates") == 0) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       openSubActivity(new OtaUpdateActivity(renderer, mappedInput, [this] {
         exitActivity();
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
+      SETTINGS.saveToFile();
+      return;
     }
   } else {
     return;

@@ -40,6 +40,24 @@ FEATURES = {
         size_kb=560,
         description='Markdown and Obsidian vault reading support'
     ),
+    'integrations': Feature(
+        name='Integrations Base',
+        flag='ENABLE_INTEGRATIONS',
+        size_kb=8,
+        description='Shared runtime hooks for remote sync integrations'
+    ),
+    'koreader_sync': Feature(
+        name='KOReader Sync',
+        flag='ENABLE_KOREADER_SYNC',
+        size_kb=0,
+        description='Sync reading progress with KOReader'
+    ),
+    'calibre_sync': Feature(
+        name='Calibre Sync',
+        flag='ENABLE_CALIBRE_SYNC',
+        size_kb=0,
+        description='Calibre OPDS browser and metadata sync settings'
+    ),
     'background_server': Feature(
         name='Background Server',
         flag='ENABLE_BACKGROUND_SERVER',
@@ -49,36 +67,201 @@ FEATURES = {
 }
 
 
-# Define presets
-PRESETS = {
-    'minimal': {
-        'description': 'All features disabled (~5.5MB, -1.1MB savings)',
-        'features': {}  # All disabled
+# Feature metadata and dependencies
+class FeatureMetadata:
+    """Metadata about feature implementation and dependencies."""
+
+    def __init__(self, implemented: bool, stable: bool, requires: List[str] = None,
+                 conflicts: List[str] = None, recommends: List[str] = None):
+        self.implemented = implemented
+        self.stable = stable
+        self.requires = requires or []
+        self.conflicts = conflicts or []
+        self.recommends = recommends or []
+
+
+FEATURE_METADATA = {
+    'extended_fonts': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'image_sleep': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'markdown': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'integrations': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'koreader_sync': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=['integrations'],
+        conflicts=[],
+        recommends=[]
+    ),
+    'calibre_sync': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=['integrations'],
+        conflicts=[],
+        recommends=[]
+    ),
+    'background_server': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+}
+
+
+def validate_feature_configuration(enabled_features: Dict[str, bool]) -> tuple[List[str], List[str]]:
+    """
+    Validate feature dependencies and conflicts.
+
+    Returns:
+        (errors, warnings) - Lists of error and warning messages
+    """
+    errors = []
+    warnings = []
+
+    for feature_key, enabled in enabled_features.items():
+        if not enabled:
+            continue
+
+        metadata = FEATURE_METADATA.get(feature_key)
+        if not metadata:
+            warnings.append(f"Unknown feature: {feature_key}")
+            continue
+
+        # Check if feature is implemented
+        if not metadata.implemented:
+            errors.append(
+                f"{FEATURES[feature_key].name} is not yet implemented. "
+                f"This feature flag exists but the code is not complete. "
+                f"Build will fail or feature will not work."
+            )
+
+        # Check required dependencies
+        for required in metadata.requires:
+            if not enabled_features.get(required, False):
+                errors.append(
+                    f"{FEATURES[feature_key].name} requires {FEATURES[required].name} to be enabled"
+                )
+
+        # Check conflicts
+        for conflict in metadata.conflicts:
+            if enabled_features.get(conflict, False):
+                errors.append(
+                    f"{FEATURES[feature_key].name} conflicts with {FEATURES[conflict].name}. "
+                    f"These features cannot be enabled together."
+                )
+
+        # Check recommendations
+        for recommended in metadata.recommends:
+            if not enabled_features.get(recommended, False):
+                warnings.append(
+                    f"{FEATURES[feature_key].name} works best with {FEATURES[recommended].name} enabled"
+                )
+
+    return errors, warnings
+
+
+def apply_dependency_defaults(enabled_features: Dict[str, bool]) -> List[str]:
+    """
+    Auto-enable required parent features for enabled downstream features.
+
+    Returns:
+        List of warning messages describing auto-enabled dependencies.
+    """
+    warnings: List[str] = []
+    changed = True
+
+    while changed:
+        changed = False
+        for feature_key, enabled in enabled_features.items():
+            if not enabled:
+                continue
+
+            metadata = FEATURE_METADATA.get(feature_key)
+            if not metadata:
+                continue
+
+            for required in metadata.requires:
+                if not enabled_features.get(required, False):
+                    enabled_features[required] = True
+                    warnings.append(
+                        f"Auto-enabled {FEATURES[required].name} because {FEATURES[feature_key].name} is enabled"
+                    )
+                    changed = True
+
+    return warnings
+
+
+PROFILES = {
+    'lean': {
+        'description': 'Core reader only (~5.5MB, maximum flash headroom)',
+        'features': {},
     },
     'standard': {
-        'description': 'Extended fonts + Image sleep (~6.2MB, recommended)',
+        'description': 'Balanced defaults (~5.9MB, recommended)',
         'features': {
             'extended_fonts': True,
             'image_sleep': True,
-            'markdown': False,
-            'background_server': False,
-        }
+            'background_server': True,
+        },
     },
     'full': {
-        'description': 'All features enabled (~6.6MB, current baseline)',
+        'description': 'All optional features enabled (~6.5MB)',
         'features': {
             'extended_fonts': True,
             'image_sleep': True,
             'markdown': True,
+            'integrations': True,
+            'koreader_sync': True,
+            'calibre_sync': True,
             'background_server': True,
-        }
+        },
     },
 }
+
+# Backward-compatible aliases used by old docs/workflows.
+LEGACY_PROFILE_ALIASES = {
+    'minimal': 'lean',
+}
+
+
+def empty_feature_state() -> Dict[str, bool]:
+    """Return a fully-initialized feature map with all options disabled."""
+    return {feature_key: False for feature_key in FEATURES.keys()}
+
+
+def resolve_profile_name(profile_name: str) -> str:
+    """Resolve legacy profile aliases to canonical profile names."""
+    return LEGACY_PROFILE_ALIASES.get(profile_name, profile_name)
 
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 5.5  # Minimal build size
+    base_size_mb = 5.5  # Lean profile size baseline
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
@@ -98,7 +281,7 @@ def generate_build_flags(enabled_features: Dict[str, bool]) -> List[str]:
     return flags
 
 
-def generate_platformio_ini(enabled_features: Dict[str, bool], output_path: Path):
+def generate_platformio_ini(enabled_features: Dict[str, bool], output_path: Path, profile_name: str):
     """Generate platformio-custom.ini with custom build configuration."""
 
     build_flags = generate_build_flags(enabled_features)
@@ -121,6 +304,7 @@ def generate_platformio_ini(enabled_features: Dict[str, bool], output_path: Path
     content = f"""# Custom CrossPoint Reader Build Configuration
 # Generated by generate_build_config.py
 #
+# Selected profile: {profile_name}
 # Estimated firmware size: ~{estimated_size:.1f}MB
 #
 # Enabled features:
@@ -133,7 +317,7 @@ def generate_platformio_ini(enabled_features: Dict[str, bool], output_path: Path
 extends = base
 build_flags =
   ${{base.build_flags}}
-  -DCROSSPOINT_VERSION="${{crosspoint.version}}-custom"
+  -DCROSSPOINT_VERSION=\\"${{crosspoint.version}}-custom\\"
 {chr(10).join(f'  {flag}' for flag in build_flags)}
 """
 
@@ -155,16 +339,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Use a preset
-  %(prog)s --preset minimal
-  %(prog)s --preset standard
-  %(prog)s --preset full
+  # Use a profile
+  %(prog)s --profile lean
+  %(prog)s --profile standard
+  %(prog)s --profile full
 
   # Enable specific features
   %(prog)s --enable extended_fonts --enable image_sleep
 
-  # Disable specific features from full build
-  %(prog)s --preset full --disable markdown
+  # Disable specific features from full profile
+  %(prog)s --profile full --disable markdown
 
   # List available features
   %(prog)s --list-features
@@ -172,9 +356,15 @@ Examples:
     )
 
     parser.add_argument(
+        '--profile',
+        choices=sorted(list(PROFILES.keys()) + list(LEGACY_PROFILE_ALIASES.keys())),
+        help='Use a predefined feature profile'
+    )
+
+    parser.add_argument(
         '--preset',
-        choices=['minimal', 'standard', 'full'],
-        help='Use a predefined feature preset'
+        choices=sorted(list(PROFILES.keys()) + list(LEGACY_PROFILE_ALIASES.keys())),
+        help='Deprecated alias for --profile'
     )
 
     parser.add_argument(
@@ -215,39 +405,79 @@ Examples:
             print(f"  {'':20}   Size impact: ~{feature.size_kb}K")
             print()
 
-        print("\nAvailable presets:\n")
-        for preset_name, preset_info in PRESETS.items():
-            print(f"  {preset_name:10} - {preset_info['description']}")
+        print("\nAvailable profiles:\n")
+        for profile_name, profile_info in PROFILES.items():
+            print(f"  {profile_name:10} - {profile_info['description']}")
+
+        if LEGACY_PROFILE_ALIASES:
+            print("\nLegacy aliases:\n")
+            for legacy_name, canonical_name in LEGACY_PROFILE_ALIASES.items():
+                print(f"  {legacy_name:10} -> {canonical_name}")
 
         return 0
 
-    # Determine enabled features
-    enabled_features = {}
-
+    # Handle profile/preset compatibility.
+    requested_profile = args.profile
     if args.preset:
-        # Start with preset
-        enabled_features = PRESETS[args.preset]['features'].copy()
-        print(f"Using preset: {args.preset}")
-        print(f"  {PRESETS[args.preset]['description']}")
-    else:
-        # Default: all features disabled
-        for feature_key in FEATURES.keys():
-            enabled_features[feature_key] = False
+        if requested_profile and requested_profile != args.preset:
+            print("❌ Cannot pass both --profile and --preset with different values")
+            return 1
+        requested_profile = args.preset
+
+    # Determine enabled features
+    enabled_features = empty_feature_state()
+    selected_profile = "custom"
+    if requested_profile:
+        canonical_profile = resolve_profile_name(requested_profile)
+        if canonical_profile not in PROFILES:
+            print(f"❌ Unknown profile: {requested_profile}")
+            return 1
+        enabled_features.update(PROFILES[canonical_profile]['features'])
+        selected_profile = canonical_profile
+        if requested_profile in LEGACY_PROFILE_ALIASES:
+            print(f"⚠️  Profile '{requested_profile}' is deprecated; using '{canonical_profile}'")
+        print(f"Using profile: {canonical_profile}")
+        print(f"  {PROFILES[canonical_profile]['description']}")
 
     # Apply --enable flags
     if args.enable:
         for feature_key in args.enable:
             enabled_features[feature_key] = True
+        if selected_profile != "custom":
+            selected_profile = f"{selected_profile}+overrides"
 
     # Apply --disable flags
     if args.disable:
         for feature_key in args.disable:
             enabled_features[feature_key] = False
+        if selected_profile != "custom":
+            selected_profile = f"{selected_profile}+overrides"
+
+    dependency_warnings = apply_dependency_defaults(enabled_features)
+
+    # Validate configuration
+    errors, warnings = validate_feature_configuration(enabled_features)
+    warnings = dependency_warnings + warnings
+
+    # Print warnings
+    if warnings:
+        print("\n⚠️  Warnings:")
+        for warning in warnings:
+            print(f"  • {warning}")
+        print()
+
+    # Print errors and exit if any
+    if errors:
+        print("\n❌ Configuration errors:")
+        for error in errors:
+            print(f"  • {error}")
+        print("\nConfiguration is invalid. Please fix the errors above.")
+        return 1
 
     # Generate configuration
-    generate_platformio_ini(enabled_features, args.output)
+    generate_platformio_ini(enabled_features, args.output, selected_profile)
 
-    print(f"\nTo build: pio run -e custom")
+    print("\nTo build: uv run pio run -e custom")
 
     return 0
 
