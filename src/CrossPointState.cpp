@@ -7,7 +7,7 @@
 #include "SpiBusMutex.h"
 
 namespace {
-constexpr uint8_t STATE_FILE_VERSION = 2;
+constexpr uint8_t STATE_FILE_VERSION = 3;
 constexpr char STATE_FILE[] = "/.crosspoint/state.bin";
 }  // namespace
 
@@ -23,6 +23,7 @@ bool CrossPointState::saveToFile() const {
   serialization::writePod(outputFile, STATE_FILE_VERSION);
   serialization::writeString(outputFile, openEpubPath);
   serialization::writePod(outputFile, lastSleepImage);
+  serialization::writePod(outputFile, readerActivityLoadCount);
   outputFile.close();
   return true;
 }
@@ -60,6 +61,10 @@ bool CrossPointState::loadFromFile() {
     }
   } else {
     lastSleepImage = 0;
+  }
+
+  if (version >= 3) {
+    serialization::readPod(inputFile, readerActivityLoadCount);
   }
 
   inputFile.close();

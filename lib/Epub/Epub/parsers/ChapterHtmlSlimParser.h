@@ -8,6 +8,8 @@
 
 #include "../ParsedText.h"
 #include "../blocks/TextBlock.h"
+#include "../css/CssParser.h"
+#include "../css/CssStyle.h"
 
 class Epub;
 class Page;
@@ -32,6 +34,7 @@ class ChapterHtmlSlimParser {
   // leave one char at end for null pointer
   char partWordBuffer[MAX_WORD_SIZE + 1] = {};
   int partWordBufferIndex = 0;
+  bool nextWordContinues = false;  // true when next flushed word attaches to previous (inline element boundary)
   std::unique_ptr<ParsedText> currentTextBlock = nullptr;
   std::unique_ptr<Page> currentPage = nullptr;
   int16_t currentPageNextY = 0;
@@ -42,8 +45,24 @@ class ChapterHtmlSlimParser {
   uint16_t viewportWidth;
   uint16_t viewportHeight;
   bool hyphenationEnabled;
+  const CssParser* cssParser;
+  bool embeddedStyle;
 
-  void startNewTextBlock(TextBlock::Style style);
+  // Style tracking (replaces depth-based approach)
+  struct StyleStackEntry {
+    int depth = 0;
+    bool hasBold = false, bold = false;
+    bool hasItalic = false, italic = false;
+    bool hasUnderline = false, underline = false;
+  };
+  std::vector<StyleStackEntry> inlineStyleStack;
+  CssStyle currentCssStyle;
+  bool effectiveBold = false;
+  bool effectiveItalic = false;
+  bool effectiveUnderline = false;
+
+  void updateEffectiveInlineStyle();
+  void startNewTextBlock(const BlockStyle& blockStyle);
   void flushPartWordBuffer();
   void makePages();
   void processImage(const char* src, const char* alt);
@@ -73,7 +92,10 @@ class ChapterHtmlSlimParser {
         viewportHeight(viewportHeight),
         hyphenationEnabled(hyphenationEnabled),
         completePageFn(completePageFn),
-        popupFn(popupFn) {}
+        popupFn(popupFn),
+        cssParser(cssParser),
+        embeddedStyle(embeddedStyle) {}
+
   ~ChapterHtmlSlimParser() = default;
   bool parseAndBuildPages();
   void addLineToPage(std::shared_ptr<TextBlock> line);

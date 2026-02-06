@@ -49,7 +49,7 @@ void XtcReaderActivity::onEnter() {
   // Save current XTC as last opened book and add to recent books
   APP_STATE.openEpubPath = xtc->getPath();
   APP_STATE.saveToFile();
-  RECENT_BOOKS.addBook(xtc->getPath(), xtc->getTitle(), xtc->getAuthor());
+  RECENT_BOOKS.addBook(xtc->getPath(), xtc->getTitle(), xtc->getAuthor(), xtc->getThumbBmpPath());
 
   // Trigger first update
   updateRequired = true;
@@ -68,6 +68,8 @@ void XtcReaderActivity::onExit() {
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
+  APP_STATE.readerActivityLoadCount = 0;
+  APP_STATE.saveToFile();
   xtc.reset();
 }
 

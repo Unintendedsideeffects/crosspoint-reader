@@ -35,6 +35,84 @@ int HomeActivity::getMenuItemCount() const {
   return count;
 }
 
+void HomeActivity::loadRecentBooks(int maxBooks) {
+  recentBooks.clear();
+  const auto& books = RECENT_BOOKS.getBooks();
+  recentBooks.reserve(std::min(static_cast<int>(books.size()), maxBooks));
+
+  for (const RecentBook& book : books) {
+    // Limit to maximum number of recent books
+    if (recentBooks.size() >= maxBooks) {
+      break;
+    }
+
+    // Skip if file no longer exists
+    if (!SdMan.exists(book.path.c_str())) {
+      continue;
+    }
+
+    recentBooks.push_back(book);
+  }
+}
+
+void HomeActivity::loadRecentCovers(int coverHeight) {
+  recentsLoading = true;
+  bool showingLoading = false;
+  Rect popupRect;
+
+  int progress = 0;
+  for (RecentBook& book : recentBooks) {
+    if (!book.coverBmpPath.empty()) {
+      std::string coverPath = UITheme::getCoverThumbPath(book.coverBmpPath, coverHeight);
+      if (!SdMan.exists(coverPath.c_str())) {
+        // If epub, try to load the metadata for title/author and cover
+        if (StringUtils::checkFileExtension(book.path, ".epub")) {
+          Epub epub(book.path, "/.crosspoint");
+          // Skip loading css since we only need metadata here
+          epub.load(false, true);
+
+          // Try to generate thumbnail image for Continue Reading card
+          if (!showingLoading) {
+            showingLoading = true;
+            popupRect = GUI.drawPopup(renderer, "Loading...");
+          }
+          GUI.fillPopupProgress(renderer, popupRect, 10 + progress * (90 / recentBooks.size()));
+          bool success = epub.generateThumbBmp(coverHeight);
+          if (!success) {
+            RECENT_BOOKS.updateBook(book.path, book.title, book.author, "");
+            book.coverBmpPath = "";
+          }
+          coverRendered = false;
+          updateRequired = true;
+        } else if (StringUtils::checkFileExtension(book.path, ".xtch") ||
+                   StringUtils::checkFileExtension(book.path, ".xtc")) {
+          // Handle XTC file
+          Xtc xtc(book.path, "/.crosspoint");
+          if (xtc.load()) {
+            // Try to generate thumbnail image for Continue Reading card
+            if (!showingLoading) {
+              showingLoading = true;
+              popupRect = GUI.drawPopup(renderer, "Loading...");
+            }
+            GUI.fillPopupProgress(renderer, popupRect, 10 + progress * (90 / recentBooks.size()));
+            bool success = xtc.generateThumbBmp(coverHeight);
+            if (!success) {
+              RECENT_BOOKS.updateBook(book.path, book.title, book.author, "");
+              book.coverBmpPath = "";
+            }
+            coverRendered = false;
+            updateRequired = true;
+          }
+        }
+      }
+    }
+    progress++;
+  }
+
+  recentsLoaded = true;
+  recentsLoading = false;
+}
+
 void HomeActivity::onEnter() {
   Activity::onEnter();
 
@@ -52,62 +130,16 @@ void HomeActivity::onEnter() {
   hasOpdsUrl = false;
 #endif
 
-  if (hasContinueReading) {
-    // Extract filename from path for display
-    lastBookTitle = APP_STATE.openEpubPath;
-    const size_t lastSlash = lastBookTitle.find_last_of('/');
-    if (lastSlash != std::string::npos) {
-      lastBookTitle = lastBookTitle.substr(lastSlash + 1);
-    }
-
-    // If epub, try to load the metadata for title/author and cover
-    if (StringUtils::checkFileExtension(lastBookTitle, ".epub")) {
-      Epub epub(APP_STATE.openEpubPath, "/.crosspoint");
-      epub.load(false);
-      if (!epub.getTitle().empty()) {
-        lastBookTitle = std::string(epub.getTitle());
-      }
-      if (!epub.getAuthor().empty()) {
-        lastBookAuthor = std::string(epub.getAuthor());
-      }
-      // Try to generate thumbnail image for Continue Reading card
-      if (epub.generateThumbBmp()) {
-        coverBmpPath = epub.getThumbBmpPath();
-        hasCoverImage = true;
-      }
-    } else if (StringUtils::checkFileExtension(lastBookTitle, ".xtch") ||
-               StringUtils::checkFileExtension(lastBookTitle, ".xtc")) {
-      // Handle XTC file
-      Xtc xtc(APP_STATE.openEpubPath, "/.crosspoint");
-      if (xtc.load()) {
-        if (!xtc.getTitle().empty()) {
-          lastBookTitle = std::string(xtc.getTitle());
-        }
-        if (!xtc.getAuthor().empty()) {
-          lastBookAuthor = std::string(xtc.getAuthor());
-        }
-        // Try to generate thumbnail image for Continue Reading card
-        if (xtc.generateThumbBmp()) {
-          coverBmpPath = xtc.getThumbBmpPath();
-          hasCoverImage = true;
-        }
-      }
-      // Remove extension from title if we don't have metadata
-      if (StringUtils::checkFileExtension(lastBookTitle, ".xtch")) {
-        lastBookTitle.resize(lastBookTitle.length() - 5);
-      } else if (StringUtils::checkFileExtension(lastBookTitle, ".xtc")) {
-        lastBookTitle.resize(lastBookTitle.length() - 4);
-      }
-    }
-  }
-
   selectorIndex = 0;
+
+  auto metrics = UITheme::getInstance().getMetrics();
+  loadRecentBooks(metrics.homeRecentBooksCount);
 
   // Trigger first update
   updateRequired = true;
 
   xTaskCreate(&HomeActivity::taskTrampoline, "HomeActivityTask",
-              4096,               // Stack size (increased for cover image rendering)
+              8192,               // Stack size
               this,               // Parameters
               1,                  // Priority
               &displayTaskHandle  // Task handle
@@ -178,7 +210,7 @@ void HomeActivity::loop() {
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     // Calculate dynamic indices based on which options are available
     int idx = 0;
-    const int continueIdx = hasContinueReading ? idx++ : -1;
+    int menuSelectedIndex = selectorIndex - static_cast<int>(recentBooks.size());
     const int myLibraryIdx = idx++;
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
     const int opdsLibraryIdx = hasOpdsUrl ? idx++ : -1;
@@ -187,9 +219,9 @@ void HomeActivity::loop() {
     const int fileTransferIdx = idx++;
     const int settingsIdx = idx;
 
-    if (selectorIndex == continueIdx) {
-      onContinueReading();
-    } else if (selectorIndex == myLibraryIdx) {
+    if (selectorIndex < recentBooks.size()) {
+      onSelectBook(recentBooks[selectorIndex].path);
+    } else if (menuSelectedIndex == myLibraryIdx) {
       onMyLibraryOpen();
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
     } else if (selectorIndex == opdsLibraryIdx) {
@@ -199,7 +231,7 @@ void HomeActivity::loop() {
       onTodoOpen();
     } else if (selectorIndex == fileTransferIdx) {
       onFileTransferOpen();
-    } else if (selectorIndex == settingsIdx) {
+    } else if (menuSelectedIndex == settingsIdx) {
       onSettingsOpen();
     }
   } else if (prevPressed) {
@@ -229,30 +261,18 @@ void HomeActivity::displayTaskLoop() {
 }
 
 void HomeActivity::render() {
-  // If we have a stored cover buffer, restore it instead of clearing
-  const bool bufferRestored = coverBufferStored && restoreCoverBuffer();
-  if (!bufferRestored) {
-    renderer.clearScreen();
-  }
-
+  auto metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
-  constexpr int margin = 20;
-  constexpr int bottomMargin = 60;
+  renderer.clearScreen();
+  bool bufferRestored = coverBufferStored && restoreCoverBuffer();
 
-  // --- Top "book" card for the current title (selectorIndex == 0) ---
-  const int bookWidth = pageWidth / 2;
-  const int bookHeight = pageHeight / 2;
-  const int bookX = (pageWidth - bookWidth) / 2;
-  constexpr int bookY = 30;
-  const bool bookSelected = hasContinueReading && selectorIndex == 0;
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.homeTopPadding}, nullptr);
 
-  // Bookmark dimensions (used in multiple places)
-  const int bookmarkWidth = bookWidth / 8;
-  const int bookmarkHeight = bookHeight / 5;
-  const int bookmarkX = bookX + bookWidth - bookmarkWidth - 10;
-  const int bookmarkY = bookY + 5;
+  GUI.drawRecentBookCover(renderer, Rect{0, metrics.homeTopPadding, pageWidth, metrics.homeCoverTileHeight},
+                          recentBooks, selectorIndex, coverRendered, coverBufferStored, bufferRestored,
+                          std::bind(&HomeActivity::storeCoverBuffer, this));
 
   // Draw book card regardless, fill with message based on `hasContinueReading`
   {
@@ -527,55 +547,28 @@ void HomeActivity::render() {
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
   if (hasOpdsUrl) {
     // Insert OPDS Browser after My Library
-    menuItems.insert(menuItems.begin() + 1, "OPDS Browser");
+    menuItems.insert(menuItems.begin() + 2, "OPDS Browser");
   }
 #endif
 
-  const int menuTileWidth = pageWidth - 2 * margin;
-  constexpr int menuTileHeight = 45;
-  constexpr int menuSpacing = 8;
-  const int totalMenuHeight =
-      static_cast<int>(menuItems.size()) * menuTileHeight + (static_cast<int>(menuItems.size()) - 1) * menuSpacing;
-
-  int menuStartY = bookY + bookHeight + 15;
-  // Ensure we don't collide with the bottom button legend
-  const int maxMenuStartY = pageHeight - bottomMargin - totalMenuHeight - margin;
-  if (menuStartY > maxMenuStartY) {
-    menuStartY = maxMenuStartY;
-  }
-
-  for (size_t i = 0; i < menuItems.size(); ++i) {
-    const int overallIndex = static_cast<int>(i) + (hasContinueReading ? 1 : 0);
-    constexpr int tileX = margin;
-    const int tileY = menuStartY + static_cast<int>(i) * (menuTileHeight + menuSpacing);
-    const bool selected = selectorIndex == overallIndex;
-
-    if (selected) {
-      renderer.fillRect(tileX, tileY, menuTileWidth, menuTileHeight);
-    } else {
-      renderer.drawRect(tileX, tileY, menuTileWidth, menuTileHeight);
-    }
-
-    const char* label = menuItems[i];
-    const int textWidth = renderer.getTextWidth(UI_10_FONT_ID, label);
-    const int textX = tileX + (menuTileWidth - textWidth) / 2;
-    const int lineHeight = renderer.getLineHeight(UI_10_FONT_ID);
-    const int textY = tileY + (menuTileHeight - lineHeight) / 2;  // vertically centered assuming y is top of text
-
-    // Invert text when the tile is selected, to contrast with the filled background
-    renderer.drawText(UI_10_FONT_ID, textX, textY, label, !selected);
-  }
+  GUI.drawButtonMenu(
+      renderer,
+      Rect{0, metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.verticalSpacing, pageWidth,
+           pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing * 2 +
+                         metrics.buttonHintsHeight)},
+      static_cast<int>(menuItems.size()), selectorIndex - recentBooks.size(),
+      [&menuItems](int index) { return std::string(menuItems[index]); }, nullptr);
 
   const auto labels = mappedInput.mapLabels("", "Select", "Up", "Down");
-  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-
-  const bool showBatteryPercentage =
-      SETTINGS.hideBatteryPercentage != CrossPointSettings::HIDE_BATTERY_PERCENTAGE::HIDE_ALWAYS;
-  // get percentage so we can align text properly
-  const uint16_t percentage = battery.readPercentage();
-  const auto percentageText = showBatteryPercentage ? std::to_string(percentage) + "%" : "";
-  const auto batteryX = pageWidth - 25 - renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str());
-  ScreenComponents::drawBattery(renderer, batteryX, 10, showBatteryPercentage);
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
+
+  if (!firstRenderDone) {
+    firstRenderDone = true;
+    updateRequired = true;
+  } else if (!recentsLoaded && !recentsLoading) {
+    recentsLoading = true;
+    loadRecentCovers(metrics.homeCoverHeight);
+  }
 }

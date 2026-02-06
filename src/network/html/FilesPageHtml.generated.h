@@ -319,24 +319,46 @@ constexpr char FilesPageHtml[] PROGMEM = R"rawliteral(<!DOCTYPE html><html><head
     .folder-btn:hover {
       background-color: #d68910;
     }
-    /* Delete button styles */
-    .delete-btn {
+    /* Action button styles */
+    .delete-btn,
+    .rename-btn,
+    .move-btn {
       background: none;
       border: none;
       cursor: pointer;
       font-size: 1.1em;
       padding: 4px 8px;
       border-radius: 4px;
-      color: #95a5a6;
       transition: all 0.15s;
+    }
+    .delete-btn {
+      color: #95a5a6;
     }
     .delete-btn:hover {
       background-color: #fee;
       color: #e74c3c;
     }
+    .rename-btn {
+      color: #2980b9;
+    }
+    .rename-btn:hover {
+      background-color: #e8f4fd;
+    }
+    .move-btn {
+      color: #16a085;
+    }
+    .move-btn:hover {
+      background-color: #e6f7f4;
+    }
     .actions-col {
-      width: 60px;
+      width: 140px;
       text-align: center;
+    }
+    .action-icon-group {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
     /* Failed uploads banner */
     .failed-uploads-banner {
@@ -460,6 +482,32 @@ constexpr char FilesPageHtml[] PROGMEM = R"rawliteral(<!DOCTYPE html><html><head
     .delete-btn-cancel:hover {
       background-color: #7f8c8d;
     }
+    .rename-btn-confirm {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+      width: 100%;
+    }
+    .rename-btn-confirm:hover {
+      background-color: #2e86c1;
+    }
+    .move-btn-confirm {
+      background-color: #16a085;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+      width: 100%;
+    }
+    .move-btn-confirm:hover {
+      background-color: #138d75;
+    }
     .loader-container {
       display: flex;
       justify-content: center;
@@ -555,18 +603,23 @@ constexpr char FilesPageHtml[] PROGMEM = R"rawliteral(<!DOCTYPE html><html><head
         font-size: 1.1em;
       }
       .actions-col {
-        width: 40px;
+        width: 120px;
       }
-      .delete-btn {
+      .delete-btn,
+      .rename-btn,
+      .move-btn {
         font-size: 1em;
         padding: 2px 4px;
+      }
+      .action-icon-group {
+        gap: 4px;
       }
       .no-files {
         padding: 20px;
         font-size: 0.9em;
       }
     }
-  </style> </head><body><div class="nav-links"><a href="/">Home</a><a href="/files">File Manager</a></div><div class="page-header"><div class="page-header-left"><h1>📁 File Manager</h1><div class="breadcrumb-inline" id="directory-breadcrumbs"></div></div><div class="action-buttons"><button class="action-btn upload-action-btn" onclick="openUploadModal()">📤 Upload</button><button class="action-btn folder-action-btn" onclick="openFolderModal()">📁 New Folder</button></div></div><div class="failed-uploads-banner" id="failedUploadsBanner"><div class="failed-uploads-header"><h3 class="failed-uploads-title">⚠️ Some files failed to upload</h3><button class="dismiss-btn" onclick="dismissFailedUploads()" title="Dismiss">&times;</button></div><div id="failedFilesList"></div><button class="retry-all-btn" onclick="retryAllFailedUploads()">Retry All Failed Uploads</button></div><div class="card"><div class="contents-header"><h2 class="contents-title">Contents</h2><span class="summary-inline" id="folder-summary"></span></div><div id="file-table"><div class="loader-container"><span class="loader"></span></div></div></div><div class="card"><p style="text-align: center; color: #95a5a6; margin: 0;"> CrossPoint E-Reader • Open Source </p></div><div class="modal-overlay" id="uploadModal"><div class="modal"><button class="modal-close" onclick="closeUploadModal()">&times;</button><h3>📤 Upload file</h3><div class="upload-form"><p class="file-info">Select a file to upload to <strong id="uploadPathDisplay"></strong></p><input type="file" id="fileInput" onchange="validateFile()" multiple><button id="uploadBtn" class="upload-btn" onclick="uploadFile()" disabled>Upload</button><div id="progress-container"><div id="progress-bar"><div id="progress-fill"></div></div><div id="progress-text"></div></div></div></div></div><div class="modal-overlay" id="folderModal"><div class="modal"><button class="modal-close" onclick="closeFolderModal()">&times;</button><h3>📁 New Folder</h3><div class="folder-form"><p class="file-info">Create a new folder in <strong id="folderPathDisplay"></strong></p><input type="text" id="folderName" class="folder-input" placeholder="Folder name..."><button class="folder-btn" onclick="createFolder()">Create Folder</button></div></div></div><div class="modal-overlay" id="deleteModal"><div class="modal"><button class="modal-close" onclick="closeDeleteModal()">&times;</button><h3>🗑️ Delete Item</h3><div class="folder-form"><p class="delete-warning">⚠️ This action cannot be undone!</p><p class="file-info">Are you sure you want to delete:</p><p class="delete-item-name" id="deleteItemName"></p><input type="hidden" id="deleteItemPath"><input type="hidden" id="deleteItemType"><button class="delete-btn-confirm" onclick="confirmDelete()">Delete</button><button class="delete-btn-cancel" onclick="closeDeleteModal()">Cancel</button></div></div></div> <script>
+  </style> </head><body><div class="nav-links"><a href="/">Home</a><a href="/files">File Manager</a></div><div class="page-header"><div class="page-header-left"><h1>📁 File Manager</h1><div class="breadcrumb-inline" id="directory-breadcrumbs"></div></div><div class="action-buttons"><button class="action-btn upload-action-btn" onclick="openUploadModal()">📤 Upload</button><button class="action-btn folder-action-btn" onclick="openFolderModal()">📁 New Folder</button></div></div><div class="failed-uploads-banner" id="failedUploadsBanner"><div class="failed-uploads-header"><h3 class="failed-uploads-title">⚠️ Some files failed to upload</h3><button class="dismiss-btn" onclick="dismissFailedUploads()" title="Dismiss">&times;</button></div><div id="failedFilesList"></div><button class="retry-all-btn" onclick="retryAllFailedUploads()">Retry All Failed Uploads</button></div><div class="card"><div class="contents-header"><h2 class="contents-title">Contents</h2><span class="summary-inline" id="folder-summary"></span></div><div id="file-table"><div class="loader-container"><span class="loader"></span></div></div></div><div class="card"><p style="text-align: center; color: #95a5a6; margin: 0;"> CrossPoint E-Reader • Open Source </p></div><div class="modal-overlay" id="uploadModal"><div class="modal"><button class="modal-close" onclick="closeUploadModal()">&times;</button><h3>📤 Upload file</h3><div class="upload-form"><p class="file-info">Select a file to upload to <strong id="uploadPathDisplay"></strong></p><input type="file" id="fileInput" onchange="validateFile()" multiple><button id="uploadBtn" class="upload-btn" onclick="uploadFile()" disabled>Upload</button><div id="progress-container"><div id="progress-bar"><div id="progress-fill"></div></div><div id="progress-text"></div></div></div></div></div><div class="modal-overlay" id="folderModal"><div class="modal"><button class="modal-close" onclick="closeFolderModal()">&times;</button><h3>📁 New Folder</h3><div class="folder-form"><p class="file-info">Create a new folder in <strong id="folderPathDisplay"></strong></p><input type="text" id="folderName" class="folder-input" placeholder="Folder name..."><button class="folder-btn" onclick="createFolder()">Create Folder</button></div></div></div><div class="modal-overlay" id="deleteModal"><div class="modal"><button class="modal-close" onclick="closeDeleteModal()">&times;</button><h3>🗑️ Delete Item</h3><div class="folder-form"><p class="delete-warning">⚠️ This action cannot be undone!</p><p class="file-info">Are you sure you want to delete:</p><p class="delete-item-name" id="deleteItemName"></p><input type="hidden" id="deleteItemPath"><input type="hidden" id="deleteItemType"><button class="delete-btn-confirm" onclick="confirmDelete()">Delete</button><button class="delete-btn-cancel" onclick="closeDeleteModal()">Cancel</button></div></div></div><div class="modal-overlay" id="renameModal"><div class="modal"><button class="modal-close" onclick="closeRenameModal()">&times;</button><h3>✏️ Rename File</h3><div class="folder-form"><p class="file-info">Renaming <strong id="renameItemName"></strong></p><input type="text" id="renameNewName" class="folder-input" placeholder="New file name..."><input type="hidden" id="renameItemPath"><button class="rename-btn-confirm" onclick="confirmRename()">Rename</button><button class="delete-btn-cancel" onclick="closeRenameModal()">Cancel</button></div></div></div><div class="modal-overlay" id="moveModal"><div class="modal"><button class="modal-close" onclick="closeMoveModal()">&times;</button><h3>📂 Move File</h3><div class="folder-form"><p class="file-info">Moving <strong id="moveItemName"></strong></p><input type="text" id="moveDestPath" class="folder-input" list="moveFolderOptions" placeholder="/Destination/Folder"><datalist id="moveFolderOptions"></datalist><input type="hidden" id="moveItemPath"><button class="move-btn-confirm" onclick="confirmMove()">Move</button><button class="delete-btn-cancel" onclick="closeMoveModal()">Cancel</button></div></div></div> <script>
   // get current path from query parameter
   const currentPath = decodeURIComponent(new URLSearchParams(window.location.search).get('path') || '/');
 
@@ -1080,6 +1133,170 @@ function retryAllFailedUploads() {
 
     xhr.onerror = function() {
       alert('Failed to create folder - network error');
+    };
+
+    xhr.send(formData);
+  }
+
+  // Rename functions
+  function openRenameModal(name, path) {
+    document.getElementById('renameItemName').textContent = '📄 ' + name;
+    document.getElementById('renameItemPath').value = path;
+    document.getElementById('renameNewName').value = name;
+    document.getElementById('renameModal').classList.add('open');
+    setTimeout(() => {
+      const input = document.getElementById('renameNewName');
+      input.focus();
+      input.select();
+    }, 50);
+  }
+
+  function closeRenameModal() {
+    document.getElementById('renameModal').classList.remove('open');
+  }
+
+  function confirmRename() {
+    const path = document.getElementById('renameItemPath').value;
+    const newName = document.getElementById('renameNewName').value.trim();
+
+    if (!newName) {
+      alert('Please enter a new name.');
+      return;
+    }
+    if (newName.includes('/') || newName.includes('\\')) {
+      alert('File name cannot include slashes.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('path', path);
+    formData.append('name', newName);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/rename', true);
+
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        window.location.reload();
+      } else {
+        alert('Failed to rename: ' + xhr.responseText);
+      }
+      closeRenameModal();
+    };
+
+    xhr.onerror = function() {
+      alert('Failed to rename - network error');
+      closeRenameModal();
+    };
+
+    xhr.send(formData);
+  }
+
+  // Move functions
+  function normalizePath(path) {
+    if (!path) return '/';
+    let normalized = path.trim();
+    if (!normalized.startsWith('/')) normalized = '/' + normalized;
+    if (normalized.length > 1 && normalized.endsWith('/')) {
+      normalized = normalized.slice(0, -1);
+    }
+    return normalized;
+  }
+
+  function getParentPath(path) {
+    const normalized = normalizePath(path);
+    if (normalized === '/') return '/';
+    const idx = normalized.lastIndexOf('/');
+    return idx <= 0 ? '/' : normalized.slice(0, idx);
+  }
+
+  async function loadMoveFolderOptions() {
+    const options = new Set();
+    options.add('/');
+    const parent = getParentPath(currentPath);
+    if (parent) options.add(parent);
+
+    async function fetchFolders(path) {
+      try {
+        const response = await fetch('/api/files?path=' + encodeURIComponent(path));
+        if (!response.ok) return [];
+        return await response.json();
+      } catch (e) {
+        return [];
+      }
+    }
+
+    const rootFiles = await fetchFolders('/');
+    rootFiles.forEach(file => {
+      if (file.isDirectory) {
+        options.add('/' + file.name);
+      }
+    });
+
+    if (currentPath !== '/') {
+      const currentFiles = await fetchFolders(currentPath);
+      currentFiles.forEach(file => {
+        if (file.isDirectory) {
+          let folderPath = currentPath;
+          if (!folderPath.endsWith('/')) folderPath += '/';
+          folderPath += file.name;
+          options.add(folderPath);
+        }
+      });
+    }
+
+    const dataList = document.getElementById('moveFolderOptions');
+    dataList.innerHTML = '';
+    Array.from(options).sort().forEach(path => {
+      const option = document.createElement('option');
+      option.value = path;
+      dataList.appendChild(option);
+    });
+  }
+
+  function openMoveModal(name, path) {
+    document.getElementById('moveItemName').textContent = '📄 ' + name;
+    document.getElementById('moveItemPath').value = path;
+    document.getElementById('moveDestPath').value = currentPath === '/' ? '/' : currentPath;
+    document.getElementById('moveModal').classList.add('open');
+    loadMoveFolderOptions();
+    setTimeout(() => {
+      document.getElementById('moveDestPath').focus();
+    }, 50);
+  }
+
+  function closeMoveModal() {
+    document.getElementById('moveModal').classList.remove('open');
+  }
+
+  function confirmMove() {
+    const path = document.getElementById('moveItemPath').value;
+    const destPath = normalizePath(document.getElementById('moveDestPath').value);
+
+    if (!destPath) {
+      alert('Please enter a destination folder.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('path', path);
+    formData.append('dest', destPath);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/move', true);
+
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        window.location.reload();
+      } else {
+        alert('Failed to move: ' + xhr.responseText);
+      }
+      closeMoveModal();
+    };
+
+    xhr.onerror = function() {
+      alert('Failed to move - network error');
+      closeMoveModal();
     };
 
     xhr.send(formData);

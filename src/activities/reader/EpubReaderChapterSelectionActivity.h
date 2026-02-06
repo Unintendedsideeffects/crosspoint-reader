@@ -30,7 +30,7 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   // This adapts automatically when switching between portrait and landscape.
   int getPageItems() const;
 
-  // Total items including sync options (top and bottom)
+  // Total TOC items count
   int getTotalItems() const;
 
   // Check if sync option is available (credentials configured)

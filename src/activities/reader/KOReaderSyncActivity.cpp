@@ -8,6 +8,7 @@
 #include "MappedInputManager.h"
 #include "activities/TaskShutdown.h"
 #include "activities/network/WifiSelectionActivity.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/TimeSync.h"
 
@@ -241,7 +242,7 @@ void KOReaderSyncActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 320, "Set up KOReader account in Settings");
 
     const auto labels = mappedInput.mapLabels("Back", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -314,7 +315,7 @@ void KOReaderSyncActivity::render() {
     renderer.drawText(UI_10_FONT_ID, 20, optionY + optionHeight * 2, "Cancel", selectedOption != 2);
 
     const auto labels = mappedInput.mapLabels("", "Select", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -324,7 +325,7 @@ void KOReaderSyncActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 320, "Upload current position?");
 
     const auto labels = mappedInput.mapLabels("Cancel", "Upload", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -333,7 +334,7 @@ void KOReaderSyncActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 300, "Progress uploaded!", true, EpdFontFamily::BOLD);
 
     const auto labels = mappedInput.mapLabels("Back", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -343,7 +344,7 @@ void KOReaderSyncActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 320, statusMessage.c_str());
 
     const auto labels = mappedInput.mapLabels("Back", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
