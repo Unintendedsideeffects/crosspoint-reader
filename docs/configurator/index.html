@@ -447,7 +447,7 @@
                 <div class="feature-meta">
                   Sync reading progress with KOReader service.
                 </div>
-                <div class="feature-size">Size TBD</div>
+                <div class="feature-size">~2 KB</div>
               </div>
               <label class="toggle">
                 <input
@@ -465,7 +465,7 @@
                 <div class="feature-meta">
                   OPDS browser + metadata sync settings for Calibre.
                 </div>
-                <div class="feature-size">Size TBD</div>
+                <div class="feature-size">~15 KB</div>
               </div>
               <label class="toggle">
                 <input
@@ -532,12 +532,22 @@
             <textarea id="ini-output" readonly></textarea>
           </div>
 
+          <div class="output">
+            <label for="share-output" class="feature-title"
+              >Shareable picker URL</label
+            >
+            <textarea id="share-output" readonly></textarea>
+          </div>
+
           <div class="actions">
             <button class="btn btn-secondary" id="copy-command">
               Copy generate command
             </button>
             <button class="btn btn-secondary" id="copy-flags">
               Copy build flags
+            </button>
+            <button class="btn btn-secondary" id="copy-share">
+              Copy share URL
             </button>
             <button class="btn btn-secondary" id="download-ini">
               Download platformio-custom.ini
@@ -588,12 +598,12 @@
           default: false,
         },
         koreader_sync: {
-          sizeKb: 0,
+          sizeKb: 2,
           flag: "ENABLE_KOREADER_SYNC",
           default: false,
         },
         calibre_sync: {
-          sizeKb: 0,
+          sizeKb: 15,
           flag: "ENABLE_CALIBRE_SYNC",
           default: false,
         },
@@ -638,6 +648,30 @@
           return { owner: host.split(".")[0], repo: pathParts[0] };
         }
         return { owner: "Unintendedsideeffects", repo: "crosspoint-reader" };
+      }
+
+      function parseBooleanParam(value) {
+        if (value == null) {
+          return null;
+        }
+        const normalized = value.toLowerCase();
+        if (
+          normalized === "1" ||
+          normalized === "true" ||
+          normalized === "yes" ||
+          normalized === "on"
+        ) {
+          return true;
+        }
+        if (
+          normalized === "0" ||
+          normalized === "false" ||
+          normalized === "no" ||
+          normalized === "off"
+        ) {
+          return false;
+        }
+        return null;
       }
 
       function profileToSelections(name) {
@@ -843,6 +877,37 @@
         return args.join(" ");
       }
 
+      function buildShareUrl(selections, selectedProfile) {
+        const url = new URL(window.location.href);
+        url.search = "";
+        const shareProfile =
+          selectedProfile === "custom" ? baseProfile : selectedProfile;
+        url.searchParams.set("profile", shareProfile);
+        Object.keys(FEATURES).forEach((feature) => {
+          url.searchParams.set(feature, selections[feature] ? "1" : "0");
+        });
+        return url.toString();
+      }
+
+      function parseInitialStateFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const requestedProfile = params.get("profile");
+        const initialProfile = PROFILES[requestedProfile]
+          ? requestedProfile
+          : "standard";
+        const selections = profileToSelections(initialProfile);
+
+        Object.keys(FEATURES).forEach((feature) => {
+          const parsed = parseBooleanParam(params.get(feature));
+          if (parsed !== null) {
+            selections[feature] = parsed;
+          }
+        });
+
+        applyDependencyRules(selections, null, null);
+        return { initialProfile, selections };
+      }
+
       function updateOutputs(selections, selectedProfile, matchingProfile) {
         document.getElementById("flags-output").value = buildFlags(selections);
         document.getElementById("command-output").value = buildGenerateCommand(
@@ -851,6 +916,10 @@
           baseProfile
         );
         document.getElementById("ini-output").value = buildIni(
+          selections,
+          selectedProfile
+        );
+        document.getElementById("share-output").value = buildShareUrl(
           selections,
           selectedProfile
         );
@@ -912,6 +981,13 @@
           });
 
         document
+          .getElementById("copy-share")
+          .addEventListener("click", async () => {
+            const text = document.getElementById("share-output").value;
+            await navigator.clipboard.writeText(text);
+          });
+
+        document
           .getElementById("download-ini")
           .addEventListener("click", () => {
             const content = document.getElementById("ini-output").value;
@@ -928,7 +1004,11 @@
       }
 
       setupEvents();
-      applyProfile("standard");
+      const initialState = parseInitialStateFromUrl();
+      baseProfile = initialState.initialProfile;
+      setSelections(initialState.selections);
+      highlightProfile(baseProfile);
+      updateAll();
     </script>
   </body>
 </html>

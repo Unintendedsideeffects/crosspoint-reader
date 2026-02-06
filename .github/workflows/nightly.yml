@@ -80,7 +80,13 @@ jobs:
           PY
 
       - name: Build firmware (nightly)
-        run: pio run -e gh_release
+        run: pio run -e gh_release | tee pio.log
+
+      - name: Enforce flash headroom
+        run: |
+          python scripts/check_flash_headroom.py \
+            --log pio.log \
+            --min-headroom-kb 80
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2

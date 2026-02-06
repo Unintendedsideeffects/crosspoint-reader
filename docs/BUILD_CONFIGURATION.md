@@ -123,7 +123,7 @@ Full Markdown rendering with Obsidian vault compatibility.
 ### KOReader Sync
 
 **Flag:** `ENABLE_KOREADER_SYNC`
-**Size Impact:** TBD
+**Size Impact:** ~2KB
 **Default:** Disabled
 **Depends on:** `ENABLE_INTEGRATIONS`
 
@@ -140,7 +140,7 @@ Syncs reading progress with KOReader-compatible metadata.
 ### Calibre Sync
 
 **Flag:** `ENABLE_CALIBRE_SYNC`
-**Size Impact:** TBD
+**Size Impact:** ~15KB
 **Default:** Disabled
 **Depends on:** `ENABLE_INTEGRATIONS`
 
