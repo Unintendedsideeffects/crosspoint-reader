@@ -6,7 +6,7 @@ CrossPoint Reader supports customizable firmware builds, allowing you to include
 
 - [Quick Start](#quick-start)
 - [Feature Reference](#feature-reference)
-- [Build Presets](#build-presets)
+- [Build Profiles](#build-profiles)
 - [Local Build Instructions](#local-build-instructions)
 - [GitHub Actions Builds](#github-actions-builds)
 - [Flash Memory Considerations](#flash-memory-considerations)
@@ -17,7 +17,7 @@ CrossPoint Reader supports customizable firmware builds, allowing you to include
 ### Using the Feature Picker (Easiest)
 
 1. Visit [Feature Picker](https://unintendedsideeffects.github.io/crosspoint-reader/configurator/)
-2. Select your desired features or choose a preset
+2. Select your desired features or choose a profile
 3. Click "Build on GitHub Actions"
 4. Wait ~5-10 minutes for the build to complete
 5. Download the firmware artifact and flash to your device
@@ -25,14 +25,14 @@ CrossPoint Reader supports customizable firmware builds, allowing you to include
 ### Using Command Line (Local Builds)
 
 ```bash
-# Generate configuration for standard preset
-python scripts/generate_build_config.py --preset standard
+# Generate configuration for standard profile
+uv run python scripts/generate_build_config.py --profile standard
 
 # Build custom firmware
-pio run -e custom
+uv run pio run -e custom
 
 # Flash to device
-pio run -e custom --target upload
+uv run pio run -e custom --target upload
 ```
 
 ## Feature Reference
@@ -120,6 +120,56 @@ Full Markdown rendering with Obsidian vault compatibility.
 
 ---
 
+### KOReader Sync
+
+**Flag:** `ENABLE_KOREADER_SYNC`
+**Size Impact:** TBD
+**Default:** Disabled
+**Depends on:** `ENABLE_INTEGRATIONS`
+
+Syncs reading progress with KOReader-compatible metadata.
+
+**When disabled:**
+- KOReader sync actions are unavailable
+- Core EPUB/TXT/Markdown reading is unaffected
+
+**Use case:** Enable only if you actively use KOReader sync flows.
+
+---
+
+### Calibre Sync
+
+**Flag:** `ENABLE_CALIBRE_SYNC`
+**Size Impact:** TBD
+**Default:** Disabled
+**Depends on:** `ENABLE_INTEGRATIONS`
+
+Syncs metadata and reading progress with Calibre.
+
+**When disabled:**
+- Calibre sync actions are unavailable
+- Core reader behavior is unchanged
+
+**Use case:** Enable only if you use Calibre integration.
+
+---
+
+### Integrations Base
+
+**Flag:** `ENABLE_INTEGRATIONS`
+**Size Impact:** ~8KB
+**Default:** Disabled
+
+Shared runtime hooks required by remote sync integrations.
+
+**When disabled:**
+- KOReader and Calibre sync features are forced off
+- Core reading behavior is unchanged
+
+**Use case:** Enable only when you need KOReader sync and/or Calibre OPDS flows.
+
+---
+
 ### Background Web Server
 
 **Flag:** `ENABLE_BACKGROUND_SERVER`
@@ -142,14 +192,14 @@ Keeps the WiFi file management server running in the background while reading.
 
 ---
 
-## Build Presets
+## Build Profiles
 
-### Minimal Preset
+### Lean Profile
 
-**Size:** ~5.5MB (~1.1MB savings from full build)
+**Size:** ~5.5MB (~1.0MB savings from full profile)
 
 ```bash
-python scripts/generate_build_config.py --preset minimal
+uv run python scripts/generate_build_config.py --profile lean
 ```
 
 **Features:**
@@ -165,39 +215,45 @@ python scripts/generate_build_config.py --preset minimal
 
 ---
 
-### Standard Preset (Recommended)
+### Standard Profile (Recommended)
 
-**Size:** ~6.2MB
+**Size:** ~5.9MB
 
 ```bash
-python scripts/generate_build_config.py --preset standard
+uv run python scripts/generate_build_config.py --profile standard
 ```
 
 **Features:**
 - ✓ Extended Fonts
 - ✓ PNG/JPEG Sleep
 - ✗ Markdown/Obsidian
-- ✗ Background Server
+- ✗ Integrations Base
+- ✗ KOReader Sync
+- ✗ Calibre Sync
+- ✓ Background Server
 
 **Best for:**
 - Most users
 - Good balance of features and flash space
-- Includes essential reading features
+- Includes essential reading features plus background file access
 
 ---
 
-### Full Preset
+### Full Profile
 
-**Size:** ~6.6MB (current default)
+**Size:** ~6.5MB (all optional modules)
 
 ```bash
-python scripts/generate_build_config.py --preset full
+uv run python scripts/generate_build_config.py --profile full
 ```
 
 **Features:**
 - ✓ Extended Fonts
 - ✓ PNG/JPEG Sleep
 - ✓ Markdown/Obsidian
+- ✓ Integrations Base
+- ✓ KOReader Sync
+- ✓ Calibre Sync
 - ✓ Background Server
 
 **Best for:**
@@ -219,46 +275,49 @@ python scripts/generate_build_config.py --preset full
 
 The `generate_build_config.py` script creates a `platformio-custom.ini` file with your selected features.
 
-**Using presets:**
+**Using profiles:**
 ```bash
-# Minimal build
-python scripts/generate_build_config.py --preset minimal
+# Lean build
+uv run python scripts/generate_build_config.py --profile lean
 
 # Standard build
-python scripts/generate_build_config.py --preset standard
+uv run python scripts/generate_build_config.py --profile standard
 
 # Full build
-python scripts/generate_build_config.py --preset full
+uv run python scripts/generate_build_config.py --profile full
 ```
 
 **Custom feature selection:**
 ```bash
-# Start from minimal, add specific features
-python scripts/generate_build_config.py --enable extended_fonts --enable image_sleep
+# Start from lean, add specific features
+uv run python scripts/generate_build_config.py --profile lean --enable extended_fonts --enable image_sleep
 
 # Start from full, remove specific features
-python scripts/generate_build_config.py --preset full --disable markdown
+uv run python scripts/generate_build_config.py --profile full --disable markdown
 
 # Enable only markdown
-python scripts/generate_build_config.py --enable markdown
+uv run python scripts/generate_build_config.py --enable markdown
+
+# Enable KOReader sync (auto-enables integrations base)
+uv run python scripts/generate_build_config.py --enable koreader_sync
 ```
 
 **List available features:**
 ```bash
-python scripts/generate_build_config.py --list-features
+uv run python scripts/generate_build_config.py --list-features
 ```
 
 ### Build and Flash
 
 ```bash
 # Build the custom firmware
-pio run -e custom
+uv run pio run -e custom
 
 # Build and flash in one command
-pio run -e custom --target upload
+uv run pio run -e custom --target upload
 
 # Build and monitor serial output
-pio run -e custom --target upload --target monitor
+uv run pio run -e custom --target upload --target monitor
 ```
 
 ### Verify Build Size
@@ -270,7 +329,7 @@ After building, check the firmware size:
 ls -lh .pio/build/custom/firmware.bin
 
 # Or use PlatformIO
-pio run -e custom -t size
+uv run pio run -e custom -t size
 ```
 
 ---
@@ -295,7 +354,7 @@ GitHub Actions provides cloud-based builds without requiring local build tools.
 2. Select "Build Custom Firmware" workflow
 3. Click "Run workflow"
 4. Select your branch
-5. Choose preset or toggle individual features
+5. Choose profile or toggle individual features
 6. Click "Run workflow"
 7. Wait for completion
 8. Download the `custom-firmware` artifact
@@ -323,15 +382,15 @@ The ESP32-C3 in the Xteink X4 has:
 
 | Build Type | Size | Flash Usage | Books Space |
 |------------|------|-------------|-------------|
-| Minimal | ~5.5MB | 86% | Maximum |
-| Standard | ~6.2MB | 97% | Good |
-| Full | ~6.6MB | 103%* | Tight |
+| Lean | ~5.5MB | 86% | Maximum |
+| Standard | ~5.9MB | 92% | Good |
+| Full | ~6.5MB | 102%* | Tight |
 
 *Note: Full build exceeds partition size but compression may allow it to fit. Test before deploying.
 
 ### Tips for Managing Flash Space
 
-1. **Start with Standard preset** - best balance for most users
+1. **Start with Standard profile** - best balance for most users
 2. **Disable unused features** - save space for more books
 3. **Use BMP sleep images** - if you don't need PNG/JPEG
 4. **Skip Markdown** - largest single feature at ~560KB
@@ -347,12 +406,12 @@ The ESP32-C3 in the Xteink X4 has:
 
 **Solutions:**
 1. Disable one or more features
-2. Use a smaller preset (Standard instead of Full)
+2. Use a smaller profile (Standard instead of Full)
 3. Specifically disable large features like Markdown (~560KB)
 
 Example:
 ```bash
-python scripts/generate_build_config.py --preset standard
+uv run python scripts/generate_build_config.py --profile standard
 ```
 
 ### Feature Not Working After Flash
@@ -372,8 +431,8 @@ python scripts/generate_build_config.py --preset standard
 
 **Solution:** Rebuild with Markdown enabled:
 ```bash
-python scripts/generate_build_config.py --enable markdown
-pio run -e custom --target upload
+uv run python scripts/generate_build_config.py --enable markdown
+uv run pio run -e custom --target upload
 ```
 
 ### Sleep Images Not Loading
@@ -385,8 +444,8 @@ pio run -e custom --target upload
 **Solutions:**
 1. Rebuild with image sleep enabled:
    ```bash
-   python scripts/generate_build_config.py --enable image_sleep
-   pio run -e custom --target upload
+   uv run python scripts/generate_build_config.py --enable image_sleep
+   uv run pio run -e custom --target upload
    ```
 2. Or convert your images to BMP format (works in all builds)
 
@@ -401,7 +460,7 @@ pio run -e custom --target upload
 
 **Solutions:**
 1. Check the Actions log for specific errors
-2. Try a known-good preset (standard)
+2. Try a known-good profile (standard)
 3. Ensure your fork is up to date with upstream
 
 ### How to Check Current Build Configuration
@@ -431,6 +490,9 @@ build_flags =
   -DENABLE_EXTENDED_FONTS=1
   -DENABLE_IMAGE_SLEEP=1
   -DENABLE_MARKDOWN=0
+  -DENABLE_INTEGRATIONS=0
+  -DENABLE_KOREADER_SYNC=0
+  -DENABLE_CALIBRE_SYNC=0
   -DENABLE_BACKGROUND_SERVER=0
 ```
 
@@ -462,7 +524,7 @@ To add a new optional feature:
    )
    ```
 
-4. Update presets as needed
+4. Update profiles as needed
 
 ---
 

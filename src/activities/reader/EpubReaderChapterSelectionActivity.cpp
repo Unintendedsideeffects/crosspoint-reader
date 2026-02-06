@@ -2,18 +2,28 @@
 
 #include <GfxRenderer.h>
 
-#include "KOReaderCredentialStore.h"
-#include "KOReaderSyncActivity.h"
+#include "FeatureFlags.h"
 #include "MappedInputManager.h"
 #include "activities/TaskShutdown.h"
 #include "fontIds.h"
+
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+#include "KOReaderCredentialStore.h"
+#include "KOReaderSyncActivity.h"
+#endif
 
 namespace {
 // Time threshold for treating a long press as a page-up/page-down
 constexpr int SKIP_PAGE_MS = 700;
 }  // namespace
 
-bool EpubReaderChapterSelectionActivity::hasSyncOption() const { return KOREADER_STORE.hasCredentials(); }
+bool EpubReaderChapterSelectionActivity::hasSyncOption() const {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  return KOREADER_STORE.hasCredentials();
+#else
+  return false;
+#endif
+}
 
 int EpubReaderChapterSelectionActivity::getTotalItems() const {
   // Add 2 for sync options (top and bottom) if credentials are configured
@@ -94,6 +104,7 @@ void EpubReaderChapterSelectionActivity::onExit() {
 }
 
 void EpubReaderChapterSelectionActivity::launchSyncActivity() {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   exitActivity();
   enterNewActivity(new KOReaderSyncActivity(
@@ -109,6 +120,9 @@ void EpubReaderChapterSelectionActivity::launchSyncActivity() {
         onSyncPosition(newSpineIndex, newPage);
       }));
   xSemaphoreGive(renderingMutex);
+#else
+  onGoBack();
+#endif
 }
 
 void EpubReaderChapterSelectionActivity::loop() {

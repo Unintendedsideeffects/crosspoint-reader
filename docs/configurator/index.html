@@ -139,6 +139,16 @@
         gap: 14px;
       }
 
+      .profile-status {
+        margin-top: 10px;
+        font-size: 0.9rem;
+        color: var(--ink-soft);
+      }
+
+      .profile-status strong {
+        color: var(--accent-2);
+      }
+
       .feature-item {
         display: flex;
         align-items: center;
@@ -147,6 +157,10 @@
         border-radius: 14px;
         border: 1px solid var(--border);
         background: #fbfaf8;
+      }
+
+      .feature-item.disabled {
+        opacity: 0.6;
       }
 
       .feature-title {
@@ -329,11 +343,11 @@
 
       <div class="grid">
         <section class="card">
-          <h2>Presets</h2>
+          <h2>Profiles</h2>
           <div class="preset-row">
-            <button class="preset-btn" data-preset="minimal">
-              Minimal
-              <span>Smallest footprint</span>
+            <button class="preset-btn" data-preset="lean">
+              Lean
+              <span>Core reader only</span>
             </button>
             <button class="preset-btn active" data-preset="standard">
               Standard
@@ -341,8 +355,13 @@
             </button>
             <button class="preset-btn" data-preset="full">
               Full
-              <span>Everything enabled</span>
+              <span>All optional modules</span>
             </button>
+          </div>
+          <div class="profile-status" id="profile-status"></div>
+          <div class="note" style="margin-top: 12px">
+            KOReader Sync and Calibre Sync are downstream toggles and require
+            Integrations Base.
           </div>
 
           <h2 style="margin-top: 24px">Features</h2>
@@ -406,9 +425,27 @@
 
             <div class="feature-item">
               <div>
+                <div class="feature-title">Integrations Base</div>
+                <div class="feature-meta">
+                  Shared hooks for remote sync integrations.
+                </div>
+                <div class="feature-size">~8 KB</div>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  id="integrations"
+                  data-feature="integrations"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="feature-item">
+              <div>
                 <div class="feature-title">KOReader Sync</div>
                 <div class="feature-meta">
-                  Sync reading progress with KOReader.
+                  Sync reading progress with KOReader service.
                 </div>
                 <div class="feature-size">Size TBD</div>
               </div>
@@ -426,7 +463,7 @@
               <div>
                 <div class="feature-title">Calibre Sync</div>
                 <div class="feature-meta">
-                  Sync metadata and reading progress with Calibre.
+                  OPDS browser + metadata sync settings for Calibre.
                 </div>
                 <div class="feature-size">Size TBD</div>
               </div>
@@ -464,12 +501,12 @@
         <section class="card">
           <div class="size-panel">
             <div class="size-label">Estimated Firmware Size</div>
-            <div class="size-value" id="size-value">6.6 MB</div>
+            <div class="size-value" id="size-value">5.9 MB</div>
             <div class="size-bar">
               <div class="size-bar-fill" id="size-bar"></div>
             </div>
             <div class="size-context" id="size-context">
-              103% of 6.4 MB flash budget
+              92% of 6.4 MB flash budget
             </div>
           </div>
 
@@ -482,6 +519,13 @@
           </div>
 
           <div class="output">
+            <label for="command-output" class="feature-title"
+              >Local generate command</label
+            >
+            <textarea id="command-output" readonly></textarea>
+          </div>
+
+          <div class="output">
             <label for="ini-output" class="feature-title"
               >platformio-custom.ini</label
             >
@@ -489,6 +533,9 @@
           </div>
 
           <div class="actions">
+            <button class="btn btn-secondary" id="copy-command">
+              Copy generate command
+            </button>
             <button class="btn btn-secondary" id="copy-flags">
               Copy build flags
             </button>
@@ -535,6 +582,11 @@
           flag: "ENABLE_MARKDOWN",
           default: true,
         },
+        integrations: {
+          sizeKb: 8,
+          flag: "ENABLE_INTEGRATIONS",
+          default: false,
+        },
         koreader_sync: {
           sizeKb: 0,
           flag: "ENABLE_KOREADER_SYNC",
@@ -554,22 +606,30 @@
 
       const BASE_SIZE_MB = 5.5;
       const MAX_FLASH_MB = 6.4;
+      const FEATURE_DEPENDENCIES = {
+        koreader_sync: ["integrations"],
+        calibre_sync: ["integrations"],
+      };
 
-      const PRESETS = {
-        minimal: {},
+      const PROFILES = {
+        lean: {},
         standard: {
           extended_fonts: true,
           image_sleep: true,
+          background_server: true,
         },
         full: {
           extended_fonts: true,
           image_sleep: true,
           markdown: true,
+          integrations: true,
           koreader_sync: true,
           calibre_sync: true,
           background_server: true,
         },
       };
+
+      let baseProfile = "standard";
 
       function getRepoInfo() {
         const host = window.location.hostname;
@@ -580,16 +640,128 @@
         return { owner: "Unintendedsideeffects", repo: "crosspoint-reader" };
       }
 
-      function applyPreset(name) {
-        const preset = PRESETS[name] || {};
-        document.querySelectorAll(".preset-btn").forEach((btn) => {
-          btn.classList.toggle("active", btn.dataset.preset === name);
+      function profileToSelections(name) {
+        const profile = PROFILES[name] || {};
+        const selections = {};
+        Object.keys(FEATURES).forEach((feature) => {
+          selections[feature] = Boolean(profile[feature]);
         });
+        return selections;
+      }
+
+      function setSelections(selections) {
         Object.keys(FEATURES).forEach((feature) => {
           const checkbox = document.getElementById(feature);
-          checkbox.checked = preset[feature] || false;
+          checkbox.checked = Boolean(selections[feature]);
         });
+      }
+
+      function enableDependencies(feature, selections) {
+        const parents = FEATURE_DEPENDENCIES[feature] || [];
+        parents.forEach((parent) => {
+          if (!selections[parent]) {
+            selections[parent] = true;
+            enableDependencies(parent, selections);
+          }
+        });
+      }
+
+      function disableDependents(feature, selections) {
+        Object.keys(FEATURE_DEPENDENCIES).forEach((child) => {
+          const parents = FEATURE_DEPENDENCIES[child] || [];
+          if (parents.includes(feature) && selections[child]) {
+            selections[child] = false;
+            disableDependents(child, selections);
+          }
+        });
+      }
+
+      function applyDependencyRules(selections, changedFeature, enabled) {
+        if (changedFeature) {
+          if (enabled) {
+            enableDependencies(changedFeature, selections);
+          } else {
+            disableDependents(changedFeature, selections);
+          }
+        }
+
+        Object.keys(FEATURE_DEPENDENCIES).forEach((child) => {
+          const parents = FEATURE_DEPENDENCIES[child] || [];
+          const missingParent = parents.some((parent) => !selections[parent]);
+          if (missingParent) {
+            selections[child] = false;
+          }
+        });
+      }
+
+      function updateDependencyUi(selections) {
+        Object.keys(FEATURES).forEach((feature) => {
+          const checkbox = document.getElementById(feature);
+          const parents = FEATURE_DEPENDENCIES[feature] || [];
+          const blocked = parents.some((parent) => !selections[parent]);
+          checkbox.disabled = blocked;
+          if (blocked) {
+            const childLabel = checkbox
+              .closest(".feature-item")
+              .querySelector(".feature-title")
+              .textContent.trim();
+            const parentLabels = parents.map((parent) =>
+              document
+                .getElementById(parent)
+                .closest(".feature-item")
+                .querySelector(".feature-title")
+                .textContent.trim()
+            );
+            checkbox.title = `${childLabel} requires ${parentLabels.join(
+              ", "
+            )}`;
+          } else {
+            checkbox.title = "";
+          }
+
+          const item = checkbox.closest(".feature-item");
+          if (item) {
+            item.classList.toggle("disabled", blocked);
+          }
+        });
+      }
+
+      function highlightProfile(profileName) {
+        document.querySelectorAll(".preset-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.preset === profileName);
+        });
+      }
+
+      function detectMatchingProfile(selections) {
+        for (const [profileName] of Object.entries(PROFILES)) {
+          const profileSelections = profileToSelections(profileName);
+          const isMatch = Object.keys(FEATURES).every(
+            (feature) => selections[feature] === profileSelections[feature]
+          );
+          if (isMatch) {
+            return profileName;
+          }
+        }
+        return null;
+      }
+
+      function applyProfile(name) {
+        if (!PROFILES[name]) {
+          return;
+        }
+        baseProfile = name;
+        setSelections(profileToSelections(name));
+        highlightProfile(name);
         updateAll();
+      }
+
+      function updateProfileStatus(matchingProfile) {
+        const status = document.getElementById("profile-status");
+        if (matchingProfile) {
+          status.innerHTML = `Active profile: <strong>${matchingProfile}</strong>`;
+        } else {
+          status.innerHTML = `Active profile: <strong>custom</strong> (manual overrides from ${baseProfile})`;
+        }
       }
 
       function readSelections() {
@@ -642,21 +814,53 @@
         return flags.join(" ");
       }
 
-      function buildIni(selections) {
-        return `[env:custom]\nextends = env:esp32\nbuild_flags =\n  ${buildFlags(
-          selections
-        ).replace(/ -D/g, "\n  -D")}\n`;
+      function buildIni(selections, selectedProfile) {
+        const flags = buildFlags(selections).replace(/ -D/g, "\n  -D");
+        return `# Custom CrossPoint Reader Build Configuration\n# Generated by web configurator\n# Selected profile: ${selectedProfile}\n\n[env:custom]\nextends = base\nbuild_flags =\n  \\${base.build_flags}\n  -DCROSSPOINT_VERSION=\\\"\\${crosspoint.version}-custom\\\"\n  ${flags}\n`;
       }
 
-      function updateOutputs(selections) {
+      function buildGenerateCommand(selections, matchingProfile, baseProfileName) {
+        if (matchingProfile) {
+          return `uv run python scripts/generate_build_config.py --profile ${matchingProfile}`;
+        }
+
+        const baseSelections = profileToSelections(baseProfileName);
+        const args = [
+          "uv run python scripts/generate_build_config.py",
+          `--profile ${baseProfileName}`,
+        ];
+
+        Object.keys(FEATURES).forEach((feature) => {
+          if (selections[feature] !== baseSelections[feature]) {
+            args.push(
+              selections[feature]
+                ? `--enable ${feature}`
+                : `--disable ${feature}`
+            );
+          }
+        });
+
+        return args.join(" ");
+      }
+
+      function updateOutputs(selections, selectedProfile, matchingProfile) {
         document.getElementById("flags-output").value = buildFlags(selections);
-        document.getElementById("ini-output").value = buildIni(selections);
+        document.getElementById("command-output").value = buildGenerateCommand(
+          selections,
+          matchingProfile,
+          baseProfile
+        );
+        document.getElementById("ini-output").value = buildIni(
+          selections,
+          selectedProfile
+        );
       }
 
-      function updateBuildLink(selections) {
+      function updateBuildLink(selections, selectedProfile) {
         const repo = getRepoInfo();
         const workflow = "build-custom.yml";
         const params = new URLSearchParams();
+        params.set("profile", selectedProfile);
         Object.keys(FEATURES).forEach((feature) => {
           params.set(feature, selections[feature] ? "true" : "false");
         });
@@ -664,23 +868,40 @@
         document.getElementById("build-link").href = url;
       }
 
-      function updateAll() {
+      function updateAll(changedFeature = null, enabled = null) {
         const selections = readSelections();
+        applyDependencyRules(selections, changedFeature, enabled);
+        setSelections(selections);
+        updateDependencyUi(selections);
+        const matchingProfile = detectMatchingProfile(selections);
+        highlightProfile(matchingProfile);
+        updateProfileStatus(matchingProfile);
+        const selectedProfile = matchingProfile || "custom";
         const size = computeSize(selections);
         updateSizeDisplay(size);
-        updateOutputs(selections);
-        updateBuildLink(selections);
+        updateOutputs(selections, selectedProfile, matchingProfile);
+        updateBuildLink(selections, selectedProfile);
       }
 
       function setupEvents() {
         document.querySelectorAll(".preset-btn").forEach((btn) => {
-          btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
+          btn.addEventListener("click", () => applyProfile(btn.dataset.preset));
         });
 
         document
           .querySelectorAll("input[data-feature]")
           .forEach((checkbox) => {
-            checkbox.addEventListener("change", updateAll);
+            checkbox.addEventListener("change", (event) => {
+              const feature = event.target.dataset.feature;
+              updateAll(feature, event.target.checked);
+            });
+          });
+
+        document
+          .getElementById("copy-command")
+          .addEventListener("click", async () => {
+            const text = document.getElementById("command-output").value;
+            await navigator.clipboard.writeText(text);
           });
 
         document
@@ -707,7 +928,7 @@
       }
 
       setupEvents();
-      applyPreset("standard");
+      applyProfile("standard");
     </script>
   </body>
 </html>

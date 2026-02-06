@@ -3,16 +3,16 @@ name: Build Custom Firmware
 on:
   workflow_dispatch:
     inputs:
-      preset:
-        description: 'Feature Preset'
+      profile:
+        description: 'Build profile'
         required: true
         type: choice
-        default: 'custom'
+        default: 'standard'
         options:
-          - custom
-          - minimal
+          - lean
           - standard
           - full
+          - custom
       extended_fonts:
         description: 'Extended Fonts (12/16/18pt + OpenDyslexic, ~300K)'
         required: false
@@ -27,7 +27,22 @@ on:
         description: 'Markdown/Obsidian Support (~560K)'
         required: false
         type: boolean
-        default: true
+        default: false
+      integrations:
+        description: 'Integrations base layer (~8K)'
+        required: false
+        type: boolean
+        default: false
+      koreader_sync:
+        description: 'KOReader Sync (size TBD)'
+        required: false
+        type: boolean
+        default: false
+      calibre_sync:
+        description: 'Calibre Sync (size TBD)'
+        required: false
+        type: boolean
+        default: false
       background_server:
         description: 'Background Web Server (~5K)'
         required: false
@@ -48,26 +63,22 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Cache PlatformIO
-        uses: actions/cache@v4
-        with:
-          path: ~/.platformio
-          key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
-          restore-keys: ${{ runner.os }}-platformio-
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
 
-      - name: Install PlatformIO
-        run: pip install --upgrade platformio
+      - name: Install dependencies
+        run: uv sync --frozen
 
       - name: Generate custom build configuration
         id: config
         run: |
-          # Build the command based on preset or individual features
-          if [ "${{ inputs.preset }}" != "custom" ]; then
-            echo "Using preset: ${{ inputs.preset }}"
-            python scripts/generate_build_config.py --preset "${{ inputs.preset }}"
+          # Build the command based on profile or individual features
+          if [ "${{ inputs.profile }}" != "custom" ]; then
+            echo "Using profile: ${{ inputs.profile }}"
+            uv run python scripts/generate_build_config.py --profile "${{ inputs.profile }}"
           else
             echo "Using custom feature selection"
-            CMD="python scripts/generate_build_config.py"
+            CMD="uv run python scripts/generate_build_config.py"
 
             # Add enabled features
             if [ "${{ inputs.extended_fonts }}" == "true" ]; then
@@ -78,6 +89,15 @@ jobs:
             fi
             if [ "${{ inputs.markdown }}" == "true" ]; then
               CMD="$CMD --enable markdown"
+            fi
+            if [ "${{ inputs.integrations }}" == "true" ]; then
+              CMD="$CMD --enable integrations"
+            fi
+            if [ "${{ inputs.koreader_sync }}" == "true" ]; then
+              CMD="$CMD --enable koreader_sync"
+            fi
+            if [ "${{ inputs.calibre_sync }}" == "true" ]; then
+              CMD="$CMD --enable calibre_sync"
             fi
             if [ "${{ inputs.background_server }}" == "true" ]; then
               CMD="$CMD --enable background_server"
@@ -92,22 +112,25 @@ jobs:
           cat platformio-custom.ini
 
       - name: Build custom firmware
-        run: pio run -e custom
+        run: uv run pio run -e custom
 
       - name: Report firmware size
         run: |
           echo "### Custom Firmware Build" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ inputs.preset }}" != "custom" ]; then
-            echo "**Preset:** ${{ inputs.preset }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.profile }}" != "custom" ]; then
+            echo "**Profile:** ${{ inputs.profile }}" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Preset:** Custom" >> $GITHUB_STEP_SUMMARY
+            echo "**Profile:** custom" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Features:**" >> $GITHUB_STEP_SUMMARY
             echo "- Extended Fonts: ${{ inputs.extended_fonts }}" >> $GITHUB_STEP_SUMMARY
             echo "- PNG/JPEG Sleep: ${{ inputs.image_sleep }}" >> $GITHUB_STEP_SUMMARY
             echo "- Markdown/Obsidian: ${{ inputs.markdown }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Integrations Base: ${{ inputs.integrations }}" >> $GITHUB_STEP_SUMMARY
+            echo "- KOReader Sync: ${{ inputs.koreader_sync }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Calibre Sync: ${{ inputs.calibre_sync }}" >> $GITHUB_STEP_SUMMARY
             echo "- Background Server: ${{ inputs.background_server }}" >> $GITHUB_STEP_SUMMARY
           fi
 

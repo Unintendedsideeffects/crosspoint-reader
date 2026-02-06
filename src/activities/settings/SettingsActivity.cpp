@@ -5,6 +5,7 @@
 
 #include "CategorySettingsActivity.h"
 #include "CrossPointSettings.h"
+#include "FeatureFlags.h"
 #include "MappedInputManager.h"
 #include "activities/TaskShutdown.h"
 #include "fontIds.h"
@@ -50,14 +51,25 @@ const SettingInfo controlsSettings[controlsSettingsCount] = {
     SettingInfo::Enum("Short Power Button Click", &CrossPointSettings::shortPwrBtn,
                       {"Ignore", "Sleep", "Page Turn", "Select"})};
 
-constexpr int systemSettingsCount = 7;
+constexpr int systemSettingsCount = 5 +
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+                                    1 +
+#endif
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+                                    1 +
+#endif
+                                    0;
 const SettingInfo systemSettings[systemSettingsCount] = {
     SettingInfo::Enum("Time to Sleep", &CrossPointSettings::sleepTimeout,
                       {"1 min", "5 min", "10 min", "15 min", "30 min"}),
     SettingInfo::Toggle("File Server on Charge", &CrossPointSettings::backgroundServerOnCharge),
     SettingInfo::Enum("Release Channel", &CrossPointSettings::releaseChannel, {"Stable", "Nightly", "Latest Build"}),
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
     SettingInfo::Action("KOReader Sync"),
+#endif
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
     SettingInfo::Action("OPDS Browser"),
+#endif
     SettingInfo::Action("Clear Cache"),
     SettingInfo::Action("Check for updates")};
 }  // namespace

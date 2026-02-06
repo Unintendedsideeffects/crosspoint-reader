@@ -12,13 +12,12 @@
 #include "Battery.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
-#include "KOReaderCredentialStore.h"
+#include "FeatureManifest.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "WifiCredentialStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
-#include "activities/browser/OpdsBookBrowserActivity.h"
 #include "activities/home/HomeActivity.h"
 #include "activities/home/MyLibraryActivity.h"
 #include "activities/network/CrossPointWebServerActivity.h"
@@ -31,16 +30,19 @@
 #include "network/BackgroundWebServer.h"
 #include "util/DateUtils.h"
 
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+#include "KOReaderCredentialStore.h"
+#endif
+
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+#include "activities/browser/OpdsBookBrowserActivity.h"
+#endif
+
 HalDisplay display;
 HalGPIO gpio;
 MappedInputManager mappedInputManager(gpio);
 GfxRenderer renderer(display);
 Activity* currentActivity;
-
-// Feature flags - default to enabled unless build system overrides
-#ifndef ENABLE_EXTENDED_FONTS
-#define ENABLE_EXTENDED_FONTS 1
-#endif
 
 // Fonts
 EpdFont bookerly14RegularFont(&bookerly_14_regular);
@@ -243,8 +245,12 @@ void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab)
 }
 
 void onGoToBrowser() {
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
   exitActivity();
   enterNewActivity(new OpdsBookBrowserActivity(renderer, mappedInputManager, onGoHome));
+#else
+  return;
+#endif
 }
 
 void onGoToTodo() {
@@ -333,6 +339,9 @@ void setup() {
     while (!Serial && (millis() - start) < 3000) {
       delay(10);
     }
+
+    // Print feature configuration for debugging
+    FeatureManifest::printToSerial();
   }
 
   // SD Card Initialization
@@ -346,7 +355,9 @@ void setup() {
   }
 
   SETTINGS.loadFromFile();
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.loadFromFile();
+#endif
   WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
 
   if (gpio.isWakeupByPowerButton()) {

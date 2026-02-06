@@ -12,6 +12,7 @@
 #include "Battery.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "FeatureFlags.h"
 #include "MappedInputManager.h"
 #include "ScreenComponents.h"
 #include "SpiBusMutex.h"
@@ -27,7 +28,9 @@ void HomeActivity::taskTrampoline(void* param) {
 int HomeActivity::getMenuItemCount() const {
   int count = 4;  // My Library, TODO, File transfer, Settings
   if (hasContinueReading) count++;
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
   if (hasOpdsUrl) count++;
+#endif
   return count;
 }
 
@@ -41,8 +44,12 @@ void HomeActivity::onEnter() {
   // Check if we have a book to continue reading
   hasContinueReading = !APP_STATE.openEpubPath.empty() && SdMan.exists(APP_STATE.openEpubPath.c_str());
 
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
   // Check if OPDS browser URL is configured
   hasOpdsUrl = strlen(SETTINGS.opdsServerUrl) > 0;
+#else
+  hasOpdsUrl = false;
+#endif
 
   if (hasContinueReading) {
     // Extract filename from path for display
@@ -172,7 +179,9 @@ void HomeActivity::loop() {
     int idx = 0;
     const int continueIdx = hasContinueReading ? idx++ : -1;
     const int myLibraryIdx = idx++;
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
     const int opdsLibraryIdx = hasOpdsUrl ? idx++ : -1;
+#endif
     const int todoIdx = idx++;
     const int fileTransferIdx = idx++;
     const int settingsIdx = idx;
@@ -181,8 +190,10 @@ void HomeActivity::loop() {
       onContinueReading();
     } else if (selectorIndex == myLibraryIdx) {
       onMyLibraryOpen();
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
     } else if (selectorIndex == opdsLibraryIdx) {
       onOpdsBrowserOpen();
+#endif
     } else if (selectorIndex == todoIdx) {
       onTodoOpen();
     } else if (selectorIndex == fileTransferIdx) {
@@ -512,10 +523,12 @@ void HomeActivity::render() {
   // --- Bottom menu tiles ---
   // Build menu items dynamically
   std::vector<const char*> menuItems = {"My Library", "TODO", "File Transfer", "Settings"};
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
   if (hasOpdsUrl) {
     // Insert OPDS Browser after My Library
     menuItems.insert(menuItems.begin() + 1, "OPDS Browser");
   }
+#endif
 
   const int menuTileWidth = pageWidth - 2 * margin;
   constexpr int menuTileHeight = 45;
