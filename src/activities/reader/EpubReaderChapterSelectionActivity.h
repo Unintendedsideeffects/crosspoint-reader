@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "../ActivityWithSubactivity.h"
+#include "FeatureFlags.h"
 
 class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity {
   std::shared_ptr<Epub> epub;
@@ -35,8 +36,10 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   // Check if sync option is available (credentials configured)
   bool hasSyncOption() const;
 
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   // Check if given item index is a sync option (first or last)
   bool isSyncItem(int index) const;
+#endif
 
   // Convert item index to TOC index (accounting for top sync option offset)
   int tocIndexFromItemIndex(int itemIndex) const;
@@ -44,7 +47,9 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   static void taskTrampoline(void* param);
   void displayTaskLoop();
   void renderScreen();
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   void launchSyncActivity();
+#endif
 
  public:
   explicit EpubReaderChapterSelectionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,

@@ -31,16 +31,14 @@ int EpubReaderChapterSelectionActivity::getTotalItems() const {
   return epub->getTocItemsCount() + syncCount;
 }
 
-bool EpubReaderChapterSelectionActivity::isSyncItem(int index) const {
+// Only compiled when KOReader sync integration is available.
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+bool EpubReaderChapterSelectionActivity::isSyncItem(int index) const {
   if (!KOREADER_STORE.hasCredentials()) return false;
   // First item and last item are sync options
   return index == 0 || index == getTotalItems() - 1;
-#else
-  (void)index;
-  return false;
-#endif
 }
+#endif
 
 int EpubReaderChapterSelectionActivity::tocIndexFromItemIndex(int itemIndex) const {
   // Account for the sync option at the top
@@ -108,8 +106,9 @@ void EpubReaderChapterSelectionActivity::onExit() {
   renderingMutex = nullptr;
 }
 
-void EpubReaderChapterSelectionActivity::launchSyncActivity() {
+// Only compiled when KOReader sync integration is available.
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+void EpubReaderChapterSelectionActivity::launchSyncActivity() {
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   exitActivity();
   enterNewActivity(new KOReaderSyncActivity(
@@ -125,10 +124,8 @@ void EpubReaderChapterSelectionActivity::launchSyncActivity() {
         onSyncPosition(newSpineIndex, newPage);
       }));
   xSemaphoreGive(renderingMutex);
-#else
-  onGoBack();
-#endif
 }
+#endif
 
 void EpubReaderChapterSelectionActivity::loop() {
   if (subActivity) {
