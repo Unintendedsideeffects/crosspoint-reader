@@ -15,6 +15,7 @@
 #include "WifiSelectionActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "util/TimeSync.h"
 
 namespace {
 // AP Mode configuration
@@ -191,6 +192,9 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
     isApMode = false;
 
     exitActivity();
+
+    // Sync time via NTP now that WiFi is connected
+    TimeSync::syncTimeWithNtpLowMemory();
 
     // Start mDNS for hostname resolution
     if (MDNS.begin(HOSTNAME)) {
