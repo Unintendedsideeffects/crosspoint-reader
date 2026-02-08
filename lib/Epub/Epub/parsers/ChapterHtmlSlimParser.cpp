@@ -1,5 +1,6 @@
 #include "ChapterHtmlSlimParser.h"
 
+#include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <Logging.h>
@@ -186,15 +187,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
           std::string htmlDir = (lastSlash != std::string::npos) ? htmlHref.substr(0, lastSlash + 1) : "";
 
           // Resolve the image path relative to the HTML file
-          std::string imageHref = src;
-          while (imageHref.find("../") == 0) {
-            imageHref = imageHref.substr(3);
-            if (!htmlDir.empty()) {
-              size_t dirSlash = htmlDir.find_last_of('/', htmlDir.length() - 2);
-              htmlDir = (dirSlash != std::string::npos) ? htmlDir.substr(0, dirSlash + 1) : "";
-            }
-          }
-          std::string resolvedPath = htmlDir + imageHref;
+          std::string resolvedPath = FsHelpers::normalisePath(htmlDir + src);
 
           // Create a unique filename for the cached image
           std::string ext;
