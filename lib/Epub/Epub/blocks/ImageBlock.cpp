@@ -139,7 +139,8 @@ void ImageBlock::render(GfxRenderer& renderer, const int x, const int y) {
   config.useGrayscale = true;
   config.useDithering = true;
   config.performanceMode = false;
-  config.cachePath = cachePath;  // Enable caching during decode
+  config.useExactDimensions = true;  // Use pre-calculated dimensions to avoid rounding mismatches
+  config.cachePath = cachePath;      // Enable caching during decode
 
   ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(imagePath);
   if (!decoder) {

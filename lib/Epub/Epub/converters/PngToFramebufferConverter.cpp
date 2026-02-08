@@ -241,16 +241,25 @@ bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath
     return false;
   }
 
-  // Calculate scale factor to fit within maxWidth x maxHeight
+  // Calculate output dimensions
   ctx.srcWidth = png.getWidth();
   ctx.srcHeight = png.getHeight();
-  float scaleX = (float)config.maxWidth / ctx.srcWidth;
-  float scaleY = (float)config.maxHeight / ctx.srcHeight;
-  ctx.scale = (scaleX < scaleY) ? scaleX : scaleY;
-  if (ctx.scale > 1.0f) ctx.scale = 1.0f;  // Don't upscale
 
-  ctx.dstWidth = (int)(ctx.srcWidth * ctx.scale);
-  ctx.dstHeight = (int)(ctx.srcHeight * ctx.scale);
+  if (config.useExactDimensions && config.maxWidth > 0 && config.maxHeight > 0) {
+    // Use exact dimensions as specified (avoids rounding mismatches with pre-calculated sizes)
+    ctx.dstWidth = config.maxWidth;
+    ctx.dstHeight = config.maxHeight;
+    ctx.scale = (float)ctx.dstWidth / ctx.srcWidth;
+  } else {
+    // Calculate scale factor to fit within maxWidth/maxHeight
+    float scaleX = (float)config.maxWidth / ctx.srcWidth;
+    float scaleY = (float)config.maxHeight / ctx.srcHeight;
+    ctx.scale = (scaleX < scaleY) ? scaleX : scaleY;
+    if (ctx.scale > 1.0f) ctx.scale = 1.0f;  // Don't upscale
+
+    ctx.dstWidth = (int)(ctx.srcWidth * ctx.scale);
+    ctx.dstHeight = (int)(ctx.srcHeight * ctx.scale);
+  }
   ctx.lastDstY = -1;  // Reset row tracking
 
   Serial.printf("[%lu] [PNG] PNG %dx%d -> %dx%d (scale %.2f), bpp: %d\n", millis(), ctx.srcWidth, ctx.srcHeight,
