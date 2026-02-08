@@ -1,6 +1,7 @@
 #pragma once
 #include <HalStorage.h>
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -60,9 +61,7 @@ class Page {
 
   // Check if page contains any images (used to force full refresh)
   bool hasImages() const {
-    for (const auto& el : elements) {
-      if (el->getTag() == TAG_PageImage) return true;
-    }
-    return false;
+    return std::any_of(elements.begin(), elements.end(),
+                       [](const std::shared_ptr<PageElement>& el) { return el->getTag() == TAG_PageImage; });
   }
 };
