@@ -606,7 +606,7 @@ bool Markdown::renderToHtmlFile(const std::string& htmlPath) const {
 
   std::vector<std::string> stack;
   stack.push_back(filepath);
-  const std::string output = preprocessContent(content, 0, stack);
+  std::string output = preprocessContent(std::move(content), 0, stack);
 
   FsFile htmlFile;
   if (!SdMan.openFileForWrite("MD ", htmlPath, htmlFile)) {
@@ -1013,12 +1013,19 @@ std::string Markdown::getContent() const {
   return content;
 }
 
-std::string Markdown::preprocessContent(const std::string& content, int depth, std::vector<std::string>& stack) const {
+std::string Markdown::preprocessContent(std::string content, int depth, std::vector<std::string>& stack) const {
   if (depth > MAX_EMBED_DEPTH) {
     return "[Embedded note omitted]";
   }
 
   std::string processed = stripFrontmatter(content);
+
+  // Release the raw content now — stripFrontmatter returned an independent copy
+  // and we no longer need the original.  On memory-constrained devices this
+  // avoids holding two full copies of the file simultaneously.
+  content.clear();
+  content.shrink_to_fit();
+
   processed = stripComments(processed);
 
   bool inFence = false;
@@ -1232,6 +1239,13 @@ std::string Markdown::preprocessContent(const std::string& content, int depth, s
   }
 
   const bool endsWithNewline = !processed.empty() && processed.back() == '\n';
+
+  // Release processed now that lines have been extracted — on memory-constrained
+  // devices holding both the full string and the line vector simultaneously can
+  // push past the available heap for large files.
+  processed.clear();
+  processed.shrink_to_fit();
+
   std::vector<std::string> outLines;
   outLines.reserve(lines.size() + 16);
 
@@ -1319,8 +1333,19 @@ std::string Markdown::preprocessContent(const std::string& content, int depth, s
     i++;
   }
 
+  // Release lines now that outLines has been built.
+  lines.clear();
+  lines.shrink_to_fit();
+
   std::string output;
-  output.reserve(processed.size() + 64);
+  {
+    // Estimate output size from outLines content.
+    size_t estimatedSize = 0;
+    for (const auto& line : outLines) {
+      estimatedSize += line.size() + 1;
+    }
+    output.reserve(estimatedSize);
+  }
   for (size_t i = 0; i < outLines.size(); i++) {
     output.append(outLines[i]);
     if (output.size() >= MarkdownParser::MAX_INPUT_SIZE) {
@@ -1352,7 +1377,8 @@ bool Markdown::parseToAst() {
   MarkdownParser parser;
   std::vector<std::string> stack;
   stack.push_back(filepath);
-  const std::string processed = preprocessContent(content, 0, stack);
+  std::string processed = preprocessContent(std::move(content), 0, stack);
+
   ast = parser.parse(processed);
 
   if (!ast) {
