@@ -57,4 +57,12 @@ class Page {
   void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) const;
   bool serialize(FsFile& file) const;
   static std::unique_ptr<Page> deserialize(FsFile& file);
+
+  // Check if page contains any images (used to force full refresh)
+  bool hasImages() const {
+    for (const auto& el : elements) {
+      if (el->getTag() == TAG_PageImage) return true;
+    }
+    return false;
+  }
 };
