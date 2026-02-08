@@ -240,6 +240,13 @@ bool Markdown::renderToHtmlFile(const std::string& htmlPath) const {
   file.close();
 
   std::string processed = stripFrontmatter(content);
+
+  // Release raw content — stripFrontmatter returned an independent copy.
+  // Avoids holding two full copies of the file simultaneously on
+  // memory-constrained devices.
+  content.clear();
+  content.shrink_to_fit();
+
   processed = stripComments(processed);
 
   std::string output;
@@ -626,7 +633,7 @@ bool Markdown::parseToAst() {
   }
 
   MarkdownParser parser;
-  ast = parser.parseWithPreprocessing(content);
+  ast = parser.parseWithPreprocessing(std::move(content));
 
   if (!ast) {
     Serial.printf("[%lu] [MD ] Failed to parse markdown to AST\n", millis());

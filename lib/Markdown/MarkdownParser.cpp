@@ -71,13 +71,13 @@ std::unique_ptr<MdNode> MarkdownParser::parse(const std::string& markdown) {
   return std::move(root);
 }
 
-std::unique_ptr<MdNode> MarkdownParser::parseWithPreprocessing(const std::string& markdown) {
+std::unique_ptr<MdNode> MarkdownParser::parseWithPreprocessing(std::string markdown) {
   if (markdown.size() > MAX_INPUT_SIZE) {
     Serial.printf("[%lu] [MD ] Preprocess failed: input size %zu exceeds limit %zu\n", millis(), markdown.size(),
                   MAX_INPUT_SIZE);
     return nullptr;
   }
-  std::string processed = preprocessMarkdown(markdown);
+  std::string processed = preprocessMarkdown(std::move(markdown));
   return parse(processed);
 }
 
@@ -538,8 +538,11 @@ bool MarkdownParser::appendTextNode(MdNode* parent, std::string text) {
 }
 
 // Preprocessing implementation
-std::string MarkdownParser::preprocessMarkdown(const std::string& input) {
+std::string MarkdownParser::preprocessMarkdown(std::string input) {
   std::string content = stripFrontmatter(input);
+  // Release raw input now — stripFrontmatter returned an independent copy
+  input.clear();
+  input.shrink_to_fit();
   content = stripComments(content);
 
   std::string output;

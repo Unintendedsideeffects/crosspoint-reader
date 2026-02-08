@@ -21,7 +21,7 @@ class MarkdownParser {
   std::unique_ptr<MdNode> parse(const std::string& markdown);
 
   // Parse with Obsidian preprocessing (frontmatter, comments, callouts, wikilinks)
-  std::unique_ptr<MdNode> parseWithPreprocessing(const std::string& markdown);
+  std::unique_ptr<MdNode> parseWithPreprocessing(std::string markdown);
 
  private:
   // Parser state during md4c callbacks
@@ -61,7 +61,7 @@ class MarkdownParser {
   bool appendTextNode(MdNode* parent, std::string text);
 
   // Preprocessing helpers (shared with Markdown.cpp but reimplemented here)
-  static std::string preprocessMarkdown(const std::string& input);
+  static std::string preprocessMarkdown(std::string input);
   static std::string stripFrontmatter(const std::string& content);
   static std::string stripComments(const std::string& content);
   static std::string processLine(const std::string& line);
