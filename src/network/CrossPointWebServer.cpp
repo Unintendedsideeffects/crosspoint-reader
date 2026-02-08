@@ -123,6 +123,12 @@ void CrossPointWebServer::begin() {
   // Create folder endpoint
   server->on("/mkdir", HTTP_POST, [this] { handleCreateFolder(); });
 
+  // Rename file endpoint
+  server->on("/rename", HTTP_POST, [this] { handleRename(); });
+
+  // Move file endpoint
+  server->on("/move", HTTP_POST, [this] { handleMove(); });
+
   // Delete file/folder endpoint
   server->on("/delete", HTTP_POST, [this] { handleDelete(); });
 
@@ -836,6 +842,186 @@ void CrossPointWebServer::handleCreateFolder() const {
   } else {
     Serial.printf("[%lu] [WEB] Failed to create folder: %s\n", millis(), folderPath.c_str());
     server->send(500, "text/plain", "Failed to create folder");
+  }
+}
+
+void CrossPointWebServer::handleRename() const {
+  if (!server->hasArg("path") || !server->hasArg("name")) {
+    server->send(400, "text/plain", "Missing path or new name");
+    return;
+  }
+
+  String itemPath = PathUtils::urlDecode(server->arg("path"));
+  String newName = server->arg("name");
+  newName.trim();
+
+  if (!PathUtils::isValidSdPath(itemPath)) {
+    server->send(400, "text/plain", "Invalid path");
+    return;
+  }
+  itemPath = PathUtils::normalizePath(itemPath);
+
+  if (itemPath == "/") {
+    server->send(400, "text/plain", "Invalid path");
+    return;
+  }
+  if (newName.isEmpty()) {
+    server->send(400, "text/plain", "New name cannot be empty");
+    return;
+  }
+  if (newName.indexOf('/') >= 0 || newName.indexOf('\\') >= 0) {
+    server->send(400, "text/plain", "Invalid file name");
+    return;
+  }
+  if (newName.startsWith(".")) {
+    server->send(403, "text/plain", "Cannot rename to hidden name");
+    return;
+  }
+
+  const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
+  if (itemName.startsWith(".")) {
+    server->send(403, "text/plain", "Cannot rename protected item");
+    return;
+  }
+  if (newName == itemName) {
+    server->send(200, "text/plain", "Name unchanged");
+    return;
+  }
+
+  {
+    SpiBusMutex::Guard guard;
+    if (!SdMan.exists(itemPath.c_str())) {
+      server->send(404, "text/plain", "Item not found");
+      return;
+    }
+  }
+
+  String parentPath = itemPath.substring(0, itemPath.lastIndexOf('/'));
+  if (parentPath.isEmpty()) {
+    parentPath = "/";
+  }
+  String newPath = parentPath;
+  if (!newPath.endsWith("/")) {
+    newPath += "/";
+  }
+  newPath += newName;
+
+  SpiBusMutex::Guard guard;
+  FsFile file = SdMan.open(itemPath.c_str());
+  if (!file) {
+    server->send(500, "text/plain", "Failed to open file");
+    return;
+  }
+
+  if (SdMan.exists(newPath.c_str())) {
+    file.close();
+    server->send(409, "text/plain", "Target already exists");
+    return;
+  }
+
+  clearEpubCacheIfNeeded(itemPath);
+  invalidateSleepCacheIfNeeded(itemPath);
+  const bool success = file.rename(newPath.c_str());
+  file.close();
+
+  if (success) {
+    Serial.printf("[%lu] [WEB] Renamed: %s -> %s\n", millis(), itemPath.c_str(), newPath.c_str());
+    server->send(200, "text/plain", "Renamed successfully");
+  } else {
+    Serial.printf("[%lu] [WEB] Failed to rename: %s -> %s\n", millis(), itemPath.c_str(), newPath.c_str());
+    server->send(500, "text/plain", "Failed to rename file");
+  }
+}
+
+void CrossPointWebServer::handleMove() const {
+  if (!server->hasArg("path") || !server->hasArg("dest")) {
+    server->send(400, "text/plain", "Missing path or destination");
+    return;
+  }
+
+  String itemPath = PathUtils::urlDecode(server->arg("path"));
+  String destPath = PathUtils::urlDecode(server->arg("dest"));
+
+  if (!PathUtils::isValidSdPath(itemPath) || !PathUtils::isValidSdPath(destPath)) {
+    server->send(400, "text/plain", "Invalid path");
+    return;
+  }
+  itemPath = PathUtils::normalizePath(itemPath);
+  destPath = PathUtils::normalizePath(destPath);
+
+  if (itemPath == "/") {
+    server->send(400, "text/plain", "Invalid path");
+    return;
+  }
+
+  const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
+  if (itemName.startsWith(".")) {
+    server->send(403, "text/plain", "Cannot move protected item");
+    return;
+  }
+
+  {
+    SpiBusMutex::Guard guard;
+    if (!SdMan.exists(itemPath.c_str())) {
+      server->send(404, "text/plain", "Item not found");
+      return;
+    }
+  }
+
+  SpiBusMutex::Guard guard;
+  FsFile file = SdMan.open(itemPath.c_str());
+  if (!file) {
+    server->send(500, "text/plain", "Failed to open file");
+    return;
+  }
+  if (file.isDirectory()) {
+    file.close();
+    server->send(400, "text/plain", "Only files can be moved");
+    return;
+  }
+
+  if (!SdMan.exists(destPath.c_str())) {
+    file.close();
+    server->send(404, "text/plain", "Destination not found");
+    return;
+  }
+  FsFile destDir = SdMan.open(destPath.c_str());
+  if (!destDir || !destDir.isDirectory()) {
+    if (destDir) destDir.close();
+    file.close();
+    server->send(400, "text/plain", "Destination is not a folder");
+    return;
+  }
+  destDir.close();
+
+  String newPath = destPath;
+  if (!newPath.endsWith("/")) {
+    newPath += "/";
+  }
+  newPath += itemName;
+
+  if (newPath == itemPath) {
+    file.close();
+    server->send(200, "text/plain", "Already in destination");
+    return;
+  }
+  if (SdMan.exists(newPath.c_str())) {
+    file.close();
+    server->send(409, "text/plain", "Target already exists");
+    return;
+  }
+
+  clearEpubCacheIfNeeded(itemPath);
+  invalidateSleepCacheIfNeeded(itemPath);
+  const bool success = file.rename(newPath.c_str());
+  file.close();
+
+  if (success) {
+    Serial.printf("[%lu] [WEB] Moved: %s -> %s\n", millis(), itemPath.c_str(), newPath.c_str());
+    server->send(200, "text/plain", "Moved successfully");
+  } else {
+    Serial.printf("[%lu] [WEB] Failed to move: %s -> %s\n", millis(), itemPath.c_str(), newPath.c_str());
+    server->send(500, "text/plain", "Failed to move file");
   }
 }
 

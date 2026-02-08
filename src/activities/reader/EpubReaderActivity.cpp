@@ -145,7 +145,7 @@ void EpubReaderActivity::loop() {
     if (!waitForRenderingMutex()) {
       return;
     }
-    const int currentPage = section ? section->currentPage : 0;
+    const int currentPage = section ? section->currentPage + 1 : 0;
     const int totalPages = section ? section->pageCount : 0;
     exitActivity();
     enterNewActivity(new EpubReaderMenuActivity(
