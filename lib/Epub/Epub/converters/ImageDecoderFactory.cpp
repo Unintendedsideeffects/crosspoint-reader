@@ -4,7 +4,6 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "JpegToFramebufferConverter.h"
 #include "PngToFramebufferConverter.h"
@@ -50,11 +49,3 @@ ImageToFramebufferDecoder* ImageDecoderFactory::getDecoder(const std::string& im
 }
 
 bool ImageDecoderFactory::isFormatSupported(const std::string& imagePath) { return getDecoder(imagePath) != nullptr; }
-
-std::vector<std::string> ImageDecoderFactory::getSupportedFormats() {
-  std::vector<std::string> formats;
-  formats.push_back(".jpg");
-  formats.push_back(".jpeg");
-  formats.push_back(".png");
-  return formats;
-}
