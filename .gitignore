@@ -12,3 +12,6 @@ build
 # Build artifacts
 firmware.bin
 partitions.bin
+.pio-codex*/
+.worktrees/
+platformio-custom.ini

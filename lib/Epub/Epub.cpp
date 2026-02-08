@@ -532,7 +532,7 @@ std::string Epub::getThumbBmpPath(int height) const { return cachePath + "/thumb
 
 bool Epub::generateThumbBmp(int height) const {
   // Already generated, return true
-  if (SdMan.exists(getThumbBmpPath(height).c_str())) {
+  if (SdMan.exists(getThumbBmpPath().c_str())) {
     return true;
   }
 

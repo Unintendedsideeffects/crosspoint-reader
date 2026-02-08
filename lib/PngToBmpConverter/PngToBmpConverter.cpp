@@ -522,7 +522,8 @@ static bool parsePngHeaders(PngDecodeContext& ctx) {
         Serial.printf("[%lu] [PNG] Truncated PLTE chunk\n", millis());
         return false;
       }
-      ctx.file.seekCur(4);  // CRC
+      // Skip any remaining palette data beyond 256 entries, plus CRC
+      ctx.file.seekCur(static_cast<int32_t>(chunkLen - paletteBytes) + 4);
     } else if (chunkType == CHUNK_tRNS) {
       // Transparency chunk
       if (ctx.colorType == PNG_COLOR_INDEXED) {
