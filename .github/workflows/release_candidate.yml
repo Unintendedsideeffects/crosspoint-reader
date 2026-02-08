@@ -1,11 +1,11 @@
 name: Compile Release Candidate
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build-release-candidate:
-    if: startsWith(github.head_ref, 'release/')
+    if: startsWith(github.ref_name, 'release/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
