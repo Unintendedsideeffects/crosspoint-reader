@@ -517,14 +517,21 @@ static bool parsePngHeaders(PngDecodeContext& ctx) {
       // Read palette
       ctx.paletteCount = chunkLen / 3;
       if (ctx.paletteCount > 256) ctx.paletteCount = 256;
-      ctx.file.read(ctx.palette, ctx.paletteCount * 3);
+      const size_t paletteBytes = static_cast<size_t>(ctx.paletteCount) * 3;
+      if (ctx.file.read(ctx.palette, paletteBytes) != paletteBytes) {
+        Serial.printf("[%lu] [PNG] Truncated PLTE chunk\n", millis());
+        return false;
+      }
       ctx.file.seekCur(4);  // CRC
     } else if (chunkType == CHUNK_tRNS) {
       // Transparency chunk
       if (ctx.colorType == PNG_COLOR_INDEXED) {
         ctx.hasPaletteAlpha = true;
         size_t alphaCount = chunkLen < 256 ? chunkLen : 256;
-        ctx.file.read(ctx.paletteAlpha, alphaCount);
+        if (ctx.file.read(ctx.paletteAlpha, alphaCount) != alphaCount) {
+          Serial.printf("[%lu] [PNG] Truncated tRNS chunk\n", millis());
+          return false;
+        }
         ctx.file.seekCur(chunkLen - alphaCount + 4);  // Skip rest + CRC
       } else {
         ctx.file.seekCur(chunkLen + 4);

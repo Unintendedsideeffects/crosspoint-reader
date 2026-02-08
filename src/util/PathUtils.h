@@ -35,7 +35,7 @@ bool isValidSdPath(const String& path);
  * - Collapses multiple consecutive slashes
  *
  * @param path The path to normalize
- * @return Normalized path, or empty string if invalid
+ * @return Normalized path (empty input becomes "/")
  */
 String normalizePath(const String& path);
 

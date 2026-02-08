@@ -13,17 +13,14 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "FeatureFlags.h"
+#include "SleepExtensionHooks.h"
 #include "SpiBusMutex.h"
 #include "fontIds.h"
 #include "images/CrossLarge.h"
 #include "util/StringUtils.h"
 
 namespace {
-
-// Feature flag for PNG/JPEG sleep image support
-#ifndef ENABLE_IMAGE_SLEEP
-#define ENABLE_IMAGE_SLEEP 1
-#endif
 
 // Supported image extensions for sleep images
 #if ENABLE_IMAGE_SLEEP
@@ -87,6 +84,14 @@ struct SleepImageCache {
 };
 
 SleepImageCache sleepImageCache;
+
+bool tryRenderExternalSleepApp(GfxRenderer& renderer, MappedInputManager& mappedInput) {
+  const bool rendered = SleepExtensionHooks::renderExternalSleepScreen(renderer, mappedInput);
+  if (rendered) {
+    Serial.printf("[%lu] [SLP] External sleep app rendered screen\n", millis());
+  }
+  return rendered;
+}
 
 void validateSleepImagesOnce() {
   SleepCacheMutex::Guard guard;
@@ -169,6 +174,11 @@ void SleepActivity::onEnter() {
 
   // Initialize image decoder factory
   ImageDecoderFactory::initialize();
+
+  // Optional extension point for third-party sleep apps.
+  if (tryRenderExternalSleepApp(renderer, mappedInput)) {
+    return;
+  }
 
   switch (SETTINGS.sleepScreen) {
     case (CrossPointSettings::SLEEP_SCREEN_MODE::BLANK):

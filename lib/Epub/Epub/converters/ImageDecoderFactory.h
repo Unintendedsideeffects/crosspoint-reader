@@ -4,12 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "FeatureFlags.h"
 #include "ImageToFramebufferDecoder.h"
-
-// Feature flag for PNG/JPEG sleep image support
-#ifndef ENABLE_IMAGE_SLEEP
-#define ENABLE_IMAGE_SLEEP 1
-#endif
 
 #if ENABLE_IMAGE_SLEEP
 class JpegToFramebufferConverter;

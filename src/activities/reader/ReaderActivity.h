@@ -2,16 +2,12 @@
 #include <memory>
 
 #include "../ActivityWithSubactivity.h"
+#include "FeatureFlags.h"
 #include "activities/home/MyLibraryActivity.h"
 
 class Epub;
 class Xtc;
 class Txt;
-
-// Feature flag for Markdown/Obsidian support
-#ifndef ENABLE_MARKDOWN
-#define ENABLE_MARKDOWN 1
-#endif
 
 #if ENABLE_MARKDOWN
 class Markdown;
