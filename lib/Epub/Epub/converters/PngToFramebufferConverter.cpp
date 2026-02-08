@@ -47,7 +47,7 @@ struct PngContext {
 // avoiding the need for global file state.
 static void* pngOpenWithHandle(const char* filename, int32_t* size) {
   FsFile* f = new FsFile();
-  if (!SdMan.openFileForRead("PNG", std::string(filename), *f)) {
+  if (!Storage.openFileForRead("PNG", std::string(filename), *f)) {
     delete f;
     return nullptr;
   }

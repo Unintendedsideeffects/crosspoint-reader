@@ -19,7 +19,7 @@ ImageBlock::ImageBlock(const std::string& imagePath, int16_t width, int16_t heig
 
 bool ImageBlock::imageExists() const {
   FsFile file;
-  return SdMan.openFileForRead("IMG", imagePath, file);
+  return Storage.openFileForRead("IMG", imagePath, file);
 }
 
 void ImageBlock::layout(GfxRenderer& renderer) {}
@@ -36,7 +36,7 @@ static std::string getCachePath(const std::string& imagePath) {
 static bool renderFromCache(GfxRenderer& renderer, const std::string& cachePath, int x, int y, int expectedWidth,
                             int expectedHeight) {
   FsFile cacheFile;
-  if (!SdMan.openFileForRead("IMG", cachePath, cacheFile)) {
+  if (!Storage.openFileForRead("IMG", cachePath, cacheFile)) {
     return false;
   }
 
@@ -117,7 +117,7 @@ void ImageBlock::render(GfxRenderer& renderer, const int x, const int y) {
   // No cache - need to decode the image
   // Check if image file exists
   FsFile file;
-  if (!SdMan.openFileForRead("IMG", imagePath, file)) {
+  if (!Storage.openFileForRead("IMG", imagePath, file)) {
     Serial.printf("[%lu] [IMG] Image file not found: %s\n", millis(), imagePath.c_str());
     return;
   }

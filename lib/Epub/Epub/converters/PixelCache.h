@@ -57,7 +57,7 @@ struct PixelCache {
     if (!buffer) return false;
 
     FsFile cacheFile;
-    if (!SdMan.openFileForWrite("IMG", cachePath, cacheFile)) {
+    if (!Storage.openFileForWrite("IMG", cachePath, cacheFile)) {
       Serial.printf("[%lu] [IMG] Failed to open cache file for writing: %s\n", millis(), cachePath.c_str());
       return false;
     }
