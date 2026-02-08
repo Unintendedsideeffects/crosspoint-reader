@@ -620,8 +620,14 @@ constexpr char FilesPageHtml[] PROGMEM = R"rawliteral(<!DOCTYPE html><html><head
       }
     }
   </style> </head><body><div class="nav-links"><a href="/">Home</a><a href="/files">File Manager</a></div><div class="page-header"><div class="page-header-left"><h1>📁 File Manager</h1><div class="breadcrumb-inline" id="directory-breadcrumbs"></div></div><div class="action-buttons"><button class="action-btn upload-action-btn" onclick="openUploadModal()">📤 Upload</button><button class="action-btn folder-action-btn" onclick="openFolderModal()">📁 New Folder</button></div></div><div class="failed-uploads-banner" id="failedUploadsBanner"><div class="failed-uploads-header"><h3 class="failed-uploads-title">⚠️ Some files failed to upload</h3><button class="dismiss-btn" onclick="dismissFailedUploads()" title="Dismiss">&times;</button></div><div id="failedFilesList"></div><button class="retry-all-btn" onclick="retryAllFailedUploads()">Retry All Failed Uploads</button></div><div class="card"><div class="contents-header"><h2 class="contents-title">Contents</h2><span class="summary-inline" id="folder-summary"></span></div><div id="file-table"><div class="loader-container"><span class="loader"></span></div></div></div><div class="card"><p style="text-align: center; color: #95a5a6; margin: 0;"> CrossPoint E-Reader • Open Source </p></div><div class="modal-overlay" id="uploadModal"><div class="modal"><button class="modal-close" onclick="closeUploadModal()">&times;</button><h3>📤 Upload file</h3><div class="upload-form"><p class="file-info">Select a file to upload to <strong id="uploadPathDisplay"></strong></p><input type="file" id="fileInput" onchange="validateFile()" multiple><button id="uploadBtn" class="upload-btn" onclick="uploadFile()" disabled>Upload</button><div id="progress-container"><div id="progress-bar"><div id="progress-fill"></div></div><div id="progress-text"></div></div></div></div></div><div class="modal-overlay" id="folderModal"><div class="modal"><button class="modal-close" onclick="closeFolderModal()">&times;</button><h3>📁 New Folder</h3><div class="folder-form"><p class="file-info">Create a new folder in <strong id="folderPathDisplay"></strong></p><input type="text" id="folderName" class="folder-input" placeholder="Folder name..."><button class="folder-btn" onclick="createFolder()">Create Folder</button></div></div></div><div class="modal-overlay" id="deleteModal"><div class="modal"><button class="modal-close" onclick="closeDeleteModal()">&times;</button><h3>🗑️ Delete Item</h3><div class="folder-form"><p class="delete-warning">⚠️ This action cannot be undone!</p><p class="file-info">Are you sure you want to delete:</p><p class="delete-item-name" id="deleteItemName"></p><input type="hidden" id="deleteItemPath"><input type="hidden" id="deleteItemType"><button class="delete-btn-confirm" onclick="confirmDelete()">Delete</button><button class="delete-btn-cancel" onclick="closeDeleteModal()">Cancel</button></div></div></div><div class="modal-overlay" id="renameModal"><div class="modal"><button class="modal-close" onclick="closeRenameModal()">&times;</button><h3>✏️ Rename File</h3><div class="folder-form"><p class="file-info">Renaming <strong id="renameItemName"></strong></p><input type="text" id="renameNewName" class="folder-input" placeholder="New file name..."><input type="hidden" id="renameItemPath"><button class="rename-btn-confirm" onclick="confirmRename()">Rename</button><button class="delete-btn-cancel" onclick="closeRenameModal()">Cancel</button></div></div></div><div class="modal-overlay" id="moveModal"><div class="modal"><button class="modal-close" onclick="closeMoveModal()">&times;</button><h3>📂 Move File</h3><div class="folder-form"><p class="file-info">Moving <strong id="moveItemName"></strong></p><input type="text" id="moveDestPath" class="folder-input" list="moveFolderOptions" placeholder="/Destination/Folder"><datalist id="moveFolderOptions"></datalist><input type="hidden" id="moveItemPath"><button class="move-btn-confirm" onclick="confirmMove()">Move</button><button class="delete-btn-cancel" onclick="closeMoveModal()">Cancel</button></div></div></div> <script>
-  // get current path from query parameter
-  const currentPath = decodeURIComponent(new URLSearchParams(window.location.search).get('path') || '/');
+  // Get current path from query parameter; default safely on malformed encoding.
+  const currentPath = (() => {
+    try {
+      return decodeURIComponent(new URLSearchParams(window.location.search).get('path') || '/');
+    } catch (_error) {
+      return '/';
+    }
+  })();
 
   function escapeHtml(unsafe) {
     return unsafe
@@ -641,15 +647,20 @@ constexpr char FilesPageHtml[] PROGMEM = R"rawliteral(<!DOCTYPE html><html><head
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)).toLocaleString() + ' ' + sizes[i];
   }
 
+  let modalOverlayHandlersBound = false;
+
   async function hydrate() {
-    // Close modals when clicking overlay
-    document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
-      overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) {
-          overlay.classList.remove('open');
-        }
+    // Close modals when clicking overlay (bind once across re-hydrates).
+    if (!modalOverlayHandlersBound) {
+      document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+        overlay.addEventListener('click', function(e) {
+          if (e.target === overlay) {
+            overlay.classList.remove('open');
+          }
+        });
       });
-    });
+      modalOverlayHandlersBound = true;
+    }
 
     const breadcrumbs = document.getElementById('directory-breadcrumbs');
     const fileTable = document.getElementById('file-table');
@@ -786,7 +797,8 @@ const WS_CHUNK_SIZE = 4096; // 4KB chunks - smaller for ESP32 stability
 // Get WebSocket URL based on current page location
 function getWsUrl() {
   const host = window.location.hostname;
-  return `ws://${host}:${WS_PORT}/`;
+  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${scheme}://${host}:${WS_PORT}/`;
 }
 
 // Upload file via WebSocket (faster, binary protocol)
@@ -977,10 +989,11 @@ function uploadFile() {
     progressText.textContent = `Uploading ${file.name} (${currentIndex + 1}/${files.length})${methodText}`;
 
     const onProgress = (loaded, total) => {
-      const percent = Math.round((loaded / total) * 100);
-      progressFill.style.width = percent + '%';
+      const percent = total > 0 ? Math.round((loaded / total) * 100) : 100;
+      const boundedPercent = Math.max(0, Math.min(100, percent));
+      progressFill.style.width = boundedPercent + '%';
       const speed = ''; // Could calculate speed here
-      progressText.textContent = `Uploading ${file.name} (${currentIndex + 1}/${files.length})${methodText} — ${percent}%`;
+      progressText.textContent = `Uploading ${file.name} (${currentIndex + 1}/${files.length})${methodText} — ${boundedPercent}%`;
     };
 
     const onComplete = () => {

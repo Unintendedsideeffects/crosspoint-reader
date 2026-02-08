@@ -10,12 +10,8 @@
 #include <algorithm>
 
 #include "CrossPointWebServer.h"
+#include "FeatureFlags.h"
 #include "util/TimeSync.h"
-
-// Feature flag for background web server
-#ifndef ENABLE_BACKGROUND_SERVER
-#define ENABLE_BACKGROUND_SERVER 1
-#endif
 
 namespace {
 constexpr const char* MDNS_HOSTNAME = "crosspoint";

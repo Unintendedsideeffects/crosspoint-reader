@@ -6,11 +6,6 @@
 #include <string>
 #include <vector>
 
-// Feature flag for PNG/JPEG sleep image support
-#ifndef ENABLE_IMAGE_SLEEP
-#define ENABLE_IMAGE_SLEEP 1
-#endif
-
 #if ENABLE_IMAGE_SLEEP
 #include "JpegToFramebufferConverter.h"
 #include "PngToFramebufferConverter.h"

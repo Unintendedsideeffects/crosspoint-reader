@@ -750,8 +750,14 @@
 </div>
 
 <script>
-  // get current path from query parameter
-  const currentPath = decodeURIComponent(new URLSearchParams(window.location.search).get('path') || '/');
+  // Get current path from query parameter; default safely on malformed encoding.
+  const currentPath = (() => {
+    try {
+      return decodeURIComponent(new URLSearchParams(window.location.search).get('path') || '/');
+    } catch (_error) {
+      return '/';
+    }
+  })();
 
   function escapeHtml(unsafe) {
     return unsafe
@@ -771,15 +777,20 @@
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)).toLocaleString() + ' ' + sizes[i];
   }
 
+  let modalOverlayHandlersBound = false;
+
   async function hydrate() {
-    // Close modals when clicking overlay
-    document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
-      overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) {
-          overlay.classList.remove('open');
-        }
+    // Close modals when clicking overlay (bind once across re-hydrates).
+    if (!modalOverlayHandlersBound) {
+      document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+        overlay.addEventListener('click', function(e) {
+          if (e.target === overlay) {
+            overlay.classList.remove('open');
+          }
+        });
       });
-    });
+      modalOverlayHandlersBound = true;
+    }
 
     const breadcrumbs = document.getElementById('directory-breadcrumbs');
     const fileTable = document.getElementById('file-table');
@@ -916,7 +927,8 @@ const WS_CHUNK_SIZE = 4096; // 4KB chunks - smaller for ESP32 stability
 // Get WebSocket URL based on current page location
 function getWsUrl() {
   const host = window.location.hostname;
-  return `ws://${host}:${WS_PORT}/`;
+  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${scheme}://${host}:${WS_PORT}/`;
 }
 
 // Upload file via WebSocket (faster, binary protocol)
@@ -1107,10 +1119,11 @@ function uploadFile() {
     progressText.textContent = `Uploading ${file.name} (${currentIndex + 1}/${files.length})${methodText}`;
 
     const onProgress = (loaded, total) => {
-      const percent = Math.round((loaded / total) * 100);
-      progressFill.style.width = percent + '%';
+      const percent = total > 0 ? Math.round((loaded / total) * 100) : 100;
+      const boundedPercent = Math.max(0, Math.min(100, percent));
+      progressFill.style.width = boundedPercent + '%';
       const speed = ''; // Could calculate speed here
-      progressText.textContent = `Uploading ${file.name} (${currentIndex + 1}/${files.length})${methodText} — ${percent}%`;
+      progressText.textContent = `Uploading ${file.name} (${currentIndex + 1}/${files.length})${methodText} — ${boundedPercent}%`;
     };
 
     const onComplete = () => {

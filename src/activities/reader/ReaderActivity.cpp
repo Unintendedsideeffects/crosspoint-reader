@@ -9,11 +9,6 @@
 #include "activities/util/FullScreenMessageActivity.h"
 #include "util/StringUtils.h"
 
-// Feature flag for Markdown/Obsidian support
-#ifndef ENABLE_MARKDOWN
-#define ENABLE_MARKDOWN 1
-#endif
-
 #if ENABLE_MARKDOWN
 #include "Markdown.h"
 #include "MarkdownReaderActivity.h"

@@ -473,17 +473,32 @@ void CrossPointWebServer::handleDownload() const {
     }
   }
 
-  if (!SdMan.exists(itemPath.c_str())) {
+  bool exists = false;
+  {
+    SpiBusMutex::Guard guard;
+    exists = SdMan.exists(itemPath.c_str());
+  }
+  if (!exists) {
     server->send(404, "text/plain", "Item not found");
     return;
   }
 
-  FsFile file = SdMan.open(itemPath.c_str());
+  FsFile file;
+  {
+    SpiBusMutex::Guard guard;
+    file = SdMan.open(itemPath.c_str());
+  }
   if (!file) {
     server->send(500, "text/plain", "Failed to open file");
     return;
   }
-  if (file.isDirectory()) {
+  bool isDirectory = false;
+  {
+    SpiBusMutex::Guard guard;
+    isDirectory = file.isDirectory();
+  }
+  if (isDirectory) {
+    SpiBusMutex::Guard guard;
     file.close();
     server->send(400, "text/plain", "Path is a directory");
     return;
@@ -494,19 +509,49 @@ void CrossPointWebServer::handleDownload() const {
     contentType = "application/epub+zip";
   }
 
-  char nameBuf[128] = {0};
-  String filename = "download";
-  if (file.getName(nameBuf, sizeof(nameBuf))) {
-    filename = nameBuf;
+  size_t fileSize = 0;
+  {
+    SpiBusMutex::Guard guard;
+    fileSize = file.size();
   }
 
-  server->setContentLength(file.size());
+  char nameBuf[128] = {0};
+  String filename = "download";
+  {
+    SpiBusMutex::Guard guard;
+    if (file.getName(nameBuf, sizeof(nameBuf))) {
+      filename = nameBuf;
+    }
+  }
+
+  server->setContentLength(fileSize);
   server->sendHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
   server->send(200, contentType.c_str(), "");
 
   WiFiClient client = server->client();
-  client.write(file);
-  file.close();
+  uint8_t buffer[1024];
+  while (true) {
+    size_t bytesRead = 0;
+    {
+      SpiBusMutex::Guard guard;
+      bytesRead = file.read(buffer, sizeof(buffer));
+    }
+    if (bytesRead == 0) {
+      break;
+    }
+    const size_t bytesWritten = client.write(buffer, bytesRead);
+    if (bytesWritten != bytesRead) {
+      Serial.printf("[%lu] [WEB] Download truncated for %s (wanted %u, wrote %u)\n", millis(), itemPath.c_str(),
+                    static_cast<unsigned int>(bytesRead), static_cast<unsigned int>(bytesWritten));
+      break;
+    }
+    yield();
+    esp_task_wdt_reset();
+  }
+  {
+    SpiBusMutex::Guard guard;
+    file.close();
+  }
 }
 
 // Static variables for upload handling
@@ -768,13 +813,23 @@ void CrossPointWebServer::handleCreateFolder() const {
   Serial.printf("[%lu] [WEB] Creating folder: %s\n", millis(), folderPath.c_str());
 
   // Check if already exists
-  if (SdMan.exists(folderPath.c_str())) {
+  bool folderExists = false;
+  {
+    SpiBusMutex::Guard guard;
+    folderExists = SdMan.exists(folderPath.c_str());
+  }
+  if (folderExists) {
     server->send(400, "text/plain", "Folder already exists");
     return;
   }
 
   // Create the folder
-  if (SdMan.mkdir(folderPath.c_str())) {
+  bool created = false;
+  {
+    SpiBusMutex::Guard guard;
+    created = SdMan.mkdir(folderPath.c_str());
+  }
+  if (created) {
     Serial.printf("[%lu] [WEB] Folder created successfully: %s\n", millis(), folderPath.c_str());
     invalidateSleepCacheIfNeeded(folderPath);
     server->send(200, "text/plain", "Folder created: " + folderName);
@@ -801,13 +856,14 @@ void CrossPointWebServer::handleDelete() const {
     return;
   }
 
+  // Normalize before root checks so variants like "//" are treated as root.
+  itemPath = PathUtils::normalizePath(itemPath);
+
   // Validate path
-  if (itemPath.isEmpty() || itemPath == "/") {
+  if (itemPath == "/") {
     server->send(400, "text/plain", "Cannot delete root directory");
     return;
   }
-
-  itemPath = PathUtils::normalizePath(itemPath);
 
   // Security check: prevent deletion of protected items
   const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
@@ -829,7 +885,12 @@ void CrossPointWebServer::handleDelete() const {
   }
 
   // Check if item exists
-  if (!SdMan.exists(itemPath.c_str())) {
+  bool itemExists = false;
+  {
+    SpiBusMutex::Guard guard;
+    itemExists = SdMan.exists(itemPath.c_str());
+  }
+  if (!itemExists) {
     Serial.printf("[%lu] [WEB] Delete failed - item not found: %s\n", millis(), itemPath.c_str());
     server->send(404, "text/plain", "Item not found");
     return;
@@ -967,16 +1028,22 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
 
           // Check if file exists and remove it
           esp_task_wdt_reset();
-          if (SdMan.exists(filePath.c_str())) {
-            SdMan.remove(filePath.c_str());
+          {
+            SpiBusMutex::Guard guard;
+            if (SdMan.exists(filePath.c_str())) {
+              SdMan.remove(filePath.c_str());
+            }
           }
 
           // Open file for writing
           esp_task_wdt_reset();
-          if (!SdMan.openFileForWrite("WS", filePath, wsUploadFile)) {
-            wsServer->sendTXT(num, "ERROR:Failed to create file");
-            wsUploadInProgress = false;
-            return;
+          {
+            SpiBusMutex::Guard guard;
+            if (!SdMan.openFileForWrite("WS", filePath, wsUploadFile)) {
+              wsServer->sendTXT(num, "ERROR:Failed to create file");
+              wsUploadInProgress = false;
+              return;
+            }
           }
           esp_task_wdt_reset();
 
