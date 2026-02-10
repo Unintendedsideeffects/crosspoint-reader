@@ -48,18 +48,16 @@ void HomeActivity::taskTrampoline(void* param) {
   self->displayTaskLoop();
 }
 
+#if !ENABLE_HOME_MEDIA_PICKER
 int HomeActivity::getMenuItemCount() const {
-#if ENABLE_HOME_MEDIA_PICKER
-  return menuItemCount;
-#else
   int count = 4;  // My Library, TODO, File transfer, Settings
   if (hasContinueReading) count++;
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
   if (hasOpdsUrl) count++;
 #endif
   return count;
-#endif
 }
+#endif
 
 std::string HomeActivity::fallbackTitleFromPath(const std::string& path) {
   auto title = path;
@@ -331,6 +329,7 @@ void HomeActivity::onExit() {
   recentBooks.clear();
 }
 
+#if !ENABLE_HOME_MEDIA_PICKER
 bool HomeActivity::storeCoverBuffer() {
   uint8_t* frameBuffer = renderer.getFrameBuffer();
   if (!frameBuffer) {
@@ -364,6 +363,7 @@ bool HomeActivity::restoreCoverBuffer() {
   memcpy(frameBuffer, coverBuffer, bufferSize);
   return true;
 }
+#endif
 
 void HomeActivity::freeCoverBuffer() {
   if (coverBuffer) {
