@@ -192,6 +192,26 @@ Keeps the WiFi file management server running in the background while reading.
 
 ---
 
+### Home Media Picker
+
+**Flag:** `ENABLE_HOME_MEDIA_PICKER`
+**Size Impact:** ~12KB
+**Default:** Enabled
+
+Replaces the classic Home list selector with a streamlined media-style layout:
+
+- Left/Right controls the horizontal recent-book shelf
+- Up/Down controls the vertical action menu
+- Confirm opens the highlighted menu action
+
+**When disabled:**
+- Home screen uses the legacy "Continue Reading + vertical menu" layout
+- Navigation falls back to single-axis menu selection
+
+**Use case:** Disable if you prefer the legacy Home behavior.
+
+---
+
 ## Build Profiles
 
 ### Lean Profile
@@ -207,6 +227,7 @@ uv run python scripts/generate_build_config.py --profile lean
 - ✗ PNG/JPEG Sleep
 - ✗ Markdown/Obsidian
 - ✗ Background Server
+- ✗ Home Media Picker
 
 **Best for:**
 - Devices with very limited flash space
@@ -231,6 +252,7 @@ uv run python scripts/generate_build_config.py --profile standard
 - ✗ KOReader Sync
 - ✗ Calibre Sync
 - ✓ Background Server
+- ✓ Home Media Picker
 
 **Best for:**
 - Most users
@@ -255,6 +277,7 @@ uv run python scripts/generate_build_config.py --profile full
 - ✓ KOReader Sync
 - ✓ Calibre Sync
 - ✓ Background Server
+- ✓ Home Media Picker
 
 **Best for:**
 - Users who want all features
@@ -494,6 +517,7 @@ build_flags =
   -DENABLE_KOREADER_SYNC=0
   -DENABLE_CALIBRE_SYNC=0
   -DENABLE_BACKGROUND_SERVER=0
+  -DENABLE_HOME_MEDIA_PICKER=1
 ```
 
 ### Adding Your Own Feature Flags

@@ -23,6 +23,7 @@ class FeatureManifest {
   static constexpr bool hasKOReaderSync() { return ENABLE_KOREADER_SYNC != 0; }
   static constexpr bool hasCalibreSync() { return ENABLE_CALIBRE_SYNC != 0; }
   static constexpr bool hasBackgroundServer() { return ENABLE_BACKGROUND_SERVER != 0; }
+  static constexpr bool hasHomeMediaPicker() { return ENABLE_HOME_MEDIA_PICKER != 0; }
 
   /**
    * Count how many optional features are enabled.
@@ -30,7 +31,7 @@ class FeatureManifest {
    */
   static constexpr int enabledFeatureCount() {
     return hasExtendedFonts() + hasImageSleep() + hasMarkdown() + hasIntegrations() + hasKOReaderSync() +
-           hasCalibreSync() + hasBackgroundServer();
+           hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker();
   }
 
   /**
@@ -56,6 +57,7 @@ class FeatureManifest {
     addFeature(hasKOReaderSync(), "koreader_sync");
     addFeature(hasCalibreSync(), "calibre_sync");
     addFeature(hasBackgroundServer(), "background_server");
+    addFeature(hasHomeMediaPicker(), "home_media_picker");
 
     return build.isEmpty() ? "minimal" : build;
   }
@@ -73,6 +75,7 @@ class FeatureManifest {
     json += ",\"koreader_sync\":" + String(hasKOReaderSync() ? "true" : "false");
     json += ",\"calibre_sync\":" + String(hasCalibreSync() ? "true" : "false");
     json += ",\"background_server\":" + String(hasBackgroundServer() ? "true" : "false");
+    json += ",\"home_media_picker\":" + String(hasHomeMediaPicker() ? "true" : "false");
     json += "}";
     return json;
   }
@@ -90,7 +93,8 @@ class FeatureManifest {
     Serial.printf("  KOReader Sync:     %s\n", hasKOReaderSync() ? "ENABLED " : "DISABLED");
     Serial.printf("  Calibre Sync:      %s\n", hasCalibreSync() ? "ENABLED " : "DISABLED");
     Serial.printf("  Background Server: %s\n", hasBackgroundServer() ? "ENABLED " : "DISABLED");
-    Serial.printf("[FEATURES] %d/7 optional features enabled\n", enabledFeatureCount());
+    Serial.printf("  Home Media Picker: %s\n", hasHomeMediaPicker() ? "ENABLED " : "DISABLED");
+    Serial.printf("[FEATURES] %d/8 optional features enabled\n", enabledFeatureCount());
     Serial.printf("[FEATURES] Build: %s\n", getBuildString().c_str());
   }
 

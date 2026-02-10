@@ -1,0 +1,162 @@
+name: Profile Matrix Tests
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "lib/**"
+      - "scripts/generate_build_config.py"
+      - "scripts/validate_custom_config.py"
+      - "docs/configurator/**"
+      - "platformio.ini"
+      - ".github/workflows/feature-matrix-test.yml"
+  push:
+    branches: [master, fork-drift, "feature/**"]
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-profiles:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: lean
+            name: "Profile: Lean"
+            profile: "lean"
+            extra_args: ""
+            expected_max_size_mb: 5.7
+          - id: standard
+            name: "Profile: Standard"
+            profile: "standard"
+            extra_args: ""
+            expected_max_size_mb: 6.1
+          - id: full
+            name: "Profile: Full"
+            profile: "full"
+            extra_args: ""
+            expected_max_size_mb: 6.6
+          - id: full_no_md
+            name: "Full minus Markdown"
+            profile: "full"
+            extra_args: "--disable markdown"
+            expected_max_size_mb: 6.1
+          - id: lean_md
+            name: "Lean plus Markdown"
+            profile: "lean"
+            extra_args: "--enable markdown"
+            expected_max_size_mb: 6.2
+          - id: standard_sync
+            name: "Standard plus Sync"
+            profile: "standard"
+            extra_args: "--enable koreader_sync --enable calibre_sync"
+            expected_max_size_mb: 6.2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Generate build configuration
+        run: |
+          echo "Generating profile='${{ matrix.profile }}' overrides='${{ matrix.extra_args }}'"
+          uv run python scripts/generate_build_config.py --profile "${{ matrix.profile }}" ${{ matrix.extra_args }}
+          echo ""
+          cat platformio-custom.ini
+
+      - name: Build firmware
+        run: |
+          PLATFORMIO_BUILD_DIR=".pio-${{ matrix.id }}" uv run pio run -e custom
+
+      - name: Validate firmware size
+        env:
+          EXPECTED_MAX_MB: ${{ matrix.expected_max_size_mb }}
+          MAX_FLASH_MB: "6.4"
+        run: |
+          FIRMWARE_PATH=".pio-${{ matrix.id }}/custom/firmware.bin"
+          if [ ! -f "$FIRMWARE_PATH" ]; then
+            echo "❌ ERROR: firmware.bin not found"
+            exit 1
+          fi
+
+          SIZE_BYTES=$(stat -c%s "$FIRMWARE_PATH")
+          SIZE_MB=$(SIZE_BYTES="$SIZE_BYTES" python - <<'PY'
+          import os
+          size = int(os.environ["SIZE_BYTES"])
+          print(size / (1024 * 1024))
+          PY
+          )
+
+          echo "Actual size:    ${SIZE_MB}MB"
+          echo "Expected max:   ${EXPECTED_MAX_MB}MB"
+          echo "Flash capacity: ${MAX_FLASH_MB}MB"
+
+          SIZE_MB="$SIZE_MB" python - <<'PY'
+          import os
+          import sys
+
+          size_mb = float(os.environ["SIZE_MB"])
+          expected_max_mb = float(os.environ["EXPECTED_MAX_MB"])
+          flash_max_mb = float(os.environ["MAX_FLASH_MB"])
+
+          if size_mb > flash_max_mb:
+              print(f"❌ Firmware size {size_mb:.2f}MB exceeds flash capacity {flash_max_mb:.2f}MB")
+              sys.exit(1)
+          if size_mb > expected_max_mb:
+              print(f"⚠️  Firmware size {size_mb:.2f}MB exceeds expected {expected_max_mb:.2f}MB")
+          else:
+              print(f"✅ Size check passed: {size_mb:.2f}MB")
+          PY
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: firmware-${{ matrix.id }}
+          path: |
+            .pio-${{ matrix.id }}/custom/firmware.bin
+            platformio-custom.ini
+          retention-days: 7
+
+  report-results:
+    name: Matrix Summary
+    runs-on: ubuntu-latest
+    needs: test-profiles
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Profile Matrix Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.test-profiles.result }}" == "success" ]; then
+            echo "✅ All profile combinations built successfully." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some profile combinations failed." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Validated targets:" >> $GITHUB_STEP_SUMMARY
+          echo "- lean" >> $GITHUB_STEP_SUMMARY
+          echo "- standard" >> $GITHUB_STEP_SUMMARY
+          echo "- full" >> $GITHUB_STEP_SUMMARY
+          echo "- full-minus-markdown" >> $GITHUB_STEP_SUMMARY
+          echo "- lean-plus-markdown" >> $GITHUB_STEP_SUMMARY
+          echo "- standard-plus-sync" >> $GITHUB_STEP_SUMMARY

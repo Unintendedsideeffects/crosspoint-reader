@@ -495,6 +495,25 @@
                 <span class="slider"></span>
               </label>
             </div>
+
+            <div class="feature-item">
+              <div>
+                <div class="feature-title">Home Media Picker</div>
+                <div class="feature-meta">
+                  Horizontal book shelf + vertical menu navigation on Home.
+                </div>
+                <div class="feature-size">~12 KB</div>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  id="home_media_picker"
+                  checked
+                  data-feature="home_media_picker"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
           </div>
         </section>
 
@@ -612,6 +631,11 @@
           flag: "ENABLE_BACKGROUND_SERVER",
           default: true,
         },
+        home_media_picker: {
+          sizeKb: 12,
+          flag: "ENABLE_HOME_MEDIA_PICKER",
+          default: true,
+        },
       };
 
       const BASE_SIZE_MB = 5.5;
@@ -627,6 +651,7 @@
           extended_fonts: true,
           image_sleep: true,
           background_server: true,
+          home_media_picker: true,
         },
         full: {
           extended_fonts: true,
@@ -636,6 +661,7 @@
           koreader_sync: true,
           calibre_sync: true,
           background_server: true,
+          home_media_picker: true,
         },
       };
 

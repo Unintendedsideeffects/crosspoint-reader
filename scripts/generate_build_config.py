@@ -64,6 +64,12 @@ FEATURES = {
         size_kb=5,
         description='Background web server for file management'
     ),
+    'home_media_picker': Feature(
+        name='Home Media Picker',
+        flag='ENABLE_HOME_MEDIA_PICKER',
+        size_kb=12,
+        description='Streamlined home UI with horizontal book shelf + vertical menu'
+    ),
 }
 
 
@@ -124,6 +130,13 @@ FEATURE_METADATA = {
         recommends=[]
     ),
     'background_server': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'home_media_picker': FeatureMetadata(
         implemented=True,
         stable=True,
         requires=[],
@@ -227,6 +240,7 @@ PROFILES = {
             'extended_fonts': True,
             'image_sleep': True,
             'background_server': True,
+            'home_media_picker': True,
         },
     },
     'full': {
@@ -239,6 +253,7 @@ PROFILES = {
             'koreader_sync': True,
             'calibre_sync': True,
             'background_server': True,
+            'home_media_picker': True,
         },
     },
 }
