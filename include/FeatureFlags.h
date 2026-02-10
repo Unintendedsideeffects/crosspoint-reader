@@ -31,6 +31,10 @@
 #define ENABLE_BACKGROUND_SERVER 1
 #endif
 
+#ifndef ENABLE_HOME_MEDIA_PICKER
+#define ENABLE_HOME_MEDIA_PICKER 1
+#endif
+
 // Enforce downstream dependencies at compile time.
 #if !ENABLE_INTEGRATIONS
 #undef ENABLE_KOREADER_SYNC

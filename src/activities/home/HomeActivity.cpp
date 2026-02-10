@@ -7,6 +7,7 @@
 #include <Utf8.h>
 #include <Xtc.h>
 
+#include <algorithm>
 #include <cstring>
 #include <vector>
 
@@ -15,17 +16,39 @@
 #include "CrossPointState.h"
 #include "FeatureFlags.h"
 #include "MappedInputManager.h"
+#include "RecentBooksStore.h"
 #include "ScreenComponents.h"
 #include "SpiBusMutex.h"
 #include "activities/TaskShutdown.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
 
+namespace {
+int clampValue(const int value, const int minValue, const int maxValue) {
+  if (value < minValue) {
+    return minValue;
+  }
+  if (value > maxValue) {
+    return maxValue;
+  }
+  return value;
+}
+
+#if ENABLE_HOME_MEDIA_PICKER
+constexpr int kMediaTopPadding = 18;
+constexpr int kMediaShelfTop = 40;
+constexpr int kMediaBottomHintMargin = 60;
+constexpr int kMenuTileHeight = 38;
+constexpr int kMenuTileSpacing = 7;
+#endif
+}  // namespace
+
 void HomeActivity::taskTrampoline(void* param) {
   auto* self = static_cast<HomeActivity*>(param);
   self->displayTaskLoop();
 }
 
+#if !ENABLE_HOME_MEDIA_PICKER
 int HomeActivity::getMenuItemCount() const {
   int count = 4;  // My Library, TODO, File transfer, Settings
   if (hasContinueReading) count++;
@@ -33,6 +56,170 @@ int HomeActivity::getMenuItemCount() const {
   if (hasOpdsUrl) count++;
 #endif
   return count;
+}
+#endif
+
+std::string HomeActivity::fallbackTitleFromPath(const std::string& path) {
+  auto title = path;
+  const size_t lastSlash = title.find_last_of('/');
+  if (lastSlash != std::string::npos) {
+    title = title.substr(lastSlash + 1);
+  }
+
+  if (StringUtils::checkFileExtension(title, ".xtch")) {
+    title.resize(title.length() - 5);
+  } else if (StringUtils::checkFileExtension(title, ".epub") || StringUtils::checkFileExtension(title, ".xtc") ||
+             StringUtils::checkFileExtension(title, ".txt") || StringUtils::checkFileExtension(title, ".md")) {
+    title.resize(title.length() - 4);
+  }
+
+  return title;
+}
+
+std::string HomeActivity::fallbackAuthor(const RecentBook& book) {
+  if (!book.author.empty()) {
+    return book.author;
+  }
+  return "";
+}
+
+void HomeActivity::rebuildMenuLayout() {
+  int idx = 0;
+  menuOpenBookIndex = idx++;
+  menuMyLibraryIndex = idx++;
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+  menuOpdsIndex = hasOpdsUrl ? idx++ : -1;
+#else
+  menuOpdsIndex = -1;
+#endif
+  menuTodoIndex = idx++;
+  menuFileTransferIndex = idx++;
+  menuSettingsIndex = idx++;
+  menuItemCount = idx;
+}
+
+void HomeActivity::loadRecentBooks() {
+  recentBooks.clear();
+  const auto& storedBooks = RECENT_BOOKS.getBooks();
+  recentBooks.reserve(storedBooks.size());
+
+  for (const auto& stored : storedBooks) {
+    if (!SdMan.exists(stored.path.c_str())) {
+      continue;
+    }
+
+    RecentBook entry = stored;
+    bool metadataChanged = false;
+
+    if (entry.title.empty() || entry.coverBmpPath.empty()) {
+      const RecentBook hydrated = RECENT_BOOKS.getDataFromBook(entry.path);
+      if (!hydrated.title.empty() && hydrated.title != entry.title) {
+        entry.title = hydrated.title;
+        metadataChanged = true;
+      }
+      if (!hydrated.author.empty() && hydrated.author != entry.author) {
+        entry.author = hydrated.author;
+        metadataChanged = true;
+      }
+      if (!hydrated.coverBmpPath.empty() && hydrated.coverBmpPath != entry.coverBmpPath) {
+        entry.coverBmpPath = hydrated.coverBmpPath;
+        metadataChanged = true;
+      }
+    }
+
+    if (entry.title.empty()) {
+      entry.title = fallbackTitleFromPath(entry.path);
+      if (entry.title != stored.title) {
+        metadataChanged = true;
+      }
+    }
+
+    if (metadataChanged) {
+      RECENT_BOOKS.updateBook(entry.path, entry.title, entry.author, entry.coverBmpPath);
+    }
+
+    recentBooks.push_back(entry);
+  }
+
+  if (recentBooks.empty()) {
+    selectedBookIndex = 0;
+    return;
+  }
+
+  if (!APP_STATE.openEpubPath.empty()) {
+    for (size_t i = 0; i < recentBooks.size(); ++i) {
+      if (recentBooks[i].path == APP_STATE.openEpubPath) {
+        selectedBookIndex = static_cast<int>(i);
+        return;
+      }
+    }
+  }
+
+  selectedBookIndex = clampValue(selectedBookIndex, 0, static_cast<int>(recentBooks.size()) - 1);
+}
+
+void HomeActivity::openSelectedBook() {
+  if (recentBooks.empty()) {
+    return;
+  }
+
+  if (selectedBookIndex < 0 || selectedBookIndex >= static_cast<int>(recentBooks.size())) {
+    selectedBookIndex = 0;
+  }
+
+  const auto& selected = recentBooks[static_cast<size_t>(selectedBookIndex)];
+  if (!SdMan.exists(selected.path.c_str())) {
+    loadRecentBooks();
+    updateRequired = true;
+    return;
+  }
+
+  APP_STATE.openEpubPath = selected.path;
+  APP_STATE.saveToFile();
+  onContinueReading();
+}
+
+std::string HomeActivity::getMenuItemLabel(const int index) const {
+  if (index == menuOpenBookIndex) {
+    return recentBooks.empty() ? "Open Book (empty)" : "Open Book";
+  }
+  if (index == menuMyLibraryIndex) {
+    return "My Library";
+  }
+  if (index == menuOpdsIndex) {
+    return "OPDS Browser";
+  }
+  if (index == menuTodoIndex) {
+    return "TODO";
+  }
+  if (index == menuFileTransferIndex) {
+    return "File Transfer";
+  }
+  if (index == menuSettingsIndex) {
+    return "Settings";
+  }
+  return "";
+}
+
+bool HomeActivity::drawCoverAt(const std::string& coverPath, const int x, const int y, const int width,
+                               const int height) const {
+  if (coverPath.empty() || !SdMan.exists(coverPath.c_str())) {
+    return false;
+  }
+
+  SpiBusMutex::Guard guard;
+  FsFile file;
+  if (!SdMan.openFileForRead("HOME", coverPath, file)) {
+    return false;
+  }
+
+  Bitmap bitmap(file);
+  const bool ok = bitmap.parseHeaders() == BmpReaderError::Ok;
+  if (ok) {
+    renderer.drawBitmap(bitmap, x, y, width, height);
+  }
+  file.close();
+  return ok;
 }
 
 void HomeActivity::onEnter() {
@@ -42,15 +229,28 @@ void HomeActivity::onEnter() {
   exitTaskRequested.store(false);
   taskHasExited.store(false);
 
-  // Check if we have a book to continue reading
-  hasContinueReading = !APP_STATE.openEpubPath.empty() && SdMan.exists(APP_STATE.openEpubPath.c_str());
-
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
   // Check if OPDS browser URL is configured
   hasOpdsUrl = strlen(SETTINGS.opdsServerUrl) > 0;
 #else
   hasOpdsUrl = false;
 #endif
+
+#if ENABLE_HOME_MEDIA_PICKER
+  loadRecentBooks();
+  rebuildMenuLayout();
+  selectedMenuIndex = 0;
+  hasContinueReading = !recentBooks.empty();
+  selectorIndex = 0;
+
+  hasCoverImage = false;
+  coverRendered = false;
+  coverBmpPath.clear();
+  lastBookTitle.clear();
+  lastBookAuthor.clear();
+#else
+  // Check if we have a book to continue reading
+  hasContinueReading = !APP_STATE.openEpubPath.empty() && SdMan.exists(APP_STATE.openEpubPath.c_str());
 
   if (hasContinueReading) {
     // Extract filename from path for display
@@ -104,6 +304,7 @@ void HomeActivity::onEnter() {
   }
 
   selectorIndex = 0;
+#endif
 
   // Trigger first update
   updateRequired = true;
@@ -125,8 +326,10 @@ void HomeActivity::onExit() {
 
   // Free the stored cover buffer if any
   freeCoverBuffer();
+  recentBooks.clear();
 }
 
+#if !ENABLE_HOME_MEDIA_PICKER
 bool HomeActivity::storeCoverBuffer() {
   uint8_t* frameBuffer = renderer.getFrameBuffer();
   if (!frameBuffer) {
@@ -160,6 +363,7 @@ bool HomeActivity::restoreCoverBuffer() {
   memcpy(frameBuffer, coverBuffer, bufferSize);
   return true;
 }
+#endif
 
 void HomeActivity::freeCoverBuffer() {
   if (coverBuffer) {
@@ -170,6 +374,60 @@ void HomeActivity::freeCoverBuffer() {
 }
 
 void HomeActivity::loop() {
+#if ENABLE_HOME_MEDIA_PICKER
+  const bool leftPressed = mappedInput.wasPressed(MappedInputManager::Button::Left);
+  const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
+  const bool upPressed = mappedInput.wasPressed(MappedInputManager::Button::Up);
+  const bool downPressed = mappedInput.wasPressed(MappedInputManager::Button::Down);
+
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+    if (selectedMenuIndex == menuOpenBookIndex) {
+      openSelectedBook();
+      return;
+    }
+    if (selectedMenuIndex == menuMyLibraryIndex) {
+      onMyLibraryOpen();
+      return;
+    }
+    if (selectedMenuIndex == menuOpdsIndex) {
+      onOpdsBrowserOpen();
+      return;
+    }
+    if (selectedMenuIndex == menuTodoIndex) {
+      onTodoOpen();
+      return;
+    }
+    if (selectedMenuIndex == menuFileTransferIndex) {
+      onFileTransferOpen();
+      return;
+    }
+    if (selectedMenuIndex == menuSettingsIndex) {
+      onSettingsOpen();
+      return;
+    }
+  }
+
+  if (!recentBooks.empty()) {
+    const int bookCount = static_cast<int>(recentBooks.size());
+    if (leftPressed) {
+      selectedBookIndex = (selectedBookIndex + bookCount - 1) % bookCount;
+      updateRequired = true;
+    } else if (rightPressed) {
+      selectedBookIndex = (selectedBookIndex + 1) % bookCount;
+      updateRequired = true;
+    }
+  }
+
+  if (menuItemCount > 0) {
+    if (upPressed) {
+      selectedMenuIndex = (selectedMenuIndex + menuItemCount - 1) % menuItemCount;
+      updateRequired = true;
+    } else if (downPressed) {
+      selectedMenuIndex = (selectedMenuIndex + 1) % menuItemCount;
+      updateRequired = true;
+    }
+  }
+#else
   const bool prevPressed = mappedInput.wasPressed(MappedInputManager::Button::Up) ||
                            mappedInput.wasPressed(MappedInputManager::Button::Left);
   const bool nextPressed = mappedInput.wasPressed(MappedInputManager::Button::Down) ||
@@ -211,6 +469,7 @@ void HomeActivity::loop() {
     selectorIndex = (selectorIndex + 1) % menuCount;
     updateRequired = true;
   }
+#endif
 }
 
 void HomeActivity::displayTaskLoop() {
@@ -231,6 +490,144 @@ void HomeActivity::displayTaskLoop() {
 }
 
 void HomeActivity::render() {
+#if ENABLE_HOME_MEDIA_PICKER
+  renderer.clearScreen();
+
+  const auto pageWidth = renderer.getScreenWidth();
+  const auto pageHeight = renderer.getScreenHeight();
+
+  constexpr int margin = 20;
+  const int menuAreaHeight =
+      menuItemCount * kMenuTileHeight + (menuItemCount > 0 ? (menuItemCount - 1) * kMenuTileSpacing : 0);
+  int menuStartY = pageHeight - kMediaBottomHintMargin - menuAreaHeight;
+  menuStartY = std::max(menuStartY, kMediaShelfTop + 230);
+
+  const int shelfBottom = menuStartY - 12;
+  const int shelfHeight = shelfBottom - kMediaShelfTop;
+
+  const int shelfLabelY = kMediaTopPadding;
+  renderer.drawText(UI_10_FONT_ID, margin, shelfLabelY, "MEDIA SHELF");
+  const int labelWidth = renderer.getTextWidth(UI_10_FONT_ID, "MEDIA SHELF");
+  const int dividerY = shelfLabelY + renderer.getLineHeight(UI_10_FONT_ID) / 2;
+  renderer.drawLine(margin + labelWidth + 10, dividerY, pageWidth - margin, dividerY);
+
+  const int coverHeight = clampValue(shelfHeight - 95, 170, 280);
+  const int coverWidth = clampValue((coverHeight * 7) / 10, 130, 210);
+  const int coverX = (pageWidth - coverWidth) / 2;
+  const int coverY = kMediaShelfTop + 24;
+
+  const int sideCoverHeight = (coverHeight * 2) / 3;
+  const int sideCoverWidth = (coverWidth * 2) / 3;
+  const int sideCoverY = coverY + (coverHeight - sideCoverHeight) / 2 + 8;
+  const int leftCoverX = std::max(margin, coverX - sideCoverWidth + 14);
+  const int rightCoverX = std::min(pageWidth - margin - sideCoverWidth, coverX + coverWidth - 14);
+
+  auto drawPlaceholder = [&](const std::string& title, const int x, const int y, const int w, const int h,
+                             const bool highlighted) {
+    if (highlighted) {
+      renderer.fillRect(x, y, w, h);
+      renderer.drawRect(x, y, w, h, false);
+    } else {
+      renderer.drawRect(x, y, w, h);
+    }
+
+    const std::string trimmed = renderer.truncatedText(UI_10_FONT_ID, title.c_str(), w - 18);
+    const int textY = y + (h - renderer.getLineHeight(UI_10_FONT_ID)) / 2;
+    renderer.drawCenteredText(UI_10_FONT_ID, textY, trimmed.c_str(), !highlighted);
+  };
+
+  auto drawBookCard = [&](const RecentBook& book, const int x, const int y, const int w, const int h, const bool front,
+                          const bool selected) {
+    const bool hasCover = drawCoverAt(book.coverBmpPath, x, y, w, h);
+    if (!hasCover) {
+      const std::string fallback = fallbackTitleFromPath(book.path);
+      drawPlaceholder(fallback.empty() ? "Untitled" : fallback, x, y, w, h, selected && front);
+    } else if (selected && front) {
+      renderer.drawRect(x + 2, y + 2, w - 4, h - 4);
+      renderer.drawRect(x + 5, y + 5, w - 10, h - 10);
+    } else {
+      renderer.drawRect(x, y, w, h);
+    }
+  };
+
+  if (recentBooks.empty()) {
+    drawPlaceholder("No recent books", coverX, coverY, coverWidth, coverHeight, false);
+    renderer.drawCenteredText(UI_12_FONT_ID, coverY + coverHeight + 14, "Open a file from My Library");
+  } else {
+    const int bookCount = static_cast<int>(recentBooks.size());
+    selectedBookIndex = clampValue(selectedBookIndex, 0, bookCount - 1);
+
+    if (bookCount > 1) {
+      const int previous = (selectedBookIndex + bookCount - 1) % bookCount;
+      const int next = (selectedBookIndex + 1) % bookCount;
+      drawBookCard(recentBooks[static_cast<size_t>(previous)], leftCoverX, sideCoverY, sideCoverWidth, sideCoverHeight,
+                   false, false);
+      drawBookCard(recentBooks[static_cast<size_t>(next)], rightCoverX, sideCoverY, sideCoverWidth, sideCoverHeight,
+                   false, false);
+    }
+
+    const auto& selectedBook = recentBooks[static_cast<size_t>(selectedBookIndex)];
+    drawBookCard(selectedBook, coverX, coverY, coverWidth, coverHeight, true, true);
+
+    std::string title = selectedBook.title.empty() ? fallbackTitleFromPath(selectedBook.path) : selectedBook.title;
+    if (title.empty()) {
+      title = "Untitled";
+    }
+    const std::string titleLine = renderer.truncatedText(UI_12_FONT_ID, title.c_str(), pageWidth - margin * 2);
+
+    std::string author = fallbackAuthor(selectedBook);
+    if (!author.empty()) {
+      author = renderer.truncatedText(UI_10_FONT_ID, author.c_str(), pageWidth - margin * 2);
+    }
+
+    const int maxMetaTop = shelfBottom - renderer.getLineHeight(UI_12_FONT_ID) - renderer.getLineHeight(UI_10_FONT_ID) -
+                           renderer.getLineHeight(UI_10_FONT_ID) - 6;
+    const int metaTop = std::min(coverY + coverHeight + 10, maxMetaTop);
+    renderer.drawCenteredText(UI_12_FONT_ID, metaTop, titleLine.c_str());
+
+    int infoY = metaTop + renderer.getLineHeight(UI_12_FONT_ID);
+    if (!author.empty()) {
+      renderer.drawCenteredText(UI_10_FONT_ID, infoY, author.c_str());
+      infoY += renderer.getLineHeight(UI_10_FONT_ID);
+    }
+
+    const std::string position =
+        std::to_string(selectedBookIndex + 1) + " / " + std::to_string(static_cast<int>(recentBooks.size()));
+    renderer.drawCenteredText(UI_10_FONT_ID, infoY, position.c_str());
+    renderer.drawCenteredText(UI_10_FONT_ID, shelfBottom - renderer.getLineHeight(UI_10_FONT_ID), "Left/Right: books");
+  }
+
+  const int menuTileWidth = pageWidth - 2 * margin;
+  for (int i = 0; i < menuItemCount; ++i) {
+    const int tileX = margin;
+    const int tileY = menuStartY + i * (kMenuTileHeight + kMenuTileSpacing);
+    const bool selected = i == selectedMenuIndex;
+    if (selected) {
+      renderer.fillRect(tileX, tileY, menuTileWidth, kMenuTileHeight);
+    } else {
+      renderer.drawRect(tileX, tileY, menuTileWidth, kMenuTileHeight);
+    }
+
+    const std::string label = getMenuItemLabel(i);
+    const int textWidth = renderer.getTextWidth(UI_10_FONT_ID, label.c_str());
+    const int textX = tileX + (menuTileWidth - textWidth) / 2;
+    const int textY = tileY + (kMenuTileHeight - renderer.getLineHeight(UI_10_FONT_ID)) / 2;
+    renderer.drawText(UI_10_FONT_ID, textX, textY, label.c_str(), !selected);
+  }
+
+  const auto labels = mappedInput.mapLabels("", "Select", "Book -", "Book +");
+  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  renderer.drawSideButtonHints(UI_10_FONT_ID, "Menu -", "Menu +");
+
+  const bool showBatteryPercentage =
+      SETTINGS.hideBatteryPercentage != CrossPointSettings::HIDE_BATTERY_PERCENTAGE::HIDE_ALWAYS;
+  const uint16_t percentage = battery.readPercentage();
+  const auto percentageText = showBatteryPercentage ? std::to_string(percentage) + "%" : "";
+  const auto batteryX = pageWidth - 25 - renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str());
+  ScreenComponents::drawBattery(renderer, batteryX, 10, showBatteryPercentage);
+
+  renderer.displayBuffer();
+#else
   // If we have a stored cover buffer, restore it instead of clearing
   const bool bufferRestored = coverBufferStored && restoreCoverBuffer();
   if (!bufferRestored) {
@@ -580,4 +977,5 @@ void HomeActivity::render() {
   ScreenComponents::drawBattery(renderer, batteryX, 10, showBatteryPercentage);
 
   renderer.displayBuffer();
+#endif
 }
