@@ -1,4 +1,5 @@
 #pragma once
+#include <FeatureFlags.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
@@ -53,10 +54,12 @@ class HomeActivity final : public Activity {
   bool drawCoverAt(const std::string& coverPath, int x, int y, int width, int height) const;
   static std::string fallbackTitleFromPath(const std::string& path);
   static std::string fallbackAuthor(const RecentBook& book);
+#if !ENABLE_HOME_MEDIA_PICKER
   int getMenuItemCount() const;
   bool storeCoverBuffer();    // Store frame buffer for cover image
   bool restoreCoverBuffer();  // Restore frame buffer from stored cover
-  void freeCoverBuffer();     // Free the stored cover buffer
+#endif
+  void freeCoverBuffer();  // Free the stored cover buffer
 
  public:
   explicit HomeActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
