@@ -159,14 +159,14 @@ bool RecentBooksStore::loadFromFile() {
     recentBooks.reserve(count);
 
     for (uint8_t i = 0; i < count; i++) {
-      std::string path, title, author;
+      std::string path, title, author, coverBmpPath;
       if (!serialization::readString(inputFile, path) || !serialization::readString(inputFile, title) ||
-          !serialization::readString(inputFile, author)) {
+          !serialization::readString(inputFile, author) || !serialization::readString(inputFile, coverBmpPath)) {
         Serial.printf("[%lu] [RBS] Failed to read book entry %d\n", millis(), i);
         inputFile.close();
         return false;
       }
-      recentBooks.push_back({path, title, author});
+      recentBooks.push_back({path, title, author, coverBmpPath});
     }
   }
 

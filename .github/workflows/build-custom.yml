@@ -48,6 +48,11 @@ on:
         required: false
         type: boolean
         default: true
+      home_media_picker:
+        description: 'Home Media Picker UI (~12K)'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build-custom:
@@ -102,6 +107,9 @@ jobs:
             if [ "${{ inputs.background_server }}" == "true" ]; then
               CMD="$CMD --enable background_server"
             fi
+            if [ "${{ inputs.home_media_picker }}" == "true" ]; then
+              CMD="$CMD --enable home_media_picker"
+            fi
 
             # Execute the command
             eval $CMD
@@ -138,6 +146,7 @@ jobs:
             echo "- KOReader Sync: ${{ inputs.koreader_sync }}" >> $GITHUB_STEP_SUMMARY
             echo "- Calibre Sync: ${{ inputs.calibre_sync }}" >> $GITHUB_STEP_SUMMARY
             echo "- Background Server: ${{ inputs.background_server }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Home Media Picker: ${{ inputs.home_media_picker }}" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY

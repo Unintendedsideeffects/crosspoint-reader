@@ -9,6 +9,7 @@ This document describes all HTTP and WebSocket endpoints available on the CrossP
     - [GET `/files` - File Browser Page](#get-files---file-browser-page)
     - [GET `/api/status` - Device Status](#get-apistatus---device-status)
     - [GET `/api/files` - List Files](#get-apifiles---list-files)
+    - [GET `/download` - Download File](#get-download---download-file)
     - [POST `/upload` - Upload File](#post-upload---upload-file)
     - [POST `/mkdir` - Create Folder](#post-mkdir---create-folder)
     - [POST `/delete` - Delete File or Folder](#post-delete---delete-file-or-folder)
@@ -127,6 +128,49 @@ curl "http://crosspoint.local/api/files?path=/Books"
 **Notes:**
 - Hidden files (starting with `.`) are automatically filtered out
 - System folders (`System Volume Information`, `XTCache`) are hidden
+
+---
+
+### GET `/download` - Download File
+
+Downloads a file from the SD card.
+
+**Request:**
+```bash
+# Download from root
+curl -L "http://crosspoint.local/download?path=/mybook.epub" -o mybook.epub
+
+# Download from a nested folder
+curl -L "http://crosspoint.local/download?path=/Books/Fiction/mybook.epub" -o mybook.epub
+```
+
+**Query Parameters:**
+
+| Parameter | Required | Description              |
+| --------- | -------- | ------------------------ |
+| `path`    | Yes      | Absolute file path on SD |
+
+**Response (200 OK):**
+- Binary file stream (`application/octet-stream` for most files)
+- `application/epub+zip` for `.epub` files
+- `Content-Disposition: attachment; filename="..."`
+
+**Error Responses:**
+
+| Status | Body                                | Cause                           |
+| ------ | ----------------------------------- | ------------------------------- |
+| 400    | `Missing path`                      | `path` parameter not provided   |
+| 400    | `Invalid path`                      | Invalid or root path            |
+| 400    | `Path is a directory`               | Attempted to download a folder  |
+| 403    | `Cannot access system files`        | Hidden file (starts with `.`)   |
+| 403    | `Cannot access protected items`     | Protected system file/folder    |
+| 404    | `Item not found`                    | Path does not exist             |
+| 500    | `Failed to open file`               | SD card access/open error       |
+
+**Protected Items:**
+- Files/folders starting with `.`
+- `System Volume Information`
+- `XTCache`
 
 ---
 
