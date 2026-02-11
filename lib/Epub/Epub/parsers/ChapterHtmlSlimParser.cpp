@@ -174,20 +174,9 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       if (!src.empty()) {
         LOG_DBG("EHP", "Found image: src=%s", src.c_str());
 
-        // Get the spine item's href to resolve the relative path
-        size_t lastUnderscore = self->filepath.rfind('_');
-        if (lastUnderscore != std::string::npos && lastUnderscore > 0) {
-          std::string indexStr = self->filepath.substr(lastUnderscore + 1);
-          indexStr.resize(indexStr.find('.'));
-          int spineIndex = atoi(indexStr.c_str());
-
-          const auto& spineItem = self->epub->getSpineItem(spineIndex);
-          std::string htmlHref = spineItem.href;
-          size_t lastSlash = htmlHref.find_last_of('/');
-          std::string htmlDir = (lastSlash != std::string::npos) ? htmlHref.substr(0, lastSlash + 1) : "";
-
+        {
           // Resolve the image path relative to the HTML file
-          std::string resolvedPath = FsHelpers::normalisePath(htmlDir + src);
+          std::string resolvedPath = FsHelpers::normalisePath(self->contentBase + src);
 
           // Create a unique filename for the cached image
           std::string ext;
@@ -195,8 +184,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
           if (extPos != std::string::npos) {
             ext = resolvedPath.substr(extPos);
           }
-          std::string cachedImagePath = self->epub->getCachePath() + "/img_" + std::to_string(spineIndex) + "_" +
-                                        std::to_string(self->imageCounter++) + ext;
+          std::string cachedImagePath = self->imageBasePath + std::to_string(self->imageCounter++) + ext;
 
           // Extract image to cache file
           FsFile cachedImageFile;
