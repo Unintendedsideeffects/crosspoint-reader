@@ -88,36 +88,36 @@ jobs:
             uv run python scripts/generate_build_config.py --profile "${{ inputs.profile }}"
           else
             echo "Using custom feature selection"
-            CMD="uv run python scripts/generate_build_config.py"
+            CMD=(uv run python scripts/generate_build_config.py)
 
             # Add enabled features
             if [ "${{ inputs.extended_fonts }}" == "true" ]; then
-              CMD="$CMD --enable extended_fonts"
+              CMD+=(--enable extended_fonts)
             fi
             if [ "${{ inputs.image_sleep }}" == "true" ]; then
-              CMD="$CMD --enable image_sleep"
+              CMD+=(--enable image_sleep)
             fi
             if [ "${{ inputs.markdown }}" == "true" ]; then
-              CMD="$CMD --enable markdown"
+              CMD+=(--enable markdown)
             fi
             if [ "${{ inputs.integrations }}" == "true" ]; then
-              CMD="$CMD --enable integrations"
+              CMD+=(--enable integrations)
             fi
             if [ "${{ inputs.koreader_sync }}" == "true" ]; then
-              CMD="$CMD --enable koreader_sync"
+              CMD+=(--enable koreader_sync)
             fi
             if [ "${{ inputs.calibre_sync }}" == "true" ]; then
-              CMD="$CMD --enable calibre_sync"
+              CMD+=(--enable calibre_sync)
             fi
             if [ "${{ inputs.background_server }}" == "true" ]; then
-              CMD="$CMD --enable background_server"
+              CMD+=(--enable background_server)
             fi
             if [ "${{ inputs.home_media_picker }}" == "true" ]; then
-              CMD="$CMD --enable home_media_picker"
+              CMD+=(--enable home_media_picker)
             fi
 
             # Execute the command
-            eval $CMD
+            "${CMD[@]}"
           fi
 
           # Show generated configuration
