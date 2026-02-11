@@ -372,7 +372,7 @@
                 <div class="feature-meta">
                   Adds more reading sizes + OpenDyslexic support.
                 </div>
-                <div class="feature-size">~300 KB</div>
+                <div class="feature-size">~3.5 MB</div>
               </div>
               <label class="toggle">
                 <input
@@ -391,7 +391,7 @@
                 <div class="feature-meta">
                   Enables PNG and JPEG sleep screens. BMP stays on.
                 </div>
-                <div class="feature-size">~140 KB</div>
+                <div class="feature-size">~33 KB</div>
               </div>
               <label class="toggle">
                 <input
@@ -410,7 +410,7 @@
                 <div class="feature-meta">
                   Full Markdown rendering and Obsidian compatibility.
                 </div>
-                <div class="feature-size">~560 KB</div>
+                <div class="feature-size">~158 KB</div>
               </div>
               <label class="toggle">
                 <input
@@ -429,7 +429,7 @@
                 <div class="feature-meta">
                   Shared hooks for remote sync integrations.
                 </div>
-                <div class="feature-size">~8 KB</div>
+                <div class="feature-size">~0 KB</div>
               </div>
               <label class="toggle">
                 <input
@@ -465,7 +465,7 @@
                 <div class="feature-meta">
                   OPDS browser + metadata sync settings for Calibre.
                 </div>
-                <div class="feature-size">~15 KB</div>
+                <div class="feature-size">~17 KB</div>
               </div>
               <label class="toggle">
                 <input
@@ -483,7 +483,7 @@
                 <div class="feature-meta">
                   Keeps the file server alive while reading.
                 </div>
-                <div class="feature-size">~5 KB</div>
+                <div class="feature-size">~4 KB</div>
               </div>
               <label class="toggle">
                 <input
@@ -502,7 +502,7 @@
                 <div class="feature-meta">
                   Horizontal book shelf + vertical menu navigation on Home.
                 </div>
-                <div class="feature-size">~12 KB</div>
+                <div class="feature-size">~0 KB</div>
               </div>
               <label class="toggle">
                 <input
@@ -520,12 +520,12 @@
         <section class="card">
           <div class="size-panel">
             <div class="size-label">Estimated Firmware Size</div>
-            <div class="size-value" id="size-value">5.9 MB</div>
+            <div class="size-value" id="size-value">6.2 MB</div>
             <div class="size-bar">
               <div class="size-bar-fill" id="size-bar"></div>
             </div>
             <div class="size-context" id="size-context">
-              92% of 6.4 MB flash budget
+              97% of 6.4 MB flash budget
             </div>
           </div>
 
@@ -597,22 +597,22 @@
     <script>
       const FEATURES = {
         extended_fonts: {
-          sizeKb: 300,
+          sizeKb: 3630,
           flag: "ENABLE_EXTENDED_FONTS",
           default: true,
         },
         image_sleep: {
-          sizeKb: 140,
+          sizeKb: 33,
           flag: "ENABLE_IMAGE_SLEEP",
           default: true,
         },
         markdown: {
-          sizeKb: 560,
+          sizeKb: 158,
           flag: "ENABLE_MARKDOWN",
           default: true,
         },
         integrations: {
-          sizeKb: 8,
+          sizeKb: 0,
           flag: "ENABLE_INTEGRATIONS",
           default: false,
         },
@@ -622,23 +622,23 @@
           default: false,
         },
         calibre_sync: {
-          sizeKb: 15,
+          sizeKb: 17,
           flag: "ENABLE_CALIBRE_SYNC",
           default: false,
         },
         background_server: {
-          sizeKb: 5,
+          sizeKb: 4,
           flag: "ENABLE_BACKGROUND_SERVER",
           default: true,
         },
         home_media_picker: {
-          sizeKb: 12,
+          sizeKb: 0,
           flag: "ENABLE_HOME_MEDIA_PICKER",
           default: true,
         },
       };
 
-      const BASE_SIZE_MB = 5.5;
+      const BASE_SIZE_MB = 2.62;
       const MAX_FLASH_MB = 6.4;
       const FEATURE_DEPENDENCIES = {
         koreader_sync: ["integrations"],

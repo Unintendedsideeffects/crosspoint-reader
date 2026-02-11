@@ -101,13 +101,13 @@ Behavior:
 
 | Feature | Flag | Size | Status | Dependencies |
 |---------|------|------|--------|--------------|
-| Extended Fonts | `ENABLE_EXTENDED_FONTS` | ~300KB | ✅ Stable | None |
-| PNG/JPEG Sleep | `ENABLE_IMAGE_SLEEP` | ~140KB | ✅ Stable | None |
-| Markdown/Obsidian | `ENABLE_MARKDOWN` | ~560KB | ✅ Stable | None |
-| Integrations Base | `ENABLE_INTEGRATIONS` | ~8KB | ✅ Stable | None |
-| KOReader Sync | `ENABLE_KOREADER_SYNC` | TBD | ✅ Stable | `ENABLE_INTEGRATIONS` |
-| Calibre Sync | `ENABLE_CALIBRE_SYNC` | TBD | ✅ Stable | `ENABLE_INTEGRATIONS` |
-| Background Server | `ENABLE_BACKGROUND_SERVER` | ~5KB | ✅ Stable | None |
+| Extended Fonts | `ENABLE_EXTENDED_FONTS` | ~3.5MB | ✅ Stable | None |
+| PNG/JPEG Sleep | `ENABLE_IMAGE_SLEEP` | ~33KB | ✅ Stable | None |
+| Markdown/Obsidian | `ENABLE_MARKDOWN` | ~158KB | ✅ Stable | None |
+| Integrations Base | `ENABLE_INTEGRATIONS` | ~0KB | ✅ Stable | None |
+| KOReader Sync | `ENABLE_KOREADER_SYNC` | ~2KB | ✅ Stable | `ENABLE_INTEGRATIONS` |
+| Calibre Sync | `ENABLE_CALIBRE_SYNC` | ~17KB | ✅ Stable | `ENABLE_INTEGRATIONS` |
+| Background Server | `ENABLE_BACKGROUND_SERVER` | ~4KB | ✅ Stable | None |
 
 ## Testing Strategy
 
@@ -126,7 +126,7 @@ Behavior:
 4. Edge cases
 
 **Nightly Tests:**
-- Full 64-combination test (all possible feature sets)
+- Full 256-combination test (all possible feature sets)
 - Size regression detection
 - Non-linear interaction detection
 
@@ -349,7 +349,7 @@ python scripts/measure_feature_sizes.py
 
 ### Nightly
 
-- Full 64-combination test
+- Full 256-combination test
 - Size regression detection
 - Results archived for trending
 
@@ -371,9 +371,9 @@ python scripts/measure_feature_sizes.py
 
 ### Flash Size
 
-- Minimal: ~5.5MB (-1.1MB savings)
+- Minimal: ~2.6MB (~3.8MB savings vs full)
 - Standard: ~6.2MB (recommended)
-- Full: ~6.6MB (at capacity limit)
+- Full: ~6.4MB (tight headroom)
 
 **Feature flags enable significant flash savings** for users who don't need all features.
 
