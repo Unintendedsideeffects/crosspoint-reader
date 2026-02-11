@@ -10,6 +10,7 @@
 
 #include "../Activity.h"
 #include "RecentBooksStore.h"
+#include "util/ButtonNavigator.h"
 
 class MyLibraryActivity final : public Activity {
  public:
@@ -20,6 +21,7 @@ class MyLibraryActivity final : public Activity {
   SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
+  ButtonNavigator buttonNavigator;
 
   Tab currentTab = Tab::Recent;
   int selectorIndex = 0;

@@ -1,7 +1,7 @@
 #include "MarkdownSection.h"
 
 #include <Arduino.h>
-#include <SDCardManager.h>
+#include <HalStorage.h>
 #include <Serialization.h>
 
 #include <cmath>
@@ -87,7 +87,7 @@ bool MarkdownSection::loadSectionFile(int fontId, float lineCompression, bool ex
   SpiBusMutex::Guard guard;
   nodeToPageMap.clear();
   closeSectionFile();
-  if (!SdMan.openFileForRead("MSC", filePath, file)) {
+  if (!Storage.openFileForRead("MSC", filePath, file)) {
     return false;
   }
 
@@ -136,10 +136,10 @@ bool MarkdownSection::loadSectionFile(int fontId, float lineCompression, bool ex
 bool MarkdownSection::clearCache() const {
   SpiBusMutex::Guard guard;
   const_cast<MarkdownSection*>(this)->closeSectionFile();
-  if (!SdMan.exists(filePath.c_str())) {
+  if (!Storage.exists(filePath.c_str())) {
     return true;
   }
-  if (!SdMan.remove(filePath.c_str())) {
+  if (!Storage.remove(filePath.c_str())) {
     Serial.printf("[%lu] [MSC] Failed to clear cache\n", millis());
     return false;
   }
@@ -154,11 +154,11 @@ bool MarkdownSection::createSectionFile(const MdNode& root, int fontId, float li
   SpiBusMutex::Guard guard;
   closeSectionFile();
 
-  if (!SdMan.exists(cachePath.c_str())) {
-    SdMan.mkdir(cachePath.c_str());
+  if (!Storage.exists(cachePath.c_str())) {
+    Storage.mkdir(cachePath.c_str());
   }
 
-  if (!SdMan.openFileForWrite("MSC", filePath, file)) {
+  if (!Storage.openFileForWrite("MSC", filePath, file)) {
     return false;
   }
 
@@ -181,7 +181,7 @@ bool MarkdownSection::createSectionFile(const MdNode& root, int fontId, float li
   if (!success) {
     Serial.printf("[%lu] [MSC] Failed to render markdown pages\n", millis());
     file.close();
-    SdMan.remove(filePath.c_str());
+    Storage.remove(filePath.c_str());
     return false;
   }
 
@@ -200,7 +200,7 @@ bool MarkdownSection::createSectionFile(const MdNode& root, int fontId, float li
   if (hasFailedLutRecords) {
     Serial.printf("[%lu] [MSC] Failed to write LUT due to invalid page positions\n", millis());
     file.close();
-    SdMan.remove(filePath.c_str());
+    Storage.remove(filePath.c_str());
     return false;
   }
 
@@ -214,7 +214,7 @@ bool MarkdownSection::createSectionFile(const MdNode& root, int fontId, float li
 std::unique_ptr<Page> MarkdownSection::loadPageFromSectionFile() {
   SpiBusMutex::Guard guard;
   if (!fileOpenForReading) {
-    if (!SdMan.openFileForRead("MSC", filePath, file)) {
+    if (!Storage.openFileForRead("MSC", filePath, file)) {
       return nullptr;
     }
     fileOpenForReading = true;

@@ -4,7 +4,7 @@
 #include <Epub/converters/ImageDecoderFactory.h>
 #include <Epub/converters/ImageToFramebufferDecoder.h>
 #include <GfxRenderer.h>
-#include <SDCardManager.h>
+#include <HalStorage.h>
 #include <Txt.h>
 #include <Xtc.h>
 
@@ -102,7 +102,7 @@ void validateSleepImagesOnce() {
   // Clear before scanning (in case of previous partial scan)
   sleepImageCache.validFiles.clear();
 
-  auto dir = SdMan.open("/sleep");
+  auto dir = Storage.open("/sleep");
   if (!(dir && dir.isDirectory())) {
     if (dir) dir.close();
     sleepImageCache.scanned = true;
@@ -217,7 +217,7 @@ void SleepActivity::renderCustomSleepScreen() const {
     if (isBmpFile(filename)) {
       // Use existing BMP rendering path
       FsFile file;
-      if (SdMan.openFileForRead("SLP", filename, file)) {
+      if (Storage.openFileForRead("SLP", filename, file)) {
         Bitmap bitmap(file, true);
         if (bitmap.parseHeaders() == BmpReaderError::Ok) {
           renderBitmapSleepScreen(bitmap);
@@ -238,7 +238,7 @@ void SleepActivity::renderCustomSleepScreen() const {
   for (const char* sleepImagePath : rootSleepImages) {
     if (isBmpFile(sleepImagePath)) {
       FsFile file;
-      if (SdMan.openFileForRead("SLP", sleepImagePath, file)) {
+      if (Storage.openFileForRead("SLP", sleepImagePath, file)) {
         Bitmap bitmap(file, true);
         if (bitmap.parseHeaders() == BmpReaderError::Ok) {
           Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), sleepImagePath);
@@ -503,7 +503,7 @@ void SleepActivity::renderCoverSleepScreen() const {
   }
 
   FsFile file;
-  if (SdMan.openFileForRead("SLP", coverBmpPath, file)) {
+  if (Storage.openFileForRead("SLP", coverBmpPath, file)) {
     Bitmap bitmap(file);
     if (bitmap.parseHeaders() == BmpReaderError::Ok) {
       Serial.printf("[SLP] Rendering sleep cover: %s\n", coverBmpPath.c_str());

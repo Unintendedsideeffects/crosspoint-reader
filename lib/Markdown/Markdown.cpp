@@ -1,7 +1,7 @@
 #include "Markdown.h"
 
 #include <FsHelpers.h>
-#include <SDCardManager.h>
+#include <HalStorage.h>
 #include <Serialization.h>
 
 #include <algorithm>
@@ -26,7 +26,7 @@ bool isHeadingLine(const std::string& line, uint8_t& outLevel, std::string& outT
 
 uint32_t hashFileContents(const std::string& path) {
   FsFile file;
-  if (!SdMan.openFileForRead("MD ", path, file)) {
+  if (!Storage.openFileForRead("MD ", path, file)) {
     return 0;
   }
 
@@ -303,7 +303,7 @@ std::string normalizeSlug(const std::string& input) {
 
 bool readFileToString(const std::string& path, std::string& out, size_t maxBytes) {
   FsFile file;
-  if (!SdMan.openFileForRead("MD ", path, file)) {
+  if (!Storage.openFileForRead("MD ", path, file)) {
     return false;
   }
 
@@ -484,13 +484,13 @@ bool Markdown::load() {
     return true;
   }
 
-  if (!SdMan.exists(filepath.c_str())) {
+  if (!Storage.exists(filepath.c_str())) {
     Serial.printf("[%lu] [MD ] File does not exist: %s\n", millis(), filepath.c_str());
     return false;
   }
 
   FsFile file;
-  if (!SdMan.openFileForRead("MD ", filepath, file)) {
+  if (!Storage.openFileForRead("MD ", filepath, file)) {
     Serial.printf("[%lu] [MD ] Failed to open file: %s\n", millis(), filepath.c_str());
     return false;
   }
@@ -515,11 +515,11 @@ std::string Markdown::getTitle() const {
 }
 
 void Markdown::setupCacheDir() const {
-  if (!SdMan.exists(cacheBasePath.c_str())) {
-    SdMan.mkdir(cacheBasePath.c_str());
+  if (!Storage.exists(cacheBasePath.c_str())) {
+    Storage.mkdir(cacheBasePath.c_str());
   }
-  if (!SdMan.exists(cachePath.c_str())) {
-    SdMan.mkdir(cachePath.c_str());
+  if (!Storage.exists(cachePath.c_str())) {
+    Storage.mkdir(cachePath.c_str());
   }
 }
 
@@ -544,9 +544,9 @@ bool Markdown::ensureHtml() {
   const std::string metaPath = cachePath + "/meta.bin";
 
   bool needsRender = true;
-  if (SdMan.exists(htmlPath.c_str()) && SdMan.exists(metaPath.c_str())) {
+  if (Storage.exists(htmlPath.c_str()) && Storage.exists(metaPath.c_str())) {
     FsFile metaFile;
-    if (SdMan.openFileForRead("MD ", metaPath, metaFile)) {
+    if (Storage.openFileForRead("MD ", metaPath, metaFile)) {
       uint32_t magic = 0;
       uint8_t version = 0;
       uint32_t cachedSize = 0;
@@ -570,12 +570,12 @@ bool Markdown::ensureHtml() {
   }
 
   if (!renderToHtmlFile(htmlPath)) {
-    SdMan.remove(htmlPath.c_str());
+    Storage.remove(htmlPath.c_str());
     return false;
   }
 
   FsFile metaFile;
-  if (SdMan.openFileForWrite("MD ", metaPath, metaFile)) {
+  if (Storage.openFileForWrite("MD ", metaPath, metaFile)) {
     serialization::writePod(metaFile, META_MAGIC);
     serialization::writePod(metaFile, META_VERSION);
     serialization::writePod(metaFile, static_cast<uint32_t>(fileSize));
@@ -588,7 +588,7 @@ bool Markdown::ensureHtml() {
 
 bool Markdown::renderToHtmlFile(const std::string& htmlPath) const {
   FsFile file;
-  if (!SdMan.openFileForRead("MD ", filepath, file)) {
+  if (!Storage.openFileForRead("MD ", filepath, file)) {
     return false;
   }
 
@@ -609,7 +609,7 @@ bool Markdown::renderToHtmlFile(const std::string& htmlPath) const {
   std::string output = preprocessContent(std::move(content), 0, stack);
 
   FsFile htmlFile;
-  if (!SdMan.openFileForWrite("MD ", htmlPath, htmlFile)) {
+  if (!Storage.openFileForWrite("MD ", htmlPath, htmlFile)) {
     return false;
   }
 
@@ -994,7 +994,7 @@ std::string Markdown::getContent() const {
   }
 
   FsFile file;
-  if (!SdMan.openFileForRead("MD ", filepath, file)) {
+  if (!Storage.openFileForRead("MD ", filepath, file)) {
     return "";
   }
 

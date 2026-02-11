@@ -1,9 +1,9 @@
 #include "PngToFramebufferConverter.h"
 
 #include <GfxRenderer.h>
+#include <HalStorage.h>
 #include <HardwareSerial.h>
 #include <PNGdec.h>
-#include <SDCardManager.h>
 #include <SdFat.h>
 
 #include "DitherUtils.h"
@@ -47,7 +47,7 @@ struct PngContext {
 // avoiding the need for global file state.
 static void* pngOpenWithHandle(const char* filename, int32_t* size) {
   FsFile* f = new FsFile();
-  if (!SdMan.openFileForRead("PNG", std::string(filename), *f)) {
+  if (!Storage.openFileForRead("PNG", std::string(filename), *f)) {
     delete f;
     return nullptr;
   }

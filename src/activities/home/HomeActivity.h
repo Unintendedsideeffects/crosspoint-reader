@@ -9,13 +9,18 @@
 #include <vector>
 
 #include "../Activity.h"
+#include "./MyLibraryActivity.h"
 #include "RecentBooksStore.h"
+#include "util/ButtonNavigator.h"
+
+struct Rect;
 
 class HomeActivity final : public Activity {
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
+  ButtonNavigator buttonNavigator;
   int selectorIndex = 0;
   int selectedBookIndex = 0;
   int selectedMenuIndex = 0;

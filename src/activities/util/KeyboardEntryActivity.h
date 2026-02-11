@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "../Activity.h"
+#include "util/ButtonNavigator.h"
 
 /**
  * Reusable keyboard entry activity for text input.
@@ -68,6 +69,7 @@ class KeyboardEntryActivity : public Activity {
   SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
+  ButtonNavigator buttonNavigator;
   bool updateRequired = false;
 
   // Keyboard state

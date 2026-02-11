@@ -46,4 +46,5 @@ class ReaderActivity final : public ActivityWithSubactivity {
         onGoBack(onGoBack),
         onGoToLibrary(onGoToLibrary) {}
   void onEnter() override;
+  bool isReaderActivity() const override { return true; }
 };

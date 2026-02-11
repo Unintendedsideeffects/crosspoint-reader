@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "../Activity.h"
+#include "util/ButtonNavigator.h"
 
 class XtcReaderChapterSelectionActivity final : public Activity {
   std::shared_ptr<Xtc> xtc;
@@ -15,6 +16,7 @@ class XtcReaderChapterSelectionActivity final : public Activity {
   SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
+  ButtonNavigator buttonNavigator;
   uint32_t currentPage = 0;
   int selectorIndex = 0;
   bool updateRequired = false;

@@ -3,7 +3,7 @@
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
-#include <SDCardManager.h>
+#include <HalStorage.h>
 #include <SPI.h>
 #include <builtinFonts/all.h>
 
@@ -26,8 +26,10 @@
 #include "activities/todo/TodoActivity.h"
 #include "activities/todo/TodoFallbackActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 #include "network/BackgroundWebServer.h"
+#include "util/ButtonNavigator.h"
 #include "util/DateUtils.h"
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
@@ -204,6 +206,8 @@ void waitForPowerRelease() {
 
 // Enter deep sleep mode
 void enterDeepSleep() {
+  APP_STATE.lastSleepFromReader = currentActivity && currentActivity->isReaderActivity();
+  APP_STATE.saveToFile();
   exitActivity();
   enterNewActivity(new SleepActivity(renderer, mappedInputManager));
 
@@ -274,7 +278,7 @@ void onGoToTodo() {
 #if ENABLE_MARKDOWN
   // 1. Try markdown (.md)
   const std::string todoMdPath = "/daily/" + today + ".md";
-  if (SdMan.exists(todoMdPath.c_str())) {
+  if (Storage.exists(todoMdPath.c_str())) {
     enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
     return;
   }
@@ -282,14 +286,14 @@ void onGoToTodo() {
 
   // 2. Try text (.txt)
   const std::string todoTxtPath = "/daily/" + today + ".txt";
-  if (SdMan.exists(todoTxtPath.c_str())) {
+  if (Storage.exists(todoTxtPath.c_str())) {
     enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoTxtPath, today, onGoHome));
     return;
   }
 
   // 3. Try EPUB (ReadOnly/ReaderActivity)
   const std::string todoEpubPath = "/daily/" + today + ".epub";
-  if (SdMan.exists(todoEpubPath.c_str())) {
+  if (Storage.exists(todoEpubPath.c_str())) {
     enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, onGoHome, onGoToMyLibraryWithPath));
     return;
   }
@@ -311,6 +315,7 @@ void onGoHome() {
 
 void setupDisplayAndFonts() {
   display.begin();
+  renderer.begin();
   Serial.printf("[%lu] [   ] Display initialized\n", millis());
   renderer.insertFont(BOOKERLY_14_FONT_ID, bookerly14FontFamily);
 #if ENABLE_EXTENDED_FONTS
@@ -353,7 +358,7 @@ void setup() {
 
   // SD Card Initialization
   // We need 6 open files concurrently when parsing a new chapter
-  if (!SdMan.begin()) {
+  if (!Storage.begin()) {
     Serial.printf("[%lu] [   ] SD card initialization failed\n", millis());
     setupDisplayAndFonts();
     exitActivity();
@@ -366,6 +371,8 @@ void setup() {
   KOREADER_STORE.loadFromFile();
 #endif
   WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
+  UITheme::getInstance().reload();
+  ButtonNavigator::setMappedInputManager(mappedInputManager);
 
   switch (gpio.getWakeupReason()) {
     case HalGPIO::WakeupReason::PowerButton:
@@ -396,7 +403,10 @@ void setup() {
   APP_STATE.loadFromFile();
   RECENT_BOOKS.loadFromFile();
 
-  if (APP_STATE.openEpubPath.empty()) {
+  // Boot to home screen if no book is open, last sleep was not from reader, back button is held, or reader activity
+  // crashed (indicated by readerActivityLoadCount > 0)
+  if (APP_STATE.openEpubPath.empty() || !APP_STATE.lastSleepFromReader ||
+      mappedInputManager.isPressed(MappedInputManager::Button::Back) || APP_STATE.readerActivityLoadCount > 0) {
     onGoHome();
   } else {
     // Clear app state to avoid getting into a boot loop if the epub doesn't load

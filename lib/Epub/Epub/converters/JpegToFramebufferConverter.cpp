@@ -1,8 +1,8 @@
 #include "JpegToFramebufferConverter.h"
 
 #include <GfxRenderer.h>
+#include <HalStorage.h>
 #include <HardwareSerial.h>
-#include <SDCardManager.h>
 #include <SdFat.h>
 #include <picojpeg.h>
 
@@ -22,7 +22,7 @@ struct JpegContext {
 
 bool JpegToFramebufferConverter::getDimensionsStatic(const std::string& imagePath, ImageDimensions& out) {
   FsFile file;
-  if (!SdMan.openFileForRead("JPG", imagePath, file)) {
+  if (!Storage.openFileForRead("JPG", imagePath, file)) {
     Serial.printf("[%lu] [JPG] Failed to open file for dimensions: %s\n", millis(), imagePath.c_str());
     return false;
   }
@@ -49,7 +49,7 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
   Serial.printf("[%lu] [JPG] Decoding JPEG: %s\n", millis(), imagePath.c_str());
 
   FsFile file;
-  if (!SdMan.openFileForRead("JPG", imagePath, file)) {
+  if (!Storage.openFileForRead("JPG", imagePath, file)) {
     Serial.printf("[%lu] [JPG] Failed to open file: %s\n", millis(), imagePath.c_str());
     return false;
   }

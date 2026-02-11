@@ -3,7 +3,7 @@
 #include <Bitmap.h>
 #include <Epub.h>
 #include <GfxRenderer.h>
-#include <SDCardManager.h>
+#include <HalStorage.h>
 #include <Utf8.h>
 #include <Xtc.h>
 
@@ -104,7 +104,7 @@ void HomeActivity::loadRecentBooks() {
   recentBooks.reserve(storedBooks.size());
 
   for (const auto& stored : storedBooks) {
-    if (!SdMan.exists(stored.path.c_str())) {
+    if (!Storage.exists(stored.path.c_str())) {
       continue;
     }
 
@@ -168,7 +168,7 @@ void HomeActivity::openSelectedBook() {
   }
 
   const auto& selected = recentBooks[static_cast<size_t>(selectedBookIndex)];
-  if (!SdMan.exists(selected.path.c_str())) {
+  if (!Storage.exists(selected.path.c_str())) {
     loadRecentBooks();
     updateRequired = true;
     return;
@@ -203,13 +203,13 @@ std::string HomeActivity::getMenuItemLabel(const int index) const {
 
 bool HomeActivity::drawCoverAt(const std::string& coverPath, const int x, const int y, const int width,
                                const int height) const {
-  if (coverPath.empty() || !SdMan.exists(coverPath.c_str())) {
+  if (coverPath.empty() || !Storage.exists(coverPath.c_str())) {
     return false;
   }
 
   SpiBusMutex::Guard guard;
   FsFile file;
-  if (!SdMan.openFileForRead("HOME", coverPath, file)) {
+  if (!Storage.openFileForRead("HOME", coverPath, file)) {
     return false;
   }
 
@@ -250,7 +250,7 @@ void HomeActivity::onEnter() {
   lastBookAuthor.clear();
 #else
   // Check if we have a book to continue reading
-  hasContinueReading = !APP_STATE.openEpubPath.empty() && SdMan.exists(APP_STATE.openEpubPath.c_str());
+  hasContinueReading = !APP_STATE.openEpubPath.empty() && Storage.exists(APP_STATE.openEpubPath.c_str());
 
   if (hasContinueReading) {
     // Extract filename from path for display
@@ -428,12 +428,18 @@ void HomeActivity::loop() {
     }
   }
 #else
-  const bool prevPressed = mappedInput.wasPressed(MappedInputManager::Button::Up) ||
-                           mappedInput.wasPressed(MappedInputManager::Button::Left);
-  const bool nextPressed = mappedInput.wasPressed(MappedInputManager::Button::Down) ||
-                           mappedInput.wasPressed(MappedInputManager::Button::Right);
 
   const int menuCount = getMenuItemCount();
+
+  buttonNavigator.onNext([this, menuCount] {
+    selectorIndex = ButtonNavigator::nextIndex(selectorIndex, menuCount);
+    updateRequired = true;
+  });
+
+  buttonNavigator.onPrevious([this, menuCount] {
+    selectorIndex = ButtonNavigator::previousIndex(selectorIndex, menuCount);
+    updateRequired = true;
+  });
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     // Calculate dynamic indices based on which options are available
@@ -462,12 +468,6 @@ void HomeActivity::loop() {
     } else if (selectorIndex == settingsIdx) {
       onSettingsOpen();
     }
-  } else if (prevPressed) {
-    selectorIndex = (selectorIndex + menuCount - 1) % menuCount;
-    updateRequired = true;
-  } else if (nextPressed) {
-    selectorIndex = (selectorIndex + 1) % menuCount;
-    updateRequired = true;
   }
 #endif
 }
@@ -661,7 +661,7 @@ void HomeActivity::render() {
       // First time: load cover from SD and render
       SpiBusMutex::Guard guard;
       FsFile file;
-      if (SdMan.openFileForRead("HOME", coverBmpPath, file)) {
+      if (Storage.openFileForRead("HOME", coverBmpPath, file)) {
         Bitmap bitmap(file);
         if (bitmap.parseHeaders() == BmpReaderError::Ok) {
           // Calculate position to center image within the book card

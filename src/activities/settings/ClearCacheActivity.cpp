@@ -1,8 +1,8 @@
 #include "ClearCacheActivity.h"
 
 #include <GfxRenderer.h>
+#include <HalStorage.h>
 #include <HardwareSerial.h>
-#include <SDCardManager.h>
 
 #include "MappedInputManager.h"
 #include "SpiBusMutex.h"
@@ -112,7 +112,7 @@ void ClearCacheActivity::clearCache() {
 
   SpiBusMutex::Guard guard;
   // Open .crosspoint directory
-  auto root = SdMan.open("/.crosspoint");
+  auto root = Storage.open("/.crosspoint");
   if (!root || !root.isDirectory()) {
     Serial.printf("[%lu] [CLEAR_CACHE] Failed to open cache directory\n", millis());
     if (root) root.close();
@@ -137,7 +137,7 @@ void ClearCacheActivity::clearCache() {
 
       file.close();  // Close before attempting to delete
 
-      if (SdMan.removeDir(fullPath.c_str())) {
+      if (Storage.removeDir(fullPath.c_str())) {
         clearedCount++;
       } else {
         Serial.printf("[%lu] [CLEAR_CACHE] Failed to remove: %s\n", millis(), fullPath.c_str());

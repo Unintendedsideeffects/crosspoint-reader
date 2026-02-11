@@ -1,7 +1,7 @@
 #include "CrossPointSettings.h"
 
+#include <HalStorage.h>
 #include <HardwareSerial.h>
-#include <SDCardManager.h>
 #include <Serialization.h>
 
 #include <cstring>
@@ -81,10 +81,10 @@ void applyLegacyFrontButtonLayout(CrossPointSettings& settings) {
 bool CrossPointSettings::saveToFile() const {
   SpiBusMutex::Guard guard;
   // Make sure the directory exists
-  SdMan.mkdir("/.crosspoint");
+  Storage.mkdir("/.crosspoint");
 
   FsFile outputFile;
-  if (!SdMan.openFileForWrite("CPS", SETTINGS_FILE, outputFile)) {
+  if (!Storage.openFileForWrite("CPS", SETTINGS_FILE, outputFile)) {
     return false;
   }
 
@@ -129,7 +129,7 @@ bool CrossPointSettings::saveToFile() const {
 bool CrossPointSettings::loadFromFile() {
   SpiBusMutex::Guard guard;
   FsFile inputFile;
-  if (!SdMan.openFileForRead("CPS", SETTINGS_FILE, inputFile)) {
+  if (!Storage.openFileForRead("CPS", SETTINGS_FILE, inputFile)) {
     return false;
   }
 

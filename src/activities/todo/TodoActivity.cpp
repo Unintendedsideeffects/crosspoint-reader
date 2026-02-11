@@ -1,7 +1,7 @@
 #include "TodoActivity.h"
 
 #include <Arduino.h>
-#include <SDCardManager.h>
+#include <HalStorage.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -185,12 +185,12 @@ void TodoActivity::loadTasks() {
   SpiBusMutex::Guard guard;
   items.clear();
 
-  if (!SdMan.exists(filePath.c_str())) {
+  if (!Storage.exists(filePath.c_str())) {
     // If file doesn't exist, we start empty
     return;
   }
 
-  FsFile file = SdMan.open(filePath.c_str(), FILE_READ);
+  FsFile file = Storage.open(filePath.c_str(), FILE_READ);
   if (!file) {
     return;
   }
@@ -234,10 +234,10 @@ void TodoActivity::saveTasks() {
   const auto slashPos = filePath.find_last_of('/');
   if (slashPos != std::string::npos && slashPos > 0) {
     std::string dirPath = filePath.substr(0, slashPos);
-    SdMan.mkdir(dirPath.c_str());
+    Storage.mkdir(dirPath.c_str());
   }
 
-  FsFile file = SdMan.open(filePath.c_str(), FILE_WRITE | O_TRUNC);
+  FsFile file = Storage.open(filePath.c_str(), FILE_WRITE | O_TRUNC);
   if (!file) {
     return;
   }

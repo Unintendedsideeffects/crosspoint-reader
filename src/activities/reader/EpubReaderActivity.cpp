@@ -3,7 +3,7 @@
 #include <Epub/Page.h>
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
-#include <SDCardManager.h>
+#include <HalStorage.h>
 #include <esp_task_wdt.h>
 
 #include "CrossPointSettings.h"
@@ -97,7 +97,7 @@ void EpubReaderActivity::onEnter() {
   {
     SpiBusMutex::Guard guard;
     FsFile f;
-    if (SdMan.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
+    if (Storage.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
       uint8_t data[6];
       int dataSize = f.read(data, 6);
       if (dataSize == 4 || dataSize == 6) {
@@ -222,15 +222,15 @@ void EpubReaderActivity::loop() {
     xSemaphoreGive(renderingMutex);
   }
 
-  // Long press BACK (1s+) goes directly to home
+  // Long press BACK (1s+) goes to file selection
   if (mappedInput.isPressed(MappedInputManager::Button::Back) && mappedInput.getHeldTime() >= goHomeMs) {
-    onGoHome();
+    onGoBack();
     return;
   }
 
-  // Short press BACK goes to file selection
+  // Short press BACK goes directly to home
   if (mappedInput.wasReleased(MappedInputManager::Button::Back) && mappedInput.getHeldTime() < goHomeMs) {
-    onGoBack();
+    onGoHome();
     return;
   }
 
@@ -614,9 +614,10 @@ void EpubReaderActivity::renderScreen() {
     bool sectionLoaded = false;
     {
       SpiBusMutex::Guard guard;
-      sectionLoaded = section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
-                                               SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment,
-                                               viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled);
+      sectionLoaded =
+          section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
+                                   SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
+                                   viewportHeight, SETTINGS.hyphenationEnabled, SETTINGS.embeddedStyle);
     }
     if (!sectionLoaded) {
       Serial.printf("[%lu] [ERS] Cache not found, building...\n", millis());
@@ -625,7 +626,7 @@ void EpubReaderActivity::renderScreen() {
 
       if (!section->createSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
                                       SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
-                                      viewportHeight, SETTINGS.hyphenationEnabled, popupFn)) {
+                                      viewportHeight, SETTINGS.hyphenationEnabled, SETTINGS.embeddedStyle, popupFn)) {
         Serial.printf("[%lu] [ERS] Failed to persist page data to SD\n", millis());
         section.reset();
         return;
@@ -702,7 +703,7 @@ void EpubReaderActivity::renderScreen() {
 void EpubReaderActivity::saveProgress(int spineIndex, int currentPage, int pageCount) {
   SpiBusMutex::Guard guard;
   FsFile f;
-  if (SdMan.openFileForWrite("ERS", epub->getCachePath() + "/progress.bin", f)) {
+  if (Storage.openFileForWrite("ERS", epub->getCachePath() + "/progress.bin", f)) {
     uint8_t data[6];
     data[0] = spineIndex & 0xFF;
     data[1] = (spineIndex >> 8) & 0xFF;

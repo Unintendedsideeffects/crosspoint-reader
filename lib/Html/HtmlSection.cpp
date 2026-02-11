@@ -1,6 +1,6 @@
 #include "HtmlSection.h"
 
-#include <SDCardManager.h>
+#include <HalStorage.h>
 #include <Serialization.h>
 
 #include <cmath>
@@ -86,7 +86,7 @@ bool HtmlSection::loadSectionFile(int fontId, float lineCompression, bool extraP
                                   bool hyphenationEnabled, uint32_t sourceSize) {
   SpiBusMutex::Guard guard;
   closeSectionFile();
-  if (!SdMan.openFileForRead("HSC", filePath, file)) {
+  if (!Storage.openFileForRead("HSC", filePath, file)) {
     return false;
   }
 
@@ -135,10 +135,10 @@ bool HtmlSection::loadSectionFile(int fontId, float lineCompression, bool extraP
 bool HtmlSection::clearCache() const {
   SpiBusMutex::Guard guard;
   const_cast<HtmlSection*>(this)->closeSectionFile();
-  if (!SdMan.exists(filePath.c_str())) {
+  if (!Storage.exists(filePath.c_str())) {
     return true;
   }
-  if (!SdMan.remove(filePath.c_str())) {
+  if (!Storage.remove(filePath.c_str())) {
     Serial.printf("[%lu] [HSC] Failed to clear cache\n", millis());
     return false;
   }
@@ -153,11 +153,11 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
   SpiBusMutex::Guard guard;
   closeSectionFile();
 
-  if (!SdMan.exists(cachePath.c_str())) {
-    SdMan.mkdir(cachePath.c_str());
+  if (!Storage.exists(cachePath.c_str())) {
+    Storage.mkdir(cachePath.c_str());
   }
 
-  if (!SdMan.openFileForWrite("HSC", filePath, file)) {
+  if (!Storage.openFileForWrite("HSC", filePath, file)) {
     return false;
   }
 
@@ -169,7 +169,7 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
   size_t htmlSize = 0;
   {
     FsFile htmlFile;
-    if (SdMan.openFileForRead("HSC", htmlPath, htmlFile)) {
+    if (Storage.openFileForRead("HSC", htmlPath, htmlFile)) {
       htmlSize = htmlFile.size();
       htmlFile.close();
     }
@@ -183,6 +183,7 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
       htmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
       viewportHeight, hyphenationEnabled,
       [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
+      false,     // embeddedStyle - not used for standalone HTML
       nullptr,   // popupFn - not used for standalone HTML
       nullptr);  // cssParser - not used for standalone HTML
 
@@ -190,7 +191,7 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
   if (!success) {
     Serial.printf("[%lu] [HSC] Failed to parse HTML and build pages\n", millis());
     file.close();
-    SdMan.remove(filePath.c_str());
+    Storage.remove(filePath.c_str());
     return false;
   }
 
@@ -207,7 +208,7 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
   if (hasFailedLutRecords) {
     Serial.printf("[%lu] [HSC] Failed to write LUT due to invalid page positions\n", millis());
     file.close();
-    SdMan.remove(filePath.c_str());
+    Storage.remove(filePath.c_str());
     return false;
   }
 
@@ -221,7 +222,7 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
 std::unique_ptr<Page> HtmlSection::loadPageFromSectionFile() {
   SpiBusMutex::Guard guard;
   if (!fileOpenForReading) {
-    if (!SdMan.openFileForRead("HSC", filePath, file)) {
+    if (!Storage.openFileForRead("HSC", filePath, file)) {
       return nullptr;
     }
     fileOpenForReading = true;

@@ -4,8 +4,8 @@
 #include <EpdFontFamily.h>
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
+#include <HalStorage.h>
 #include <ImageConverter.h>
-#include <SDCardManager.h>
 #include <esp_task_wdt.h>
 
 #include <algorithm>
@@ -800,7 +800,7 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
   }
 
   FsFile imageFile;
-  if (!SdMan.openFileForRead("MDR", imagePath, imageFile)) {
+  if (!Storage.openFileForRead("MDR", imagePath, imageFile)) {
     startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
     return;
