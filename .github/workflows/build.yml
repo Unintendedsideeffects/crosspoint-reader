@@ -159,7 +159,42 @@ jobs:
             cp "$PARTITIONS_BIN" partitions.bin
           fi
 
-      - name: Remove existing CI assets (if any)
+      - name: Compute CI rotation slot
+        id: ci-slot
+        shell: bash
+        run: |
+          slot=$(( ((GITHUB_RUN_NUMBER - 1) % 3) + 1 ))
+          echo "slot=${slot}" >> "$GITHUB_OUTPUT"
+          echo "tag=ci-latest-${slot}" >> "$GITHUB_OUTPUT"
+
+      - name: Remove existing rotating CI slot assets (if any)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          target_tag="${{ steps.ci-slot.outputs.tag }}"
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/${target_tag} --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
+          if [ -z "$asset_ids" ]; then
+            echo "No existing ${target_tag} assets to remove."
+            exit 0
+          fi
+          for asset_id in $asset_ids; do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
+          done
+
+      - name: Publish rotating CI slot release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ci-slot.outputs.tag }}
+          name: CI Latest Slot ${{ steps.ci-slot.outputs.slot }}
+          prerelease: true
+          draft: false
+          generate_release_notes: false
+          files: |
+            firmware.bin
+            partitions.bin*
+
+      - name: Remove existing ci-latest assets (if any)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

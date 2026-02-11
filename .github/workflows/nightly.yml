@@ -108,3 +108,35 @@ jobs:
             .pio/build/gh_release/firmware.bin
             .pio/build/gh_release/partitions.bin
             .pio/build/gh_release/bootloader.bin
+
+      - name: Prune old nightly releases (keep latest 3)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          stale_releases="$(
+            gh api repos/${{ github.repository }}/releases --paginate --jq '
+              [
+                .[]
+                | select(.prerelease == true and (.tag_name | test("^[0-9]+\\.[0-9]+\\.[0-9]{8}$")))
+              ]
+              | sort_by(.created_at)
+              | reverse
+              | .[3:][]
+              | [.id, .tag_name]
+              | @tsv
+            '
+          )"
+
+          if [ -z "$stale_releases" ]; then
+            echo "No nightly releases to prune."
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r release_id tag_name; do
+            [ -n "$release_id" ] || continue
+            echo "Deleting nightly release ${tag_name} (id ${release_id})"
+            gh api -X DELETE "repos/${{ github.repository }}/releases/${release_id}"
+            gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/${tag_name}" || true
+          done <<< "$stale_releases"
