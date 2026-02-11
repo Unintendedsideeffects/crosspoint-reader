@@ -240,6 +240,7 @@
 <script>
   let allSettings = [];
   let originalValues = {};
+  let touchedFields = {};
 
   function escapeHtml(unsafe) {
     return unsafe
@@ -264,12 +265,12 @@
     if (setting.type === 'toggle') {
       const checked = setting.value ? 'checked' : '';
       return '<label class="toggle-switch">' +
-        '<input type="checkbox" id="' + id + '" ' + checked + ' onchange="markChanged()">' +
+        '<input type="checkbox" id="' + id + '" ' + checked + ' onchange="markChanged(\'' + setting.key + '\')">' +
         '<span class="toggle-slider"></span></label>';
     }
 
     if (setting.type === 'enum') {
-      let html = '<select id="' + id + '" onchange="markChanged()">';
+      let html = '<select id="' + id + '" onchange="markChanged(\'' + setting.key + '\')">';
       setting.options.forEach(function(opt, idx) {
         const selected = idx === setting.value ? ' selected' : '';
         html += '<option value="' + idx + '"' + selected + '>' + escapeHtml(opt) + '</option>';
@@ -281,14 +282,15 @@
     if (setting.type === 'value') {
       return '<input type="number" id="' + id + '" value="' + setting.value + '"' +
         ' min="' + setting.min + '" max="' + setting.max + '" step="' + setting.step + '"' +
-        ' onchange="markChanged()">';
+        ' onchange="markChanged(\'' + setting.key + '\')">';
     }
 
     if (setting.type === 'string') {
       const inputType = setting.name.toLowerCase().includes('password') ? 'password' : 'text';
       const val = setting.value || '';
+      const placeholder = inputType === 'password' && setting.hasValue ? ' placeholder="Saved"' : '';
       return '<input type="' + inputType + '" id="' + id + '" value="' + escapeHtml(val) + '"' +
-        ' oninput="markChanged()">';
+        placeholder + ' oninput="markChanged(\'' + setting.key + '\')">';
     }
 
     return '';
@@ -313,7 +315,8 @@
     return undefined;
   }
 
-  function markChanged() {
+  function markChanged(key) {
+    if (key) touchedFields[key] = true;
     document.getElementById('saveBtn').disabled = false;
   }
 
@@ -327,6 +330,7 @@
 
       // Store original values
       originalValues = {};
+      touchedFields = {};
       allSettings.forEach(function(s) {
         originalValues[s.key] = s.value;
       });
@@ -371,7 +375,13 @@
     const changes = {};
     allSettings.forEach(function(s) {
       const current = getValue(s);
-      if (current !== undefined && current !== originalValues[s.key]) {
+      const isPasswordField = s.type === 'string' && s.name.toLowerCase().includes('password');
+      if (isPasswordField) {
+        // Password fields are masked on load; apply only when user explicitly edited.
+        if (touchedFields[s.key] && current !== undefined) {
+          changes[s.key] = current;
+        }
+      } else if (current !== undefined && current !== originalValues[s.key]) {
         changes[s.key] = current;
       }
     });
@@ -397,6 +407,7 @@
       // Update original values to new values
       for (const key in changes) {
         originalValues[key] = changes[key];
+        delete touchedFields[key];
       }
 
       showMessage('Settings saved successfully!', false);

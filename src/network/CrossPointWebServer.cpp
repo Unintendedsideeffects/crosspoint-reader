@@ -1243,6 +1243,13 @@ void CrossPointWebServer::handleGetSettings() const {
         if (isPasswordField) {
           // Do not expose stored passwords over the settings API.
           doc["value"] = "";
+          if (s.stringGetter) {
+            doc["hasValue"] = !s.stringGetter().empty();
+          } else if (s.stringPtr) {
+            doc["hasValue"] = s.stringPtr[0] != '\0';
+          } else {
+            doc["hasValue"] = false;
+          }
         } else if (s.stringGetter) {
           doc["value"] = s.stringGetter();
         } else if (s.stringPtr) {
