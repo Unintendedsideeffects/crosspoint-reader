@@ -25,25 +25,25 @@ FEATURES = {
     'extended_fonts': Feature(
         name='Extended Fonts',
         flag='ENABLE_EXTENDED_FONTS',
-        size_kb=300,
+        size_kb=3630,
         description='12/16/18pt fonts and OpenDyslexic support'
     ),
     'image_sleep': Feature(
         name='PNG/JPEG Sleep Images',
         flag='ENABLE_IMAGE_SLEEP',
-        size_kb=140,
+        size_kb=33,
         description='PNG and JPEG sleep screen support (BMP always included)'
     ),
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=560,
+        size_kb=158,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
         name='Integrations Base',
         flag='ENABLE_INTEGRATIONS',
-        size_kb=8,
+        size_kb=0,
         description='Shared runtime hooks for remote sync integrations'
     ),
     'koreader_sync': Feature(
@@ -55,19 +55,19 @@ FEATURES = {
     'calibre_sync': Feature(
         name='Calibre Sync',
         flag='ENABLE_CALIBRE_SYNC',
-        size_kb=15,
+        size_kb=17,
         description='Calibre OPDS browser and metadata sync settings'
     ),
     'background_server': Feature(
         name='Background Server',
         flag='ENABLE_BACKGROUND_SERVER',
-        size_kb=5,
+        size_kb=4,
         description='Background web server for file management'
     ),
     'home_media_picker': Feature(
         name='Home Media Picker',
         flag='ENABLE_HOME_MEDIA_PICKER',
-        size_kb=12,
+        size_kb=0,
         description='Streamlined home UI with horizontal book shelf + vertical menu'
     ),
 }
@@ -231,11 +231,11 @@ def apply_dependency_defaults(enabled_features: Dict[str, bool]) -> List[str]:
 
 PROFILES = {
     'lean': {
-        'description': 'Core reader only (~5.5MB, maximum flash headroom)',
+        'description': 'Core reader only (~2.6MB, maximum flash headroom)',
         'features': {},
     },
     'standard': {
-        'description': 'Balanced defaults (~5.9MB, recommended)',
+        'description': 'Balanced defaults (~6.2MB, recommended)',
         'features': {
             'extended_fonts': True,
             'image_sleep': True,
@@ -244,7 +244,7 @@ PROFILES = {
         },
     },
     'full': {
-        'description': 'All optional features enabled (~6.5MB)',
+        'description': 'All optional features enabled (~6.4MB, tight fit)',
         'features': {
             'extended_fonts': True,
             'image_sleep': True,
@@ -276,7 +276,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 5.5  # Lean profile size baseline
+    base_size_mb = 2.62  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:

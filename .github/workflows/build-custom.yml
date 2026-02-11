@@ -14,42 +14,42 @@ on:
           - full
           - custom
       extended_fonts:
-        description: 'Extended Fonts (12/16/18pt + OpenDyslexic, ~300K)'
+        description: 'Extended Fonts (12/16/18pt + OpenDyslexic, ~3.5MB)'
         required: false
         type: boolean
         default: true
       image_sleep:
-        description: 'PNG/JPEG Sleep Images (~140K)'
+        description: 'PNG/JPEG Sleep Images (~33KB)'
         required: false
         type: boolean
         default: true
       markdown:
-        description: 'Markdown/Obsidian Support (~560K)'
+        description: 'Markdown/Obsidian Support (~158KB)'
         required: false
         type: boolean
         default: false
       integrations:
-        description: 'Integrations base layer (~8K)'
+        description: 'Integrations base layer (~0KB)'
         required: false
         type: boolean
         default: false
       koreader_sync:
-        description: 'KOReader Sync (size TBD)'
+        description: 'KOReader Sync (~2KB)'
         required: false
         type: boolean
         default: false
       calibre_sync:
-        description: 'Calibre Sync (size TBD)'
+        description: 'Calibre Sync (~17KB)'
         required: false
         type: boolean
         default: false
       background_server:
-        description: 'Background Web Server (~5K)'
+        description: 'Background Web Server (~4KB)'
         required: false
         type: boolean
         default: true
       home_media_picker:
-        description: 'Home Media Picker UI (~12K)'
+        description: 'Home Media Picker UI (~0KB)'
         required: false
         type: boolean
         default: true

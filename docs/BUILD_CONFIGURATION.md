@@ -40,7 +40,7 @@ uv run pio run -e custom --target upload
 ### Extended Fonts
 
 **Flag:** `ENABLE_EXTENDED_FONTS`
-**Size Impact:** ~300KB
+**Size Impact:** ~3.5MB
 **Default:** Enabled
 
 Includes additional font sizes and OpenDyslexic font support for better reading accessibility.
@@ -66,7 +66,7 @@ Includes additional font sizes and OpenDyslexic font support for better reading 
 ### PNG/JPEG Sleep Images
 
 **Flag:** `ENABLE_IMAGE_SLEEP`
-**Size Impact:** ~140KB
+**Size Impact:** ~33KB
 **Default:** Enabled
 
 Enables PNG and JPEG format support for custom sleep screen images.
@@ -92,7 +92,7 @@ Enables PNG and JPEG format support for custom sleep screen images.
 ### Markdown/Obsidian
 
 **Flag:** `ENABLE_MARKDOWN`
-**Size Impact:** ~560KB
+**Size Impact:** ~158KB
 **Default:** Enabled
 
 Full Markdown rendering with Obsidian vault compatibility.
@@ -140,7 +140,7 @@ Syncs reading progress with KOReader-compatible metadata.
 ### Calibre Sync
 
 **Flag:** `ENABLE_CALIBRE_SYNC`
-**Size Impact:** ~15KB
+**Size Impact:** ~17KB
 **Default:** Disabled
 **Depends on:** `ENABLE_INTEGRATIONS`
 
@@ -157,7 +157,7 @@ Syncs metadata and reading progress with Calibre.
 ### Integrations Base
 
 **Flag:** `ENABLE_INTEGRATIONS`
-**Size Impact:** ~8KB
+**Size Impact:** ~0KB
 **Default:** Disabled
 
 Shared runtime hooks required by remote sync integrations.
@@ -173,7 +173,7 @@ Shared runtime hooks required by remote sync integrations.
 ### Background Web Server
 
 **Flag:** `ENABLE_BACKGROUND_SERVER`
-**Size Impact:** ~5KB
+**Size Impact:** ~4KB
 **Default:** Enabled
 
 Keeps the WiFi file management server running in the background while reading.
@@ -195,7 +195,7 @@ Keeps the WiFi file management server running in the background while reading.
 ### Home Media Picker
 
 **Flag:** `ENABLE_HOME_MEDIA_PICKER`
-**Size Impact:** ~12KB
+**Size Impact:** ~0KB
 **Default:** Enabled
 
 Replaces the classic Home list selector with a streamlined media-style layout:
@@ -216,7 +216,7 @@ Replaces the classic Home list selector with a streamlined media-style layout:
 
 ### Lean Profile
 
-**Size:** ~5.5MB (~1.0MB savings from full profile)
+**Size:** ~2.6MB (~3.8MB savings from full profile)
 
 ```bash
 uv run python scripts/generate_build_config.py --profile lean
@@ -238,7 +238,7 @@ uv run python scripts/generate_build_config.py --profile lean
 
 ### Standard Profile (Recommended)
 
-**Size:** ~5.9MB
+**Size:** ~6.2MB
 
 ```bash
 uv run python scripts/generate_build_config.py --profile standard
@@ -263,7 +263,7 @@ uv run python scripts/generate_build_config.py --profile standard
 
 ### Full Profile
 
-**Size:** ~6.5MB (all optional modules)
+**Size:** ~6.4MB (all optional modules, tight fit)
 
 ```bash
 uv run python scripts/generate_build_config.py --profile full
@@ -405,18 +405,18 @@ The ESP32-C3 in the Xteink X4 has:
 
 | Build Type | Size | Flash Usage | Books Space |
 |------------|------|-------------|-------------|
-| Lean | ~5.5MB | 86% | Maximum |
-| Standard | ~5.9MB | 92% | Good |
-| Full | ~6.5MB | 102%* | Tight |
+| Lean | ~2.6MB | 41% | Maximum |
+| Standard | ~6.2MB | 97% | Good |
+| Full | ~6.4MB | 99-100% | Tight |
 
-*Note: Full build exceeds partition size but compression may allow it to fit. Test before deploying.
+*Note: Full build currently fits, but leaves very little headroom. Test before deploying.
 
 ### Tips for Managing Flash Space
 
 1. **Start with Standard profile** - best balance for most users
 2. **Disable unused features** - save space for more books
 3. **Use BMP sleep images** - if you don't need PNG/JPEG
-4. **Skip Markdown** - largest single feature at ~560KB
+4. **Skip Extended Fonts** - largest single feature at ~3.5MB
 5. **Monitor OTA updates** - custom builds may be larger than default
 
 ---
@@ -430,7 +430,7 @@ The ESP32-C3 in the Xteink X4 has:
 **Solutions:**
 1. Disable one or more features
 2. Use a smaller profile (Standard instead of Full)
-3. Specifically disable large features like Markdown (~560KB)
+3. Specifically disable large features like Extended Fonts (~3.5MB)
 
 Example:
 ```bash
