@@ -289,7 +289,7 @@ unsigned char JpegToFramebufferConverter::jpegReadCallback(unsigned char* pBuf, 
   return 0;
 }
 
-bool JpegToFramebufferConverter::supportsFormat(const std::string& extension) const {
+bool JpegToFramebufferConverter::supportsFormat(const std::string& extension) {
   std::string ext = extension;
   for (auto& c : ext) {
     c = tolower(c);

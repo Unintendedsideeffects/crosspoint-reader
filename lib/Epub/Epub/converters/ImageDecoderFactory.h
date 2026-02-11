@@ -10,7 +10,6 @@ class PngToFramebufferConverter;
 
 class ImageDecoderFactory {
  public:
-  static void initialize();
   // Returns non-owning pointer - factory owns the decoder lifetime
   static ImageToFramebufferDecoder* getDecoder(const std::string& imagePath);
   static bool isFormatSupported(const std::string& imagePath);
@@ -18,5 +17,4 @@ class ImageDecoderFactory {
  private:
   static std::unique_ptr<JpegToFramebufferConverter> jpegDecoder;
   static std::unique_ptr<PngToFramebufferConverter> pngDecoder;
-  static bool initialized;
 };
