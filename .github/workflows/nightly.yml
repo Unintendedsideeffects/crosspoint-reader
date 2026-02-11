@@ -94,6 +94,7 @@ jobs:
         run: |
           uv run python scripts/check_flash_headroom.py \
             --log pio.log \
+            --firmware .pio/build/gh_release/firmware.bin \
             --min-headroom-kb 64
 
       - name: Create GitHub release
