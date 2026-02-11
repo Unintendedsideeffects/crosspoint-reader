@@ -34,9 +34,36 @@ int clampValue(const int value, const int minValue, const int maxValue) {
   return value;
 }
 
+std::string fileNameFromPath(const std::string& path) {
+  const size_t slash = path.find_last_of('/');
+  if (slash == std::string::npos) {
+    return path;
+  }
+  if (slash + 1 >= path.size()) {
+    return "";
+  }
+  return path.substr(slash + 1);
+}
+
+const char* formatLabelFromPath(const std::string& path) {
+  if (StringUtils::checkFileExtension(path, ".epub")) {
+    return "EPUB";
+  }
+  if (StringUtils::checkFileExtension(path, ".md")) {
+    return "MARKDOWN";
+  }
+  if (StringUtils::checkFileExtension(path, ".txt")) {
+    return "TEXT";
+  }
+  if (StringUtils::checkFileExtension(path, ".xtch") || StringUtils::checkFileExtension(path, ".xtc")) {
+    return "XTC";
+  }
+  return "BOOK";
+}
+
 #if ENABLE_HOME_MEDIA_PICKER
-constexpr int kMediaTopPadding = 18;
-constexpr int kMediaShelfTop = 40;
+constexpr int kMediaTopPadding = 14;
+constexpr int kMediaShelfTop = 48;
 constexpr int kMediaBottomHintMargin = 60;
 constexpr int kMenuTileHeight = 38;
 constexpr int kMenuTileSpacing = 7;
@@ -493,43 +520,42 @@ void HomeActivity::render() {
 #if ENABLE_HOME_MEDIA_PICKER
   renderer.clearScreen();
 
-  const auto pageWidth = renderer.getScreenWidth();
-  const auto pageHeight = renderer.getScreenHeight();
+  const int pageWidth = renderer.getScreenWidth();
+  const int pageHeight = renderer.getScreenHeight();
 
-  constexpr int margin = 20;
+  constexpr int margin = 18;
+  constexpr int cardRadius = 8;
   const int menuAreaHeight =
       menuItemCount * kMenuTileHeight + (menuItemCount > 0 ? (menuItemCount - 1) * kMenuTileSpacing : 0);
   int menuStartY = pageHeight - kMediaBottomHintMargin - menuAreaHeight;
-  menuStartY = std::max(menuStartY, kMediaShelfTop + 230);
+  menuStartY = std::max(menuStartY, kMediaShelfTop + 340);
 
-  const int shelfBottom = menuStartY - 12;
+  const int shelfBottom = menuStartY - 18;
   const int shelfHeight = shelfBottom - kMediaShelfTop;
 
-  const int shelfLabelY = kMediaTopPadding;
-  renderer.drawText(UI_10_FONT_ID, margin, shelfLabelY, "MEDIA SHELF");
-  const int labelWidth = renderer.getTextWidth(UI_10_FONT_ID, "MEDIA SHELF");
-  const int dividerY = shelfLabelY + renderer.getLineHeight(UI_10_FONT_ID) / 2;
-  renderer.drawLine(margin + labelWidth + 10, dividerY, pageWidth - margin, dividerY);
+  const int eyebrowY = kMediaTopPadding;
+  renderer.drawText(UI_10_FONT_ID, margin, eyebrowY, "HOME");
+  const int titleY = eyebrowY + renderer.getLineHeight(UI_10_FONT_ID) + 1;
+  renderer.drawText(UI_12_FONT_ID, margin, titleY, "Book Shelf", true, EpdFontFamily::BOLD);
+  const int titleWidth = renderer.getTextWidth(UI_12_FONT_ID, "Book Shelf", EpdFontFamily::BOLD);
+  const int dividerY = titleY + renderer.getLineHeight(UI_12_FONT_ID) / 2;
+  renderer.drawLine(margin + titleWidth + 12, dividerY, pageWidth - margin, dividerY);
 
-  const int coverHeight = clampValue(shelfHeight - 95, 170, 280);
-  const int coverWidth = clampValue((coverHeight * 7) / 10, 130, 210);
+  const int coverHeight = clampValue(shelfHeight - 190, 190, 320);
+  const int coverWidth = clampValue((coverHeight * 7) / 10, 136, 228);
   const int coverX = (pageWidth - coverWidth) / 2;
   const int coverY = kMediaShelfTop + 24;
 
-  const int sideCoverHeight = (coverHeight * 2) / 3;
-  const int sideCoverWidth = (coverWidth * 2) / 3;
-  const int sideCoverY = coverY + (coverHeight - sideCoverHeight) / 2 + 8;
-  const int leftCoverX = std::max(margin, coverX - sideCoverWidth + 14);
-  const int rightCoverX = std::min(pageWidth - margin - sideCoverWidth, coverX + coverWidth - 14);
+  const int sideCoverHeight = (coverHeight * 3) / 5;
+  const int sideCoverWidth = (coverWidth * 3) / 5;
+  const int sideCoverY = coverY + (coverHeight - sideCoverHeight) / 2 + 10;
+  const int leftCoverX = std::max(margin, coverX - sideCoverWidth + 10);
+  const int rightCoverX = std::min(pageWidth - margin - sideCoverWidth, coverX + coverWidth - 10);
 
   auto drawPlaceholder = [&](const std::string& title, const int x, const int y, const int w, const int h,
                              const bool highlighted) {
-    if (highlighted) {
-      renderer.fillRect(x, y, w, h);
-      renderer.drawRect(x, y, w, h, false);
-    } else {
-      renderer.drawRect(x, y, w, h);
-    }
+    renderer.fillRoundedRect(x, y, w, h, cardRadius, highlighted ? Color::Black : Color::LightGray);
+    renderer.drawRoundedRect(x, y, w, h, 1, cardRadius, !highlighted);
 
     const std::string trimmed = renderer.truncatedText(UI_10_FONT_ID, title.c_str(), w - 18);
     const int textY = y + (h - renderer.getLineHeight(UI_10_FONT_ID)) / 2;
@@ -542,17 +568,27 @@ void HomeActivity::render() {
     if (!hasCover) {
       const std::string fallback = fallbackTitleFromPath(book.path);
       drawPlaceholder(fallback.empty() ? "Untitled" : fallback, x, y, w, h, selected && front);
-    } else if (selected && front) {
-      renderer.drawRect(x + 2, y + 2, w - 4, h - 4);
-      renderer.drawRect(x + 5, y + 5, w - 10, h - 10);
+      return;
+    }
+
+    if (!front) {
+      renderer.fillRectDither(x, y, w, h, Color::LightGray);
+    }
+
+    if (selected && front) {
+      renderer.drawRect(x, y, w, h, 2, true);
+      renderer.drawRect(x + 6, y + 6, w - 12, h - 12);
     } else {
       renderer.drawRect(x, y, w, h);
     }
   };
 
+  renderer.fillRectDither(margin, coverY + coverHeight - 8, pageWidth - margin * 2, 18, Color::LightGray);
+  renderer.drawLine(margin, coverY + coverHeight + 10, pageWidth - margin, coverY + coverHeight + 10);
+
   if (recentBooks.empty()) {
     drawPlaceholder("No recent books", coverX, coverY, coverWidth, coverHeight, false);
-    renderer.drawCenteredText(UI_12_FONT_ID, coverY + coverHeight + 14, "Open a file from My Library");
+    renderer.drawCenteredText(UI_12_FONT_ID, coverY + coverHeight + 20, "Open a file from My Library");
   } else {
     const int bookCount = static_cast<int>(recentBooks.size());
     selectedBookIndex = clampValue(selectedBookIndex, 0, bookCount - 1);
@@ -564,6 +600,9 @@ void HomeActivity::render() {
                    false, false);
       drawBookCard(recentBooks[static_cast<size_t>(next)], rightCoverX, sideCoverY, sideCoverWidth, sideCoverHeight,
                    false, false);
+      renderer.drawText(UI_10_FONT_ID, margin, coverY + coverHeight / 2, "<");
+      renderer.drawText(UI_10_FONT_ID, pageWidth - margin - renderer.getTextWidth(UI_10_FONT_ID, ">"),
+                        coverY + coverHeight / 2, ">");
     }
 
     const auto& selectedBook = recentBooks[static_cast<size_t>(selectedBookIndex)];
@@ -573,49 +612,77 @@ void HomeActivity::render() {
     if (title.empty()) {
       title = "Untitled";
     }
-    const std::string titleLine = renderer.truncatedText(UI_12_FONT_ID, title.c_str(), pageWidth - margin * 2);
+    title = renderer.truncatedText(UI_12_FONT_ID, title.c_str(), pageWidth - margin * 2 - 28, EpdFontFamily::BOLD);
 
     std::string author = fallbackAuthor(selectedBook);
-    if (!author.empty()) {
-      author = renderer.truncatedText(UI_10_FONT_ID, author.c_str(), pageWidth - margin * 2);
+    if (author.empty()) {
+      author = "Unknown author";
+    } else {
+      author = renderer.truncatedText(UI_10_FONT_ID, author.c_str(), pageWidth - margin * 2 - 28);
     }
 
-    const int maxMetaTop = shelfBottom - renderer.getLineHeight(UI_12_FONT_ID) - renderer.getLineHeight(UI_10_FONT_ID) -
-                           renderer.getLineHeight(UI_10_FONT_ID) - 6;
-    const int metaTop = std::min(coverY + coverHeight + 10, maxMetaTop);
-    renderer.drawCenteredText(UI_12_FONT_ID, metaTop, titleLine.c_str());
+    const int infoY = coverY + coverHeight + 18;
+    const int infoHeight = clampValue(shelfBottom - infoY - 10, 88, 132);
+    const int infoX = margin;
+    const int infoWidth = pageWidth - margin * 2;
 
-    int infoY = metaTop + renderer.getLineHeight(UI_12_FONT_ID);
-    if (!author.empty()) {
-      renderer.drawCenteredText(UI_10_FONT_ID, infoY, author.c_str());
-      infoY += renderer.getLineHeight(UI_10_FONT_ID);
-    }
+    renderer.fillRoundedRect(infoX, infoY, infoWidth, infoHeight, cardRadius, Color::LightGray);
+    renderer.drawRoundedRect(infoX, infoY, infoWidth, infoHeight, 1, cardRadius, true);
+
+    const bool isCurrentBook = selectedBook.path == APP_STATE.openEpubPath;
+    const char* statusLabel = isCurrentBook ? "CURRENT BOOK" : "RECENT PICK";
+    const int statusWidth = renderer.getTextWidth(UI_10_FONT_ID, statusLabel);
+    const int statusX = infoX + 12;
+    const int statusY = infoY + 9;
+    renderer.fillRoundedRect(statusX, statusY, statusWidth + 16, 20, 6, Color::Black);
+    renderer.drawText(UI_10_FONT_ID, statusX + 8, statusY + 4, statusLabel, false);
+
+    const char* formatLabel = formatLabelFromPath(selectedBook.path);
+    const int formatWidth = renderer.getTextWidth(UI_10_FONT_ID, formatLabel);
+    const int formatX = infoX + infoWidth - formatWidth - 24;
+    renderer.drawRoundedRect(formatX, statusY, formatWidth + 12, 20, 1, 6, true);
+    renderer.drawText(UI_10_FONT_ID, formatX + 6, statusY + 4, formatLabel);
+
+    const int titleTextY = statusY + 28;
+    renderer.drawText(UI_12_FONT_ID, infoX + 12, titleTextY, title.c_str(), true, EpdFontFamily::BOLD);
+    renderer.drawText(UI_10_FONT_ID, infoX + 12, titleTextY + renderer.getLineHeight(UI_12_FONT_ID) + 2,
+                      author.c_str());
+
+    const std::string fileName =
+        renderer.truncatedText(SMALL_FONT_ID, fileNameFromPath(selectedBook.path).c_str(), infoWidth - 150);
+    renderer.drawText(SMALL_FONT_ID, infoX + 12, infoY + infoHeight - renderer.getLineHeight(SMALL_FONT_ID) - 8,
+                      fileName.c_str());
 
     const std::string position =
-        std::to_string(selectedBookIndex + 1) + " / " + std::to_string(static_cast<int>(recentBooks.size()));
-    renderer.drawCenteredText(UI_10_FONT_ID, infoY, position.c_str());
-    renderer.drawCenteredText(UI_10_FONT_ID, shelfBottom - renderer.getLineHeight(UI_10_FONT_ID), "Left/Right: books");
+        std::to_string(selectedBookIndex + 1) + " of " + std::to_string(static_cast<int>(recentBooks.size()));
+    const int positionWidth = renderer.getTextWidth(SMALL_FONT_ID, position.c_str());
+    renderer.drawText(SMALL_FONT_ID, infoX + infoWidth - positionWidth - 12,
+                      infoY + infoHeight - renderer.getLineHeight(SMALL_FONT_ID) - 8, position.c_str());
   }
 
-  const int menuTileWidth = pageWidth - 2 * margin;
+  renderer.drawText(UI_10_FONT_ID, margin, menuStartY - 16, "ACTIONS");
+
+  const int menuTileWidth = pageWidth - margin * 2;
   for (int i = 0; i < menuItemCount; ++i) {
     const int tileX = margin;
     const int tileY = menuStartY + i * (kMenuTileHeight + kMenuTileSpacing);
     const bool selected = i == selectedMenuIndex;
     if (selected) {
-      renderer.fillRect(tileX, tileY, menuTileWidth, kMenuTileHeight);
+      renderer.fillRoundedRect(tileX, tileY, menuTileWidth, kMenuTileHeight, 7, Color::Black);
     } else {
-      renderer.drawRect(tileX, tileY, menuTileWidth, kMenuTileHeight);
+      renderer.fillRoundedRect(tileX, tileY, menuTileWidth, kMenuTileHeight, 7, Color::LightGray);
+      renderer.drawRoundedRect(tileX, tileY, menuTileWidth, kMenuTileHeight, 1, 7, true);
     }
 
-    const std::string label = getMenuItemLabel(i);
-    const int textWidth = renderer.getTextWidth(UI_10_FONT_ID, label.c_str());
-    const int textX = tileX + (menuTileWidth - textWidth) / 2;
+    const std::string label = renderer.truncatedText(UI_10_FONT_ID, getMenuItemLabel(i).c_str(), menuTileWidth - 52);
     const int textY = tileY + (kMenuTileHeight - renderer.getLineHeight(UI_10_FONT_ID)) / 2;
-    renderer.drawText(UI_10_FONT_ID, textX, textY, label.c_str(), !selected);
+    renderer.drawText(UI_10_FONT_ID, tileX + 14, textY, label.c_str(), !selected, EpdFontFamily::BOLD);
+    if (selected) {
+      renderer.drawText(UI_10_FONT_ID, tileX + menuTileWidth - 18, textY, ">", false, EpdFontFamily::BOLD);
+    }
   }
 
-  const auto labels = mappedInput.mapLabels("", "Select", "Book -", "Book +");
+  const auto labels = mappedInput.mapLabels("", "Open", "Book -", "Book +");
   renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   renderer.drawSideButtonHints(UI_10_FONT_ID, "Menu -", "Menu +");
 
@@ -623,7 +690,7 @@ void HomeActivity::render() {
       SETTINGS.hideBatteryPercentage != CrossPointSettings::HIDE_BATTERY_PERCENTAGE::HIDE_ALWAYS;
   const uint16_t percentage = battery.readPercentage();
   const auto percentageText = showBatteryPercentage ? std::to_string(percentage) + "%" : "";
-  const auto batteryX = pageWidth - 25 - renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str());
+  const int batteryX = pageWidth - 25 - renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str());
   ScreenComponents::drawBattery(renderer, batteryX, 10, showBatteryPercentage);
 
   renderer.displayBuffer();
