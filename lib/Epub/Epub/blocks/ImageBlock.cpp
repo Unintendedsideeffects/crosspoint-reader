@@ -31,7 +31,7 @@ std::string getCachePath(const std::string& imagePath) {
 }
 
 bool renderFromCache(GfxRenderer& renderer, const std::string& cachePath, int x, int y, int expectedWidth,
-                            int expectedHeight) {
+                     int expectedHeight) {
   FsFile cacheFile;
   if (!Storage.openFileForRead("IMG", cachePath, cacheFile)) {
     return false;
