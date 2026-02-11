@@ -74,6 +74,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
+      - name: Ensure pip for PlatformIO
+        run: |
+          uv run python -m ensurepip --upgrade || true
+          uv run python -m pip --version
+
       - name: Generate custom build configuration
         id: config
         run: |
