@@ -17,14 +17,7 @@
 ImageBlock::ImageBlock(const std::string& imagePath, int16_t width, int16_t height)
     : imagePath(imagePath), width(width), height(height) {}
 
-bool ImageBlock::imageExists() const {
-  FsFile file;
-  if (Storage.openFileForRead("IMG", imagePath, file)) {
-    file.close();
-    return true;
-  }
-  return false;
-}
+bool ImageBlock::imageExists() const { return Storage.exists(imagePath.c_str()); }
 
 static std::string getCachePath(const std::string& imagePath) {
   // Replace extension with .pxc (pixel cache)
