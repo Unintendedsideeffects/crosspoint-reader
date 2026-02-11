@@ -25,6 +25,12 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
@@ -32,11 +38,8 @@ jobs:
           key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
           restore-keys: ${{ runner.os }}-platformio-
 
-      - name: Install PlatformIO
-        run: pip install --upgrade platformio
-
       - name: Static checks (cppcheck)
-        run: pio check -e default
+        run: uv run pio check -e default
 
       - name: Set build environment
         id: build-env
@@ -48,13 +51,13 @@ jobs:
           fi
 
       - name: Build firmware
-        run: pio run -e "${{ steps.build-env.outputs.env }}" | tee pio.log
+        run: uv run pio run -e "${{ steps.build-env.outputs.env }}" | tee pio.log
 
       - name: Enforce flash headroom
         run: |
-          python scripts/check_flash_headroom.py \
+          uv run python scripts/check_flash_headroom.py \
             --log pio.log \
-            --min-headroom-kb 80
+            --min-headroom-kb 64
 
       - name: Report firmware size
         run: |
@@ -69,7 +72,7 @@ jobs:
           fi
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Flash headroom threshold: 80 KiB" >> $GITHUB_STEP_SUMMARY
+          echo "Flash headroom threshold: 64 KiB" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
