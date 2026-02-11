@@ -36,6 +36,9 @@ jobs:
           uv run python -m ensurepip --upgrade || true
           uv run python -m pip --version
 
+      - name: Validate feature key synchronization
+        run: uv run python scripts/check_feature_key_sync.py
+
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:

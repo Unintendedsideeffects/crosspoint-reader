@@ -33,6 +33,7 @@ FEATURES = [
     'extended_fonts',
     'image_sleep',
     'markdown',
+    'integrations',
     'koreader_sync',
     'calibre_sync',
     'background_server',

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Test all 2^7 = 128 possible feature combinations
+# Test all 2^8 = 256 possible feature combinations
 # This ensures every possible configuration builds successfully
 
 set -e
@@ -12,7 +12,7 @@ else
   PIO_CMD="pio"
 fi
 
-FEATURES=("extended_fonts" "image_sleep" "markdown" "koreader_sync" "calibre_sync" "background_server" "home_media_picker")
+FEATURES=("extended_fonts" "image_sleep" "markdown" "integrations" "koreader_sync" "calibre_sync" "background_server" "home_media_picker")
 TOTAL=$((2 ** ${#FEATURES[@]}))
 FAILED=0
 PASSED=0

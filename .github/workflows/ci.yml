@@ -31,6 +31,20 @@ jobs:
           uv run ./bin/clang-format-fix
           git diff --exit-code || (echo "Please run 'bin/clang-format-fix' to fix formatting issues" && exit 1)
 
+  feature-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Validate feature key synchronization
+        run: python scripts/check_feature_key_sync.py
+
   cppcheck:
     runs-on: ubuntu-latest
     steps:
@@ -117,6 +131,7 @@ jobs:
     needs:
       - build
       - clang-format
+      - feature-sync
       - cppcheck
     if: always()
     runs-on: ubuntu-latest
