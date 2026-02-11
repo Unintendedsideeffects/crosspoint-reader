@@ -28,9 +28,25 @@ def format_kib(value: int) -> str:
     return f"{value / 1024:.1f} KiB"
 
 
+def check_headroom(used: int, total: int, min_headroom_bytes: int) -> tuple[bool, int]:
+    """Return (passes, headroom_bytes) for a used/total pair."""
+    headroom_bytes = total - used
+    return headroom_bytes >= min_headroom_bytes, headroom_bytes
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fail when firmware flash headroom drops below threshold.")
     parser.add_argument("--log", required=True, type=Path, help="Path to PlatformIO build log file")
+    parser.add_argument(
+        "--firmware",
+        type=Path,
+        help="Optional path to firmware.bin; when set, also validates binary size against app partition bytes",
+    )
+    parser.add_argument(
+        "--partition-bytes",
+        type=int,
+        help="Override app partition size in bytes for firmware.bin checks (default: value parsed from build log)",
+    )
     parser.add_argument(
         "--min-headroom-kb",
         type=int,
@@ -50,27 +66,60 @@ def main() -> int:
         return 2
 
     min_headroom_bytes = args.min_headroom_kb * 1024
-    headroom_bytes = total - used
+    linker_ok, linker_headroom = check_headroom(used, total, min_headroom_bytes)
+    ok = True
 
     print(
         f"Flash usage: {percent:.1f}% ({used} / {total} bytes), "
-        f"headroom {headroom_bytes} bytes ({format_kib(headroom_bytes)})"
+        f"headroom {linker_headroom} bytes ({format_kib(linker_headroom)})"
     )
     print(
         f"Required minimum headroom: {min_headroom_bytes} bytes "
         f"({format_kib(min_headroom_bytes)})"
     )
 
-    if headroom_bytes < min_headroom_bytes:
-        deficit = min_headroom_bytes - headroom_bytes
+    if not linker_ok:
+        deficit = min_headroom_bytes - linker_headroom
         print(
-            "ERROR: Flash headroom below threshold by "
+            "ERROR: Linker flash headroom below threshold by "
             f"{deficit} bytes ({format_kib(deficit)})."
         )
-        return 1
+        ok = False
 
-    print("Flash headroom check passed.")
-    return 0
+    if args.firmware is not None:
+        if not args.firmware.exists():
+            print(f"ERROR: firmware.bin not found: {args.firmware}")
+            return 2
+
+        partition_bytes = args.partition_bytes if args.partition_bytes is not None else total
+        firmware_size = args.firmware.stat().st_size
+        firmware_ok, firmware_headroom = check_headroom(firmware_size, partition_bytes, min_headroom_bytes)
+
+        print(
+            "Firmware image: "
+            f"{firmware_size} / {partition_bytes} bytes, "
+            f"headroom {firmware_headroom} bytes ({format_kib(firmware_headroom)})"
+        )
+
+        if firmware_size > partition_bytes:
+            over = firmware_size - partition_bytes
+            print(
+                "ERROR: firmware.bin exceeds app partition by "
+                f"{over} bytes ({format_kib(over)})."
+            )
+            ok = False
+        elif not firmware_ok:
+            deficit = min_headroom_bytes - firmware_headroom
+            print(
+                "ERROR: firmware.bin headroom below threshold by "
+                f"{deficit} bytes ({format_kib(deficit)})."
+            )
+            ok = False
+
+    if ok:
+        print("Flash headroom check passed.")
+        return 0
+    return 1
 
 
 if __name__ == "__main__":

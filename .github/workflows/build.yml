@@ -65,6 +65,7 @@ jobs:
         run: |
           uv run python scripts/check_flash_headroom.py \
             --log pio.log \
+            --firmware .pio/build/${{ steps.build-env.outputs.env }}/firmware.bin \
             --min-headroom-kb 64
 
       - name: Report firmware size
