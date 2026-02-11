@@ -352,7 +352,7 @@ bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath
   return true;
 }
 
-bool PngToFramebufferConverter::supportsFormat(const std::string& extension) const {
+bool PngToFramebufferConverter::supportsFormat(const std::string& extension) {
   std::string ext = extension;
   for (auto& c : ext) {
     c = tolower(c);

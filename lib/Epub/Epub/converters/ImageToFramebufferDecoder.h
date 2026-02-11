@@ -29,7 +29,7 @@ class ImageToFramebufferDecoder {
 
   virtual bool getDimensions(const std::string& imagePath, ImageDimensions& dims) const = 0;
 
-  virtual bool supportsFormat(const std::string& extension) const = 0;
+
   virtual const char* getFormatName() const = 0;
 
  protected:
