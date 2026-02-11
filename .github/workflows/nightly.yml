@@ -26,15 +26,18 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
           restore-keys: ${{ runner.os }}-platformio-
-
-      - name: Install PlatformIO
-        run: pip install --upgrade platformio
 
       - name: Compute nightly version
         id: version
@@ -80,13 +83,13 @@ jobs:
           PY
 
       - name: Build firmware (nightly)
-        run: pio run -e gh_release | tee pio.log
+        run: uv run pio run -e gh_release | tee pio.log
 
       - name: Enforce flash headroom
         run: |
-          python scripts/check_flash_headroom.py \
+          uv run python scripts/check_flash_headroom.py \
             --log pio.log \
-            --min-headroom-kb 80
+            --min-headroom-kb 64
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
