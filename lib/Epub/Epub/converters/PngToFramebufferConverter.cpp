@@ -12,6 +12,8 @@
 #include "DitherUtils.h"
 #include "PixelCache.h"
 
+namespace {
+
 // Context struct passed through PNGdec callbacks to avoid global mutable state.
 // The draw callback receives this via pDraw->pUser (set by png.decode()).
 // The file I/O callbacks receive the FsFile* via pFile->fHandle (set by pngOpen()).
@@ -51,7 +53,7 @@ struct PngContext {
 
 // File I/O callbacks use pFile->fHandle to access the FsFile*,
 // avoiding the need for global file state.
-static void* pngOpenWithHandle(const char* filename, int32_t* size) {
+void* pngOpenWithHandle(const char* filename, int32_t* size) {
   FsFile* f = new FsFile();
   if (!Storage.openFileForRead("PNG", std::string(filename), *f)) {
     delete f;
@@ -61,7 +63,7 @@ static void* pngOpenWithHandle(const char* filename, int32_t* size) {
   return f;
 }
 
-static void pngCloseWithHandle(void* handle) {
+void pngCloseWithHandle(void* handle) {
   FsFile* f = reinterpret_cast<FsFile*>(handle);
   if (f) {
     f->close();
@@ -69,13 +71,13 @@ static void pngCloseWithHandle(void* handle) {
   }
 }
 
-static int32_t pngReadWithHandle(PNGFILE* pFile, uint8_t* pBuf, int32_t len) {
+int32_t pngReadWithHandle(PNGFILE* pFile, uint8_t* pBuf, int32_t len) {
   FsFile* f = reinterpret_cast<FsFile*>(pFile->fHandle);
   if (!f) return 0;
   return f->read(pBuf, len);
 }
 
-static int32_t pngSeekWithHandle(PNGFILE* pFile, int32_t pos) {
+int32_t pngSeekWithHandle(PNGFILE* pFile, int32_t pos) {
   FsFile* f = reinterpret_cast<FsFile*>(pFile->fHandle);
   if (!f) return -1;
   return f->seek(pos);
@@ -85,44 +87,13 @@ static int32_t pngSeekWithHandle(PNGFILE* pFile, int32_t pos) {
 // We heap-allocate it on demand rather than using a static instance, so this memory
 // is only consumed while actually decoding/querying PNG images. This is critical on
 // the ESP32-C3 where total RAM is ~320 KB.
-static constexpr size_t PNG_DECODER_APPROX_SIZE = 44 * 1024;                          // ~42 KB + overhead
-static constexpr size_t MIN_FREE_HEAP_FOR_PNG = PNG_DECODER_APPROX_SIZE + 16 * 1024;  // decoder + 16 KB headroom
-
-bool PngToFramebufferConverter::getDimensionsStatic(const std::string& imagePath, ImageDimensions& out) {
-  size_t freeHeap = ESP.getFreeHeap();
-  if (freeHeap < MIN_FREE_HEAP_FOR_PNG) {
-    Serial.printf("[%lu] [PNG] Not enough heap for PNG decoder (%u free, need %u)\n", millis(), freeHeap,
-                  MIN_FREE_HEAP_FOR_PNG);
-    return false;
-  }
-
-  PNG* png = new (std::nothrow) PNG();
-  if (!png) {
-    Serial.printf("[%lu] [PNG] Failed to allocate PNG decoder for dimensions\n", millis());
-    return false;
-  }
-
-  int rc = png->open(imagePath.c_str(), pngOpenWithHandle, pngCloseWithHandle, pngReadWithHandle, pngSeekWithHandle,
-                     nullptr);
-
-  if (rc != 0) {
-    Serial.printf("[%lu] [PNG] Failed to open PNG for dimensions: %d\n", millis(), rc);
-    delete png;
-    return false;
-  }
-
-  out.width = png->getWidth();
-  out.height = png->getHeight();
-
-  png->close();
-  delete png;
-  return true;
-}
+constexpr size_t PNG_DECODER_APPROX_SIZE = 44 * 1024;                          // ~42 KB + overhead
+constexpr size_t MIN_FREE_HEAP_FOR_PNG = PNG_DECODER_APPROX_SIZE + 16 * 1024;  // decoder + 16 KB headroom
 
 // Convert entire source line to grayscale with alpha blending to white background.
 // For indexed PNGs with tRNS chunk, alpha values are stored at palette[768] onwards.
 // Processing the whole line at once improves cache locality and reduces per-pixel overhead.
-static void convertLineToGray(uint8_t* pPixels, uint8_t* grayLine, int width, int pixelType, uint8_t* palette,
+void convertLineToGray(uint8_t* pPixels, uint8_t* grayLine, int width, int pixelType, uint8_t* palette,
                               int hasAlpha) {
   switch (pixelType) {
     case PNG_PIXEL_GRAYSCALE:
@@ -239,6 +210,39 @@ int pngDrawCallback(PNGDRAW* pDraw) {
   }
 
   return 1;
+}
+
+}  // namespace
+
+bool PngToFramebufferConverter::getDimensionsStatic(const std::string& imagePath, ImageDimensions& out) {
+  size_t freeHeap = ESP.getFreeHeap();
+  if (freeHeap < MIN_FREE_HEAP_FOR_PNG) {
+    Serial.printf("[%lu] [PNG] Not enough heap for PNG decoder (%u free, need %u)\n", millis(), freeHeap,
+                  MIN_FREE_HEAP_FOR_PNG);
+    return false;
+  }
+
+  PNG* png = new (std::nothrow) PNG();
+  if (!png) {
+    Serial.printf("[%lu] [PNG] Failed to allocate PNG decoder for dimensions\n", millis());
+    return false;
+  }
+
+  int rc = png->open(imagePath.c_str(), pngOpenWithHandle, pngCloseWithHandle, pngReadWithHandle, pngSeekWithHandle,
+                     nullptr);
+
+  if (rc != 0) {
+    Serial.printf("[%lu] [PNG] Failed to open PNG for dimensions: %d\n", millis(), rc);
+    delete png;
+    return false;
+  }
+
+  out.width = png->getWidth();
+  out.height = png->getHeight();
+
+  png->close();
+  delete png;
+  return true;
 }
 
 bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath, GfxRenderer& renderer,
