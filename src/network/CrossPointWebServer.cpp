@@ -8,6 +8,7 @@
 #include <esp_task_wdt.h>
 
 #include <algorithm>
+#include <cstring>
 
 #include "CrossPointSettings.h"
 #include "SettingsList.h"
@@ -1237,7 +1238,12 @@ void CrossPointWebServer::handleGetSettings() const {
       }
       case SettingType::STRING: {
         doc["type"] = "string";
-        if (s.stringGetter) {
+        const bool isPasswordField = (s.key && (strstr(s.key, "password") != nullptr || strstr(s.key, "Password"))) ||
+                                     (s.name && strstr(s.name, "Password"));
+        if (isPasswordField) {
+          // Do not expose stored passwords over the settings API.
+          doc["value"] = "";
+        } else if (s.stringGetter) {
           doc["value"] = s.stringGetter();
         } else if (s.stringPtr) {
           doc["value"] = s.stringPtr;
