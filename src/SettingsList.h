@@ -65,8 +65,7 @@ inline std::vector<SettingInfo> getSettingsList() {
       SettingInfo::Toggle("File Server on Charge", &CrossPointSettings::backgroundServerOnCharge,
                           "backgroundServerOnCharge", "System"),
       SettingInfo::Enum("Release Channel", &CrossPointSettings::releaseChannel,
-                        {"Stable", "Nightly", "Latest Build", "Latest Build + Factory Reset"}, "releaseChannel",
-                        "System"),
+                        {"Release", "Nightly", "Latest", "Reset"}, "releaseChannel", "System"),
 
       // --- KOReader Sync (web-only, uses KOReaderCredentialStore) ---
       SettingInfo::DynamicString(

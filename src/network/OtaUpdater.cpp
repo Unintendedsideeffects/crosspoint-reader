@@ -10,17 +10,15 @@
 #include "esp_wifi.h"
 
 namespace {
-constexpr char latestReleaseUrl[] =
-    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/latest";
-constexpr char releasesListUrl[] =
-    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases?per_page=5";
-constexpr char ciLatestReleaseUrl[] =
-    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/ci-latest";
-constexpr char ciLatestFactoryResetReleaseUrl[] =
-    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/ci-latest_factory-reset";
+constexpr char releaseChannelUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/release";
+constexpr char nightlyChannelUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/nightly";
+constexpr char latestChannelUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/latest";
+constexpr char resetChannelUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/reset";
 constexpr char crosspointDataDir[] = "/.crosspoint";
-
-bool startsWith(const std::string& value, const char* prefix) { return value.rfind(prefix, 0) == 0; }
 
 bool wipeCrossPointData() {
   bool removed = true;
@@ -105,14 +103,13 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   esp_err_t esp_err;
   JsonDocument doc;
 
-  const bool useReleaseList = (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY);
-  const char* releaseUrl = latestReleaseUrl;
+  const char* releaseUrl = releaseChannelUrl;
   if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY) {
-    releaseUrl = releasesListUrl;
+    releaseUrl = nightlyChannelUrl;
   } else if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL) {
-    releaseUrl = ciLatestReleaseUrl;
+    releaseUrl = latestChannelUrl;
   } else if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL_FACTORY_RESET) {
-    releaseUrl = ciLatestFactoryResetReleaseUrl;
+    releaseUrl = resetChannelUrl;
     factoryResetOnInstall = true;
   }
 
@@ -165,19 +162,10 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     return INTERNAL_UPDATE_ERROR;
   }
 
-  if (useReleaseList) {
-    filter[0]["tag_name"] = true;
-    filter[0]["prerelease"] = true;
-    filter[0]["draft"] = true;
-    filter[0]["assets"][0]["name"] = true;
-    filter[0]["assets"][0]["browser_download_url"] = true;
-    filter[0]["assets"][0]["size"] = true;
-  } else {
-    filter["tag_name"] = true;
-    filter["assets"][0]["name"] = true;
-    filter["assets"][0]["browser_download_url"] = true;
-    filter["assets"][0]["size"] = true;
-  }
+  filter["tag_name"] = true;
+  filter["assets"][0]["name"] = true;
+  filter["assets"][0]["browser_download_url"] = true;
+  filter["assets"][0]["size"] = true;
   const DeserializationError error = deserializeJson(doc, local_buf, DeserializationOption::Filter(filter));
   if (error) {
     Serial.printf("[%lu] [OTA] JSON parse failed: %s\n", millis(), error.c_str());
@@ -185,35 +173,6 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   }
 
   JsonVariant release = doc.as<JsonVariant>();
-  if (useReleaseList) {
-    if (!doc.is<JsonArray>() || doc.size() == 0) {
-      Serial.printf("[%lu] [OTA] No releases found\n", millis());
-      return JSON_PARSE_ERROR;
-    }
-    bool releaseFound = false;
-    for (const auto& candidate : doc.as<JsonArray>()) {
-      if (candidate["draft"].is<bool>() && candidate["draft"].as<bool>()) {
-        continue;
-      }
-      if (!candidate["prerelease"].is<bool>() || !candidate["prerelease"].as<bool>()) {
-        continue;
-      }
-      if (!candidate["tag_name"].is<std::string>()) {
-        continue;
-      }
-      const std::string candidateTag = candidate["tag_name"].as<std::string>();
-      if (startsWith(candidateTag, "ci-latest")) {
-        continue;
-      }
-      release = candidate;
-      releaseFound = true;
-      break;
-    }
-    if (!releaseFound) {
-      Serial.printf("[%lu] [OTA] No nightly releases found\n", millis());
-      return JSON_PARSE_ERROR;
-    }
-  }
 
   if (!release["tag_name"].is<std::string>()) {
     Serial.printf("[%lu] [OTA] No tag_name found\n", millis());

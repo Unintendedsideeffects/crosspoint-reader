@@ -44,49 +44,6 @@ jobs:
           key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
           restore-keys: ${{ runner.os }}-platformio-
 
-      - name: Compute nightly version
-        id: version
-        shell: bash
-        run: |
-          base_version=$(python - <<'PY'
-          import re
-          from pathlib import Path
-          text = Path('platformio.ini').read_text()
-          match = re.search(r'^\[crosspoint\]\s*\nversion\s*=\s*([0-9]+)\.([0-9]+)\.([0-9]+)\s*$', text, re.M)
-          if not match:
-              raise SystemExit('crosspoint.version not found')
-          print(f"{match.group(1)}.{match.group(2)}")
-          PY
-          )
-          nightly_patch=$(date -u +%Y%m%d)
-          nightly_version="${base_version}.${nightly_patch}"
-          echo "nightly_version=${nightly_version}" >> "$GITHUB_OUTPUT"
-
-      - name: Update build version
-        env:
-          NIGHTLY_VERSION: ${{ steps.version.outputs.nightly_version }}
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import os
-
-          path = Path('platformio.ini')
-          lines = path.read_text().splitlines()
-          nightly = os.environ['NIGHTLY_VERSION']
-
-          out = []
-          in_crosspoint = False
-          for line in lines:
-              stripped = line.strip()
-              if stripped.startswith('[') and stripped.endswith(']'):
-                  in_crosspoint = stripped == '[crosspoint]'
-              if in_crosspoint and stripped.startswith('version'):
-                  line = f"version = {nightly}"
-              out.append(line)
-
-          path.write_text("\n".join(out) + "\n")
-          PY
-
       - name: Build firmware (nightly)
         run: uv run pio run -e gh_release | tee pio.log
 
@@ -97,47 +54,29 @@ jobs:
             --firmware .pio/build/gh_release/firmware.bin \
             --min-headroom-kb 64
 
+      - name: Remove existing nightly assets (if any)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/nightly --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin" or .name=="bootloader.bin") | .id' 2>/dev/null || true)"
+          if [ -z "$asset_ids" ]; then
+            echo "No existing nightly assets to remove."
+            exit 0
+          fi
+          for asset_id in $asset_ids; do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
+          done
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.nightly_version }}
-          name: Nightly ${{ steps.version.outputs.nightly_version }}
-          generate_release_notes: true
+          tag_name: nightly
+          name: Nightly
+          generate_release_notes: false
           draft: false
           prerelease: true
           files: |
             .pio/build/gh_release/firmware.bin
             .pio/build/gh_release/partitions.bin
             .pio/build/gh_release/bootloader.bin
-
-      - name: Prune old nightly releases (keep latest 3)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          stale_releases="$(
-            gh api repos/${{ github.repository }}/releases --paginate --jq '
-              [
-                .[]
-                | select(.prerelease == true and (.tag_name | test("^[0-9]+\\.[0-9]+\\.[0-9]{8}$")))
-              ]
-              | sort_by(.created_at)
-              | reverse
-              | .[3:][]
-              | [.id, .tag_name]
-              | @tsv
-            '
-          )"
-
-          if [ -z "$stale_releases" ]; then
-            echo "No nightly releases to prune."
-            exit 0
-          fi
-
-          while IFS=$'\t' read -r release_id tag_name; do
-            [ -n "$release_id" ] || continue
-            echo "Deleting nightly release ${tag_name} (id ${release_id})"
-            gh api -X DELETE "repos/${{ github.repository }}/releases/${release_id}"
-            gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/${tag_name}" || true
-          done <<< "$stale_releases"
