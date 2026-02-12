@@ -136,7 +136,35 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
 
-  ci-latest:
+      - name: Remove existing release channel assets (if any)
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/release --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
+          if [ -z "$asset_ids" ]; then
+            echo "No existing release channel assets to remove."
+            exit 0
+          fi
+          for asset_id in $asset_ids; do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
+          done
+
+      - name: Publish release channel
+        if: ${{ !contains(github.ref_name, '-') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: release
+          name: Release
+          prerelease: false
+          draft: false
+          generate_release_notes: false
+          files: |
+            firmware.bin
+            partitions.bin*
+
+  latest:
     needs: build
     if: ${{ !startsWith(github.ref, 'refs/tags/') && github.ref == 'refs/heads/fork-drift' }}
     runs-on: ubuntu-latest
@@ -166,34 +194,25 @@ jobs:
             cp "$PARTITIONS_BIN" partitions.bin
           fi
 
-      - name: Compute CI rotation slot
-        id: ci-slot
-        shell: bash
-        run: |
-          slot=$(( ((GITHUB_RUN_NUMBER - 1) % 3) + 1 ))
-          echo "slot=${slot}" >> "$GITHUB_OUTPUT"
-          echo "tag=ci-latest-${slot}" >> "$GITHUB_OUTPUT"
-
-      - name: Remove existing rotating CI slot assets (if any)
+      - name: Remove existing latest assets (if any)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          target_tag="${{ steps.ci-slot.outputs.tag }}"
-          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/${target_tag} --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/latest --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
           if [ -z "$asset_ids" ]; then
-            echo "No existing ${target_tag} assets to remove."
+            echo "No existing latest assets to remove."
             exit 0
           fi
           for asset_id in $asset_ids; do
             gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
           done
 
-      - name: Publish rotating CI slot release
+      - name: Publish latest release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.ci-slot.outputs.tag }}
-          name: CI Latest Slot ${{ steps.ci-slot.outputs.slot }}
+          tag_name: latest
+          name: Latest
           prerelease: true
           draft: false
           generate_release_notes: false
@@ -201,87 +220,28 @@ jobs:
             firmware.bin
             partitions.bin*
 
-      - name: Remove existing ci-latest assets (if any)
+      - name: Remove existing reset assets (if any)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/ci-latest --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/reset --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
           if [ -z "$asset_ids" ]; then
-            echo "No existing ci-latest assets to remove."
+            echo "No existing reset assets to remove."
             exit 0
           fi
           for asset_id in $asset_ids; do
             gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
           done
 
-      - name: Publish CI release
+      - name: Publish reset release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ci-latest
-          name: CI Latest
+          tag_name: reset
+          name: Reset
           prerelease: true
           draft: false
           generate_release_notes: false
           files: |
             firmware.bin
             partitions.bin*
-
-      - name: Remove existing ci-latest_factory-reset assets (if any)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/ci-latest_factory-reset --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
-          if [ -z "$asset_ids" ]; then
-            echo "No existing ci-latest_factory-reset assets to remove."
-            exit 0
-          fi
-          for asset_id in $asset_ids; do
-            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
-          done
-
-      - name: Publish CI factory-reset release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ci-latest_factory-reset
-          name: CI Latest Factory Reset
-          prerelease: true
-          draft: false
-          generate_release_notes: false
-          files: |
-            firmware.bin
-            partitions.bin*
-
-      - name: Prune extra ci-latest rotating releases
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          stale_releases="$(
-            gh api repos/${{ github.repository }}/releases --paginate --jq '
-              [
-                .[]
-                | select(
-                    (.tag_name | startswith("ci-latest-"))
-                    and (.tag_name | test("^ci-latest-[1-3]$") | not)
-                  )
-              ]
-              | .[]
-              | [.id, .tag_name]
-              | @tsv
-            '
-          )"
-
-          if [ -z "$stale_releases" ]; then
-            echo "No extra ci-latest rotating releases to prune."
-            exit 0
-          fi
-
-          while IFS=$'\t' read -r release_id tag_name; do
-            [ -n "$release_id" ] || continue
-            echo "Deleting extra CI release ${tag_name} (id ${release_id})"
-            gh api -X DELETE "repos/${{ github.repository }}/releases/${release_id}"
-            gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/${tag_name}" || true
-          done <<< "$stale_releases"
