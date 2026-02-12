@@ -3,89 +3,438 @@
 #pragma once
 constexpr char HomePageHtml[] PROGMEM =
     R"rawliteral(<!DOCTYPE html><html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>CrossPoint Reader</title> <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Oxygen, Ubuntu, sans-serif;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-        background-color: #f5f5f5;
-        color: #333;
-      }
-      h1 {
-        color: #2c3e50;
-        border-bottom: 2px solid #3498db;
-        padding-bottom: 10px;
-      }
-      h2 {
-        color: #34495e;
-        margin-top: 0;
-      }
-      .card {
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 15px 0;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      .info-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid #eee;
-      }
-      .info-row:last-child {
-        border-bottom: none;
-      }
-      .label {
-        font-weight: 600;
-        color: #7f8c8d;
-      }
-      .value {
-        color: #2c3e50;
-      }
-      .status {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 12px;
-        background-color: #27ae60;
-        color: white;
-        font-size: 0.9em;
-      }
-      .nav-links {
-        margin: 20px 0;
-      }
-      .nav-links a {
-        display: inline-block;
-        padding: 10px 20px;
-        background-color: #3498db;
-        color: white;
-        text-decoration: none;
-        border-radius: 4px;
-        margin-right: 10px;
-      }
-      .nav-links a:hover {
-        background-color: #2980b9;
-      }
-    </style> </head><body><h1>📚 CrossPoint Reader</h1><div class="nav-links"><a href="/">Home</a><a href="/files">File Manager</a></div><div class="card"><h2>Device Status</h2><div class="info-row"><span class="label">Version</span><span class="value" id="version"></span></div><div class="info-row"><span class="label">WiFi Status</span><span class="status" id="wifi-status">Loading...</span></div><div class="info-row"><span class="label">IP Address</span><span class="value" id="ip-address"></span></div><div class="info-row"><span class="label">Free Memory</span><span class="value" id="free-heap"></span></div></div><div class="card"><p style="text-align: center; color: #95a5a6; margin: 0"> CrossPoint E-Reader • Open Source </p></div> <script>
-    async function fetchStatus() {
-      try {
-        const response = await fetch('/api/status');
-        if (!response.ok) {
-          throw new Error('Failed to fetch status: ' + response.status + ' ' + response.statusText);
-        }
-        const data = await response.json();
-        document.getElementById('version').textContent = data.version || 'N/A';
-        document.getElementById('wifi-status').textContent = data.wifiStatus || 'Unknown';
-        document.getElementById('ip-address').textContent = data.ip || 'N/A';
-        document.getElementById('free-heap').textContent = data.freeHeap
-          ? data.freeHeap.toLocaleString() + ' bytes'
-          : 'N/A';
-      } catch (error) {
-        console.error('Error fetching status:', error);
-      }
+    :root {
+      --black: #000;
+      --white: #fff;
+      --gray-1: #111;
+      --gray-2: #222;
+      --gray-3: #444;
+      --gray-4: #666;
+      --gray-5: #888;
+      --gray-6: #aaa;
+      --gray-7: #ccc;
+      --gray-8: #ddd;
+      --gray-9: #eee;
+      --gray-10: #f5f5f5;
+      --font-mono: 'Courier New', Courier, monospace;
+      --font-display: Georgia, 'Times New Roman', Times, serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-mono);
+      background-color: var(--gray-10);
+      color: var(--black);
+      max-width: 800px;
+      margin: 0 auto;
+      min-height: 100vh;
+      /* Subtle paper grain via repeating 2px dot grid */
+      background-image:
+        radial-gradient(circle, var(--gray-8) 1px, transparent 1px);
+      background-size: 4px 4px;
     }
 
-    // Fetch status on page load
-    window.onload = fetchStatus;
-  </script> </body></html>)rawliteral";
+    /* ── MASTHEAD ─────────────────────────────── */
+    .masthead {
+      text-align: center;
+      padding: 24px 16px 16px;
+      border-bottom: 4px double var(--black);
+    }
+    .masthead-rule {
+      display: block;
+      border: none;
+      border-top: 1px solid var(--black);
+      margin: 0 auto 8px;
+      width: 60%;
+    }
+    .masthead h1 {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 2.2em;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      text-transform: none;
+    }
+    .masthead-sub {
+      font-family: var(--font-mono);
+      font-size: 0.7em;
+      color: var(--gray-4);
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ── NAV BAR ──────────────────────────────── */
+    .nav {
+      display: flex;
+      border-bottom: 2px solid var(--black);
+      background: var(--white);
+    }
+    .nav a {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
+      text-decoration: none;
+      color: var(--black);
+      font-size: 0.8em;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-right: 1px solid var(--gray-7);
+      transition: background 0.1s;
+    }
+    .nav a:last-child { border-right: none; }
+    .nav a:hover, .nav a.active {
+      background: var(--black);
+      color: var(--white);
+    }
+
+    /* ── SECTION HEADERS ─────────────────────── */
+    .section-hdr {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 16px 8px;
+    }
+    .section-hdr::before,
+    .section-hdr::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid var(--gray-5);
+    }
+    .section-hdr span {
+      font-size: 0.75em;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray-3);
+      white-space: nowrap;
+    }
+
+    /* ── CAROUSEL ─────────────────────────────── */
+    .carousel-wrap {
+      position: relative;
+      padding: 0 16px 16px;
+    }
+    .carousel-track {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      padding: 8px 0 4px;
+      /* Hide scrollbar but keep scroll */
+      scrollbar-width: none;
+    }
+    .carousel-track::-webkit-scrollbar { display: none; }
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-60%);
+      z-index: 2;
+      width: 32px;
+      height: 56px;
+      background: var(--white);
+      border: 2px solid var(--black);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 1.2em;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s, color 0.1s;
+    }
+    .carousel-btn:hover {
+      background: var(--black);
+      color: var(--white);
+    }
+    .carousel-btn.left { left: 4px; }
+    .carousel-btn.right { right: 4px; }
+
+    /* ── BOOK CARD ────────────────────────────── */
+    .book-card {
+      flex: 0 0 140px;
+      scroll-snap-align: start;
+      text-align: center;
+    }
+    .book-cover-frame {
+      width: 140px;
+      height: 200px;
+      border: 2px solid var(--black);
+      background: var(--white);
+      overflow: hidden;
+      position: relative;
+    }
+    .book-cover-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      /* Force grayscale rendering */
+      filter: grayscale(100%) contrast(1.2);
+    }
+    /* CSS placeholder when no cover */
+    .book-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      /* Crosshatch dither pattern */
+      background-color: var(--gray-9);
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 3px,
+          var(--gray-7) 3px,
+          var(--gray-7) 4px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 3px,
+          var(--gray-7) 3px,
+          var(--gray-7) 4px
+        );
+    }
+    .book-placeholder .ph-icon {
+      font-size: 2em;
+      line-height: 1;
+      margin-bottom: 8px;
+      color: var(--gray-3);
+    }
+    .book-placeholder .ph-title {
+      font-size: 0.65em;
+      font-weight: 700;
+      color: var(--gray-2);
+      line-height: 1.3;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      word-break: break-word;
+    }
+    .book-title {
+      font-size: 0.72em;
+      font-weight: 600;
+      margin-top: 6px;
+      line-height: 1.2;
+      color: var(--black);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .book-author {
+      font-size: 0.62em;
+      color: var(--gray-4);
+      margin-top: 2px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    /* Empty state */
+    .carousel-empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--gray-5);
+      font-size: 0.85em;
+      border: 1px dashed var(--gray-6);
+      margin: 0 16px 16px;
+    }
+    .carousel-empty .empty-icon {
+      font-size: 2em;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    /* ── 2-COL GRID MENU ─────────────────────── */
+    .grid-menu {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      margin: 0 16px 16px;
+      border: 2px solid var(--black);
+    }
+    .grid-card {
+      padding: 16px 14px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-7);
+      border-right: 1px solid var(--gray-7);
+      text-decoration: none;
+      color: var(--black);
+      display: block;
+      transition: background 0.1s;
+      position: relative;
+    }
+    .grid-card:nth-child(2n) { border-right: none; }
+    .grid-card:nth-last-child(-n+2) { border-bottom: none; }
+    .grid-card:hover {
+      /* Diagonal stripe dither on hover */
+      background-image:
+        repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 2px,
+          var(--gray-9) 2px,
+          var(--gray-9) 4px
+        );
+    }
+    .grid-card:active {
+      background: var(--gray-8);
+      background-image: none;
+    }
+    .gc-icon {
+      font-size: 1.5em;
+      line-height: 1;
+      margin-bottom: 6px;
+      display: block;
+      font-family: var(--font-mono);
+    }
+    .gc-title {
+      font-size: 0.82em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+    .gc-desc {
+      font-size: 0.68em;
+      color: var(--gray-4);
+      line-height: 1.4;
+    }
+    /* Status card specifics */
+    .gc-status-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68em;
+      padding: 2px 0;
+      border-bottom: 1px dotted var(--gray-7);
+    }
+    .gc-status-row:last-child { border-bottom: none; }
+    .gc-status-label { color: var(--gray-4); }
+    .gc-status-value { font-weight: 600; color: var(--black); }
+
+    /* ── FOOTER ───────────────────────────────── */
+    .footer {
+      text-align: center;
+      padding: 12px 16px 20px;
+      font-size: 0.65em;
+      color: var(--gray-5);
+      border-top: 1px solid var(--gray-7);
+      margin: 0 16px;
+      letter-spacing: 0.06em;
+    }
+    .footer-rule {
+      display: block;
+      margin: 0 auto 6px;
+      width: 40%;
+      border: none;
+      border-top: 1px solid var(--gray-7);
+    }
+
+    /* ── MOBILE ───────────────────────────────── */
+    @media (max-width: 480px) {
+      .masthead h1 { font-size: 1.6em; }
+      .book-card { flex: 0 0 120px; }
+      .book-cover-frame { width: 120px; height: 172px; }
+      .grid-menu { margin: 0 10px 10px; }
+      .grid-card { padding: 12px 10px; }
+      .carousel-wrap { padding: 0 10px 10px; }
+      .carousel-btn { width: 28px; height: 48px; font-size: 1em; }
+    }
+
+    /* ── LOADING ──────────────────────────────── */
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.2s steps(4,end) infinite;
+    }
+    @keyframes dots {
+      0% { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+    }
+  </style> </head><body><header class="masthead"><hr class="masthead-rule"><h1>CrossPoint Reader</h1><div class="masthead-sub">Personal E-Reader &middot; Open Source</div></header><nav class="nav"><a href="/" class="active">[Home]</a><a href="/files">[Files]</a><a href="/settings">[Settings]</a></nav><div class="section-hdr"><span>Recent Books</span></div><div id="carousel-area"><div class="carousel-empty"><span class="empty-icon">&#9744;</span><span class="loading-dots">Loading</span></div></div><div class="section-hdr"><span>Menu</span></div><div class="grid-menu"><a href="/files" class="grid-card"><span class="gc-icon">[&gt;]</span><div class="gc-title">File Manager</div><div class="gc-desc">Browse, upload, and manage books on the SD card</div></a><a href="/settings" class="grid-card"><span class="gc-icon">[=]</span><div class="gc-title">Settings</div><div class="gc-desc">Configure display, WiFi, buttons, and more</div></a><div class="grid-card" id="status-card"><span class="gc-icon">[*]</span><div class="gc-title">Device Status</div><div class="gc-status-row"><span class="gc-status-label">Version</span><span class="gc-status-value" id="st-version">--</span></div><div class="gc-status-row"><span class="gc-status-label">WiFi</span><span class="gc-status-value" id="st-wifi">--</span></div><div class="gc-status-row"><span class="gc-status-label">IP</span><span class="gc-status-value" id="st-ip">--</span></div><div class="gc-status-row"><span class="gc-status-label">Memory</span><span class="gc-status-value" id="st-heap">--</span></div></div><div class="grid-card"><span class="gc-icon">[?]</span><div class="gc-title">About</div><div class="gc-desc">CrossPoint Reader<br>Open-source firmware for the Xteink e-reader</div></div></div><footer class="footer"><hr class="footer-rule"> CrossPoint &middot; Open Source &middot; Built for Reading </footer> <script>
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatBytes(b) {
+    if (b <= 0) return '0 B';
+    var k = 1024;
+    var u = ['B','KB','MB'];
+    var i = Math.floor(Math.log(b) / Math.log(k));
+    if (i >= u.length) i = u.length - 1;
+    return (b / Math.pow(k, i)).toFixed(1) + ' ' + u[i];
+  }
+
+  async function loadStatus() {
+    try {
+      var r = await fetch('/api/status');
+      if (!r.ok) return;
+      var d = await r.json();
+      document.getElementById('st-version').textContent = d.version || '--';
+      document.getElementById('st-wifi').textContent = d.wifiStatus || '--';
+      document.getElementById('st-ip').textContent = d.ip || '--';
+      document.getElementById('st-heap').textContent = d.freeHeap ? formatBytes(d.freeHeap) : '--';
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadRecent() {
+    var area = document.getElementById('carousel-area');
+    try {
+      var r = await fetch('/api/recent');
+      if (!r.ok) throw new Error(r.status);
+      var books = await r.json();
+
+      if (!books || books.length === 0) {
+        area.innerHTML = '<div class="carousel-empty"><span class="empty-icon">&#9744;</span>No recent books yet. Upload some via File Manager.</div>';
+        return;
+      }
+
+      var html = '<div class="carousel-wrap">';
+      html += '<button class="carousel-btn left" onclick="scrollCar(-1)" aria-label="Scroll left">&#9664;</button>';
+      html += '<div class="carousel-track" id="car-track">';
+
+      for (var i = 0; i < books.length; i++) {
+        var b = books[i];
+        var t = escapeHtml(b.title || 'Untitled');
+        var a = escapeHtml(b.author || '');
+        html += '<div class="book-card">';
+        html += '<div class="book-cover-frame">';
+        if (b.hasCover) {
+          html += '<img src="/api/cover?path=' + encodeURIComponent(b.path) + '" alt="' + t + '" loading="lazy">';
+        } else {
+          html += '<div class="book-placeholder"><div class="ph-icon">&#9633;</div><div class="ph-title">' + t + '</div></div>';
+        }
+        html += '</div>';
+        html += '<div class="book-title">' + t + '</div>';
+        if (a) html += '<div class="book-author">' + a + '</div>';
+        html += '</div>';
+      }
+
+      html += '</div>';
+      html += '<button class="carousel-btn right" onclick="scrollCar(1)" aria-label="Scroll right">&#9654;</button>';
+      html += '</div>';
+      area.innerHTML = html;
+    } catch(e) {
+      console.error(e);
+      area.innerHTML = '<div class="carousel-empty"><span class="empty-icon">&#9744;</span>Could not load recent books</div>';
+    }
+  }
+
+  function scrollCar(dir) {
+    var track = document.getElementById('car-track');
+    if (!track) return;
+    track.scrollBy({ left: dir * 200, behavior: 'smooth' });
+  }
+
+  loadStatus();
+  loadRecent();
+</script> </body></html>)rawliteral";

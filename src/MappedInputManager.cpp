@@ -7,13 +7,6 @@ constexpr unsigned long POWER_DOUBLE_TAP_MS = 350;
 
 using ButtonIndex = uint8_t;
 
-struct FrontLayoutMap {
-  ButtonIndex back;
-  ButtonIndex confirm;
-  ButtonIndex left;
-  ButtonIndex right;
-};
-
 struct SideLayoutMap {
   ButtonIndex pageBack;
   ButtonIndex pageForward;
@@ -32,29 +25,36 @@ bool isDualSideLayout() {
 }  // namespace
 
 bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint8_t) const) const {
-  const auto frontLayout = static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout);
   const auto sideLayout = static_cast<CrossPointSettings::SIDE_BUTTON_LAYOUT>(SETTINGS.sideButtonLayout);
-  const auto& front = kFrontLayouts[frontLayout];
   const auto& side = kSideLayouts[sideLayout];
 
   switch (button) {
     case Button::Back:
-      return (gpio.*fn)(front.back);
+      // Logical Back maps to user-configured front button.
+      return (gpio.*fn)(SETTINGS.frontButtonBack);
     case Button::Confirm:
-      return (gpio.*fn)(front.confirm);
+      // Logical Confirm maps to user-configured front button.
+      return (gpio.*fn)(SETTINGS.frontButtonConfirm);
     case Button::Left:
-      return (gpio.*fn)(front.left);
+      // Logical Left maps to user-configured front button.
+      return (gpio.*fn)(SETTINGS.frontButtonLeft);
     case Button::Right:
-      return (gpio.*fn)(front.right);
+      // Logical Right maps to user-configured front button.
+      return (gpio.*fn)(SETTINGS.frontButtonRight);
     case Button::Up:
+      // Side buttons remain fixed for Up/Down.
       return (gpio.*fn)(HalGPIO::BTN_UP);
     case Button::Down:
+      // Side buttons remain fixed for Up/Down.
       return (gpio.*fn)(HalGPIO::BTN_DOWN);
     case Button::Power:
+      // Power button bypasses remapping.
       return (gpio.*fn)(HalGPIO::BTN_POWER);
     case Button::PageBack:
+      // Reader page navigation uses side buttons and can be swapped via settings.
       return (gpio.*fn)(side.pageBack);
     case Button::PageForward:
+      // Reader page navigation uses side buttons and can be swapped via settings.
       return (gpio.*fn)(side.pageForward);
   }
 
@@ -62,7 +62,7 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 }
 
 void MappedInputManager::updatePowerTapState() const {
-  if (SETTINGS.shortPwrBtn != CrossPointSettings::SHORT_PWRBTN::SELECT) {
+  if (!isDualSideLayout()) {
     pendingPowerReleaseMs = 0;
     doubleTapReadyMs = 0;
     return;
@@ -186,7 +186,27 @@ unsigned long MappedInputManager::getHeldTime() const { return gpio.getHeldTime(
 
 MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const char* confirm, const char* previous,
                                                          const char* next) const {
-  const auto layout = static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout);
+  if (isDualSideLayout()) {
+    return {previous, previous, next, next};
+  }
+
+  // Build the label order based on the configured hardware mapping.
+  auto labelForHardware = [&](uint8_t hw) -> const char* {
+    // Compare against configured logical roles and return the matching label.
+    if (hw == SETTINGS.frontButtonBack) {
+      return back;
+    }
+    if (hw == SETTINGS.frontButtonConfirm) {
+      return confirm;
+    }
+    if (hw == SETTINGS.frontButtonLeft) {
+      return previous;
+    }
+    if (hw == SETTINGS.frontButtonRight) {
+      return next;
+    }
+    return "";
+  };
 
   return {labelForHardware(HalGPIO::BTN_BACK), labelForHardware(HalGPIO::BTN_CONFIRM),
           labelForHardware(HalGPIO::BTN_LEFT), labelForHardware(HalGPIO::BTN_RIGHT)};

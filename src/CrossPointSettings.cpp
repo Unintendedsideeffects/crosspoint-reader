@@ -1,7 +1,7 @@
 #include "CrossPointSettings.h"
 
+#include <HalStorage.h>
 #include <HardwareSerial.h>
-#include <SDCardManager.h>
 #include <Serialization.h>
 
 #include <cstring>
@@ -25,15 +25,41 @@ constexpr uint8_t SETTINGS_FILE_VERSION = 1;
 // Increment this when adding new persisted settings fields
 constexpr uint8_t SETTINGS_COUNT = 29;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
+
+// Validate front button mapping to ensure each hardware button is unique.
+// If duplicates are detected, reset to the default physical order to prevent invalid mappings.
+void validateFrontButtonMapping(CrossPointSettings& settings) {
+  // Snapshot the logical->hardware mapping so we can compare for duplicates.
+  const uint8_t mapping[] = {settings.frontButtonBack, settings.frontButtonConfirm, settings.frontButtonLeft,
+                             settings.frontButtonRight};
+  for (size_t i = 0; i < 4; i++) {
+    for (size_t j = i + 1; j < 4; j++) {
+      if (mapping[i] == mapping[j]) {
+        // Duplicate detected: restore the default physical order (Back, Confirm, Left, Right).
+        settings.frontButtonBack = CrossPointSettings::FRONT_HW_BACK;
+        settings.frontButtonConfirm = CrossPointSettings::FRONT_HW_CONFIRM;
+        settings.frontButtonLeft = CrossPointSettings::FRONT_HW_LEFT;
+        settings.frontButtonRight = CrossPointSettings::FRONT_HW_RIGHT;
+        return;
+      }
+    }
+  }
+}
+
+// Convert legacy front button layout into explicit logical->hardware mapping.
+void applyLegacyFrontButtonLayout(CrossPointSettings& settings) {
+  settings.applyFrontButtonLayoutPreset(
+      static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(settings.frontButtonLayout));
+}
 }  // namespace
 
 bool CrossPointSettings::saveToFile() const {
   SpiBusMutex::Guard guard;
   // Make sure the directory exists
-  SdMan.mkdir("/.crosspoint");
+  Storage.mkdir("/.crosspoint");
 
   FsFile outputFile;
-  if (!SdMan.openFileForWrite("CPS", SETTINGS_FILE, outputFile)) {
+  if (!Storage.openFileForWrite("CPS", SETTINGS_FILE, outputFile)) {
     return false;
   }
 
@@ -44,7 +70,7 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writePod(outputFile, shortPwrBtn);
   serialization::writePod(outputFile, statusBar);
   serialization::writePod(outputFile, orientation);
-  serialization::writePod(outputFile, frontButtonLayout);
+  serialization::writePod(outputFile, frontButtonLayout);  // legacy
   serialization::writePod(outputFile, sideButtonLayout);
   serialization::writePod(outputFile, fontFamily);
   serialization::writePod(outputFile, fontSize);
@@ -78,7 +104,7 @@ bool CrossPointSettings::saveToFile() const {
 bool CrossPointSettings::loadFromFile() {
   SpiBusMutex::Guard guard;
   FsFile inputFile;
-  if (!SdMan.openFileForRead("CPS", SETTINGS_FILE, inputFile)) {
+  if (!Storage.openFileForRead("CPS", SETTINGS_FILE, inputFile)) {
     return false;
   }
 
@@ -95,6 +121,8 @@ bool CrossPointSettings::loadFromFile() {
 
   // load settings that exist (support older files with fewer fields)
   uint8_t settingsRead = 0;
+  // Track whether remap fields were present in the settings file.
+  bool frontButtonMappingRead = false;
   do {
     readAndValidate(inputFile, sleepScreen, SLEEP_SCREEN_MODE_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
@@ -106,7 +134,7 @@ bool CrossPointSettings::loadFromFile() {
     if (++settingsRead >= fileSettingsCount) break;
     readAndValidate(inputFile, orientation, ORIENTATION_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
-    readAndValidate(inputFile, frontButtonLayout, FRONT_BUTTON_LAYOUT_COUNT);
+    readAndValidate(inputFile, frontButtonLayout, FRONT_BUTTON_LAYOUT_COUNT);  // legacy
     if (++settingsRead >= fileSettingsCount) break;
     readAndValidate(inputFile, sideButtonLayout, SIDE_BUTTON_LAYOUT_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
@@ -172,6 +200,12 @@ bool CrossPointSettings::loadFromFile() {
     // New fields added at end for backward compatibility
   } while (false);
 
+  if (frontButtonMappingRead) {
+    validateFrontButtonMapping(*this);
+  } else {
+    applyLegacyFrontButtonLayout(*this);
+  }
+
   inputFile.close();
 
   // Validate and clamp all settings to valid ranges
@@ -179,6 +213,48 @@ bool CrossPointSettings::loadFromFile() {
 
   Serial.printf("[%lu] [CPS] Settings loaded from file\n", millis());
   return true;
+}
+
+void CrossPointSettings::applyFrontButtonLayoutPreset(const FRONT_BUTTON_LAYOUT layout) {
+  frontButtonLayout = static_cast<uint8_t>(layout);
+
+  switch (layout) {
+    case LEFT_RIGHT_BACK_CONFIRM:
+      frontButtonBack = FRONT_HW_LEFT;
+      frontButtonConfirm = FRONT_HW_RIGHT;
+      frontButtonLeft = FRONT_HW_BACK;
+      frontButtonRight = FRONT_HW_CONFIRM;
+      break;
+    case LEFT_BACK_CONFIRM_RIGHT:
+      frontButtonBack = FRONT_HW_CONFIRM;
+      frontButtonConfirm = FRONT_HW_LEFT;
+      frontButtonLeft = FRONT_HW_BACK;
+      frontButtonRight = FRONT_HW_RIGHT;
+      break;
+    case BACK_CONFIRM_RIGHT_LEFT:
+      frontButtonBack = FRONT_HW_BACK;
+      frontButtonConfirm = FRONT_HW_CONFIRM;
+      frontButtonLeft = FRONT_HW_RIGHT;
+      frontButtonRight = FRONT_HW_LEFT;
+      break;
+    case LEFT_LEFT_RIGHT_RIGHT:
+    case BACK_CONFIRM_LEFT_RIGHT:
+    default:
+      // LEFT_LEFT_RIGHT_RIGHT uses dedicated runtime behavior in MappedInputManager.
+      // Keep the underlying one-to-one mapping in default hardware order.
+      frontButtonBack = FRONT_HW_BACK;
+      frontButtonConfirm = FRONT_HW_CONFIRM;
+      frontButtonLeft = FRONT_HW_LEFT;
+      frontButtonRight = FRONT_HW_RIGHT;
+      break;
+  }
+}
+
+void CrossPointSettings::enforceButtonLayoutConstraints() {
+  // In dual-side mode, short power taps are reserved for Confirm/Back emulation.
+  if (frontButtonLayout == LEFT_LEFT_RIGHT_RIGHT) {
+    shortPwrBtn = IGNORE;
+  }
 }
 
 void CrossPointSettings::validateAndClamp() {
@@ -195,7 +271,7 @@ void CrossPointSettings::validateAndClamp() {
   if (paragraphAlignment > RIGHT_ALIGN) paragraphAlignment = JUSTIFIED;
   if (sleepTimeout > SLEEP_30_MIN) sleepTimeout = SLEEP_10_MIN;
   if (refreshFrequency > REFRESH_30) refreshFrequency = REFRESH_15;
-  if (shortPwrBtn > SELECT) shortPwrBtn = IGNORE;
+  if (shortPwrBtn > PAGE_TURN) shortPwrBtn = IGNORE;
   if (hideBatteryPercentage > HIDE_ALWAYS) hideBatteryPercentage = HIDE_NEVER;
   if (timeMode > TIME_MANUAL) timeMode = TIME_UTC;
   if (todoFallbackCover > TODO_FALLBACK_NONE) todoFallbackCover = TODO_FALLBACK_STANDARD;
@@ -213,6 +289,8 @@ void CrossPointSettings::validateAndClamp() {
   hyphenationEnabled = hyphenationEnabled ? 1 : 0;
   longPressChapterSkip = longPressChapterSkip ? 1 : 0;
   backgroundServerOnCharge = backgroundServerOnCharge ? 1 : 0;
+
+  enforceButtonLayoutConstraints();
 }
 
 float CrossPointSettings::getReaderLineCompression() const {

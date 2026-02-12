@@ -5,108 +5,145 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CrossPoint Reader - Files</title>
   <style>
+    :root {
+      --black: #000;
+      --white: #fff;
+      --gray-2: #222;
+      --gray-3: #444;
+      --gray-4: #666;
+      --gray-5: #888;
+      --gray-6: #aaa;
+      --gray-7: #ccc;
+      --gray-8: #ddd;
+      --gray-9: #eee;
+      --gray-10: #f5f5f5;
+      --font-mono: 'Courier New', Courier, monospace;
+      --font-display: Georgia, 'Times New Roman', Times, serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-      Oxygen, Ubuntu, sans-serif;
+      font-family: var(--font-mono);
       max-width: 800px;
       margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-      color: #333;
+      background-color: var(--gray-10);
+      color: var(--black);
+      background-image: radial-gradient(circle, var(--gray-8) 1px, transparent 1px);
+      background-size: 4px 4px;
     }
     h1 {
-      color: #2c3e50;
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--black);
       margin-bottom: 5px;
     }
     h2 {
-      color: #34495e;
+      color: var(--gray-2);
       margin-top: 0;
+      font-size: 1em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .card {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 15px 0;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      background: var(--white);
+      padding: 16px;
+      margin: 12px 16px;
+      border: 2px solid var(--black);
     }
     .page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 15px;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #3498db;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 2px solid var(--black);
+      background: var(--white);
     }
     .page-header-left {
       display: flex;
       align-items: baseline;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }
     .breadcrumb-inline {
-      color: #7f8c8d;
-      font-size: 1.1em;
+      color: var(--gray-5);
+      font-size: 0.85em;
     }
     .breadcrumb-inline a {
-      color: #3498db;
+      color: var(--black);
       text-decoration: none;
     }
     .breadcrumb-inline a:hover {
       text-decoration: underline;
     }
     .breadcrumb-inline .sep {
-      margin: 0 6px;
-      color: #bdc3c7;
+      margin: 0 4px;
+      color: var(--gray-6);
     }
     .breadcrumb-inline .current {
-      color: #2c3e50;
-      font-weight: 500;
+      color: var(--black);
+      font-weight: 600;
     }
-    .nav-links {
-      margin: 20px 0;
+    /* Nav bar matching home page */
+    .nav {
+      display: flex;
+      border-bottom: 2px solid var(--black);
+      background: var(--white);
     }
-    .nav-links a {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #3498db;
-      color: white;
+    .nav a {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
       text-decoration: none;
-      border-radius: 4px;
-      margin-right: 10px;
+      color: var(--black);
+      font-family: var(--font-mono);
+      font-size: 0.8em;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-right: 1px solid var(--gray-7);
+      transition: background 0.1s;
     }
-    .nav-links a:hover {
-      background-color: #2980b9;
+    .nav a:last-child { border-right: none; }
+    .nav a:hover, .nav a.active {
+      background: var(--black);
+      color: var(--white);
     }
     /* Action buttons */
     .action-buttons {
       display: flex;
-      gap: 10px;
+      gap: 8px;
     }
     .action-btn {
-      color: white;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 4px;
+      color: var(--white);
+      padding: 8px 14px;
+      border: 2px solid var(--black);
+      background: var(--black);
       cursor: pointer;
-      font-size: 0.95em;
+      font-family: var(--font-mono);
+      font-size: 0.8em;
       font-weight: 600;
       display: flex;
       align-items: center;
       gap: 6px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .action-btn:hover {
+      background: var(--white);
+      color: var(--black);
     }
     .upload-action-btn {
-      background-color: #27ae60;
-    }
-    .upload-action-btn:hover {
-      background-color: #219a52;
+      background: var(--black);
     }
     .folder-action-btn {
-      background-color: #f39c12;
+      background: var(--gray-3);
+      border-color: var(--gray-3);
     }
     .folder-action-btn:hover {
-      background-color: #d68910;
+      background: var(--white);
+      color: var(--gray-3);
     }
     /* Upload modal */
     .modal-overlay {
@@ -116,7 +153,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.6);
       z-index: 200;
       justify-content: center;
       align-items: center;
@@ -125,16 +162,20 @@
       display: flex;
     }
     .modal {
-      background: white;
-      border-radius: 8px;
-      padding: 25px;
+      background: var(--white);
+      border: 2px solid var(--black);
+      padding: 20px;
       max-width: 450px;
       width: 90%;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
     .modal h3 {
-      margin: 0 0 15px 0;
-      color: #2c3e50;
+      margin: 0 0 12px 0;
+      color: var(--black);
+      font-family: var(--font-mono);
+      font-size: 1em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .modal-close {
       float: right;
@@ -142,11 +183,12 @@
       border: none;
       font-size: 1.5em;
       cursor: pointer;
-      color: #7f8c8d;
+      color: var(--gray-5);
       line-height: 1;
+      font-family: var(--font-mono);
     }
     .modal-close:hover {
-      color: #2c3e50;
+      color: var(--black);
     }
     .file-table {
       width: 100%;
@@ -154,58 +196,64 @@
     }
     .file-table th,
     .file-table td {
-      padding: 12px;
+      padding: 10px 12px;
       text-align: left;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid var(--gray-8);
+      font-size: 0.85em;
     }
     .file-table th {
-      background-color: #f8f9fa;
+      background-color: var(--black);
+      color: var(--white);
       font-weight: 600;
-      color: #7f8c8d;
+      font-size: 0.75em;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
     .file-table tr:hover {
-      background-color: #f8f9fa;
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, var(--gray-9) 2px, var(--gray-9) 4px);
     }
     .epub-file {
-      background-color: #e8f6e9 !important;
+      background-color: var(--gray-9) !important;
     }
     .epub-file:hover {
-      background-color: #d4edda !important;
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, var(--gray-8) 2px, var(--gray-8) 4px) !important;
     }
     .folder-row {
-      background-color: #fff9e6 !important;
+      background-color: var(--white) !important;
     }
     .folder-row:hover {
-      background-color: #fff3cd !important;
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, var(--gray-9) 2px, var(--gray-9) 4px) !important;
     }
     .epub-badge {
       display: inline-block;
-      padding: 2px 8px;
-      background-color: #27ae60;
-      color: white;
-      border-radius: 10px;
-      font-size: 0.75em;
-      margin-left: 8px;
+      padding: 1px 6px;
+      background-color: var(--black);
+      color: var(--white);
+      font-size: 0.7em;
+      font-weight: 600;
+      margin-left: 6px;
+      letter-spacing: 0.04em;
     }
     .folder-badge {
       display: inline-block;
-      padding: 2px 8px;
-      background-color: #f39c12;
-      color: white;
-      border-radius: 10px;
-      font-size: 0.75em;
-      margin-left: 8px;
+      padding: 1px 6px;
+      background-color: var(--gray-4);
+      color: var(--white);
+      font-size: 0.7em;
+      font-weight: 600;
+      margin-left: 6px;
+      letter-spacing: 0.04em;
     }
     .file-icon {
-      margin-right: 8px;
+      margin-right: 6px;
     }
     .folder-link {
-      color: #2c3e50;
+      color: var(--black);
       text-decoration: none;
       cursor: pointer;
+      font-weight: 600;
     }
     .folder-link:hover {
-      color: #3498db;
       text-decoration: underline;
     }
     .upload-form {
@@ -214,65 +262,74 @@
     .upload-form input[type="file"] {
       margin: 10px 0;
       width: 100%;
+      font-family: var(--font-mono);
+      font-size: 0.85em;
     }
     .upload-btn {
-      background-color: #27ae60;
-      color: white;
+      background: var(--black);
+      color: var(--white);
       padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
+      border: 2px solid var(--black);
       cursor: pointer;
-      font-size: 1em;
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      font-weight: 600;
       width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .upload-btn:hover {
-      background-color: #219a52;
+      background: var(--white);
+      color: var(--black);
     }
     .upload-btn:disabled {
-      background-color: #95a5a6;
+      background: var(--gray-6);
+      border-color: var(--gray-6);
       cursor: not-allowed;
     }
     .file-info {
-      color: #7f8c8d;
-      font-size: 0.85em;
+      color: var(--gray-4);
+      font-size: 0.8em;
       margin: 8px 0;
     }
     .no-files {
       text-align: center;
-      color: #95a5a6;
+      color: var(--gray-5);
       padding: 40px;
-      font-style: italic;
+      font-size: 0.85em;
+      border: 1px dashed var(--gray-6);
     }
     .message {
-      padding: 15px;
-      border-radius: 4px;
-      margin: 15px 0;
+      padding: 12px;
+      margin: 12px 16px;
+      border: 2px solid var(--black);
     }
     .message.success {
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
+      background: var(--gray-9);
+      color: var(--black);
     }
     .message.error {
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
+      background: var(--white);
+      color: var(--black);
+      border-style: double;
     }
     .contents-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .contents-title {
-      font-size: 1.1em;
-      font-weight: 600;
-      color: #34495e;
+      font-size: 0.85em;
+      font-weight: 700;
+      color: var(--black);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
       margin: 0;
     }
     .summary-inline {
-      color: #7f8c8d;
-      font-size: 0.9em;
+      color: var(--gray-5);
+      font-size: 0.75em;
     }
     #progress-container {
       display: none;
@@ -280,96 +337,108 @@
     }
     #progress-bar {
       width: 100%;
-      height: 20px;
-      background-color: #e0e0e0;
-      border-radius: 10px;
+      height: 16px;
+      background-color: var(--gray-8);
+      border: 1px solid var(--gray-5);
       overflow: hidden;
     }
     #progress-fill {
       height: 100%;
-      background-color: #27ae60;
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--black),
+        var(--black) 4px,
+        var(--gray-3) 4px,
+        var(--gray-3) 8px
+      );
       width: 0%;
       transition: width 0.3s;
     }
     #progress-text {
       text-align: center;
       margin-top: 5px;
-      font-size: 0.9em;
-      color: #7f8c8d;
+      font-size: 0.75em;
+      color: var(--gray-4);
     }
     .folder-form {
       margin-top: 10px;
     }
     .folder-input {
       width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 1em;
+      padding: 8px 10px;
+      border: 2px solid var(--black);
+      font-family: var(--font-mono);
+      font-size: 0.85em;
       margin-bottom: 10px;
       box-sizing: border-box;
+      background: var(--white);
+    }
+    .folder-input:focus {
+      outline: none;
+      border-color: var(--gray-3);
     }
     .folder-btn {
-      background-color: #f39c12;
-      color: white;
+      background: var(--gray-3);
+      color: var(--white);
       padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
+      border: 2px solid var(--gray-3);
       cursor: pointer;
-      font-size: 1em;
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      font-weight: 600;
       width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .folder-btn:hover {
-      background-color: #d68910;
+      background: var(--white);
+      color: var(--gray-3);
     }
     /* Action button styles */
     .delete-btn,
     .rename-btn,
     .move-btn {
       background: none;
-      border: none;
+      border: 1px solid transparent;
       cursor: pointer;
-      font-size: 1.1em;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: all 0.15s;
-    }
-    .delete-btn {
-      color: #95a5a6;
+      font-size: 1em;
+      padding: 3px 6px;
+      transition: all 0.1s;
+      font-family: var(--font-mono);
+      color: var(--gray-5);
     }
     .delete-btn:hover {
-      background-color: #fee;
-      color: #e74c3c;
-    }
-    .rename-btn {
-      color: #2980b9;
+      background: var(--black);
+      color: var(--white);
+      border-color: var(--black);
     }
     .rename-btn:hover {
-      background-color: #e8f4fd;
-    }
-    .move-btn {
-      color: #16a085;
+      background: var(--gray-3);
+      color: var(--white);
+      border-color: var(--gray-3);
     }
     .move-btn:hover {
-      background-color: #e6f7f4;
+      background: var(--gray-4);
+      color: var(--white);
+      border-color: var(--gray-4);
     }
     .actions-col {
-      width: 140px;
+      width: 130px;
       text-align: center;
     }
     .action-icon-group {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
     }
     /* Failed uploads banner */
     .failed-uploads-banner {
-      background-color: #fff3cd;
-      border: 1px solid #ffc107;
-      border-radius: 4px;
-      padding: 15px;
-      margin-bottom: 15px;
+      background: var(--gray-9);
+      border: 2px solid var(--black);
+      border-style: double;
+      padding: 12px;
+      margin: 0 16px 12px;
       display: none;
     }
     .failed-uploads-banner.show {
@@ -379,31 +448,35 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .failed-uploads-title {
-      font-weight: 600;
-      color: #856404;
+      font-weight: 700;
+      color: var(--black);
       margin: 0;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
     .dismiss-btn {
       background: none;
       border: none;
       font-size: 1.2em;
       cursor: pointer;
-      color: #856404;
+      color: var(--gray-4);
       padding: 0;
       line-height: 1;
+      font-family: var(--font-mono);
     }
     .dismiss-btn:hover {
-      color: #533f03;
+      color: var(--black);
     }
     .failed-file-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid #ffe69c;
+      padding: 6px 0;
+      border-bottom: 1px dotted var(--gray-7);
     }
     .failed-file-item:last-child {
       border-bottom: none;
@@ -412,104 +485,126 @@
       flex: 1;
     }
     .failed-file-name {
-      font-weight: 500;
-      color: #856404;
+      font-weight: 600;
+      font-size: 0.8em;
+      color: var(--black);
     }
     .failed-file-error {
-      font-size: 0.85em;
-      color: #856404;
-      opacity: 0.8;
+      font-size: 0.7em;
+      color: var(--gray-4);
     }
     .retry-btn {
-      background-color: #ffc107;
-      color: #533f03;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
+      background: var(--gray-3);
+      color: var(--white);
+      border: 1px solid var(--gray-3);
+      padding: 4px 10px;
       cursor: pointer;
-      font-size: 0.9em;
+      font-family: var(--font-mono);
+      font-size: 0.75em;
       font-weight: 600;
     }
     .retry-btn:hover {
-      background-color: #e0a800;
+      background: var(--white);
+      color: var(--gray-3);
     }
     .retry-all-btn {
-      background-color: #ffc107;
-      color: #533f03;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
+      background: var(--black);
+      color: var(--white);
+      border: 2px solid var(--black);
+      padding: 6px 14px;
       cursor: pointer;
-      font-size: 0.95em;
+      font-family: var(--font-mono);
+      font-size: 0.8em;
       font-weight: 600;
-      margin-top: 10px;
+      margin-top: 8px;
+      text-transform: uppercase;
     }
     .retry-all-btn:hover {
-      background-color: #e0a800;
+      background: var(--white);
+      color: var(--black);
     }
     /* Delete modal */
     .delete-warning {
-      color: #e74c3c;
-      font-weight: 600;
-      margin: 10px 0;
+      color: var(--black);
+      font-weight: 700;
+      margin: 8px 0;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
     .delete-item-name {
       font-weight: 600;
-      color: #2c3e50;
+      color: var(--black);
       word-break: break-all;
+      font-size: 0.9em;
     }
     .delete-btn-confirm {
-      background-color: #e74c3c;
-      color: white;
+      background: var(--black);
+      color: var(--white);
       padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
+      border: 2px solid var(--black);
       cursor: pointer;
-      font-size: 1em;
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      font-weight: 600;
       width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .delete-btn-confirm:hover {
-      background-color: #c0392b;
+      background: var(--white);
+      color: var(--black);
     }
     .delete-btn-cancel {
-      background-color: #95a5a6;
-      color: white;
+      background: var(--gray-6);
+      color: var(--white);
       padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
+      border: 2px solid var(--gray-6);
       cursor: pointer;
-      font-size: 1em;
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      font-weight: 600;
       width: 100%;
-      margin-top: 10px;
+      margin-top: 8px;
+      text-transform: uppercase;
     }
     .delete-btn-cancel:hover {
-      background-color: #7f8c8d;
+      background: var(--white);
+      color: var(--gray-6);
     }
     .rename-btn-confirm {
-      background-color: #3498db;
-      color: white;
+      background: var(--gray-3);
+      color: var(--white);
       padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
+      border: 2px solid var(--gray-3);
       cursor: pointer;
-      font-size: 1em;
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      font-weight: 600;
       width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .rename-btn-confirm:hover {
-      background-color: #2e86c1;
+      background: var(--white);
+      color: var(--gray-3);
     }
     .move-btn-confirm {
-      background-color: #16a085;
-      color: white;
+      background: var(--gray-3);
+      color: var(--white);
       padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
+      border: 2px solid var(--gray-3);
       cursor: pointer;
-      font-size: 1em;
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      font-weight: 600;
       width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .move-btn-confirm:hover {
-      background-color: #138d75;
+      background: var(--white);
+      color: var(--gray-3);
     }
     .loader-container {
       display: flex;
@@ -518,9 +613,9 @@
       margin: 20px 0;
     }
     .loader {
-      width: 48px;
-      height: 48px;
-      border: 5px solid #AAA;
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--gray-6);
       border-bottom-color: transparent;
       border-radius: 50%;
       display: inline-block;
@@ -528,108 +623,85 @@
       animation: rotation 1s linear infinite;
     }
     @keyframes rotation {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(360deg);
-      }
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
     /* Mobile responsive styles */
     @media (max-width: 600px) {
       body {
-        padding: 10px;
-        font-size: 14px;
+        font-size: 13px;
       }
       .card {
-        padding: 12px;
-        margin: 10px 0;
+        padding: 10px;
+        margin: 8px 10px;
       }
       .page-header {
-        gap: 10px;
-        margin-bottom: 12px;
-        padding-bottom: 10px;
+        gap: 8px;
+        padding: 10px 12px;
       }
       .page-header-left {
-        gap: 8px;
-      }
-      h1 {
-        font-size: 1.3em;
-      }
-      .breadcrumb-inline {
-        font-size: 0.95em;
-      }
-      .nav-links a {
-        padding: 8px 12px;
-        margin-right: 6px;
-        font-size: 0.9em;
-      }
-      .action-buttons {
         gap: 6px;
       }
+      h1 {
+        font-size: 1.2em;
+      }
+      .breadcrumb-inline {
+        font-size: 0.8em;
+      }
+      .action-buttons {
+        gap: 4px;
+      }
       .action-btn {
-        padding: 8px 10px;
-        font-size: 0.85em;
+        padding: 6px 8px;
+        font-size: 0.75em;
       }
       .file-table th,
       .file-table td {
         padding: 8px 6px;
-        font-size: 0.9em;
-      }
-      .file-table th {
-        font-size: 0.85em;
+        font-size: 0.8em;
       }
       .file-icon {
         margin-right: 4px;
       }
       .epub-badge,
       .folder-badge {
-        padding: 2px 5px;
-        font-size: 0.65em;
-        margin-left: 4px;
+        padding: 1px 4px;
+        font-size: 0.6em;
+        margin-left: 3px;
       }
       .contents-header {
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         flex-wrap: wrap;
         gap: 4px;
       }
-      .contents-title {
-        font-size: 1em;
-      }
-      .summary-inline {
-        font-size: 0.8em;
-      }
       .modal {
-        padding: 15px;
-      }
-      .modal h3 {
-        font-size: 1.1em;
+        padding: 14px;
       }
       .actions-col {
-        width: 120px;
+        width: 110px;
       }
       .delete-btn,
       .rename-btn,
       .move-btn {
-        font-size: 1em;
+        font-size: 0.9em;
         padding: 2px 4px;
       }
       .action-icon-group {
-        gap: 4px;
+        gap: 3px;
       }
       .no-files {
         padding: 20px;
-        font-size: 0.9em;
+        font-size: 0.8em;
       }
     }
   </style>
 </head>
 <body>
-<div class="nav-links">
-  <a href="/">Home</a>
-  <a href="/files">File Manager</a>
-  <a href="/settings">Settings</a>
-</div>
+<nav class="nav">
+  <a href="/">[Home]</a>
+  <a href="/files" class="active">[Files]</a>
+  <a href="/settings">[Settings]</a>
+</nav>
 
 <div class="page-header">
   <div class="page-header-left">
@@ -666,10 +738,8 @@
   </div>
 </div>
 
-<div class="card">
-  <p style="text-align: center; color: #95a5a6; margin: 0;">
-    CrossPoint E-Reader • Open Source
-  </p>
+<div style="text-align:center; padding:12px 16px 20px; font-size:0.65em; color:var(--gray-5); border-top:1px solid var(--gray-7); margin:0 16px; letter-spacing:0.06em;">
+  CrossPoint &middot; Open Source &middot; Built for Reading
 </div>
 
 <!-- Upload Modal -->

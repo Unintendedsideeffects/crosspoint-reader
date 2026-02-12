@@ -47,10 +47,12 @@ void ButtonRemapActivity::loop() {
   // - Down: cancel without saving.
   if (mappedInput.wasPressed(MappedInputManager::Button::Up)) {
     // Persist default mapping immediately so the user can recover quickly.
+    SETTINGS.frontButtonLayout = CrossPointSettings::BACK_CONFIRM_LEFT_RIGHT;
     SETTINGS.frontButtonBack = CrossPointSettings::FRONT_HW_BACK;
     SETTINGS.frontButtonConfirm = CrossPointSettings::FRONT_HW_CONFIRM;
     SETTINGS.frontButtonLeft = CrossPointSettings::FRONT_HW_LEFT;
     SETTINGS.frontButtonRight = CrossPointSettings::FRONT_HW_RIGHT;
+    SETTINGS.enforceButtonLayoutConstraints();
     SETTINGS.saveToFile();
     onBack();
     return;
@@ -148,10 +150,13 @@ void ButtonRemapActivity::render(Activity::RenderLock&&) {
 
 void ButtonRemapActivity::applyTempMapping() {
   // Commit temporary mapping into settings (logical role -> hardware).
+  // Custom remapping exits any preset-only front layout mode.
+  SETTINGS.frontButtonLayout = CrossPointSettings::BACK_CONFIRM_LEFT_RIGHT;
   SETTINGS.frontButtonBack = tempMapping[0];
   SETTINGS.frontButtonConfirm = tempMapping[1];
   SETTINGS.frontButtonLeft = tempMapping[2];
   SETTINGS.frontButtonRight = tempMapping[3];
+  SETTINGS.enforceButtonLayoutConstraints();
 }
 
 bool ButtonRemapActivity::validateUnassigned(const uint8_t pressedButton) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <HalStorage.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
 #include <WiFiUdp.h>
@@ -80,4 +81,13 @@ class CrossPointWebServer {
   void handleRename() const;
   void handleMove() const;
   void handleDelete() const;
+
+  // Settings handlers
+  void handleSettingsPage() const;
+  void handleGetSettings() const;
+  void handlePostSettings();
+
+  // API handlers for web UI
+  void handleRecentBooks() const;
+  void handleCover() const;
 };
