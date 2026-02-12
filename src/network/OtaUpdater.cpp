@@ -19,6 +19,24 @@ constexpr char latestChannelUrl[] =
 constexpr char resetChannelUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/reset";
 constexpr char crosspointDataDir[] = "/.crosspoint";
+constexpr char factoryResetMarkerFile[] = "/.factory-reset-pending";
+
+bool markFactoryResetPending() {
+  FsFile markerFile;
+  {
+    SpiBusMutex::Guard guard;
+    if (!Storage.openFileForWrite("OTA", factoryResetMarkerFile, markerFile)) {
+      Serial.printf("[%lu] [OTA] Failed to create factory reset marker: %s\n", millis(), factoryResetMarkerFile);
+      return false;
+    }
+    static constexpr uint8_t markerByte = 1;
+    markerFile.write(&markerByte, sizeof(markerByte));
+    markerFile.close();
+  }
+
+  Serial.printf("[%lu] [OTA] Factory reset marker created: %s\n", millis(), factoryResetMarkerFile);
+  return true;
+}
 
 bool wipeCrossPointData() {
   bool removed = true;
@@ -320,8 +338,13 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     return INTERNAL_UPDATE_ERROR;
   }
 
-  if (factoryResetOnInstall && !wipeCrossPointData()) {
-    return INTERNAL_UPDATE_ERROR;
+  if (factoryResetOnInstall) {
+    if (!markFactoryResetPending()) {
+      return INTERNAL_UPDATE_ERROR;
+    }
+    if (!wipeCrossPointData()) {
+      Serial.printf("[%lu] [OTA] Immediate factory reset wipe failed; will retry on next boot\n", millis());
+    }
   }
 
   Serial.printf("[%lu] [OTA] Update completed\n", millis());

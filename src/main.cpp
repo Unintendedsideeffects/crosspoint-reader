@@ -137,6 +137,38 @@ EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
 unsigned long t1 = 0;
 unsigned long t2 = 0;
 
+namespace {
+constexpr char kCrossPointDataDir[] = "/.crosspoint";
+constexpr char kFactoryResetMarkerFile[] = "/.factory-reset-pending";
+
+void applyPendingFactoryReset() {
+  if (!Storage.exists(kFactoryResetMarkerFile)) {
+    return;
+  }
+
+  Serial.printf("[%lu] [RESET] Pending factory reset marker detected\n", millis());
+
+  bool removed = true;
+  if (Storage.exists(kCrossPointDataDir)) {
+    removed = Storage.removeDir(kCrossPointDataDir);
+  }
+  const bool ensuredDir = Storage.exists(kCrossPointDataDir) || Storage.mkdir(kCrossPointDataDir);
+
+  if (!removed || !ensuredDir) {
+    Serial.printf("[%lu] [RESET] Failed to wipe CrossPoint data (removed=%d, ensuredDir=%d). Retrying on next boot.\n",
+                  millis(), removed, ensuredDir);
+    return;
+  }
+
+  if (!Storage.remove(kFactoryResetMarkerFile)) {
+    Serial.printf("[%lu] [RESET] Wipe completed, but marker removal failed: %s\n", millis(), kFactoryResetMarkerFile);
+    return;
+  }
+
+  Serial.printf("[%lu] [RESET] Factory reset completed from pending marker\n", millis());
+}
+}  // namespace
+
 void exitActivity() {
   if (currentActivity) {
     currentActivity->onExit();
@@ -360,6 +392,8 @@ void setup() {
     enterNewActivity(new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
     return;
   }
+
+  applyPendingFactoryReset();
 
   SETTINGS.loadFromFile();
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
