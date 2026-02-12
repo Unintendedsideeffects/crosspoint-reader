@@ -115,17 +115,23 @@ jobs:
             echo "ERROR: firmware.bin not found in downloaded artifact"
             exit 1
           fi
-          mv "$FIRMWARE_BIN" crosspoint-${{ github.ref_name }}.bin
+          cp "$FIRMWARE_BIN" firmware.bin
+          cp "$FIRMWARE_BIN" crosspoint-${{ github.ref_name }}.bin
           # Optionally include partitions.bin if present
           PARTITIONS_BIN="$(find firmware -type f -name 'partitions.bin' -print -quit)"
           if [ -n "$PARTITIONS_BIN" ]; then
-            mv "$PARTITIONS_BIN" crosspoint-${{ github.ref_name }}-partitions.bin
+            cp "$PARTITIONS_BIN" partitions.bin
+            cp "$PARTITIONS_BIN" crosspoint-${{ github.ref_name }}-partitions.bin
           fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: crosspoint-*.bin
+          files: |
+            firmware.bin
+            partitions.bin*
+            crosspoint-${{ github.ref_name }}.bin
+            crosspoint-${{ github.ref_name }}-partitions.bin*
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -214,6 +220,32 @@ jobs:
         with:
           tag_name: ci-latest
           name: CI Latest
+          prerelease: true
+          draft: false
+          generate_release_notes: false
+          files: |
+            firmware.bin
+            partitions.bin*
+
+      - name: Remove existing ci-latest_factory-reset assets (if any)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/ci-latest_factory-reset --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
+          if [ -z "$asset_ids" ]; then
+            echo "No existing ci-latest_factory-reset assets to remove."
+            exit 0
+          fi
+          for asset_id in $asset_ids; do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
+          done
+
+      - name: Publish CI factory-reset release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ci-latest_factory-reset
+          name: CI Latest Factory Reset
           prerelease: true
           draft: false
           generate_release_notes: false

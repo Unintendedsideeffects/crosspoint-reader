@@ -11,6 +11,7 @@ class OtaUpdater {
   size_t processedSize = 0;
   size_t totalSize = 0;
   bool render = false;
+  bool factoryResetOnInstall = false;
 
  public:
   enum OtaUpdaterError {
@@ -30,6 +31,8 @@ class OtaUpdater {
   size_t getTotalSize() const { return totalSize; }
 
   bool getRender() const { return render; }
+
+  bool willFactoryResetOnInstall() const { return factoryResetOnInstall; }
 
   OtaUpdater() = default;
   bool isUpdateNewer() const;

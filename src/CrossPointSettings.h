@@ -112,7 +112,7 @@ class CrossPointSettings {
   };
 
   // Short power button press actions
-  enum SHORT_PWRBTN { IGNORE = 0, SLEEP = 1, PAGE_TURN = 2, SELECT = 3, SHORT_PWRBTN_COUNT };
+  enum SHORT_PWRBTN { IGNORE = 0, SLEEP = 1, PAGE_TURN = 2, SHORT_PWRBTN_COUNT };
 
   // Hide battery percentage
   enum HIDE_BATTERY_PERCENTAGE { HIDE_NEVER = 0, HIDE_READER = 1, HIDE_ALWAYS = 2, HIDE_BATTERY_PERCENTAGE_COUNT };
@@ -130,6 +130,7 @@ class CrossPointSettings {
     RELEASE_STABLE = 0,
     RELEASE_NIGHTLY = 1,
     RELEASE_LATEST_SUCCESSFUL = 2,
+    RELEASE_LATEST_SUCCESSFUL_FACTORY_RESET = 3,
     RELEASE_CHANNEL_COUNT
   };
 
@@ -149,7 +150,7 @@ class CrossPointSettings {
   // EPUB reading orientation settings
   // 0 = portrait (default), 1 = landscape clockwise, 2 = inverted, 3 = landscape counter-clockwise
   uint8_t orientation = PORTRAIT;
-  // Button layouts (front layout retained for migration only)
+  // Button layouts
   uint8_t frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
   uint8_t sideButtonLayout = PREV_NEXT;
   // Front button remap (logical -> hardware)
@@ -204,12 +205,19 @@ class CrossPointSettings {
   static CrossPointSettings& getInstance() { return instance; }
 
   uint16_t getPowerButtonDuration() const {
+    // Dual-side front layout uses short power taps for Confirm/Back.
+    // Keep long-press threshold so short taps are not interpreted as sleep.
+    if (frontButtonLayout == CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT) {
+      return 400;
+    }
     return (shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SLEEP) ? 10 : 400;
   }
   int getReaderFontId() const;
 
   bool saveToFile() const;
   bool loadFromFile();
+  void applyFrontButtonLayoutPreset(FRONT_BUTTON_LAYOUT layout);
+  void enforceButtonLayoutConstraints();
 
  private:
   // Validate loaded settings and clamp to valid ranges
