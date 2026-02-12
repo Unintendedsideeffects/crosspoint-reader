@@ -13,11 +13,13 @@ import re
 import sys
 from pathlib import Path
 
-FLASH_RE = re.compile(r"Flash:\s+\[[^\]]+\]\s+([0-9.]+)% \(used (\d+) bytes from (\d+) bytes\)")
+FLASH_RE = re.compile(r"Flash:\s+\[[^\]]+\]\s+([0-9.]+)%\s+\(used\s+(\d+)\s+bytes\s+from\s+(\d+)\s+bytes\)")
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def parse_flash_usage(log_text: str) -> tuple[float, int, int]:
-    matches = FLASH_RE.findall(log_text)
+    cleaned = ANSI_ESCAPE_RE.sub("", log_text.replace("\r", ""))
+    matches = FLASH_RE.findall(cleaned)
     if not matches:
         raise ValueError("Could not find flash usage line in build log")
     percent_str, used_str, total_str = matches[-1]
