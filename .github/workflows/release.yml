@@ -1,8 +1,6 @@
 name: Compile Release
 on:
-  push:
-    tags:
-      - '*'
+  workflow_dispatch:
 
 jobs:
   build-release:

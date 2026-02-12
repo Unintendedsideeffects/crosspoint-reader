@@ -1,8 +1,10 @@
 #include "OtaUpdater.h"
 
 #include <ArduinoJson.h>
+#include <HalStorage.h>
 
 #include "CrossPointSettings.h"
+#include "SpiBusMutex.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 #include "esp_wifi.h"
@@ -14,6 +16,33 @@ constexpr char releasesListUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases?per_page=5";
 constexpr char ciLatestReleaseUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/ci-latest";
+constexpr char ciLatestFactoryResetReleaseUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/ci-latest_factory-reset";
+constexpr char crosspointDataDir[] = "/.crosspoint";
+
+bool startsWith(const std::string& value, const char* prefix) { return value.rfind(prefix, 0) == 0; }
+
+bool wipeCrossPointData() {
+  bool removed = true;
+  bool ensuredDir = true;
+  {
+    SpiBusMutex::Guard guard;
+    if (Storage.exists(crosspointDataDir)) {
+      removed = Storage.removeDir(crosspointDataDir);
+    }
+    if (!Storage.exists(crosspointDataDir)) {
+      ensuredDir = Storage.mkdir(crosspointDataDir);
+    }
+  }
+
+  if (!removed || !ensuredDir) {
+    Serial.printf("[%lu] [OTA] Factory reset wipe failed (removed=%d, ensuredDir=%d)\n", millis(), removed, ensuredDir);
+    return false;
+  }
+
+  Serial.printf("[%lu] [OTA] Factory reset wipe completed\n", millis());
+  return true;
+}
 
 bool parseSemver(const std::string& version, int& major, int& minor, int& patch) {
   const char* versionStr = version.c_str();
@@ -64,6 +93,7 @@ esp_err_t event_handler(esp_http_client_event_t* event) {
 
 OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   updateAvailable = false;
+  factoryResetOnInstall = false;
   latestVersion.clear();
   otaUrl.clear();
   otaSize = 0;
@@ -81,6 +111,9 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     releaseUrl = releasesListUrl;
   } else if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL) {
     releaseUrl = ciLatestReleaseUrl;
+  } else if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL_FACTORY_RESET) {
+    releaseUrl = ciLatestFactoryResetReleaseUrl;
+    factoryResetOnInstall = true;
   }
 
   esp_http_client_config_t client_config = {
@@ -165,7 +198,11 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
       if (!candidate["prerelease"].is<bool>() || !candidate["prerelease"].as<bool>()) {
         continue;
       }
-      if (candidate["tag_name"] == "ci-latest") {
+      if (!candidate["tag_name"].is<std::string>()) {
+        continue;
+      }
+      const std::string candidateTag = candidate["tag_name"].as<std::string>();
+      if (startsWith(candidateTag, "ci-latest")) {
         continue;
       }
       release = candidate;
@@ -321,6 +358,10 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
   esp_err = esp_https_ota_finish(ota_handle);
   if (esp_err != ESP_OK) {
     Serial.printf("[%lu] [OTA] esp_https_ota_finish Failed: %s\n", millis(), esp_err_to_name(esp_err));
+    return INTERNAL_UPDATE_ERROR;
+  }
+
+  if (factoryResetOnInstall && !wipeCrossPointData()) {
     return INTERNAL_UPDATE_ERROR;
   }
 
