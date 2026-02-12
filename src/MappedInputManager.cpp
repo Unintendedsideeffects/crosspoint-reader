@@ -22,6 +22,10 @@ bool isDualSideLayout() {
   return static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout) ==
          CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT;
 }
+
+bool isPowerTapSelectEnabled() {
+  return static_cast<CrossPointSettings::SHORT_PWRBTN>(SETTINGS.shortPwrBtn) == CrossPointSettings::SELECT;
+}
 }  // namespace
 
 bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint8_t) const) const {
@@ -62,7 +66,7 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 }
 
 void MappedInputManager::updatePowerTapState() const {
-  if (!isDualSideLayout()) {
+  if (!isDualSideLayout() && !isPowerTapSelectEnabled()) {
     pendingPowerReleaseMs = 0;
     doubleTapReadyMs = 0;
     return;

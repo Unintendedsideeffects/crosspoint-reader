@@ -253,7 +253,7 @@ void CrossPointSettings::applyFrontButtonLayoutPreset(const FRONT_BUTTON_LAYOUT 
 void CrossPointSettings::enforceButtonLayoutConstraints() {
   // In dual-side mode, short power taps are reserved for Confirm/Back emulation.
   if (frontButtonLayout == LEFT_LEFT_RIGHT_RIGHT) {
-    shortPwrBtn = IGNORE;
+    shortPwrBtn = SELECT;
   }
 }
 
@@ -271,7 +271,7 @@ void CrossPointSettings::validateAndClamp() {
   if (paragraphAlignment > RIGHT_ALIGN) paragraphAlignment = JUSTIFIED;
   if (sleepTimeout > SLEEP_30_MIN) sleepTimeout = SLEEP_10_MIN;
   if (refreshFrequency > REFRESH_30) refreshFrequency = REFRESH_15;
-  if (shortPwrBtn > PAGE_TURN) shortPwrBtn = IGNORE;
+  if (shortPwrBtn > SELECT) shortPwrBtn = IGNORE;
   if (hideBatteryPercentage > HIDE_ALWAYS) hideBatteryPercentage = HIDE_NEVER;
   if (timeMode > TIME_MANUAL) timeMode = TIME_UTC;
   if (todoFallbackCover > TODO_FALLBACK_NONE) todoFallbackCover = TODO_FALLBACK_STANDARD;
