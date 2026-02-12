@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "CrossPointSettings.h"
+#include "RecentBooksStore.h"
 #include "SettingsList.h"
 #include "SpiBusMutex.h"
 #include "activities/boot_sleep/SleepActivity.h"
@@ -140,6 +141,10 @@ void CrossPointWebServer::begin() {
   server->on("/settings", HTTP_GET, [this] { handleSettingsPage(); });
   server->on("/api/settings", HTTP_GET, [this] { handleGetSettings(); });
   server->on("/api/settings", HTTP_POST, [this] { handlePostSettings(); });
+
+  // API endpoints for web UI (recent books, cover images)
+  server->on("/api/recent", HTTP_GET, [this] { handleRecentBooks(); });
+  server->on("/api/cover", HTTP_GET, [this] { handleCover(); });
 
   server->onNotFound([this] { handleNotFound(); });
   Serial.printf("[%lu] [WEB] [MEM] Free heap after route setup: %d bytes\n", millis(), ESP.getFreeHeap());
@@ -1314,7 +1319,11 @@ void CrossPointWebServer::handlePostSettings() {
         const int val = doc[s.key].as<int>();
         if (val >= 0 && val < static_cast<int>(s.enumValues.size())) {
           if (s.valuePtr) {
-            SETTINGS.*(s.valuePtr) = static_cast<uint8_t>(val);
+            if (s.valuePtr == &CrossPointSettings::frontButtonLayout) {
+              SETTINGS.applyFrontButtonLayoutPreset(static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(val));
+            } else {
+              SETTINGS.*(s.valuePtr) = static_cast<uint8_t>(val);
+            }
           } else if (s.valueSetter) {
             s.valueSetter(static_cast<uint8_t>(val));
           }
@@ -1348,10 +1357,139 @@ void CrossPointWebServer::handlePostSettings() {
     }
   }
 
+  SETTINGS.enforceButtonLayoutConstraints();
   SETTINGS.saveToFile();
 
   Serial.printf("[%lu] [WEB] Applied %d setting(s)\n", millis(), applied);
   server->send(200, "text/plain", String("Applied ") + String(applied) + " setting(s)");
+}
+
+void CrossPointWebServer::handleRecentBooks() const {
+  const auto& books = RECENT_BOOKS.getBooks();
+
+  server->setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server->send(200, "application/json", "");
+  server->sendContent("[");
+
+  char output[512];
+  constexpr size_t outputSize = sizeof(output);
+  bool seenFirst = false;
+  JsonDocument doc;
+
+  for (const auto& book : books) {
+    doc.clear();
+    doc["path"] = book.path;
+    doc["title"] = book.title;
+    doc["author"] = book.author;
+    doc["hasCover"] = !book.coverBmpPath.empty();
+
+    const size_t written = serializeJson(doc, output, outputSize);
+    if (written >= outputSize) continue;
+
+    if (seenFirst) {
+      server->sendContent(",");
+    } else {
+      seenFirst = true;
+    }
+    server->sendContent(output);
+  }
+
+  server->sendContent("]");
+  server->sendContent("");
+}
+
+void CrossPointWebServer::handleCover() const {
+  if (!server->hasArg("path")) {
+    server->send(400, "text/plain", "Missing path");
+    return;
+  }
+
+  const String rawArg = server->arg("path");
+  String bookPath = PathUtils::urlDecode(rawArg);
+
+  if (!PathUtils::isValidSdPath(bookPath)) {
+    server->send(400, "text/plain", "Invalid path");
+    return;
+  }
+  bookPath = PathUtils::normalizePath(bookPath);
+
+  // Look up the book in recent books to get the cached cover path
+  const auto& books = RECENT_BOOKS.getBooks();
+  std::string coverPath;
+
+  for (const auto& book : books) {
+    if (book.path == bookPath.c_str()) {
+      coverPath = book.coverBmpPath;
+      break;
+    }
+  }
+
+  // If not found in recent books or no cover, try generating one
+  if (coverPath.empty()) {
+    String lower = bookPath;
+    lower.toLowerCase();
+    if (lower.endsWith(".epub")) {
+      Epub epub(bookPath.c_str(), "/.crosspoint");
+      SpiBusMutex::Guard guard;
+      if (epub.load(false)) {
+        coverPath = epub.getThumbBmpPath();
+      }
+    }
+  }
+
+  if (coverPath.empty()) {
+    server->send(404, "text/plain", "No cover available");
+    return;
+  }
+
+  // Stream the BMP file to the client
+  bool exists = false;
+  {
+    SpiBusMutex::Guard guard;
+    exists = Storage.exists(coverPath.c_str());
+  }
+  if (!exists) {
+    server->send(404, "text/plain", "Cover file not found");
+    return;
+  }
+
+  FsFile file;
+  {
+    SpiBusMutex::Guard guard;
+    file = Storage.open(coverPath.c_str());
+  }
+  if (!file) {
+    server->send(500, "text/plain", "Failed to open cover");
+    return;
+  }
+
+  size_t fileSize = 0;
+  {
+    SpiBusMutex::Guard guard;
+    fileSize = file.size();
+  }
+
+  server->setContentLength(fileSize);
+  server->sendHeader("Cache-Control", "public, max-age=3600");
+  server->send(200, "image/bmp", "");
+
+  WiFiClient client = server->client();
+  uint8_t buffer[1024];
+  while (true) {
+    size_t bytesRead = 0;
+    {
+      SpiBusMutex::Guard guard;
+      bytesRead = file.read(buffer, sizeof(buffer));
+    }
+    if (bytesRead == 0) break;
+    client.write(buffer, bytesRead);
+    yield();
+    esp_task_wdt_reset();
+  }
+  {
+    SpiBusMutex::Guard guard;
+    file.close();
+  }
 }
 
 // WebSocket callback trampoline

@@ -23,6 +23,7 @@ enum class SettingAction {
   Network,
   ClearCache,
   CheckForUpdates,
+  FactoryReset,
 };
 
 struct SettingInfo {

@@ -5,62 +5,97 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CrossPoint Reader - Settings</title>
   <style>
+    :root {
+      --black: #000;
+      --white: #fff;
+      --gray-2: #222;
+      --gray-3: #444;
+      --gray-4: #666;
+      --gray-5: #888;
+      --gray-6: #aaa;
+      --gray-7: #ccc;
+      --gray-8: #ddd;
+      --gray-9: #eee;
+      --gray-10: #f5f5f5;
+      --font-mono: 'Courier New', Courier, monospace;
+      --font-display: Georgia, 'Times New Roman', Times, serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-        Oxygen, Ubuntu, sans-serif;
+      font-family: var(--font-mono);
       max-width: 800px;
       margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-      color: #333;
+      background-color: var(--gray-10);
+      color: var(--black);
+      background-image: radial-gradient(circle, var(--gray-8) 1px, transparent 1px);
+      background-size: 4px 4px;
     }
     h1 {
-      color: #2c3e50;
-      border-bottom: 2px solid #3498db;
-      padding-bottom: 10px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--black);
+      font-size: 1.4em;
+      padding: 14px 16px;
+      border-bottom: 2px solid var(--black);
+      background: var(--white);
     }
     h2 {
-      color: #34495e;
+      color: var(--gray-2);
       margin-top: 0;
+      font-family: var(--font-mono);
+      font-size: 0.82em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
     .card {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 15px 0;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      background: var(--white);
+      padding: 16px;
+      margin: 12px 16px;
+      border: 2px solid var(--black);
     }
-    .nav-links {
-      margin: 20px 0;
+    /* Nav bar matching home page */
+    .nav {
+      display: flex;
+      border-bottom: 2px solid var(--black);
+      background: var(--white);
     }
-    .nav-links a {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #3498db;
-      color: white;
+    .nav a {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
       text-decoration: none;
-      border-radius: 4px;
-      margin-right: 10px;
+      color: var(--black);
+      font-family: var(--font-mono);
+      font-size: 0.8em;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-right: 1px solid var(--gray-7);
+      transition: background 0.1s;
     }
-    .nav-links a:hover {
-      background-color: #2980b9;
+    .nav a:last-child { border-right: none; }
+    .nav a:hover, .nav a.active {
+      background: var(--black);
+      color: var(--white);
     }
     .setting-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 10px 0;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px dotted var(--gray-7);
     }
     .setting-row:last-child {
       border-bottom: none;
     }
     .setting-name {
       font-weight: 500;
-      color: #2c3e50;
+      color: var(--black);
       flex: 1;
       min-width: 0;
       padding-right: 12px;
+      font-size: 0.85em;
     }
     .setting-control {
       flex-shrink: 0;
@@ -70,10 +105,15 @@
     .setting-control input[type="text"],
     .setting-control input[type="password"] {
       padding: 6px 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 0.95em;
-      background: white;
+      border: 2px solid var(--black);
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background: var(--white);
+    }
+    .setting-control select:focus,
+    .setting-control input:focus {
+      outline: none;
+      border-color: var(--gray-3);
     }
     .setting-control select {
       min-width: 160px;
@@ -85,12 +125,12 @@
     .setting-control input[type="number"] {
       width: 80px;
     }
-    /* Toggle switch */
+    /* Toggle switch - grayscale */
     .toggle-switch {
       display: inline-block;
       position: relative;
-      width: 48px;
-      height: 26px;
+      width: 44px;
+      height: 24px;
     }
     .toggle-switch input {
       opacity: 0;
@@ -101,64 +141,70 @@
       position: absolute;
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #ccc;
-      border-radius: 26px;
-      transition: 0.3s;
+      background-color: var(--gray-7);
+      border: 2px solid var(--gray-5);
+      transition: 0.2s;
     }
     .toggle-slider:before {
       position: absolute;
       content: "";
-      height: 20px;
-      width: 20px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      border-radius: 50%;
-      transition: 0.3s;
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: var(--white);
+      border: 1px solid var(--gray-5);
+      transition: 0.2s;
     }
     .toggle-switch input:checked + .toggle-slider {
-      background-color: #27ae60;
+      background-color: var(--black);
+      border-color: var(--black);
     }
     .toggle-switch input:checked + .toggle-slider:before {
-      transform: translateX(22px);
+      transform: translateX(20px);
+      border-color: var(--gray-3);
     }
     .save-container {
       text-align: center;
-      margin: 20px 0;
+      margin: 16px;
     }
     .save-btn {
-      background-color: #27ae60;
-      color: white;
+      background: var(--black);
+      color: var(--white);
       padding: 12px 40px;
-      border: none;
-      border-radius: 4px;
+      border: 2px solid var(--black);
       cursor: pointer;
-      font-size: 1.1em;
-      font-weight: 600;
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
     .save-btn:hover {
-      background-color: #219a52;
+      background: var(--white);
+      color: var(--black);
     }
     .save-btn:disabled {
-      background-color: #95a5a6;
+      background: var(--gray-6);
+      border-color: var(--gray-6);
       cursor: not-allowed;
     }
     .message {
-      padding: 12px;
-      border-radius: 4px;
-      margin: 15px 0;
+      padding: 10px;
+      margin: 12px 16px;
       text-align: center;
       display: none;
+      border: 2px solid var(--black);
+      font-size: 0.85em;
     }
     .message.success {
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
+      background: var(--gray-9);
+      color: var(--black);
     }
     .message.error {
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
+      background: var(--white);
+      color: var(--black);
+      border-style: double;
     }
     .loader-container {
       display: flex;
@@ -167,9 +213,9 @@
       margin: 20px 0;
     }
     .loader {
-      width: 48px;
-      height: 48px;
-      border: 5px solid #AAA;
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--gray-6);
       border-bottom-color: transparent;
       border-radius: 50%;
       display: inline-block;
@@ -182,20 +228,15 @@
     }
     @media (max-width: 600px) {
       body {
-        padding: 10px;
-        font-size: 14px;
+        font-size: 13px;
       }
       .card {
         padding: 12px;
-        margin: 10px 0;
+        margin: 8px 10px;
       }
       h1 {
-        font-size: 1.3em;
-      }
-      .nav-links a {
-        padding: 8px 12px;
-        margin-right: 6px;
-        font-size: 0.9em;
+        font-size: 1.2em;
+        padding: 12px;
       }
       .setting-row {
         flex-wrap: wrap;
@@ -211,13 +252,13 @@
   </style>
 </head>
 <body>
-  <h1>⚙️ Settings</h1>
+  <nav class="nav">
+    <a href="/">[Home]</a>
+    <a href="/files">[Files]</a>
+    <a href="/settings" class="active">[Settings]</a>
+  </nav>
 
-  <div class="nav-links">
-    <a href="/">Home</a>
-    <a href="/files">File Manager</a>
-    <a href="/settings">Settings</a>
-  </div>
+  <h1>Settings</h1>
 
   <div id="message" class="message"></div>
 
@@ -231,10 +272,8 @@
     <button class="save-btn" id="saveBtn" onclick="saveSettings()">Save Settings</button>
   </div>
 
-  <div class="card">
-    <p style="text-align: center; color: #95a5a6; margin: 0;">
-      CrossPoint E-Reader • Open Source
-    </p>
+  <div style="text-align:center; padding:12px 16px 20px; font-size:0.65em; color:var(--gray-5); border-top:1px solid var(--gray-7); margin:0 16px; letter-spacing:0.06em;">
+    CrossPoint &middot; Open Source &middot; Built for Reading
   </div>
 
 <script>

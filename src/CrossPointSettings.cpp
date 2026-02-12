@@ -48,33 +48,8 @@ void validateFrontButtonMapping(CrossPointSettings& settings) {
 
 // Convert legacy front button layout into explicit logical->hardware mapping.
 void applyLegacyFrontButtonLayout(CrossPointSettings& settings) {
-  switch (static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(settings.frontButtonLayout)) {
-    case CrossPointSettings::LEFT_RIGHT_BACK_CONFIRM:
-      settings.frontButtonBack = CrossPointSettings::FRONT_HW_LEFT;
-      settings.frontButtonConfirm = CrossPointSettings::FRONT_HW_RIGHT;
-      settings.frontButtonLeft = CrossPointSettings::FRONT_HW_BACK;
-      settings.frontButtonRight = CrossPointSettings::FRONT_HW_CONFIRM;
-      break;
-    case CrossPointSettings::LEFT_BACK_CONFIRM_RIGHT:
-      settings.frontButtonBack = CrossPointSettings::FRONT_HW_CONFIRM;
-      settings.frontButtonConfirm = CrossPointSettings::FRONT_HW_LEFT;
-      settings.frontButtonLeft = CrossPointSettings::FRONT_HW_BACK;
-      settings.frontButtonRight = CrossPointSettings::FRONT_HW_RIGHT;
-      break;
-    case CrossPointSettings::BACK_CONFIRM_RIGHT_LEFT:
-      settings.frontButtonBack = CrossPointSettings::FRONT_HW_BACK;
-      settings.frontButtonConfirm = CrossPointSettings::FRONT_HW_CONFIRM;
-      settings.frontButtonLeft = CrossPointSettings::FRONT_HW_RIGHT;
-      settings.frontButtonRight = CrossPointSettings::FRONT_HW_LEFT;
-      break;
-    case CrossPointSettings::BACK_CONFIRM_LEFT_RIGHT:
-    default:
-      settings.frontButtonBack = CrossPointSettings::FRONT_HW_BACK;
-      settings.frontButtonConfirm = CrossPointSettings::FRONT_HW_CONFIRM;
-      settings.frontButtonLeft = CrossPointSettings::FRONT_HW_LEFT;
-      settings.frontButtonRight = CrossPointSettings::FRONT_HW_RIGHT;
-      break;
-  }
+  settings.applyFrontButtonLayoutPreset(
+      static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(settings.frontButtonLayout));
 }
 }  // namespace
 
@@ -240,6 +215,48 @@ bool CrossPointSettings::loadFromFile() {
   return true;
 }
 
+void CrossPointSettings::applyFrontButtonLayoutPreset(const FRONT_BUTTON_LAYOUT layout) {
+  frontButtonLayout = static_cast<uint8_t>(layout);
+
+  switch (layout) {
+    case LEFT_RIGHT_BACK_CONFIRM:
+      frontButtonBack = FRONT_HW_LEFT;
+      frontButtonConfirm = FRONT_HW_RIGHT;
+      frontButtonLeft = FRONT_HW_BACK;
+      frontButtonRight = FRONT_HW_CONFIRM;
+      break;
+    case LEFT_BACK_CONFIRM_RIGHT:
+      frontButtonBack = FRONT_HW_CONFIRM;
+      frontButtonConfirm = FRONT_HW_LEFT;
+      frontButtonLeft = FRONT_HW_BACK;
+      frontButtonRight = FRONT_HW_RIGHT;
+      break;
+    case BACK_CONFIRM_RIGHT_LEFT:
+      frontButtonBack = FRONT_HW_BACK;
+      frontButtonConfirm = FRONT_HW_CONFIRM;
+      frontButtonLeft = FRONT_HW_RIGHT;
+      frontButtonRight = FRONT_HW_LEFT;
+      break;
+    case LEFT_LEFT_RIGHT_RIGHT:
+    case BACK_CONFIRM_LEFT_RIGHT:
+    default:
+      // LEFT_LEFT_RIGHT_RIGHT uses dedicated runtime behavior in MappedInputManager.
+      // Keep the underlying one-to-one mapping in default hardware order.
+      frontButtonBack = FRONT_HW_BACK;
+      frontButtonConfirm = FRONT_HW_CONFIRM;
+      frontButtonLeft = FRONT_HW_LEFT;
+      frontButtonRight = FRONT_HW_RIGHT;
+      break;
+  }
+}
+
+void CrossPointSettings::enforceButtonLayoutConstraints() {
+  // In dual-side mode, short power taps are reserved for Confirm/Back emulation.
+  if (frontButtonLayout == LEFT_LEFT_RIGHT_RIGHT) {
+    shortPwrBtn = IGNORE;
+  }
+}
+
 void CrossPointSettings::validateAndClamp() {
   // Enum bounds - clamp to valid range, reset to default if out of bounds
   if (sleepScreen > BLANK) sleepScreen = DARK;
@@ -254,7 +271,7 @@ void CrossPointSettings::validateAndClamp() {
   if (paragraphAlignment > RIGHT_ALIGN) paragraphAlignment = JUSTIFIED;
   if (sleepTimeout > SLEEP_30_MIN) sleepTimeout = SLEEP_10_MIN;
   if (refreshFrequency > REFRESH_30) refreshFrequency = REFRESH_15;
-  if (shortPwrBtn > SELECT) shortPwrBtn = IGNORE;
+  if (shortPwrBtn > PAGE_TURN) shortPwrBtn = IGNORE;
   if (hideBatteryPercentage > HIDE_ALWAYS) hideBatteryPercentage = HIDE_NEVER;
   if (timeMode > TIME_MANUAL) timeMode = TIME_UTC;
   if (todoFallbackCover > TODO_FALLBACK_NONE) todoFallbackCover = TODO_FALLBACK_STANDARD;
@@ -272,6 +289,8 @@ void CrossPointSettings::validateAndClamp() {
   hyphenationEnabled = hyphenationEnabled ? 1 : 0;
   longPressChapterSkip = longPressChapterSkip ? 1 : 0;
   backgroundServerOnCharge = backgroundServerOnCharge ? 1 : 0;
+
+  enforceButtonLayoutConstraints();
 }
 
 float CrossPointSettings::getReaderLineCompression() const {

@@ -158,31 +158,11 @@ void CategorySettingsActivity::toggleCurrentSetting() {
     const bool currentValue = SETTINGS.*(setting.valuePtr);
     SETTINGS.*(setting.valuePtr) = !currentValue;
   } else if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
-    if (strcmp(setting.name, "Short Power Button Click") == 0 &&
-        SETTINGS.frontButtonLayout == CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      ScreenComponents::drawPopup(renderer, "SELECT required in dual-side");
-      xSemaphoreGive(renderingMutex);
-      vTaskDelay(pdMS_TO_TICKS(800));
-      updateRequired = true;
-      return;
-    }
-
     const uint8_t currentValue = SETTINGS.*(setting.valuePtr);
     SETTINGS.*(setting.valuePtr) = (currentValue + 1) % static_cast<uint8_t>(setting.enumValues.size());
-
-    // When switching to dual-side layout, force power button to SELECT mode
-    // (required for Back/Confirm functionality in that layout)
-    if (strcmp(setting.name, "Front Button Layout") == 0 &&
-        SETTINGS.frontButtonLayout == CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT) {
-      SETTINGS.shortPwrBtn = CrossPointSettings::SELECT;
-    }
-
-    // Prevent changing power button away from SELECT while in dual-side mode
-    // (SELECT is required for Back/Confirm in that layout)
-    if (strcmp(setting.name, "Short Power Button Click") == 0 &&
-        SETTINGS.frontButtonLayout == CrossPointSettings::LEFT_LEFT_RIGHT_RIGHT) {
-      SETTINGS.shortPwrBtn = CrossPointSettings::SELECT;
+    if (setting.valuePtr == &CrossPointSettings::frontButtonLayout) {
+      SETTINGS.applyFrontButtonLayoutPreset(
+          static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout));
     }
   } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
     const int8_t currentValue = SETTINGS.*(setting.valuePtr);
@@ -288,6 +268,7 @@ void CategorySettingsActivity::toggleCurrentSetting() {
     return;
   }
 
+  SETTINGS.enforceButtonLayoutConstraints();
   SETTINGS.saveToFile();
 }
 

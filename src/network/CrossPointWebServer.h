@@ -86,4 +86,8 @@ class CrossPointWebServer {
   void handleSettingsPage() const;
   void handleGetSettings() const;
   void handlePostSettings();
+
+  // API handlers for web UI
+  void handleRecentBooks() const;
+  void handleCover() const;
 };

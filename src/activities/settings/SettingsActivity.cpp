@@ -7,6 +7,7 @@
 #include "CalibreSettingsActivity.h"
 #include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
+#include "FactoryResetActivity.h"
 #include "FeatureFlags.h"
 #include "KOReaderSettingsActivity.h"
 #include "MappedInputManager.h"
@@ -61,6 +62,7 @@ void SettingsActivity::onEnter() {
   systemSettings.push_back(SettingInfo::Action("OPDS Browser", SettingAction::OPDSBrowser));
 #endif
   systemSettings.push_back(SettingInfo::Action("Clear Cache", SettingAction::ClearCache));
+  systemSettings.push_back(SettingInfo::Action("Factory Reset", SettingAction::FactoryReset));
   systemSettings.push_back(SettingInfo::Action("Check for updates", SettingAction::CheckForUpdates));
 
   // Reset selection to first category
@@ -99,7 +101,7 @@ void SettingsActivity::loop() {
   }
   bool hasChangedCategory = false;
 
-  // Handle category selection (use wasReleased for power button SELECT mode support)
+  // Handle category selection on release (supports dual-side power tap Confirm)
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     enterCategory(selectedCategoryIndex);
     return;
@@ -209,6 +211,11 @@ void SettingsActivity::toggleCurrentSetting() {
     const uint8_t maxIndex = static_cast<uint8_t>(setting.enumValues.size() - 1);
     const uint8_t normalizedValue = (currentValue > maxIndex) ? 0 : currentValue;
     SETTINGS.*(setting.valuePtr) = (normalizedValue + 1) % static_cast<uint8_t>(setting.enumValues.size());
+
+    if (setting.valuePtr == &CrossPointSettings::frontButtonLayout) {
+      SETTINGS.applyFrontButtonLayoutPreset(
+          static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout));
+    }
   } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
     const int8_t currentValue = SETTINGS.*(setting.valuePtr);
     if (currentValue + setting.valueRange.step > setting.valueRange.max) {
@@ -250,6 +257,9 @@ void SettingsActivity::toggleCurrentSetting() {
       case SettingAction::ClearCache:
         enterSubActivity(new ClearCacheActivity(renderer, mappedInput, onComplete));
         break;
+      case SettingAction::FactoryReset:
+        enterSubActivity(new FactoryResetActivity(renderer, mappedInput, onComplete));
+        break;
       case SettingAction::CheckForUpdates:
         enterSubActivity(new OtaUpdateActivity(renderer, mappedInput, onComplete));
         break;
@@ -261,6 +271,7 @@ void SettingsActivity::toggleCurrentSetting() {
     return;
   }
 
+  SETTINGS.enforceButtonLayoutConstraints();
   SETTINGS.saveToFile();
 }
 

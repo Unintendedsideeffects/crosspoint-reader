@@ -62,7 +62,7 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 }
 
 void MappedInputManager::updatePowerTapState() const {
-  if (SETTINGS.shortPwrBtn != CrossPointSettings::SHORT_PWRBTN::SELECT) {
+  if (!isDualSideLayout()) {
     pendingPowerReleaseMs = 0;
     doubleTapReadyMs = 0;
     return;
@@ -186,6 +186,10 @@ unsigned long MappedInputManager::getHeldTime() const { return gpio.getHeldTime(
 
 MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const char* confirm, const char* previous,
                                                          const char* next) const {
+  if (isDualSideLayout()) {
+    return {previous, previous, next, next};
+  }
+
   // Build the label order based on the configured hardware mapping.
   auto labelForHardware = [&](uint8_t hw) -> const char* {
     // Compare against configured logical roles and return the matching label.
