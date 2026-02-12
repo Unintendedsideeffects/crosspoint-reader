@@ -245,3 +245,37 @@ jobs:
           files: |
             firmware.bin
             partitions.bin*
+
+      - name: Prune legacy CI channel releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          legacy_releases="$(
+            gh api repos/${{ github.repository }}/releases --paginate --jq '
+              [
+                .[]
+                | select(
+                    .tag_name == "ci-latest"
+                    or .tag_name == "ci-latest_factory-reset"
+                    or (.tag_name | test("^ci-latest-[0-9]+$"))
+                  )
+              ]
+              | .[]
+              | [.id, .tag_name]
+              | @tsv
+            '
+          )"
+
+          if [ -z "$legacy_releases" ]; then
+            echo "No legacy CI channel releases to prune."
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r release_id tag_name; do
+            [ -n "$release_id" ] || continue
+            echo "Deleting legacy release ${tag_name} (id ${release_id})"
+            gh api -X DELETE "repos/${{ github.repository }}/releases/${release_id}" || true
+            gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/${tag_name}" || true
+          done <<< "$legacy_releases"
