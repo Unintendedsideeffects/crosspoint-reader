@@ -328,6 +328,57 @@
         font-size: 0.9rem;
         color: var(--ink-soft);
       }
+
+      .preview-section {
+        margin-top: 24px;
+      }
+
+      .preview-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-end;
+      }
+
+      .preview-subtitle {
+        color: var(--ink-soft);
+        max-width: 680px;
+        margin-top: 8px;
+      }
+
+      .preview-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .preview-card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: #fbfaf8;
+        overflow: hidden;
+      }
+
+      .preview-card img {
+        width: 100%;
+        height: auto;
+        display: block;
+        background: #f2eee8;
+      }
+
+      .preview-card figcaption {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+        color: var(--ink-soft);
+      }
+
+      .preview-meta {
+        margin-top: 14px;
+        color: var(--ink-soft);
+        font-size: 0.86rem;
+      }
     </style>
   </head>
   <body>
@@ -588,6 +639,23 @@
           </div>
         </section>
       </div>
+
+      <section class="card preview-section">
+        <div class="preview-header">
+          <div>
+            <h2>Live Screen Previews</h2>
+            <div class="preview-subtitle">
+              Auto-generated from the latest firmware UI harness and published
+              with this Feature Picker.
+            </div>
+          </div>
+          <a class="btn btn-secondary" href="./screen-previews/" target="_blank" rel="noopener"
+            >Open Preview Folder</a
+          >
+        </div>
+        <div class="preview-grid" id="preview-grid"></div>
+        <div class="preview-meta" id="preview-meta"></div>
+      </section>
 
       <div class="footer">
         Future roadmap: this picker will live inside the OTA update menu.
@@ -1029,12 +1097,50 @@
           });
       }
 
+      async function loadScreenPreviews() {
+        const grid = document.getElementById("preview-grid");
+        const meta = document.getElementById("preview-meta");
+        const manifestUrl = "./screen-previews/manifest.json";
+
+        try {
+          const response = await fetch(manifestUrl, { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`manifest fetch failed (${response.status})`);
+          }
+          const manifest = await response.json();
+
+          const files = Array.isArray(manifest.files) ? manifest.files : [];
+          if (files.length === 0) {
+            throw new Error("manifest is empty");
+          }
+
+          const cards = files
+            .map((file) => {
+              const label = file.label || file.name || "Preview";
+              const src = `./screen-previews/${file.name}`;
+              return `<figure class="preview-card"><img src="${src}" alt="${label}" loading="lazy" /><figcaption>${label}</figcaption></figure>`;
+            })
+            .join("");
+
+          grid.innerHTML = cards;
+          const generatedAt = manifest.generated_at
+            ? `Updated ${new Date(manifest.generated_at).toLocaleString()}`
+            : "Updated recently";
+          meta.textContent = generatedAt;
+        } catch (error) {
+          grid.innerHTML =
+            '<div class="note">Preview images are publishing. Check back in a minute.</div>';
+          meta.textContent = "";
+        }
+      }
+
       setupEvents();
       const initialState = parseInitialStateFromUrl();
       baseProfile = initialState.initialProfile;
       setSelections(initialState.selections);
       highlightProfile(baseProfile);
       updateAll();
+      loadScreenPreviews();
     </script>
   </body>
 </html>
