@@ -2,6 +2,9 @@
 
 #include <Utf8.h>
 
+#include <cassert>
+#include <cmath>
+
 void GfxRenderer::begin() {
   frameBuffer = display.getFrameBuffer();
   if (!frameBuffer) {
