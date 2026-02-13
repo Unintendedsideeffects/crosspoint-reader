@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-02-13T13:33:49.259966+00:00",
+  "files": [
+    {
+      "name": "01_boot.png",
+      "label": "Boot"
+    },
+    {
+      "name": "02_home_mock.png",
+      "label": "Home"
+    },
+    {
+      "name": "03_settings_mock.png",
+      "label": "Settings"
+    },
+    {
+      "name": "04_factory_reset_mock.png",
+      "label": "Factory Reset"
+    },
+    {
+      "name": "05_reader_mock.png",
+      "label": "Reader"
+    }
+  ]
+}
