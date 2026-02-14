@@ -1,12 +1,9 @@
 #include "SleepActivity.h"
 
-#include <Epub.h>
 #include <Epub/converters/ImageDecoderFactory.h>
 #include <Epub/converters/ImageToFramebufferDecoder.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-#include <Txt.h>
-#include <Xtc.h>
 
 #include <algorithm>
 #include <cctype>
@@ -19,7 +16,6 @@
 #include "SpiBusMutex.h"
 #include "fontIds.h"
 #include "images/Logo120.h"
-#include "util/StringUtils.h"
 
 namespace {
 
@@ -131,7 +127,7 @@ std::string getEntryName(const std::string& path) {
 
 std::string joinPath(const std::string& directoryPath, const std::string& entryName) {
   if (entryName.empty()) return directoryPath;
-  if (!entryName.empty() && entryName[0] == '/') return entryName;
+  if (entryName[0] == '/') return entryName;
   if (directoryPath.empty() || directoryPath == "/") return "/" + entryName;
   if (directoryPath.back() == '/') return directoryPath + entryName;
   return directoryPath + "/" + entryName;
@@ -490,90 +486,4 @@ void SleepActivity::renderImageSleepScreen(const std::string& imagePath) const {
     renderer.displayGrayBuffer();
     renderer.setRenderMode(GfxRenderer::BW);
   }
-}
-
-void SleepActivity::renderCoverSleepScreen() const {
-  void (SleepActivity::*renderNoCoverSleepScreen)() const;
-  switch (SETTINGS.sleepScreen) {
-    case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER_CUSTOM):
-      renderNoCoverSleepScreen = &SleepActivity::renderCustomSleepScreen;
-      break;
-    default:
-      renderNoCoverSleepScreen = &SleepActivity::renderDefaultSleepScreen;
-      break;
-  }
-
-  SpiBusMutex::Guard guard;
-  if (APP_STATE.openEpubPath.empty()) {
-    return (this->*renderNoCoverSleepScreen)();
-  }
-
-  std::string coverBmpPath;
-  bool cropped = SETTINGS.sleepScreenCoverMode == CrossPointSettings::SLEEP_SCREEN_COVER_MODE::CROP;
-
-  // Check if the current book is XTC, TXT, or EPUB
-  if (StringUtils::checkFileExtension(APP_STATE.openEpubPath, ".xtc") ||
-      StringUtils::checkFileExtension(APP_STATE.openEpubPath, ".xtch")) {
-    // Handle XTC file
-    Xtc lastXtc(APP_STATE.openEpubPath, "/.crosspoint");
-    if (!lastXtc.load()) {
-      LOG_ERR("SLP", "Failed to load last XTC");
-      return (this->*renderNoCoverSleepScreen)();
-    }
-
-    if (!lastXtc.generateCoverBmp()) {
-      LOG_ERR("SLP", "Failed to generate XTC cover bmp");
-      return (this->*renderNoCoverSleepScreen)();
-    }
-
-    coverBmpPath = lastXtc.getCoverBmpPath();
-  } else if (StringUtils::checkFileExtension(APP_STATE.openEpubPath, ".txt")) {
-    // Handle TXT file - looks for cover image in the same folder
-    Txt lastTxt(APP_STATE.openEpubPath, "/.crosspoint");
-    if (!lastTxt.load()) {
-      LOG_ERR("SLP", "Failed to load last TXT");
-      return (this->*renderNoCoverSleepScreen)();
-    }
-
-    if (!lastTxt.generateCoverBmp()) {
-      LOG_ERR("SLP", "No cover image found for TXT file");
-      return (this->*renderNoCoverSleepScreen)();
-    }
-
-    coverBmpPath = lastTxt.getCoverBmpPath();
-  } else if (StringUtils::checkFileExtension(APP_STATE.openEpubPath, ".epub")) {
-    // Handle EPUB file
-    Epub lastEpub(APP_STATE.openEpubPath, "/.crosspoint");
-    // Skip loading css since we only need metadata here
-    if (!lastEpub.load(true, true)) {
-      LOG_ERR("SLP", "Failed to load last epub");
-      return (this->*renderNoCoverSleepScreen)();
-    }
-
-    if (!lastEpub.generateCoverBmp(cropped)) {
-      LOG_ERR("SLP", "Failed to generate cover bmp");
-      return (this->*renderNoCoverSleepScreen)();
-    }
-
-    coverBmpPath = lastEpub.getCoverBmpPath(cropped);
-  } else {
-    return (this->*renderNoCoverSleepScreen)();
-  }
-
-  FsFile file;
-  if (Storage.openFileForRead("SLP", coverBmpPath, file)) {
-    Bitmap bitmap(file);
-    if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-      LOG_DBG("SLP", "Rendering sleep cover: %s", coverBmpPath.c_str());
-      renderBitmapSleepScreen(bitmap);
-      return;
-    }
-  }
-
-  return (this->*renderNoCoverSleepScreen)();
-}
-
-void SleepActivity::renderBlankSleepScreen() const {
-  renderer.clearScreen();
-  renderer.displayBuffer(HalDisplay::HALF_REFRESH);
 }
