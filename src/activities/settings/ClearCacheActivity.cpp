@@ -2,7 +2,7 @@
 
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-#include <HardwareSerial.h>
+#include <Logging.h>
 
 #include "MappedInputManager.h"
 #include "SpiBusMutex.h"
@@ -108,13 +108,13 @@ void ClearCacheActivity::render() {
 }
 
 void ClearCacheActivity::clearCache() {
-  Serial.printf("[%lu] [CLEAR_CACHE] Clearing cache...\n", millis());
+  LOG_DBG("CLEAR_CACHE", "Clearing cache...");
 
   SpiBusMutex::Guard guard;
   // Open .crosspoint directory
   auto root = Storage.open("/.crosspoint");
   if (!root || !root.isDirectory()) {
-    Serial.printf("[%lu] [CLEAR_CACHE] Failed to open cache directory\n", millis());
+    LOG_DBG("CLEAR_CACHE", "Failed to open cache directory");
     if (root) root.close();
     state = FAILED;
     updateRequired = true;
@@ -133,14 +133,14 @@ void ClearCacheActivity::clearCache() {
     // Only delete directories starting with epub_ or xtc_
     if (file.isDirectory() && (itemName.startsWith("epub_") || itemName.startsWith("xtc_"))) {
       String fullPath = "/.crosspoint/" + itemName;
-      Serial.printf("[%lu] [CLEAR_CACHE] Removing cache: %s\n", millis(), fullPath.c_str());
+      LOG_DBG("CLEAR_CACHE", "Removing cache: %s", fullPath.c_str());
 
       file.close();  // Close before attempting to delete
 
       if (Storage.removeDir(fullPath.c_str())) {
         clearedCount++;
       } else {
-        Serial.printf("[%lu] [CLEAR_CACHE] Failed to remove: %s\n", millis(), fullPath.c_str());
+        LOG_ERR("CLEAR_CACHE", "Failed to remove: %s", fullPath.c_str());
         failedCount++;
       }
     } else {
@@ -149,7 +149,7 @@ void ClearCacheActivity::clearCache() {
   }
   root.close();
 
-  Serial.printf("[%lu] [CLEAR_CACHE] Cache cleared: %d removed, %d failed\n", millis(), clearedCount, failedCount);
+  LOG_DBG("CLEAR_CACHE", "Cache cleared: %d removed, %d failed", clearedCount, failedCount);
 
   state = SUCCESS;
   updateRequired = true;
@@ -157,8 +157,8 @@ void ClearCacheActivity::clearCache() {
 
 void ClearCacheActivity::loop() {
   if (state == WARNING) {
-    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-      Serial.printf("[%lu] [CLEAR_CACHE] User confirmed, starting cache clear\n", millis());
+    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+      LOG_DBG("CLEAR_CACHE", "User confirmed, starting cache clear");
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       state = CLEARING;
       xSemaphoreGive(renderingMutex);
@@ -168,8 +168,8 @@ void ClearCacheActivity::loop() {
       clearCache();
     }
 
-    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-      Serial.printf("[%lu] [CLEAR_CACHE] User cancelled\n", millis());
+    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+      LOG_DBG("CLEAR_CACHE", "User cancelled");
       goBack();
     }
     return;

@@ -34,7 +34,7 @@ bool ReaderActivity::isMarkdownFile(const std::string& path) { return StringUtil
 
 std::unique_ptr<Epub> ReaderActivity::loadEpub(const std::string& path) {
   if (!Storage.exists(path.c_str())) {
-    Serial.printf("[%lu] [   ] File does not exist: %s\n", millis(), path.c_str());
+    LOG_ERR("READER", "File does not exist: %s", path.c_str());
     return nullptr;
   }
 
@@ -43,13 +43,13 @@ std::unique_ptr<Epub> ReaderActivity::loadEpub(const std::string& path) {
     return epub;
   }
 
-  Serial.printf("[%lu] [   ] Failed to load epub\n", millis());
+  LOG_ERR("READER", "Failed to load epub");
   return nullptr;
 }
 
 std::unique_ptr<Xtc> ReaderActivity::loadXtc(const std::string& path) {
   if (!Storage.exists(path.c_str())) {
-    Serial.printf("[%lu] [   ] File does not exist: %s\n", millis(), path.c_str());
+    LOG_ERR("READER", "File does not exist: %s", path.c_str());
     return nullptr;
   }
 
@@ -58,13 +58,13 @@ std::unique_ptr<Xtc> ReaderActivity::loadXtc(const std::string& path) {
     return xtc;
   }
 
-  Serial.printf("[%lu] [   ] Failed to load XTC\n", millis());
+  LOG_ERR("READER", "Failed to load XTC");
   return nullptr;
 }
 
 std::unique_ptr<Txt> ReaderActivity::loadTxt(const std::string& path) {
   if (!Storage.exists(path.c_str())) {
-    Serial.printf("[%lu] [   ] File does not exist: %s\n", millis(), path.c_str());
+    LOG_ERR("READER", "File does not exist: %s", path.c_str());
     return nullptr;
   }
 
@@ -73,7 +73,7 @@ std::unique_ptr<Txt> ReaderActivity::loadTxt(const std::string& path) {
     return txt;
   }
 
-  Serial.printf("[%lu] [   ] Failed to load TXT\n", millis());
+  LOG_ERR("READER", "Failed to load TXT");
   return nullptr;
 }
 

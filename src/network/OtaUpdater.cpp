@@ -1,7 +1,7 @@
 #include "OtaUpdater.h"
 
 #include <ArduinoJson.h>
-#include <HalStorage.h>
+#include <Logging.h>
 
 #include "CrossPointSettings.h"
 #include "SpiBusMutex.h"
@@ -88,8 +88,30 @@ esp_err_t http_client_set_header_cb(esp_http_client_handle_t http_client) {
 esp_err_t event_handler(esp_http_client_event_t* event) {
   /* We do interested in only HTTP_EVENT_ON_DATA event only */
   if (event->event_id != HTTP_EVENT_ON_DATA) return ESP_OK;
-  if (event->data_len <= 0) {
-    return ESP_OK;
+
+  if (!esp_http_client_is_chunked_response(event->client)) {
+    int content_len = esp_http_client_get_content_length(event->client);
+    int copy_len = 0;
+
+    if (local_buf == NULL) {
+      /* local_buf life span is tracked by caller checkForUpdate */
+      local_buf = static_cast<char*>(calloc(content_len + 1, sizeof(char)));
+      output_len = 0;
+      if (local_buf == NULL) {
+        LOG_ERR("OTA", "HTTP Client Out of Memory Failed, Allocation %d", content_len);
+        return ESP_ERR_NO_MEM;
+      }
+    }
+    copy_len = min(event->data_len, (content_len - output_len));
+    if (copy_len) {
+      memcpy(local_buf + output_len, event->data, copy_len);
+    }
+    output_len += copy_len;
+  } else {
+    /* Code might be hits here, It happened once (for version checking) but I need more logs to handle that */
+    int chunked_len;
+    esp_http_client_get_chunk_length(event->client, &chunked_len);
+    LOG_DBG("OTA", "esp_http_client_is_chunked_response failed, chunked_len: %d", chunked_len);
   }
 
   const int data_len = event->data_len;
@@ -155,20 +177,20 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
 
   esp_http_client_handle_t client_handle = esp_http_client_init(&client_config);
   if (!client_handle) {
-    Serial.printf("[%lu] [OTA] HTTP Client Handle Failed\n", millis());
+    LOG_ERR("OTA", "HTTP Client Handle Failed");
     return INTERNAL_UPDATE_ERROR;
   }
 
   esp_err = esp_http_client_set_header(client_handle, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
   if (esp_err != ESP_OK) {
-    Serial.printf("[%lu] [OTA] esp_http_client_set_header Failed : %s\n", millis(), esp_err_to_name(esp_err));
+    LOG_ERR("OTA", "esp_http_client_set_header Failed : %s", esp_err_to_name(esp_err));
     esp_http_client_cleanup(client_handle);
     return INTERNAL_UPDATE_ERROR;
   }
 
   esp_err = esp_http_client_perform(client_handle);
   if (esp_err != ESP_OK) {
-    Serial.printf("[%lu] [OTA] esp_http_client_perform Failed : %s\n", millis(), esp_err_to_name(esp_err));
+    LOG_ERR("OTA", "esp_http_client_perform Failed : %s", esp_err_to_name(esp_err));
     esp_http_client_cleanup(client_handle);
     return HTTP_ERROR;
   }
@@ -176,7 +198,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   /* esp_http_client_close will be called inside cleanup as well*/
   esp_err = esp_http_client_cleanup(client_handle);
   if (esp_err != ESP_OK) {
-    Serial.printf("[%lu] [OTA] esp_http_client_cleanupp Failed : %s\n", millis(), esp_err_to_name(esp_err));
+    LOG_ERR("OTA", "esp_http_client_cleanup Failed : %s", esp_err_to_name(esp_err));
     return INTERNAL_UPDATE_ERROR;
   }
 
@@ -186,19 +208,17 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   filter["assets"][0]["size"] = true;
   const DeserializationError error = deserializeJson(doc, local_buf, DeserializationOption::Filter(filter));
   if (error) {
-    Serial.printf("[%lu] [OTA] JSON parse failed: %s\n", millis(), error.c_str());
+    LOG_ERR("OTA", "JSON parse failed: %s", error.c_str());
     return JSON_PARSE_ERROR;
   }
 
-  JsonVariant release = doc.as<JsonVariant>();
-
-  if (!release["tag_name"].is<std::string>()) {
-    Serial.printf("[%lu] [OTA] No tag_name found\n", millis());
+  if (!doc["tag_name"].is<std::string>()) {
+    LOG_ERR("OTA", "No tag_name found");
     return JSON_PARSE_ERROR;
   }
 
-  if (!release["assets"].is<JsonArray>()) {
-    Serial.printf("[%lu] [OTA] No assets found\n", millis());
+  if (!doc["assets"].is<JsonArray>()) {
+    LOG_ERR("OTA", "No assets found");
     return JSON_PARSE_ERROR;
   }
 
@@ -216,11 +236,11 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   }
 
   if (!updateAvailable) {
-    Serial.printf("[%lu] [OTA] No firmware.bin asset found\n", millis());
+    LOG_ERR("OTA", "No firmware.bin asset found");
     return NO_UPDATE;
   }
 
-  Serial.printf("[%lu] [OTA] Found update: %s\n", millis(), latestVersion.c_str());
+  LOG_DBG("OTA", "Found update: %s", latestVersion.c_str());
   return OK;
 }
 
@@ -313,7 +333,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
 
   esp_err = esp_https_ota_begin(&ota_config, &ota_handle);
   if (esp_err != ESP_OK) {
-    Serial.printf("[%lu] [OTA] HTTP OTA Begin Failed: %s\n", millis(), esp_err_to_name(esp_err));
+    LOG_DBG("OTA", "HTTP OTA Begin Failed: %s", esp_err_to_name(esp_err));
     return INTERNAL_UPDATE_ERROR;
   }
 
@@ -329,33 +349,23 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
   esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 
   if (esp_err != ESP_OK) {
-    Serial.printf("[%lu] [OTA] esp_https_ota_perform Failed: %s\n", millis(), esp_err_to_name(esp_err));
+    LOG_ERR("OTA", "esp_https_ota_perform Failed: %s", esp_err_to_name(esp_err));
     esp_https_ota_finish(ota_handle);
     return HTTP_ERROR;
   }
 
   if (!esp_https_ota_is_complete_data_received(ota_handle)) {
-    Serial.printf("[%lu] [OTA] esp_https_ota_is_complete_data_received Failed: %s\n", millis(),
-                  esp_err_to_name(esp_err));
+    LOG_ERR("OTA", "esp_https_ota_is_complete_data_received Failed: %s", esp_err_to_name(esp_err));
     esp_https_ota_finish(ota_handle);
     return INTERNAL_UPDATE_ERROR;
   }
 
   esp_err = esp_https_ota_finish(ota_handle);
   if (esp_err != ESP_OK) {
-    Serial.printf("[%lu] [OTA] esp_https_ota_finish Failed: %s\n", millis(), esp_err_to_name(esp_err));
+    LOG_ERR("OTA", "esp_https_ota_finish Failed: %s", esp_err_to_name(esp_err));
     return INTERNAL_UPDATE_ERROR;
   }
 
-  if (factoryResetOnInstall) {
-    if (!markFactoryResetPending()) {
-      return INTERNAL_UPDATE_ERROR;
-    }
-    if (!wipeCrossPointData()) {
-      Serial.printf("[%lu] [OTA] Immediate factory reset wipe failed; will retry on next boot\n", millis());
-    }
-  }
-
-  Serial.printf("[%lu] [OTA] Update completed\n", millis());
+  LOG_INF("OTA", "Update completed");
   return OK;
 }

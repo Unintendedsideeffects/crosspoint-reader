@@ -1,7 +1,7 @@
 #include "CrossPointState.h"
 
 #include <HalStorage.h>
-#include <HardwareSerial.h>
+#include <Logging.h>
 #include <Serialization.h>
 
 #include "SpiBusMutex.h"
@@ -43,7 +43,7 @@ bool CrossPointState::loadFromFile() {
     return false;
   }
   if (version > STATE_FILE_VERSION) {
-    Serial.printf("[%lu] [CPS] Deserialization failed: Unknown version %u\n", millis(), version);
+    LOG_ERR("CPS", "Deserialization failed: Unknown version %u", version);
     inputFile.close();
     return false;
   }

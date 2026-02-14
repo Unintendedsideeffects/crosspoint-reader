@@ -1,6 +1,7 @@
 #include "KOReaderSyncActivity.h"
 
 #include <GfxRenderer.h>
+#include <Logging.h>
 #include <WiFi.h>
 
 #include "KOReaderCredentialStore.h"
@@ -10,7 +11,34 @@
 #include "activities/network/WifiSelectionActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
-#include "util/TimeSync.h"
+
+namespace {
+void syncTimeWithNTP() {
+  // Stop SNTP if already running (can't reconfigure while running)
+  if (esp_sntp_enabled()) {
+    esp_sntp_stop();
+  }
+
+  // Configure SNTP
+  esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);
+  esp_sntp_setservername(0, "pool.ntp.org");
+  esp_sntp_init();
+
+  // Wait for time to sync (with timeout)
+  int retry = 0;
+  const int maxRetries = 50;  // 5 seconds max
+  while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED && retry < maxRetries) {
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    retry++;
+  }
+
+  if (retry < maxRetries) {
+    LOG_DBG("KOSync", "NTP time synced");
+  } else {
+    LOG_DBG("KOSync", "NTP sync timeout, using fallback");
+  }
+}
+}  // namespace
 
 void KOReaderSyncActivity::taskTrampoline(void* param) {
   auto* self = static_cast<KOReaderSyncActivity*>(param);
@@ -21,12 +49,12 @@ void KOReaderSyncActivity::onWifiSelectionComplete(const bool success) {
   exitActivity();
 
   if (!success) {
-    Serial.printf("[%lu] [KOSync] WiFi connection failed, exiting\n", millis());
+    LOG_DBG("KOSync", "WiFi connection failed, exiting");
     onCancel();
     return;
   }
 
-  Serial.printf("[%lu] [KOSync] WiFi connected, starting sync\n", millis());
+  LOG_DBG("KOSync", "WiFi connected, starting sync");
 
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   state = SYNCING;
@@ -61,7 +89,7 @@ void KOReaderSyncActivity::performSync() {
     return;
   }
 
-  Serial.printf("[%lu] [KOSync] Document hash: %s\n", millis(), documentHash.c_str());
+  LOG_DBG("KOSync", "Document hash: %s", documentHash.c_str());
 
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   statusMessage = "Fetching remote progress...";
@@ -163,12 +191,12 @@ void KOReaderSyncActivity::onEnter() {
   }
 
   // Turn on WiFi
-  Serial.printf("[%lu] [KOSync] Turning on WiFi...\n", millis());
+  LOG_DBG("KOSync", "Turning on WiFi...");
   WiFi.mode(WIFI_STA);
 
   // Check if already connected
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("[%lu] [KOSync] Already connected to WiFi\n", millis());
+    LOG_DBG("KOSync", "Already connected to WiFi");
     state = SYNCING;
     statusMessage = "Syncing time...";
     updateRequired = true;
@@ -191,7 +219,7 @@ void KOReaderSyncActivity::onEnter() {
   }
 
   // Launch WiFi selection subactivity
-  Serial.printf("[%lu] [KOSync] Launching WifiSelectionActivity...\n", millis());
+  LOG_DBG("KOSync", "Launching WifiSelectionActivity...");
   enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
                                              [this](const bool connected) { onWifiSelectionComplete(connected); }));
 }

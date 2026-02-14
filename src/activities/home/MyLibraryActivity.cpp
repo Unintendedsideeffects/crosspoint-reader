@@ -345,18 +345,9 @@ void MyLibraryActivity::render() const {
     renderFilesTab();
   }
 
-  // Draw scroll indicator
-  const int screenHeight = renderer.getScreenHeight();
-  const int contentHeight = screenHeight - CONTENT_START_Y - 60;  // 60 for bottom bar
-  ScreenComponents::drawScrollIndicator(renderer, getCurrentPage(), getTotalPages(), CONTENT_START_Y, contentHeight);
-
-  // Draw side button hints (up/down navigation on right side)
-  // Note: text is rotated 90° CW, so ">" appears as "^" and "<" appears as "v"
-  renderer.drawSideButtonHints(UI_10_FONT_ID, ">", "<");
-
-  // Draw bottom button hints
-  const auto labels = mappedInput.mapLabels("« Back", "Open", "<", ">");
-  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  // Help text
+  const auto labels = mappedInput.mapLabels(basepath == "/" ? "« Home" : "« Back", "Open", "Up", "Down");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }
