@@ -11,6 +11,8 @@
 #include <vector>
 
 #include "activities/ActivityWithSubactivity.h"
+#include "network/BleWifiProvisioner.h"
+#include "util/ButtonNavigator.h"
 
 // Structure to hold WiFi network information
 struct WifiNetworkInfo {
@@ -22,9 +24,11 @@ struct WifiNetworkInfo {
 
 // WiFi selection states
 enum class WifiSelectionState {
+  AUTO_CONNECTING,    // Trying to connect to the last known network
   SCANNING,           // Scanning for networks
   NETWORK_LIST,       // Displaying available networks
   PASSWORD_ENTRY,     // Entering password for selected network
+  BLE_PROVISIONING,   // Waiting for credentials over BLE
   CONNECTING,         // Attempting to connect
   CONNECTED,          // Successfully connected
   SAVE_PROMPT,        // Asking user if they want to save the password
@@ -48,6 +52,7 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
+  ButtonNavigator buttonNavigator;
   bool updateRequired = false;
   WifiSelectionState state = WifiSelectionState::SCANNING;
   int selectedNetworkIndex = 0;
@@ -71,6 +76,12 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   // Whether network was connected using a saved password (skip save prompt)
   bool usedSavedPassword = false;
 
+  // Whether to attempt auto-connect on entry
+  const bool allowAutoConnect;
+
+  // Whether we are attempting to auto-connect
+  bool autoConnecting = false;
+
   // Save/forget prompt selection (0 = Yes, 1 = No)
   int savePromptSelection = 0;
   int forgetPromptSelection = 0;
@@ -78,12 +89,14 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   // Connection timeout
   static constexpr unsigned long CONNECTION_TIMEOUT_MS = 15000;
   unsigned long connectionStartTime = 0;
+  BleWifiProvisioner bleProvisioner;
 
   static void taskTrampoline(void* param);
   void displayTaskLoop();
   void render() const;
   void renderNetworkList() const;
   void renderPasswordEntry() const;
+  void renderBleProvisioning() const;
   void renderConnecting() const;
   void renderConnected() const;
   void renderSavePrompt() const;
@@ -93,14 +106,18 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   void startWifiScan();
   void processWifiScanResults();
   void selectNetwork(int index);
+  void startBleProvisioning();
+  void checkBleProvisioning();
   void attemptConnection();
   void checkConnectionStatus();
   std::string getSignalStrengthIndicator(int32_t rssi) const;
 
  public:
   explicit WifiSelectionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                 const std::function<void(bool connected)>& onComplete)
-      : ActivityWithSubactivity("WifiSelection", renderer, mappedInput), onComplete(onComplete) {}
+                                 const std::function<void(bool connected)>& onComplete, bool autoConnect = true)
+      : ActivityWithSubactivity("WifiSelection", renderer, mappedInput),
+        onComplete(onComplete),
+        allowAutoConnect(autoConnect) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;

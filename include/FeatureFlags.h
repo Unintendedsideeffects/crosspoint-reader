@@ -39,6 +39,10 @@
 #define ENABLE_WEB_POKEDEX_PLUGIN 0
 #endif
 
+#ifndef ENABLE_BLE_WIFI_PROVISIONING
+#define ENABLE_BLE_WIFI_PROVISIONING 0
+#endif
+
 // Enforce downstream dependencies at compile time.
 #if !ENABLE_INTEGRATIONS
 #undef ENABLE_KOREADER_SYNC
