@@ -87,6 +87,7 @@ void WifiSelectionActivity::onExit() {
   Activity::onExit();
 
   LOG_DBG("WIFI] [MEM", "Free heap at onExit start: %d bytes", ESP.getFreeHeap());
+  bleProvisioner.stop();
 
   // Stop any ongoing WiFi scan
   LOG_DBG("WIFI", "Deleting WiFi scan...");
@@ -121,6 +122,7 @@ void WifiSelectionActivity::onExit() {
 }
 
 void WifiSelectionActivity::startWifiScan() {
+  bleProvisioner.stop();
   autoConnecting = false;
   state = WifiSelectionState::SCANNING;
   networks.clear();
@@ -248,6 +250,64 @@ void WifiSelectionActivity::selectNetwork(const int index) {
   }
 }
 
+void WifiSelectionActivity::startBleProvisioning() {
+#if !ENABLE_BLE_WIFI_PROVISIONING
+  connectionError = "BLE provisioning disabled";
+  state = WifiSelectionState::CONNECTION_FAILED;
+  updateRequired = true;
+  return;
+#else
+  bleProvisioner.stop();
+  WiFi.scanDelete();
+  WiFi.mode(WIFI_OFF);
+  delay(80);
+
+  if (!bleProvisioner.start("CrossPoint-WiFi")) {
+    connectionError = "Error: BLE start failed";
+    state = WifiSelectionState::CONNECTION_FAILED;
+    updateRequired = true;
+    return;
+  }
+
+  state = WifiSelectionState::BLE_PROVISIONING;
+  selectedSSID.clear();
+  enteredPassword.clear();
+  selectedRequiresPassword = false;
+  usedSavedPassword = false;
+  updateRequired = true;
+#endif
+}
+
+void WifiSelectionActivity::checkBleProvisioning() {
+#if !ENABLE_BLE_WIFI_PROVISIONING
+  return;
+#else
+  std::string bleSsid;
+  std::string blePassword;
+  if (!bleProvisioner.takeCredentials(bleSsid, blePassword)) {
+    return;
+  }
+
+  bleProvisioner.stop();
+
+  selectedSSID = bleSsid;
+  enteredPassword = blePassword;
+  selectedRequiresPassword = !enteredPassword.empty();
+  usedSavedPassword = true;
+  autoConnecting = false;
+
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  if (!enteredPassword.empty()) {
+    WIFI_STORE.addCredential(selectedSSID, enteredPassword);
+  }
+  WIFI_STORE.setLastConnectedSsid(selectedSSID);
+  xSemaphoreGive(renderingMutex);
+
+  LOG_DBG("WIFI", "Received BLE credentials for %s", selectedSSID.c_str());
+  attemptConnection();
+#endif
+}
+
 void WifiSelectionActivity::attemptConnection() {
   state = autoConnecting ? WifiSelectionState::AUTO_CONNECTING : WifiSelectionState::CONNECTING;
   connectionStartTime = millis();
@@ -342,6 +402,22 @@ void WifiSelectionActivity::loop() {
   if (state == WifiSelectionState::PASSWORD_ENTRY) {
     // Reach here once password entry finished in subactivity
     attemptConnection();
+    return;
+  }
+
+  if (state == WifiSelectionState::BLE_PROVISIONING) {
+    checkBleProvisioning();
+    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+      bleProvisioner.stop();
+      state = WifiSelectionState::NETWORK_LIST;
+      updateRequired = true;
+      return;
+    }
+
+    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+      startBleProvisioning();
+      return;
+    }
     return;
   }
 
@@ -471,6 +547,10 @@ void WifiSelectionActivity::loop() {
         updateRequired = true;
         return;
       }
+#if ENABLE_BLE_WIFI_PROVISIONING
+      startBleProvisioning();
+      return;
+#endif
     }
 
     // Handle navigation
@@ -545,6 +625,9 @@ void WifiSelectionActivity::render() const {
       break;
     case WifiSelectionState::NETWORK_LIST:
       renderNetworkList();
+      break;
+    case WifiSelectionState::BLE_PROVISIONING:
+      renderBleProvisioning();
       break;
     case WifiSelectionState::CONNECTING:
       renderConnecting();
@@ -645,10 +728,40 @@ void WifiSelectionActivity::renderNetworkList() const {
   renderer.drawText(SMALL_FONT_ID, 20, pageHeight - 75, "* = Encrypted | + = Saved");
 
   const bool hasSavedPassword = !networks.empty() && networks[selectedNetworkIndex].hasSavedPassword;
-  const char* forgetLabel = hasSavedPassword ? "Forget" : "";
+#if ENABLE_BLE_WIFI_PROVISIONING
+  const char* actionLabel = hasSavedPassword ? "Forget" : "BLE";
+#else
+  const char* actionLabel = hasSavedPassword ? "Forget" : "";
+#endif
 
-  const auto labels = mappedInput.mapLabels("« Back", "Connect", forgetLabel, "Refresh");
+  const auto labels = mappedInput.mapLabels("« Back", "Connect", actionLabel, "Refresh");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+}
+
+void WifiSelectionActivity::renderBleProvisioning() const {
+#if !ENABLE_BLE_WIFI_PROVISIONING
+  renderer.drawCenteredText(UI_12_FONT_ID, 200, "BLE disabled in this build", true, EpdFontFamily::BOLD);
+  const auto labels = mappedInput.mapLabels("« Back", "", "", "");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  return;
+#else
+  const auto pageHeight = renderer.getScreenHeight();
+  const auto top = (pageHeight - 120) / 2;
+
+  renderer.drawCenteredText(UI_12_FONT_ID, top - 35, "BLE WiFi Setup", true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, top, "Advertised as: CrossPoint-WiFi");
+  renderer.drawCenteredText(UI_10_FONT_ID, top + 20, "Write credentials over BLE");
+  renderer.drawCenteredText(UI_10_FONT_ID, top + 40, "JSON: {\"ssid\":\"...\",\"password\":\"...\"}");
+
+  std::string status = bleProvisioner.getStatusMessage();
+  if (status.length() > 35) {
+    status.replace(32, status.length() - 32, "...");
+  }
+  renderer.drawCenteredText(SMALL_FONT_ID, top + 62, status.c_str());
+
+  const auto labels = mappedInput.mapLabels("« Cancel", "Restart", "", "");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+#endif
 }
 
 void WifiSelectionActivity::renderConnecting() const {

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "activities/ActivityWithSubactivity.h"
+#include "network/BleWifiProvisioner.h"
 #include "util/ButtonNavigator.h"
 
 // Structure to hold WiFi network information
@@ -27,6 +28,7 @@ enum class WifiSelectionState {
   SCANNING,           // Scanning for networks
   NETWORK_LIST,       // Displaying available networks
   PASSWORD_ENTRY,     // Entering password for selected network
+  BLE_PROVISIONING,   // Waiting for credentials over BLE
   CONNECTING,         // Attempting to connect
   CONNECTED,          // Successfully connected
   SAVE_PROMPT,        // Asking user if they want to save the password
@@ -87,12 +89,14 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   // Connection timeout
   static constexpr unsigned long CONNECTION_TIMEOUT_MS = 15000;
   unsigned long connectionStartTime = 0;
+  BleWifiProvisioner bleProvisioner;
 
   static void taskTrampoline(void* param);
   void displayTaskLoop();
   void render() const;
   void renderNetworkList() const;
   void renderPasswordEntry() const;
+  void renderBleProvisioning() const;
   void renderConnecting() const;
   void renderConnected() const;
   void renderSavePrompt() const;
@@ -102,6 +106,8 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   void startWifiScan();
   void processWifiScanResults();
   void selectNetwork(int index);
+  void startBleProvisioning();
+  void checkBleProvisioning();
   void attemptConnection();
   void checkConnectionStatus();
   std::string getSignalStrengthIndicator(int32_t rssi) const;
