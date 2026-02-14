@@ -71,7 +71,7 @@ if (FeatureManifest::hasMarkdown()) {
 // Print configuration on boot
 FeatureManifest::printToSerial();
 
-// Expose via web API
+// Expose via web API (/api/plugins)
 String json = FeatureManifest::toJson();
 ```
 
@@ -120,7 +120,7 @@ Behavior:
 - Runs in ~15 minutes
 
 **Tested Combinations:**
-1. All 3 presets (minimal, standard, full)
+1. All 3 profiles (lean, standard, full)
 2. Each individual feature
 3. Important combinations (e.g., "all except markdown")
 4. Edge cases
@@ -133,9 +133,9 @@ Behavior:
 ### Manual Testing
 
 Before release, test on physical hardware:
-1. Minimal preset - verify core functionality
-2. Standard preset - verify common usage
-3. Full preset - verify all features work together
+1. Lean profile - verify core functionality
+2. Standard profile - verify common usage
+3. Full profile - verify all features work together
 
 ### Size Validation
 
@@ -355,7 +355,7 @@ python scripts/measure_feature_sizes.py
 
 ### On Release
 
-- Manually test minimal, standard, full on hardware
+- Manually test lean, standard, full on hardware
 - Run `measure_feature_sizes.py` to update estimates
 - Update documentation if features changed
 
@@ -371,7 +371,7 @@ python scripts/measure_feature_sizes.py
 
 ### Flash Size
 
-- Minimal: ~2.6MB (~3.8MB savings vs full)
+- Lean: ~2.6MB (~3.8MB savings vs full)
 - Standard: ~6.2MB (recommended)
 - Full: ~6.4MB (tight headroom)
 
@@ -405,7 +405,6 @@ python scripts/measure_feature_sizes.py
 - **Build Configuration:** `docs/BUILD_CONFIGURATION.md`
 - **Test Plan:** `docs/FEATURE_PICKER_TEST_PLAN.md`
 - **SRE Analysis:** Result from sre-code-reviewer agent
-- **Integration Guide:** `docs/INTEGRATION_PLAN.md`
 
 ## Questions?
 

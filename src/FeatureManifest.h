@@ -5,7 +5,7 @@
 
 /**
  * FeatureManifest provides compile-time and runtime information about
- * which features are included in the firmware build.
+ * which optional plugins are included in the firmware build.
  *
  * This enables:
  * - Runtime feature detection
@@ -26,7 +26,7 @@ class FeatureManifest {
   static constexpr bool hasHomeMediaPicker() { return ENABLE_HOME_MEDIA_PICKER != 0; }
 
   /**
-   * Count how many optional features are enabled.
+   * Count how many optional plugins are enabled.
    * Useful for debugging and capacity planning.
    */
   static constexpr int enabledFeatureCount() {
@@ -36,7 +36,7 @@ class FeatureManifest {
 
   /**
    * Get a human-readable build configuration string.
-   * Format: "extended_fonts,image_sleep,markdown" (enabled features only)
+   * Format: "extended_fonts,image_sleep,markdown" (enabled plugins only)
    */
   static String getBuildString() {
     String build = "";
@@ -59,11 +59,11 @@ class FeatureManifest {
     addFeature(hasBackgroundServer(), "background_server");
     addFeature(hasHomeMediaPicker(), "home_media_picker");
 
-    return build.isEmpty() ? "minimal" : build;
+    return build.isEmpty() ? "lean" : build;
   }
 
   /**
-   * JSON serialization for web API.
+   * JSON serialization for plugin capability API.
    * Returns: {"extended_fonts":true,"image_sleep":false,...}
    */
   static String toJson() {
@@ -81,7 +81,7 @@ class FeatureManifest {
   }
 
   /**
-   * Print feature configuration to Serial for debugging.
+   * Print plugin configuration to Serial for debugging.
    * Call this during setup() to log the build configuration.
    */
   static void printToSerial() {
@@ -96,21 +96,5 @@ class FeatureManifest {
     Serial.printf("  Home Media Picker: %s\n", hasHomeMediaPicker() ? "ENABLED " : "DISABLED");
     Serial.printf("[FEATURES] %d/8 optional features enabled\n", enabledFeatureCount());
     Serial.printf("[FEATURES] Build: %s\n", getBuildString().c_str());
-  }
-
-  /**
-   * Helper to check if a specific feature is available before using it.
-   * Prevents runtime errors when accessing disabled features.
-   *
-   * Usage:
-   *   if (FeatureManifest::checkFeature("markdown", FeatureManifest::hasMarkdown())) {
-   *     // Safe to use markdown feature
-   *   }
-   */
-  static bool checkFeature(const char* featureName, bool isAvailable) {
-    if (!isAvailable) {
-      Serial.printf("[WARN] Feature '%s' is not available in this build\n", featureName);
-    }
-    return isAvailable;
   }
 };

@@ -141,7 +141,7 @@ def validate_config(config_path: Path) -> int:
     enabled_count = sum(1 for v in flags.values() if v)
     print(f"{GREEN}[PRE-BUILD] Validating custom configuration...{NC}")
     print(f"  Profile:          {selected_profile}")
-    print(f"  Features enabled: {enabled_count}/{len(flags)}")
+    print(f"  Plugins enabled: {enabled_count}/{len(flags)}")
     print(f"  Estimated size:   {estimated_size_mb:.1f}MB / {MAX_FLASH_MB}MB")
 
     if warnings:

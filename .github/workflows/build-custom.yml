@@ -82,15 +82,15 @@ jobs:
       - name: Generate custom build configuration
         id: config
         run: |
-          # Build the command based on profile or individual features
+          # Build the command based on profile or individual plugins
           if [ "${{ inputs.profile }}" != "custom" ]; then
             echo "Using profile: ${{ inputs.profile }}"
             uv run python scripts/generate_build_config.py --profile "${{ inputs.profile }}"
           else
-            echo "Using custom feature selection"
+            echo "Using custom plugin selection"
             CMD=(uv run python scripts/generate_build_config.py)
 
-            # Add enabled features
+            # Add enabled plugins
             if [ "${{ inputs.extended_fonts }}" == "true" ]; then
               CMD+=(--enable extended_fonts)
             fi
@@ -144,7 +144,7 @@ jobs:
           else
             echo "**Profile:** custom" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Features:**" >> $GITHUB_STEP_SUMMARY
+            echo "**Plugins:**" >> $GITHUB_STEP_SUMMARY
             echo "- Extended Fonts: ${{ inputs.extended_fonts }}" >> $GITHUB_STEP_SUMMARY
             echo "- PNG/JPEG Sleep: ${{ inputs.image_sleep }}" >> $GITHUB_STEP_SUMMARY
             echo "- Markdown/Obsidian: ${{ inputs.markdown }}" >> $GITHUB_STEP_SUMMARY
