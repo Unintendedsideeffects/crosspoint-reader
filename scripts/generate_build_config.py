@@ -70,6 +70,12 @@ FEATURES = {
         size_kb=0,
         description='Streamlined home UI with horizontal book shelf + vertical menu'
     ),
+    'web_pokedex_plugin': Feature(
+        name='Web Pokedex Plugin',
+        flag='ENABLE_WEB_POKEDEX_PLUGIN',
+        size_kb=34,
+        description='Browser-side Pokemon wallpaper generator at /plugins/pokedex'
+    ),
 }
 
 
@@ -137,6 +143,13 @@ FEATURE_METADATA = {
         recommends=[]
     ),
     'home_media_picker': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'web_pokedex_plugin': FeatureMetadata(
         implemented=True,
         stable=True,
         requires=[],
@@ -254,6 +267,7 @@ PROFILES = {
             'calibre_sync': True,
             'background_server': True,
             'home_media_picker': True,
+            'web_pokedex_plugin': True,
         },
     },
 }

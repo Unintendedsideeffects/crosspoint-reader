@@ -212,6 +212,26 @@ Replaces the classic Home list selector with a streamlined media-style layout:
 
 ---
 
+### Web Pokedex Plugin
+
+**Flag:** `ENABLE_WEB_POKEDEX_PLUGIN`
+**Size Impact:** ~34KB
+**Default:** Disabled
+
+Adds an optional browser-side wallpaper generator page at `/plugins/pokedex`:
+
+- Runs in the browser, not on the device CPU
+- Generates grayscale X4 wallpapers from PokeAPI data
+- Uploads directly to `/sleep/pokedex` using the existing web upload API
+
+**When disabled:**
+- `/plugins/pokedex` route is not registered
+- Files page does not show the Pokedex plugin launcher button
+
+**Use case:** Enable when you want integrated Pokedex wallpaper creation in the device web UI.
+
+---
+
 ## Build Profiles
 
 ### Lean Profile
@@ -228,6 +248,7 @@ uv run python scripts/generate_build_config.py --profile lean
 - ✗ Markdown/Obsidian
 - ✗ Background Server
 - ✗ Home Media Picker
+- ✗ Web Pokedex Plugin
 
 **Best for:**
 - Devices with very limited flash space
@@ -253,6 +274,7 @@ uv run python scripts/generate_build_config.py --profile standard
 - ✗ Calibre Sync
 - ✓ Background Server
 - ✓ Home Media Picker
+- ✗ Web Pokedex Plugin
 
 **Best for:**
 - Most users
@@ -278,6 +300,7 @@ uv run python scripts/generate_build_config.py --profile full
 - ✓ Calibre Sync
 - ✓ Background Server
 - ✓ Home Media Picker
+- ✓ Web Pokedex Plugin
 
 **Best for:**
 - Users who want all features
@@ -518,6 +541,7 @@ build_flags =
   -DENABLE_CALIBRE_SYNC=0
   -DENABLE_BACKGROUND_SERVER=0
   -DENABLE_HOME_MEDIA_PICKER=1
+  -DENABLE_WEB_POKEDEX_PLUGIN=0
 ```
 
 ### Adding Your Own Feature Flags

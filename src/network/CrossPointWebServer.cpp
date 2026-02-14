@@ -19,6 +19,9 @@
 #include "activities/boot_sleep/SleepActivity.h"
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
+#if ENABLE_WEB_POKEDEX_PLUGIN
+#include "html/PokedexPluginPageHtml.generated.h"
+#endif
 #include "html/SettingsPageHtml.generated.h"
 #include "util/PathUtils.h"
 #include "util/StringUtils.h"
@@ -143,6 +146,9 @@ void CrossPointWebServer::begin() {
 
   // Settings endpoints
   server->on("/settings", HTTP_GET, [this] { handleSettingsPage(); });
+#if ENABLE_WEB_POKEDEX_PLUGIN
+  server->on("/plugins/pokedex", HTTP_GET, [this] { handlePokedexPluginPage(); });
+#endif
   server->on("/api/settings", HTTP_GET, [this] { handleGetSettings(); });
   server->on("/api/settings", HTTP_POST, [this] { handlePostSettings(); });
 
@@ -1182,6 +1188,15 @@ void CrossPointWebServer::handleDelete() const {
 void CrossPointWebServer::handleSettingsPage() const {
   sendHtmlContent(server.get(), SettingsPageHtml, sizeof(SettingsPageHtml));
   LOG_DBG("WEB", "Served settings page");
+}
+
+void CrossPointWebServer::handlePokedexPluginPage() const {
+#if ENABLE_WEB_POKEDEX_PLUGIN
+  sendHtmlContent(server.get(), PokedexPluginPageHtml, sizeof(PokedexPluginPageHtml));
+  LOG_DBG("WEB", "Served pokedex plugin page");
+#else
+  server->send(404, "text/plain", "Pokedex plugin not enabled in this build");
+#endif
 }
 
 void CrossPointWebServer::handleGetSettings() const {

@@ -24,6 +24,7 @@ class FeatureManifest {
   static constexpr bool hasCalibreSync() { return ENABLE_CALIBRE_SYNC != 0; }
   static constexpr bool hasBackgroundServer() { return ENABLE_BACKGROUND_SERVER != 0; }
   static constexpr bool hasHomeMediaPicker() { return ENABLE_HOME_MEDIA_PICKER != 0; }
+  static constexpr bool hasWebPokedexPlugin() { return ENABLE_WEB_POKEDEX_PLUGIN != 0; }
 
   /**
    * Count how many optional plugins are enabled.
@@ -31,7 +32,7 @@ class FeatureManifest {
    */
   static constexpr int enabledFeatureCount() {
     return hasExtendedFonts() + hasImageSleep() + hasMarkdown() + hasIntegrations() + hasKOReaderSync() +
-           hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker();
+           hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin();
   }
 
   /**
@@ -58,6 +59,7 @@ class FeatureManifest {
     addFeature(hasCalibreSync(), "calibre_sync");
     addFeature(hasBackgroundServer(), "background_server");
     addFeature(hasHomeMediaPicker(), "home_media_picker");
+    addFeature(hasWebPokedexPlugin(), "web_pokedex_plugin");
 
     return build.isEmpty() ? "lean" : build;
   }
@@ -76,6 +78,7 @@ class FeatureManifest {
     json += ",\"calibre_sync\":" + String(hasCalibreSync() ? "true" : "false");
     json += ",\"background_server\":" + String(hasBackgroundServer() ? "true" : "false");
     json += ",\"home_media_picker\":" + String(hasHomeMediaPicker() ? "true" : "false");
+    json += ",\"web_pokedex_plugin\":" + String(hasWebPokedexPlugin() ? "true" : "false");
     json += "}";
     return json;
   }
@@ -94,7 +97,8 @@ class FeatureManifest {
     Serial.printf("  Calibre Sync:      %s\n", hasCalibreSync() ? "ENABLED " : "DISABLED");
     Serial.printf("  Background Server: %s\n", hasBackgroundServer() ? "ENABLED " : "DISABLED");
     Serial.printf("  Home Media Picker: %s\n", hasHomeMediaPicker() ? "ENABLED " : "DISABLED");
-    Serial.printf("[FEATURES] %d/8 optional features enabled\n", enabledFeatureCount());
+    Serial.printf("  Web Pokedex:       %s\n", hasWebPokedexPlugin() ? "ENABLED " : "DISABLED");
+    Serial.printf("[FEATURES] %d/9 optional features enabled\n", enabledFeatureCount());
     Serial.printf("[FEATURES] Build: %s\n", getBuildString().c_str());
   }
 };

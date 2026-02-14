@@ -38,6 +38,7 @@ FEATURES = [
     'calibre_sync',
     'background_server',
     'home_media_picker',
+    'web_pokedex_plugin',
 ]
 
 HAS_UV = shutil.which("uv") is not None

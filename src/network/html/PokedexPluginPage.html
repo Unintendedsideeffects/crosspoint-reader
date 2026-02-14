@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CrossPoint Reader - Pokedex Plugin</title>
+  <style>
+    :root {
+      --black: #000;
+      --white: #fff;
+      --gray-2: #222;
+      --gray-4: #666;
+      --gray-6: #aaa;
+      --gray-8: #ddd;
+      --gray-10: #f5f5f5;
+      --font-mono: 'Courier New', Courier, monospace;
+      --font-display: Georgia, 'Times New Roman', Times, serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-mono);
+      max-width: 900px;
+      margin: 0 auto;
+      background-color: var(--gray-10);
+      color: var(--black);
+      background-image: radial-gradient(circle, var(--gray-8) 1px, transparent 1px);
+      background-size: 4px 4px;
+      padding-bottom: 20px;
+    }
+
+    .nav {
+      display: flex;
+      border-bottom: 2px solid var(--black);
+      background: var(--white);
+    }
+
+    .nav a {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
+      text-decoration: none;
+      color: var(--black);
+      font-size: 0.8em;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-right: 1px solid var(--gray-8);
+    }
+
+    .nav a:last-child { border-right: none; }
+    .nav a:hover, .nav a.active { background: var(--black); color: var(--white); }
+
+    .card {
+      background: var(--white);
+      border: 2px solid var(--black);
+      margin: 12px 16px;
+      padding: 16px;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      margin-bottom: 6px;
+      font-size: 1.8em;
+    }
+
+    .subtitle {
+      color: var(--gray-4);
+      font-size: 0.9em;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    label {
+      font-size: 0.8em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid var(--black);
+      font-family: var(--font-mono);
+      font-size: 0.95em;
+      background: var(--white);
+    }
+
+    .btn {
+      border: 2px solid var(--black);
+      background: var(--black);
+      color: var(--white);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.8em;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .btn:hover {
+      background: var(--white);
+      color: var(--black);
+    }
+
+    .btn.secondary {
+      background: var(--gray-2);
+      border-color: var(--gray-2);
+    }
+
+    .btn.secondary:hover {
+      color: var(--gray-2);
+      background: var(--white);
+    }
+
+    .btn:disabled {
+      background: var(--gray-6);
+      border-color: var(--gray-6);
+      color: var(--white);
+      cursor: not-allowed;
+    }
+
+    .status {
+      padding: 10px;
+      border: 1px solid var(--gray-8);
+      background: var(--gray-10);
+      font-size: 0.82em;
+      min-height: 40px;
+    }
+
+    .canvas-wrap {
+      border: 2px solid var(--black);
+      background: var(--white);
+      padding: 10px;
+    }
+
+    canvas {
+      width: 100%;
+      max-width: 300px;
+      border: 1px solid var(--gray-8);
+      image-rendering: pixelated;
+      display: block;
+      margin: 0 auto;
+      background: var(--white);
+    }
+
+    .hint {
+      font-size: 0.78em;
+      color: var(--gray-4);
+      line-height: 1.45;
+    }
+
+    .hint code {
+      background: var(--gray-10);
+      border: 1px solid var(--gray-8);
+      padding: 1px 4px;
+    }
+
+    @media (max-width: 780px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      canvas {
+        max-width: 360px;
+      }
+    }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/">[Home]</a>
+  <a href="/files">[Files]</a>
+  <a href="/settings">[Settings]</a>
+</nav>
+
+<div class="card">
+  <h1>Pokedex Wallpaper Plugin</h1>
+  <p class="subtitle">Browser-side generation for XTEink X4 (480x800), then direct upload to <code>/sleep/pokedex</code>.</p>
+</div>
+
+<div class="card">
+  <div class="layout">
+    <div class="controls">
+      <div>
+        <label for="pokemonInput">Pokemon Name or ID</label>
+        <div class="row">
+          <input id="pokemonInput" type="text" value="1" placeholder="e.g. 25 or pikachu" />
+          <button class="btn secondary" id="randomBtn" type="button">Random</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="previewBtn" type="button">Preview</button>
+        <button class="btn secondary" id="downloadBtn" type="button">Download BMP</button>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="uploadBtn" type="button">Upload to Device</button>
+        <button class="btn secondary" id="openFolderBtn" type="button">Open /sleep/pokedex</button>
+      </div>
+
+      <div class="status" id="statusBox">Enter a Pokemon and click Preview.</div>
+
+      <p class="hint">
+        This page does all rendering in your browser. The device is only used for file storage via <code>/upload</code>.
+      </p>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="previewCanvas" width="480" height="800"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SCREEN_WIDTH = 480;
+  const SCREEN_HEIGHT = 800;
+  const MAX_POKEMON_ID = 1025;
+  const UPLOAD_PATH = "/sleep/pokedex";
+
+  const canvas = document.getElementById("previewCanvas");
+  const ctx = canvas.getContext("2d");
+  const statusBox = document.getElementById("statusBox");
+  const input = document.getElementById("pokemonInput");
+  const previewBtn = document.getElementById("previewBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const randomBtn = document.getElementById("randomBtn");
+  const openFolderBtn = document.getElementById("openFolderBtn");
+
+  let lastRendered = null;
+
+  function setStatus(message, isError) {
+    statusBox.textContent = message;
+    statusBox.style.borderColor = isError ? "#000" : "#ddd";
+    statusBox.style.background = isError ? "#fff" : "#f5f5f5";
+  }
+
+  function setBusy(isBusy) {
+    previewBtn.disabled = isBusy;
+    downloadBtn.disabled = isBusy;
+    uploadBtn.disabled = isBusy;
+    randomBtn.disabled = isBusy;
+  }
+
+  function titleCase(value) {
+    return String(value)
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, function(ch) { return ch.toUpperCase(); });
+  }
+
+  function sanitizeFilename(value) {
+    return String(value).toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+  }
+
+  async function fetchJson(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("Request failed: " + response.status);
+    }
+    return await response.json();
+  }
+
+  async function loadImage(url) {
+    return await new Promise(function(resolve, reject) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = function() { resolve(img); };
+      img.onerror = function() { reject(new Error("Failed to load image")); };
+      img.src = url;
+    });
+  }
+
+  function getFlavorText(species) {
+    if (!species || !species.flavor_text_entries) return "";
+    for (let i = 0; i < species.flavor_text_entries.length; i++) {
+      const entry = species.flavor_text_entries[i];
+      if (entry.language && entry.language.name === "en" && entry.flavor_text) {
+        return entry.flavor_text.replace(/[\f\n\r]+/g, " ").trim();
+      }
+    }
+    return "";
+  }
+
+  function wrapText(text, maxWidth, maxLines) {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let current = "";
+    for (let i = 0; i < words.length; i++) {
+      const candidate = current ? current + " " + words[i] : words[i];
+      if (ctx.measureText(candidate).width <= maxWidth) {
+        current = candidate;
+      } else {
+        if (current) lines.push(current);
+        current = words[i];
+        if (lines.length >= maxLines - 1) break;
+      }
+    }
+    if (current && lines.length < maxLines) lines.push(current);
+    if (lines.length === maxLines && words.length > 0) {
+      lines[maxLines - 1] = lines[maxLines - 1].replace(/[. ]+$/, "") + "...";
+    }
+    return lines;
+  }
+
+  function applyGrayscale() {
+    const imageData = ctx.getImageData(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = Math.round((data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000);
+      data[i] = gray;
+      data[i + 1] = gray;
+      data[i + 2] = gray;
+    }
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  function drawWallpaper(pokemon, sprite, flavorText) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    ctx.strokeStyle = "#eeeeee";
+    ctx.lineWidth = 1;
+    for (let y = 0; y < SCREEN_HEIGHT; y += 24) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(SCREEN_WIDTH, y);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "#111111";
+    ctx.fillRect(24, 24, SCREEN_WIDTH - 48, 82);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 34px Courier New";
+    ctx.fillText("#" + String(pokemon.id).padStart(4, "0"), 42, 62);
+    ctx.font = "bold 30px Courier New";
+    ctx.fillText(titleCase(pokemon.name), 42, 92);
+
+    const spriteMax = 320;
+    const scale = Math.min(spriteMax / sprite.width, spriteMax / sprite.height, 1.0);
+    const spriteW = Math.round(sprite.width * scale);
+    const spriteH = Math.round(sprite.height * scale);
+    const spriteX = Math.round((SCREEN_WIDTH - spriteW) / 2);
+    const spriteY = 170;
+
+    ctx.fillStyle = "#f0f0f0";
+    ctx.fillRect(spriteX - 18, spriteY - 18, spriteW + 36, spriteH + 36);
+    ctx.drawImage(sprite, spriteX, spriteY, spriteW, spriteH);
+
+    const typeNames = (pokemon.types || []).map(function(entry) { return titleCase(entry.type.name); }).join(" / ");
+    ctx.fillStyle = "#111111";
+    ctx.fillRect(24, 540, SCREEN_WIDTH - 48, 48);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 24px Courier New";
+    ctx.fillText(typeNames || "Unknown", 36, 571);
+
+    ctx.fillStyle = "#111111";
+    ctx.font = "18px Courier New";
+    const wrapped = wrapText(flavorText || "No flavor text available for this Pokemon.", SCREEN_WIDTH - 72, 7);
+    for (let i = 0; i < wrapped.length; i++) {
+      ctx.fillText(wrapped[i], 36, 632 + (i * 26));
+    }
+
+    ctx.font = "16px Courier New";
+    ctx.fillText("CrossPoint / sleep/pokedex", 36, 776);
+
+    applyGrayscale();
+  }
+
+  function canvasToBmpBlob() {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const headerSize = 54;
+    const rowSize = Math.floor((24 * canvas.width + 31) / 32) * 4;
+    const fileSize = headerSize + rowSize * canvas.height;
+    const buffer = new ArrayBuffer(fileSize);
+    const view = new DataView(buffer);
+
+    view.setUint16(0, 0x4d42, true);
+    view.setUint32(2, fileSize, true);
+    view.setUint32(10, headerSize, true);
+    view.setUint32(14, 40, true);
+    view.setInt32(18, canvas.width, true);
+    view.setInt32(22, -canvas.height, true);
+    view.setUint16(26, 1, true);
+    view.setUint16(28, 24, true);
+    view.setUint32(30, 0, true);
+
+    let offset = headerSize;
+    for (let y = 0; y < canvas.height; y++) {
+      const rowStart = offset;
+      for (let x = 0; x < canvas.width; x++) {
+        const i = (y * canvas.width + x) * 4;
+        view.setUint8(offset++, data[i + 2]);
+        view.setUint8(offset++, data[i + 1]);
+        view.setUint8(offset++, data[i]);
+      }
+      while ((offset - rowStart) % 4 !== 0) {
+        view.setUint8(offset++, 0);
+      }
+    }
+
+    return new Blob([buffer], { type: "image/bmp" });
+  }
+
+  async function ensureFolder(path, name) {
+    const formData = new FormData();
+    formData.append("path", path);
+    formData.append("name", name);
+    const response = await fetch("/mkdir", { method: "POST", body: formData });
+    if (response.ok) return;
+
+    const message = (await response.text()).toLowerCase();
+    if (message.includes("already") && message.includes("exist")) return;
+    if (message.includes("exists")) return;
+    throw new Error("Failed to create folder '" + name + "': " + message);
+  }
+
+  async function ensurePokedexFolder() {
+    await ensureFolder("/", "sleep");
+    await ensureFolder("/sleep", "pokedex");
+  }
+
+  async function renderCurrentPokemon() {
+    const rawInput = input.value.trim();
+    if (!rawInput) {
+      setStatus("Enter a Pokemon name or ID.", true);
+      return;
+    }
+
+    try {
+      setBusy(true);
+      setStatus("Loading Pokemon data...");
+
+      const pokemon = await fetchJson("https://pokeapi.co/api/v2/pokemon/" + encodeURIComponent(rawInput.toLowerCase()));
+      const species = await fetchJson(pokemon.species.url).catch(function() { return null; });
+      const spriteUrl =
+        (pokemon.sprites && pokemon.sprites.other && pokemon.sprites.other["official-artwork"] &&
+         pokemon.sprites.other["official-artwork"].front_default) ||
+        (pokemon.sprites && pokemon.sprites.other && pokemon.sprites.other.home && pokemon.sprites.other.home.front_default) ||
+        (pokemon.sprites && pokemon.sprites.front_default);
+
+      if (!spriteUrl) {
+        throw new Error("Pokemon sprite not available");
+      }
+
+      const sprite = await loadImage(spriteUrl);
+      drawWallpaper(pokemon, sprite, getFlavorText(species));
+      lastRendered = {
+        id: pokemon.id,
+        name: sanitizeFilename(pokemon.name)
+      };
+
+      setStatus("Ready: #" + String(pokemon.id).padStart(4, "0") + " " + titleCase(pokemon.name));
+    } catch (error) {
+      console.error(error);
+      setStatus("Failed: " + error.message, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function getOutputFilename() {
+    if (!lastRendered) {
+      return "pokedex_wallpaper_x4.bmp";
+    }
+    return "pokedex_" + String(lastRendered.id).padStart(4, "0") + "_" + lastRendered.name + "_x4.bmp";
+  }
+
+  async function downloadCurrentWallpaper() {
+    if (!lastRendered) {
+      await renderCurrentPokemon();
+      if (!lastRendered) return;
+    }
+    const blob = canvasToBmpBlob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = getOutputFilename();
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function uploadCurrentWallpaper() {
+    if (!lastRendered) {
+      await renderCurrentPokemon();
+      if (!lastRendered) return;
+    }
+
+    try {
+      setBusy(true);
+      setStatus("Ensuring /sleep/pokedex exists...");
+      await ensurePokedexFolder();
+
+      const blob = canvasToBmpBlob();
+      const formData = new FormData();
+      formData.append("file", blob, getOutputFilename());
+
+      setStatus("Uploading to " + UPLOAD_PATH + "...");
+      const response = await fetch("/upload?path=" + encodeURIComponent(UPLOAD_PATH), {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      setStatus("Upload complete: " + getOutputFilename());
+    } catch (error) {
+      console.error(error);
+      setStatus("Upload failed: " + error.message, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function setRandomPokemon() {
+    const randomId = Math.floor(Math.random() * MAX_POKEMON_ID) + 1;
+    input.value = String(randomId);
+    renderCurrentPokemon();
+  }
+
+  previewBtn.addEventListener("click", renderCurrentPokemon);
+  downloadBtn.addEventListener("click", downloadCurrentWallpaper);
+  uploadBtn.addEventListener("click", uploadCurrentWallpaper);
+  randomBtn.addEventListener("click", setRandomPokemon);
+  openFolderBtn.addEventListener("click", function() {
+    window.location.href = "/files?path=" + encodeURIComponent(UPLOAD_PATH);
+  });
+  input.addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      renderCurrentPokemon();
+    }
+  });
+
+  renderCurrentPokemon();
+</script>
+</body>
+</html>
