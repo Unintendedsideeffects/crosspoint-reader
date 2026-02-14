@@ -43,6 +43,7 @@ HalGPIO gpio;
 MappedInputManager mappedInputManager(gpio);
 GfxRenderer renderer(display);
 Activity* currentActivity;
+BackgroundWebServer& backgroundServer = BackgroundWebServer::getInstance();
 
 // Fonts
 EpdFont bookerly14RegularFont(&bookerly_14_regular);
@@ -248,7 +249,6 @@ void enterDeepSleep() {
 
 void onGoHome();
 void onGoToMyLibraryWithPath(const std::string& path);
-void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab);
 void onGoToTodo();
 void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
   (void)fromTab;
@@ -271,11 +271,6 @@ void onGoToSettings() {
 void onGoToMyLibrary() {
   exitActivity();
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
-}
-
-void onGoToMyLibraryWithTab(const std::string& path, MyLibraryActivity::Tab tab) {
-  exitActivity();
-  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, tab, path));
 }
 
 void onGoToMyLibraryWithPath(const std::string& path) {

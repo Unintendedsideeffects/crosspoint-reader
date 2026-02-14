@@ -1,15 +1,46 @@
 #include "KOReaderSyncActivity.h"
 
 #include <GfxRenderer.h>
+#include <Logging.h>
 #include <WiFi.h>
+#include <esp_sntp.h>
 
 #include "KOReaderCredentialStore.h"
 #include "KOReaderDocumentId.h"
 #include "MappedInputManager.h"
 #include "activities/TaskShutdown.h"
 #include "activities/network/WifiSelectionActivity.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/TimeSync.h"
+
+namespace {
+void syncTimeWithNTP() {
+  // Stop SNTP if already running (can't reconfigure while running)
+  if (esp_sntp_enabled()) {
+    esp_sntp_stop();
+  }
+
+  // Configure SNTP
+  esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);
+  esp_sntp_setservername(0, "pool.ntp.org");
+  esp_sntp_init();
+
+  // Wait for time to sync (with timeout)
+  int retry = 0;
+  const int maxRetries = 50;  // 5 seconds max
+  while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED && retry < maxRetries) {
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    retry++;
+  }
+
+  if (retry < maxRetries) {
+    LOG_DBG("KOSync", "NTP time synced");
+  } else {
+    LOG_DBG("KOSync", "NTP sync timeout, using fallback");
+  }
+}
+}  // namespace
 
 void KOReaderSyncActivity::taskTrampoline(void* param) {
   auto* self = static_cast<KOReaderSyncActivity*>(param);
@@ -20,12 +51,12 @@ void KOReaderSyncActivity::onWifiSelectionComplete(const bool success) {
   exitActivity();
 
   if (!success) {
-    Serial.printf("[%lu] [KOSync] WiFi connection failed, exiting\n", millis());
+    LOG_DBG("KOSync", "WiFi connection failed, exiting");
     onCancel();
     return;
   }
 
-  Serial.printf("[%lu] [KOSync] WiFi connected, starting sync\n", millis());
+  LOG_DBG("KOSync", "WiFi connected, starting sync");
 
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   state = SYNCING;
@@ -60,7 +91,7 @@ void KOReaderSyncActivity::performSync() {
     return;
   }
 
-  Serial.printf("[%lu] [KOSync] Document hash: %s\n", millis(), documentHash.c_str());
+  LOG_DBG("KOSync", "Document hash: %s", documentHash.c_str());
 
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   statusMessage = "Fetching remote progress...";
@@ -162,12 +193,12 @@ void KOReaderSyncActivity::onEnter() {
   }
 
   // Turn on WiFi
-  Serial.printf("[%lu] [KOSync] Turning on WiFi...\n", millis());
+  LOG_DBG("KOSync", "Turning on WiFi...");
   WiFi.mode(WIFI_STA);
 
   // Check if already connected
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("[%lu] [KOSync] Already connected to WiFi\n", millis());
+    LOG_DBG("KOSync", "Already connected to WiFi");
     state = SYNCING;
     statusMessage = "Syncing time...";
     updateRequired = true;
@@ -190,7 +221,7 @@ void KOReaderSyncActivity::onEnter() {
   }
 
   // Launch WiFi selection subactivity
-  Serial.printf("[%lu] [KOSync] Launching WifiSelectionActivity...\n", millis());
+  LOG_DBG("KOSync", "Launching WifiSelectionActivity...");
   enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
                                              [this](const bool connected) { onWifiSelectionComplete(connected); }));
 }
@@ -241,7 +272,7 @@ void KOReaderSyncActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 320, "Set up KOReader account in Settings");
 
     const auto labels = mappedInput.mapLabels("Back", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -291,7 +322,6 @@ void KOReaderSyncActivity::render() {
              localProgress.percentage * 100);
     renderer.drawText(UI_10_FONT_ID, 20, 320, localPageStr);
 
-    // Options
     const int optionY = 350;
     const int optionHeight = 30;
 
@@ -307,14 +337,9 @@ void KOReaderSyncActivity::render() {
     }
     renderer.drawText(UI_10_FONT_ID, 20, optionY + optionHeight, "Upload local progress", selectedOption != 1);
 
-    // Cancel option
-    if (selectedOption == 2) {
-      renderer.fillRect(0, optionY + optionHeight * 2 - 2, pageWidth - 1, optionHeight);
-    }
-    renderer.drawText(UI_10_FONT_ID, 20, optionY + optionHeight * 2, "Cancel", selectedOption != 2);
-
-    const auto labels = mappedInput.mapLabels("", "Select", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    // Bottom button hints: show Back and Select
+    const auto labels = mappedInput.mapLabels("Back", "Select", "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -323,8 +348,8 @@ void KOReaderSyncActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 280, "No remote progress found", true, EpdFontFamily::BOLD);
     renderer.drawCenteredText(UI_10_FONT_ID, 320, "Upload current position?");
 
-    const auto labels = mappedInput.mapLabels("Cancel", "Upload", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    const auto labels = mappedInput.mapLabels("Back", "Upload", "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -333,7 +358,7 @@ void KOReaderSyncActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 300, "Progress uploaded!", true, EpdFontFamily::BOLD);
 
     const auto labels = mappedInput.mapLabels("Back", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -343,7 +368,7 @@ void KOReaderSyncActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 320, statusMessage.c_str());
 
     const auto labels = mappedInput.mapLabels("Back", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -366,11 +391,11 @@ void KOReaderSyncActivity::loop() {
     // Navigate options
     if (mappedInput.wasPressed(MappedInputManager::Button::Up) ||
         mappedInput.wasPressed(MappedInputManager::Button::Left)) {
-      selectedOption = (selectedOption + 2) % 3;  // Wrap around
+      selectedOption = (selectedOption + 1) % 2;  // Wrap around among 2 options
       updateRequired = true;
     } else if (mappedInput.wasPressed(MappedInputManager::Button::Down) ||
                mappedInput.wasPressed(MappedInputManager::Button::Right)) {
-      selectedOption = (selectedOption + 1) % 3;
+      selectedOption = (selectedOption + 1) % 2;  // Wrap around among 2 options
       updateRequired = true;
     }
 
@@ -381,9 +406,6 @@ void KOReaderSyncActivity::loop() {
       } else if (selectedOption == 1) {
         // Upload local progress
         performUpload();
-      } else {
-        // Cancel
-        onCancel();
       }
     }
 

@@ -1,5 +1,28 @@
 #include "Logging.h"
 
+#include <cstdarg>
+#include <cstdio>
+
+MySerialImpl MySerialImpl::instance;
+
+size_t MySerialImpl::printf(const char* format, ...) {
+  char buf[256];
+  va_list args;
+  va_start(args, format);
+  const int len = vsnprintf(buf, sizeof(buf), format, args);
+  va_end(args);
+  if (len <= 0) {
+    return 0;
+  }
+  return logSerial.print(buf);
+}
+
+size_t MySerialImpl::write(const uint8_t b) { return logSerial.write(b); }
+
+size_t MySerialImpl::write(const uint8_t* buffer, const size_t size) { return logSerial.write(buffer, size); }
+
+void MySerialImpl::flush() { logSerial.flush(); }
+
 // Since logging can take a large amount of flash, we want to make the format string as short as possible.
 // This logPrintf prepend the timestamp, level and origin to the user-provided message, so that the user only needs to
 // provide the format string for the message itself.
