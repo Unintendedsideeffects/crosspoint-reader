@@ -67,6 +67,7 @@ constexpr int kMediaShelfTop = 48;
 constexpr int kMediaBottomHintMargin = 60;
 constexpr int kMenuTileHeight = 38;
 constexpr int kMenuTileSpacing = 7;
+constexpr int kActionsHeaderHeight = 30;
 #endif
 }  // namespace
 
@@ -525,12 +526,12 @@ void HomeActivity::render() {
 
   constexpr int margin = 18;
   constexpr int cardRadius = 8;
-  const int menuAreaHeight =
-      menuItemCount * kMenuTileHeight + (menuItemCount > 0 ? (menuItemCount - 1) * kMenuTileSpacing : 0);
-  int menuStartY = pageHeight - kMediaBottomHintMargin - menuAreaHeight;
+  const int menuAreaHeight = kActionsHeaderHeight + menuItemCount * kMenuTileHeight +
+                             (menuItemCount > 0 ? (menuItemCount - 1) * kMenuTileSpacing : 0);
+  int menuStartY = pageHeight - kMediaBottomHintMargin - menuAreaHeight + kActionsHeaderHeight;
   menuStartY = std::max(menuStartY, kMediaShelfTop + 340);
 
-  const int shelfBottom = menuStartY - 18;
+  const int shelfBottom = menuStartY - kActionsHeaderHeight - 8;
   const int shelfHeight = shelfBottom - kMediaShelfTop;
 
   const int eyebrowY = kMediaTopPadding;
@@ -634,16 +635,16 @@ void HomeActivity::render() {
     const int statusWidth = renderer.getTextWidth(UI_10_FONT_ID, statusLabel);
     const int statusX = infoX + 12;
     const int statusY = infoY + 9;
-    renderer.fillRoundedRect(statusX, statusY, statusWidth + 16, 20, 6, Color::Black);
-    renderer.drawText(UI_10_FONT_ID, statusX + 8, statusY + 4, statusLabel, false);
+    renderer.fillRoundedRect(statusX, statusY, statusWidth + 16, 24, 6, Color::Black);
+    renderer.drawText(UI_10_FONT_ID, statusX + 8, statusY + 5, statusLabel, false);
 
     const char* formatLabel = formatLabelFromPath(selectedBook.path);
     const int formatWidth = renderer.getTextWidth(UI_10_FONT_ID, formatLabel);
     const int formatX = infoX + infoWidth - formatWidth - 24;
-    renderer.drawRoundedRect(formatX, statusY, formatWidth + 12, 20, 1, 6, true);
-    renderer.drawText(UI_10_FONT_ID, formatX + 6, statusY + 4, formatLabel);
+    renderer.drawRoundedRect(formatX, statusY, formatWidth + 12, 24, 1, 6, true);
+    renderer.drawText(UI_10_FONT_ID, formatX + 6, statusY + 5, formatLabel);
 
-    const int titleTextY = statusY + 28;
+    const int titleTextY = statusY + 32;
     renderer.drawText(UI_12_FONT_ID, infoX + 12, titleTextY, title.c_str(), true, EpdFontFamily::BOLD);
     renderer.drawText(UI_10_FONT_ID, infoX + 12, titleTextY + renderer.getLineHeight(UI_12_FONT_ID) + 2,
                       author.c_str());
@@ -660,7 +661,7 @@ void HomeActivity::render() {
                       infoY + infoHeight - renderer.getLineHeight(SMALL_FONT_ID) - 8, position.c_str());
   }
 
-  renderer.drawText(UI_10_FONT_ID, margin, menuStartY - 16, "ACTIONS");
+  renderer.drawText(UI_10_FONT_ID, margin, menuStartY - kActionsHeaderHeight + 4, "ACTIONS");
 
   const int menuTileWidth = pageWidth - margin * 2;
   for (int i = 0; i < menuItemCount; ++i) {
