@@ -1,26 +1,26 @@
-# Feature Picker Test Plan
+# Plugin Picker Test Plan
 
 ## Pre-Build Validation
 
 - [x] Configuration generator script runs without errors
-- [x] All presets generate valid configurations (minimal, standard, full)
+- [x] All profiles generate valid configurations (lean, standard, full)
 - [x] Custom feature selection works
-- [x] Preset overrides work (e.g., `--preset full --disable markdown`)
+- [x] Profile overrides work (e.g., `--profile full --disable markdown`)
 - [x] Feature size estimates are calculated correctly
 - [x] Build flags are formatted correctly in output
 
 ## Build Tests
 
-### Minimal Preset Build
+### Lean Profile Build
 
 ```bash
-python scripts/generate_build_config.py --preset minimal
-pio run -e custom
+uv run python scripts/generate_build_config.py --profile lean
+uv run pio run -e custom
 ```
 
 **Expected:**
 - [  ] Build completes successfully
-- [  ] Firmware size ≤ 5.5MB
+- [  ] Firmware size ~2.6MB
 - [  ] No compilation errors
 - [  ] All feature flags set to 0
 
@@ -32,11 +32,11 @@ pio run -e custom
 - [  ] Opening .md files shows "not supported" message
 - [  ] Font size settings only show 14pt option
 
-### Standard Preset Build
+### Standard Profile Build
 
 ```bash
-python scripts/generate_build_config.py --preset standard
-pio run -e custom
+uv run python scripts/generate_build_config.py --profile standard
+uv run pio run -e custom
 ```
 
 **Expected:**
@@ -53,16 +53,16 @@ pio run -e custom
 - [  ] Opening .md files shows "not supported" message
 - [  ] Todo defaults to .txt format
 
-### Full Preset Build
+### Full Profile Build
 
 ```bash
-python scripts/generate_build_config.py --preset full
-pio run -e custom
+uv run python scripts/generate_build_config.py --profile full
+uv run pio run -e custom
 ```
 
 **Expected:**
 - [  ] Build completes successfully
-- [  ] Firmware size ~6.6MB (may be close to partition limit)
+- [  ] Firmware size ~6.4MB (tight headroom)
 - [  ] No compilation errors
 - [  ] All features enabled
 
@@ -79,8 +79,8 @@ pio run -e custom
 
 #### Test: Extended Fonts Only
 ```bash
-python scripts/generate_build_config.py --enable extended_fonts
-pio run -e custom
+uv run python scripts/generate_build_config.py --enable extended_fonts
+uv run pio run -e custom
 ```
 
 **Verify:**
@@ -90,8 +90,8 @@ pio run -e custom
 
 #### Test: Markdown Only
 ```bash
-python scripts/generate_build_config.py --enable markdown
-pio run -e custom
+uv run python scripts/generate_build_config.py --enable markdown
+uv run pio run -e custom
 ```
 
 **Verify:**
@@ -104,7 +104,7 @@ pio run -e custom
 1. [  ] Push changes to fork
 2. [  ] Navigate to Actions tab
 3. [  ] Run "Build Custom Firmware" workflow
-4. [  ] Select "standard" preset
+4. [  ] Select "standard" profile
 5. [  ] Wait for build completion
 6. [  ] Download artifact
 7. [  ] Verify artifact contains:
@@ -112,13 +112,13 @@ pio run -e custom
    - partitions.bin
    - platformio-custom.ini
 8. [  ] Flash firmware.bin to device
-9. [  ] Verify features match standard preset
+9. [  ] Verify features match standard profile
 
-## Feature Picker Web UI Test
+## Plugin Picker Web UI Test
 
 1. [  ] Open https://[username].github.io/crosspoint-reader/configurator/
 2. [  ] Page loads without errors
-3. [  ] Preset buttons work
+3. [  ] Profile buttons work
 4. [  ] Individual feature toggles work
 5. [  ] Size estimate updates in real-time
 6. [  ] Size bar visual updates correctly
@@ -173,7 +173,7 @@ pio run -e custom
 - [  ] BUILD_CONFIGURATION.md is comprehensive
 - [  ] All links work
 - [  ] Code examples are correct
-- [  ] Feature Picker link is correct
+- [  ] Plugin Picker link is correct
 - [  ] No typos or formatting errors
 
 ## Regression Tests
@@ -187,14 +187,14 @@ Run with default build (`pio run -e default`) to ensure no breakage:
 
 ## Performance Tests
 
-- [  ] Minimal build: Measure firmware size reduction
+- [  ] Lean profile build: Measure firmware size reduction
 - [  ] Standard build: Verify boot time not impacted
 - [  ] Full build: Ensure no memory issues
 - [  ] Compare free heap between builds
 
 ## Known Issues / Notes
 
-- Full build may exceed 6.4MB partition - needs testing on actual hardware
+- Full profile has tight headroom on the 6.4MB partition - verify on hardware
 - Feature detection at runtime not yet implemented (future enhancement)
 - Web configurator assumes standard GitHub repository structure
 

@@ -12,6 +12,7 @@
 #include <cstring>
 
 #include "CrossPointSettings.h"
+#include "FeatureManifest.h"
 #include "RecentBooksStore.h"
 #include "SettingsList.h"
 #include "SpiBusMutex.h"
@@ -119,6 +120,9 @@ void CrossPointWebServer::begin() {
   server->on("/files", HTTP_GET, [this] { handleFileList(); });
 
   server->on("/api/status", HTTP_GET, [this] { handleStatus(); });
+  server->on("/api/plugins", HTTP_GET, [this] { handlePlugins(); });
+  // Backward-compatible alias while tooling migrates terminology.
+  server->on("/api/features", HTTP_GET, [this] { handlePlugins(); });
   server->on("/api/files", HTTP_GET, [this] { handleFileListData(); });
   server->on("/download", HTTP_GET, [this] { handleDownload(); });
 
@@ -313,6 +317,8 @@ void CrossPointWebServer::handleStatus() const {
   serializeJson(doc, json);
   server->send(200, "application/json", json);
 }
+
+void CrossPointWebServer::handlePlugins() const { server->send(200, "application/json", FeatureManifest::toJson()); }
 
 void CrossPointWebServer::scanFiles(const char* path, const std::function<void(FileInfo)>& callback) const {
   FsFile root;

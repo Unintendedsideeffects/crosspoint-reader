@@ -3,7 +3,7 @@
 Measure actual firmware sizes for each feature to validate size estimates.
 
 This script:
-1. Builds the minimal configuration
+1. Builds the lean profile configuration
 2. Builds each feature independently
 3. Measures the size impact of each feature
 4. Tests for non-linear interactions in the full build
@@ -95,8 +95,8 @@ def build_configuration(features: Dict[str, bool], quiet=True) -> int:
 
 
 def measure_minimal_size() -> int:
-    """Measure the size of a minimal build (no optional features)."""
-    print("\n📦 Step 1: Building minimal configuration...")
+    """Measure the size of a lean profile build (no optional features)."""
+    print("\n📦 Step 1: Building lean profile configuration...")
     print("   (All optional features disabled)")
     return build_configuration({})
 
@@ -209,7 +209,7 @@ def main():
     print()
 
     try:
-        # Step 1: Measure minimal build
+        # Step 1: Measure lean profile build
         minimal_size = measure_minimal_size()
 
         # Step 2: Measure each feature
@@ -232,7 +232,7 @@ def main():
         print("\n✅ Measurement complete!")
         print("\n💡 Next steps:")
         print("   1. Update size_kb values in scripts/generate_build_config.py")
-        print("   2. Update BASE_SIZE_MB if minimal size changed")
+        print("   2. Update BASE_SIZE_MB if lean profile size changed")
         print("   3. Commit build_size_measurements.json for tracking")
 
         return 0

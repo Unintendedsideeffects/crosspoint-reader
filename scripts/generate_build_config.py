@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generate custom PlatformIO build configuration for CrossPoint Reader.
-Allows selective enabling/disabling of features to reduce firmware size.
+Allows selective enabling/disabling of plugins to reduce firmware size.
 """
 
 import argparse
@@ -302,7 +302,7 @@ def generate_platformio_ini(enabled_features: Dict[str, bool], output_path: Path
     build_flags = generate_build_flags(enabled_features)
     estimated_size = calculate_size(enabled_features)
 
-    # Generate feature list for comment
+    # Generate plugin list for comment
     enabled_list = []
     disabled_list = []
     for feature_key in FEATURES.keys():
@@ -322,10 +322,10 @@ def generate_platformio_ini(enabled_features: Dict[str, bool], output_path: Path
 # Selected profile: {profile_name}
 # Estimated firmware size: ~{estimated_size:.1f}MB
 #
-# Enabled features:
+# Enabled plugins:
 {enabled_comment}
 #
-# Disabled features:
+# Disabled plugins:
 {disabled_comment}
 
 [env:custom]
@@ -339,11 +339,11 @@ build_flags =
     output_path.write_text(content)
     print(f"Generated {output_path}")
     print(f"Estimated firmware size: ~{estimated_size:.1f}MB")
-    print(f"\nEnabled features:")
+    print(f"\nEnabled plugins:")
     for name in enabled_list:
         print(f"  ✓ {name}")
     if disabled_list:
-        print(f"\nDisabled features:")
+        print(f"\nDisabled plugins:")
         for name in disabled_list:
             print(f"  ✗ {name}")
 
@@ -359,21 +359,21 @@ Examples:
   %(prog)s --profile standard
   %(prog)s --profile full
 
-  # Enable specific features
+  # Enable specific plugins
   %(prog)s --enable extended_fonts --enable image_sleep
 
-  # Disable specific features from full profile
+  # Disable specific plugins from full profile
   %(prog)s --profile full --disable markdown
 
-  # List available features
-  %(prog)s --list-features
+  # List available plugins
+  %(prog)s --list-plugins
 """
     )
 
     parser.add_argument(
         '--profile',
         choices=sorted(list(PROFILES.keys()) + list(LEGACY_PROFILE_ALIASES.keys())),
-        help='Use a predefined feature profile'
+        help='Use a predefined plugin profile'
     )
 
     parser.add_argument(
@@ -386,14 +386,14 @@ Examples:
         '--enable',
         action='append',
         choices=list(FEATURES.keys()),
-        help='Enable a specific feature (can be used multiple times)'
+        help='Enable a specific plugin (can be used multiple times)'
     )
 
     parser.add_argument(
         '--disable',
         action='append',
         choices=list(FEATURES.keys()),
-        help='Disable a specific feature (can be used multiple times)'
+        help='Disable a specific plugin (can be used multiple times)'
     )
 
     parser.add_argument(
@@ -409,11 +409,17 @@ Examples:
         help='List all available features and exit'
     )
 
+    parser.add_argument(
+        '--list-plugins',
+        action='store_true',
+        help='Alias for --list-features'
+    )
+
     args = parser.parse_args()
 
-    # Handle --list-features
-    if args.list_features:
-        print("Available features:\n")
+    # Handle --list-features / --list-plugins
+    if args.list_features or args.list_plugins:
+        print("Available plugins:\n")
         for key, feature in FEATURES.items():
             print(f"  {key:20} - {feature.name}")
             print(f"  {'':20}   {feature.description}")

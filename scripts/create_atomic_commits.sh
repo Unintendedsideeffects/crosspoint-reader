@@ -37,7 +37,7 @@ git commit -m "feat(build): add build configuration generator script
 
 - Add Python script to generate custom PlatformIO configs
 - Define feature flags: ENABLE_EXTENDED_FONTS, ENABLE_IMAGE_SLEEP, ENABLE_MARKDOWN, ENABLE_BACKGROUND_SERVER
-- Support presets: minimal, standard, full
+- Support profiles: lean, standard, full
 - Calculate firmware size estimates
 - Generate platformio-custom.ini with custom build flags
 
@@ -205,7 +205,7 @@ git commit -m "feat(ci): add custom firmware build workflow
 
 Add workflow_dispatch workflow for building custom firmware:
 - Feature toggles for each optional component
-- Preset selection (minimal/standard/full)
+- Profile selection (lean/standard/full)
 - Automatic build configuration generation
 - Firmware artifact upload
 - Build size reporting in job summary
@@ -213,7 +213,7 @@ Add workflow_dispatch workflow for building custom firmware:
 Usage:
 1. Go to Actions tab
 2. Select \"Build Custom Firmware\"
-3. Choose preset or toggle features
+3. Choose profile or toggle features
 4. Run workflow
 5. Download custom-firmware artifact
 
@@ -235,7 +235,7 @@ if [ -d "docs/configurator" ]; then
 Static web UI for custom firmware configuration:
 - Interactive feature toggles
 - Real-time size calculator
-- Preset buttons (minimal/standard/full)
+- Profile buttons (lean/standard/full)
 - Build flag generation and display
 - platformio-custom.ini download
 - Direct link to GitHub Actions workflow
@@ -255,7 +255,7 @@ echo "----------------------"
 
 # Component 4: Documentation
 echo "Adding documentation..."
-git add README.md docs/BUILD_CONFIGURATION.md docs/FEATURE_PICKER_TEST_PLAN.md docs/INTEGRATION_PLAN.md FEATURE_PICKER_IMPLEMENTATION.md 2>/dev/null || true
+git add README.md docs/BUILD_CONFIGURATION.md docs/FEATURE_PICKER_TEST_PLAN.md docs/MODULAR_ARCHITECTURE_GUIDE.md 2>/dev/null || true
 git commit -m "docs: add Feature Picker documentation
 
 Comprehensive documentation for custom firmware builds:
@@ -279,18 +279,6 @@ FEATURE_PICKER_TEST_PLAN.md:
 - On-device verification
 - Graceful degradation tests
 
-INTEGRATION_PLAN.md:
-- Atomic component breakdown
-- Merge strategy
-- Dependency graph
-- Conflict resolution guide
-
-FEATURE_PICKER_IMPLEMENTATION.md:
-- Implementation summary
-- File changes overview
-- Architecture decisions
-- Success criteria
-
 Component: Documentation
 Dependencies: All components
 Size Impact: N/A (docs only)
@@ -306,4 +294,4 @@ echo "1. Review commits: ${BLUE}git log --oneline -15${NC}"
 echo "2. Push to remote: ${BLUE}git push origin ${CURRENT_BRANCH}${NC}"
 echo "3. Create PRs for each phase or merge all at once"
 echo ""
-echo "Integration guide: ${BLUE}docs/INTEGRATION_PLAN.md${NC}"
+echo "Architecture guide: ${BLUE}docs/MODULAR_ARCHITECTURE_GUIDE.md${NC}"
