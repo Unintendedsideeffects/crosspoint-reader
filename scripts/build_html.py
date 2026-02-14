@@ -44,7 +44,8 @@ for root, _, files in os.walk(SRC_DIR):
 
             # Compress with gzip (compresslevel 9 is maximum compression)
             # IMPORTANT: we don't use brotli because Firefox doesn't support brotli with insecured context (only supported on HTTPS)
-            compressed = gzip.compress(minified.encode('utf-8'), compresslevel=9)
+            # Use deterministic gzip output so generated headers don't drift on every build.
+            compressed = gzip.compress(minified.encode('utf-8'), compresslevel=9, mtime=0)
 
             base_name = f"{os.path.splitext(file)[0]}Html"
             header_path = os.path.join(root, f"{base_name}.generated.h")
@@ -71,4 +72,3 @@ for root, _, files in os.walk(SRC_DIR):
             print(f"  Original: {len(html_content)} bytes")
             print(f"  Minified: {len(minified)} bytes ({100*len(minified)/len(html_content):.1f}%)")
             print(f"  Compressed: {len(compressed)} bytes ({100*len(compressed)/len(html_content):.1f}%)")
-
