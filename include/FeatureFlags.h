@@ -35,6 +35,10 @@
 #define ENABLE_HOME_MEDIA_PICKER 1
 #endif
 
+#ifndef ENABLE_WEB_POKEDEX_PLUGIN
+#define ENABLE_WEB_POKEDEX_PLUGIN 0
+#endif
+
 // Enforce downstream dependencies at compile time.
 #if !ENABLE_INTEGRATIONS
 #undef ENABLE_KOREADER_SYNC

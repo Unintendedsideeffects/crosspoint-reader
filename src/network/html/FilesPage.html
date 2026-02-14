@@ -141,9 +141,17 @@
       background: var(--gray-3);
       border-color: var(--gray-3);
     }
+    .plugin-action-btn {
+      background: var(--gray-2);
+      border-color: var(--gray-2);
+    }
     .folder-action-btn:hover {
       background: var(--white);
       color: var(--gray-3);
+    }
+    .plugin-action-btn:hover {
+      background: var(--white);
+      color: var(--gray-2);
     }
     /* Upload modal */
     .modal-overlay {
@@ -712,6 +720,7 @@
   <div class="action-buttons">
     <button class="action-btn upload-action-btn" onclick="openUploadModal()">📤 Upload</button>
     <button class="action-btn folder-action-btn" onclick="openFolderModal()">📁 New Folder</button>
+    <button class="action-btn plugin-action-btn" id="pokedexPluginBtn" onclick="openPokedexPlugin()" style="display:none;">🧩 Pokedex</button>
   </div>
 </div>
 
@@ -986,8 +995,39 @@
   }
 
 let failedUploadsGlobal = [];
+let pluginCapabilities = {};
 const WS_PORT = 81;
 const WS_CHUNK_SIZE = 4096; // 4KB chunks - smaller for ESP32 stability
+
+async function loadPluginCapabilities() {
+  try {
+    const response = await fetch('/api/plugins');
+    if (!response.ok) {
+      return;
+    }
+    pluginCapabilities = await response.json();
+    updatePluginButtons();
+  } catch (error) {
+    console.warn('Failed to load plugin capabilities:', error);
+  }
+}
+
+function updatePluginButtons() {
+  const pokedexButton = document.getElementById('pokedexPluginBtn');
+  if (!pokedexButton) {
+    return;
+  }
+
+  if (pluginCapabilities.web_pokedex_plugin) {
+    pokedexButton.style.display = 'inline-flex';
+  } else {
+    pokedexButton.style.display = 'none';
+  }
+}
+
+function openPokedexPlugin() {
+  window.location.href = '/plugins/pokedex';
+}
 
 // Get WebSocket URL based on current page location
 function getWsUrl() {
@@ -1550,6 +1590,7 @@ function retryAllFailedUploads() {
     xhr.send(formData);
   }
 
+  loadPluginCapabilities();
   hydrate();
 </script>
 </body>

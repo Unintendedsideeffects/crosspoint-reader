@@ -565,6 +565,24 @@
                 <span class="slider"></span>
               </label>
             </div>
+
+            <div class="feature-item">
+              <div>
+                <div class="feature-title">Web Pokedex Plugin</div>
+                <div class="feature-meta">
+                  Browser-side Pokemon wallpaper generator in Files page.
+                </div>
+                <div class="feature-size">~34 KB</div>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  id="web_pokedex_plugin"
+                  data-feature="web_pokedex_plugin"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
           </div>
         </section>
 
@@ -646,8 +664,8 @@
           <div>
             <div class="feature-title">X4 Grayscale Pokedex Wallpaper</div>
             <div class="feature-meta">
-              Generate `sleep.bmp` wallpapers from Pokemon data. Locked to
-              XTEink X4 dimensions and grayscale output.
+              Generate wallpapers from Pokemon data. Upload to
+              <code>/sleep/pokedex</code> for the new Sleep Source mode.
             </div>
             <div class="feature-size">No firmware size impact</div>
           </div>
@@ -726,6 +744,11 @@
           flag: "ENABLE_HOME_MEDIA_PICKER",
           default: true,
         },
+        web_pokedex_plugin: {
+          sizeKb: 34,
+          flag: "ENABLE_WEB_POKEDEX_PLUGIN",
+          default: false,
+        },
       };
 
       const BASE_SIZE_MB = 2.62;
@@ -752,6 +775,7 @@
           calibre_sync: true,
           background_server: true,
           home_media_picker: true,
+          web_pokedex_plugin: true,
         },
       };
 
