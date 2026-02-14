@@ -293,13 +293,30 @@ CrossPointWebServer::WsUploadStatus CrossPointWebServer::getWsUploadStatus() con
   return status;
 }
 
-static void sendHtmlContent(WebServer* server, const char* data, size_t len) {
+static_assert(HomePageHtmlCompressedSize == sizeof(HomePageHtml), "Home page compressed size mismatch");
+static_assert(FilesPageHtmlCompressedSize == sizeof(FilesPageHtml), "Files page compressed size mismatch");
+static_assert(SettingsPageHtmlCompressedSize == sizeof(SettingsPageHtml), "Settings page compressed size mismatch");
+#if ENABLE_WEB_POKEDEX_PLUGIN
+static_assert(PokedexPluginPageHtmlCompressedSize == sizeof(PokedexPluginPageHtml),
+              "Pokedex page compressed size mismatch");
+#endif
+
+static bool isGzipPayload(const char* data, size_t len) {
+  return len >= 2 && static_cast<unsigned char>(data[0]) == 0x1f && static_cast<unsigned char>(data[1]) == 0x8b;
+}
+
+static void sendPrecompressedHtml(WebServer* server, const char* data, size_t compressedLen) {
+  if (!isGzipPayload(data, compressedLen)) {
+    LOG_ERR("WEB", "Attempted to serve non-gzip HTML payload");
+    server->send(500, "text/plain", "Invalid precompressed HTML payload");
+    return;
+  }
   server->sendHeader("Content-Encoding", "gzip");
-  server->send_P(200, "text/html", data, len);
+  server->send_P(200, "text/html; charset=utf-8", data, compressedLen);
 }
 
 void CrossPointWebServer::handleRoot() const {
-  sendHtmlContent(server.get(), HomePageHtml, sizeof(HomePageHtml));
+  sendPrecompressedHtml(server.get(), HomePageHtml, HomePageHtmlCompressedSize);
   LOG_DBG("WEB", "Served root page");
 }
 
@@ -417,7 +434,7 @@ bool CrossPointWebServer::isEpubFile(const String& filename) const {
 }
 
 void CrossPointWebServer::handleFileList() const {
-  sendHtmlContent(server.get(), FilesPageHtml, sizeof(FilesPageHtml));
+  sendPrecompressedHtml(server.get(), FilesPageHtml, FilesPageHtmlCompressedSize);
 }
 
 void CrossPointWebServer::handleFileListData() const {
@@ -1186,13 +1203,13 @@ void CrossPointWebServer::handleDelete() const {
 }
 
 void CrossPointWebServer::handleSettingsPage() const {
-  sendHtmlContent(server.get(), SettingsPageHtml, sizeof(SettingsPageHtml));
+  sendPrecompressedHtml(server.get(), SettingsPageHtml, SettingsPageHtmlCompressedSize);
   LOG_DBG("WEB", "Served settings page");
 }
 
 void CrossPointWebServer::handlePokedexPluginPage() const {
 #if ENABLE_WEB_POKEDEX_PLUGIN
-  sendHtmlContent(server.get(), PokedexPluginPageHtml, sizeof(PokedexPluginPageHtml));
+  sendPrecompressedHtml(server.get(), PokedexPluginPageHtml, PokedexPluginPageHtmlCompressedSize);
   LOG_DBG("WEB", "Served pokedex plugin page");
 #else
   server->send(404, "text/plain", "Pokedex plugin not enabled in this build");
