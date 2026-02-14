@@ -10,7 +10,8 @@ CrossPoint-specific constraints in this variant:
 - Single-image `.bmp` export is always used
 - Batch-generation and multi-device controls are hidden
 
-Open `index.html` in a browser and generate a wallpaper for `/sleep.bmp`.
+Open `index.html` in a browser and generate wallpapers for the `/sleep/pokedex/` folder.
+The generated `.bmp` files should be copied to `sleep/pokedex` on the SD card.
 
 ## Attribution
 Original project is MIT licensed by m86-tech.

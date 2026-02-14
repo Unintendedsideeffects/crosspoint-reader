@@ -19,10 +19,11 @@ class CrossPointSettings {
     DARK = 0,
     LIGHT = 1,
     CUSTOM = 2,
+    SLEEP_SCREEN_MODE_COUNT,
+    // Legacy values kept for backward compatibility with old persisted files.
     COVER = 3,
     BLANK = 4,
     COVER_CUSTOM = 5,
-    SLEEP_SCREEN_MODE_COUNT
   };
   enum SLEEP_SCREEN_COVER_MODE { FIT = 0, CROP = 1, SLEEP_SCREEN_COVER_MODE_COUNT };
   enum SLEEP_SCREEN_COVER_FILTER {
@@ -30,6 +31,12 @@ class CrossPointSettings {
     BLACK_AND_WHITE = 1,
     INVERTED_BLACK_AND_WHITE = 2,
     SLEEP_SCREEN_COVER_FILTER_COUNT
+  };
+  enum SLEEP_SCREEN_SOURCE {
+    SLEEP_SOURCE_SLEEP = 0,
+    SLEEP_SOURCE_POKEDEX = 1,
+    SLEEP_SOURCE_ALL = 2,
+    SLEEP_SCREEN_SOURCE_COUNT
   };
 
   // Status bar display type enum
@@ -140,6 +147,8 @@ class CrossPointSettings {
   uint8_t sleepScreenCoverMode = FIT;
   // Sleep screen cover filter
   uint8_t sleepScreenCoverFilter = NO_FILTER;
+  // Sleep screen custom-image source
+  uint8_t sleepScreenSource = SLEEP_SOURCE_SLEEP;
   // Status bar settings
   uint8_t statusBar = FULL;
   // Text rendering settings

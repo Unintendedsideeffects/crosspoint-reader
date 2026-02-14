@@ -126,6 +126,7 @@
             <h1>X4 Grayscale Wallpaper</h1>
             <div class="locked-note">
                 CrossPoint companion plugin: locked to XTEink X4 (480 x 800), grayscale sprite rendering, and BMP export.
+                Save generated files into <code>sleep/pokedex/</code> on your SD card.
             </div>
             
             <div class="input-row">
@@ -413,7 +414,7 @@
         function downloadSingle() {
             const poke = document.getElementById('pokeInput').value.toLowerCase().trim();
             const safePoke = poke || 'pokemon';
-            const filename = `${safePoke}_xteink_x4_grayscale`;
+            const filename = `pokedex_${safePoke}_xteink_x4_grayscale`;
             const bmpBlob = canvasToBMP(canvas);
             saveAs(bmpBlob, filename + ".bmp");
         }
