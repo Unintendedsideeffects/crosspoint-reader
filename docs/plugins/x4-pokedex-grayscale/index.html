@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CrossPoint Plugin: X4 Grayscale Pokedex Wallpaper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        :root { --bg: #e0e0e0; --panel: #ffffff; --accent: #2c3e50; }
+        
+        body { 
+            font-family: 'VT323', monospace; 
+            background: var(--bg); 
+            display: flex; 
+            justify-content: center; 
+            padding: 40px; 
+            margin: 0; 
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .layout-wrapper {
+            display: flex;
+            flex-direction: row; 
+            align-items: flex-start; 
+            justify-content: center;
+            gap: 40px; 
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .controls { 
+            background: var(--panel); 
+            padding: 25px; 
+            border-radius: 8px; 
+            border: 2px solid #ccc; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+            flex: 0 0 450px; 
+            width: 100%;
+            max-width: 500px; 
+        }
+
+        .preview-area {
+            flex: 1 1 auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: sticky;
+            top: 20px; 
+        }
+
+        canvas { 
+            border: 4px solid #333; 
+            border-radius: 4px; 
+            background: white; 
+            image-rendering: pixelated; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            max-width: 100%; 
+            max-height: 85vh; 
+            width: auto;
+            height: auto;
+        }
+
+        h1, h2, h3 { margin: 0 0 10px 0; grid-column: span 2; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; font-family: 'VT323', monospace; text-transform: uppercase; font-size: 2.5rem; }
+        h2 { font-size: 1.5rem; margin-top: 20px; border-top: 2px solid #eee; border-bottom: none; padding-top: 10px; }
+        h3 { font-size: 1.3rem; border: none; padding: 0; margin-bottom: 5px; text-align: left; grid-column: span 2; margin-top: 10px; }
+        label { font-size: 1.3rem; color: #666; display: block; margin-bottom: 5px; }
+        select, input[type=text], input[type=number] { width: 100%; padding: 8px; background: #fafafa; border: 2px solid #ddd; font-family: 'VT323', monospace; font-size: 1.4rem; border-radius: 4px; box-sizing: border-box; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        
+        .checkbox-group { grid-column: span 2; display: flex; align-items: center; justify-content: center; background: #f0f0f0; padding: 10px; border-radius: 4px; gap: 10px;}
+        input[type=checkbox] { width: 20px; height: 20px; margin: 0; cursor: pointer; }
+        .checkbox-group label { margin: 0; cursor: pointer; }
+        
+        button { background: var(--accent); color: #fff; cursor: pointer; grid-column: span 2; margin-top: 10px; padding: 12px; font-size: 1.5rem; border: none; border-radius: 4px; font-family: 'VT323', monospace; text-transform: uppercase; letter-spacing: 1px; }
+        button:hover { background: #34495e; }
+        button:disabled { background: #95a5a6; cursor: not-allowed; }
+
+        .input-row { grid-column: span 2; display: flex; gap: 10px; align-items: flex-end; }
+        .random-btn { background: #e67e22; width: auto; padding: 8px 20px; margin: 0; }
+        .random-btn:hover { background: #d35400; }
+
+        .progress-container { grid-column: span 2; width: 100%; background-color: #f3f3f3; border-radius: 4px; margin-top: 10px; display: none; }
+        .progress-bar { width: 0%; height: 20px; background-color: #27ae60; border-radius: 4px; transition: width 0.2s; }
+        .status-text { grid-column: span 2; text-align: center; color: #555; margin-top: 5px; font-size: 1.1rem; font-family: 'VT323', monospace; }
+
+        .res-container { grid-column: span 2; background: #f9f9f9; padding: 10px; border: 2px solid #ddd; border-radius: 4px; }
+        .res-option { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .res-option input[type=radio] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
+        .res-option label { margin: 0; font-weight: bold; font-size: 1.2rem; cursor: pointer; }
+        .custom-res-inputs { display: flex; align-items: center; gap: 5px; margin-left: 30px; }
+        .custom-res-inputs input { width: 80px; text-align: center; }
+        .warning-text { font-size: 0.9rem; color: #e67e22; margin-left: 30px; display: block; }
+        .disabled { opacity: 0.5; pointer-events: none; }
+        .locked-note {
+            grid-column: span 2;
+            background: #eef4f7;
+            border: 2px solid #cad9e3;
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: #2f4a5d;
+            font-size: 1.2rem;
+            line-height: 1.3;
+            text-align: center;
+        }
+
+        @media (max-width: 1000px) {
+            .layout-wrapper { flex-direction: column; align-items: center; }
+            .controls { max-width: 600px; flex: none; }
+            .preview-area { position: static; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="layout-wrapper">
+        
+        <div class="controls">
+            <h1>X4 Grayscale Wallpaper</h1>
+            <div class="locked-note">
+                CrossPoint companion plugin: locked to XTEink X4 (480 x 800), grayscale sprite rendering, and BMP export.
+            </div>
+            
+            <div class="input-row">
+                <div style="flex-grow: 1;">
+                    <label>Single Pokémon</label>
+                    <input type="text" id="pokeInput" value="1" placeholder="Name or ID">
+                </div>
+                <button onclick="loadRandom()" class="random-btn">Random 🎲</button>
+            </div>
+
+            <h3>Resolution Settings</h3>
+            <div class="res-container">
+                
+                <div class="res-option">
+                    <input type="radio" id="resModePreset" name="resMode" value="preset" checked onchange="toggleResMode()">
+                    <label for="resModePreset">Boox Device Presets</label>
+                </div>
+                <div id="presetContainer" style="margin-left: 30px; margin-bottom: 10px;">
+                    <select id="resInput">
+                        <optgroup label="13.3 inch (Max / Tab X)">
+                            <option value="2200,1650">Tab X / Max Lumi (2200 x 1650)</option>
+                            <option value="2200,1650">Max 3 / Max 2 (2200 x 1650)</option>
+                        </optgroup>
+                        <optgroup label="10.3 inch (Note / Tab Ultra)">
+                            <option value="2480,1860">Tab Ultra C / Pro (2480 x 1860)</option>
+                            <option value="2480,1860">Note Air 3 C (2480 x 1860)</option>
+                            <option value="1872,1404">Note Air 1 / 2 / Plus (1872 x 1404)</option>
+                            <option value="1872,1404">Note 5 / Note X (1872 x 1404)</option>
+                            <option value="2480,1860">Go 10.3 (2480 x 1860)</option>
+                        </optgroup>
+                        <optgroup label="7.8 inch (Nova / Tab Mini)">
+                            <option value="1872,1404">Tab Mini C (1404 x 1872)</option>
+                            <option value="1872,1404">Nova Air C / 3 Color (1404 x 1872)</option>
+                            <option value="1872,1404">Nova Air / Nova 3 / 2 (1404 x 1872)</option>
+                        </optgroup>
+                        <optgroup label="7 inch (Page / Leaf / Galileo)">
+                            <option value="1680,1264">Page / Leaf 2 (1264 x 1680)</option>
+                            <option value="1680,1264">Galileo (1264 x 1680)</option>
+                            <option value="1680,1264">Go 7 Color (1264 x 1680)</option>
+                        </optgroup>
+                        <optgroup label="6 inch (Poke / Palma)">
+                            <option value="824,1648">Palma (824 x 1648)</option>
+                            <option value="1448,1072">Poke 5 / 4 Lite (1072 x 1448)</option>
+                            <option value="1448,1072">Poke 3 / 2 (1072 x 1448)</option>
+                            <option value="1448,1072">Go 6 (1072 x 1448)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="res-option">
+                    <input type="radio" id="resModeOther" name="resMode" value="other" onchange="toggleResMode()">
+                    <label for="resModeOther">Other Devices</label>
+                </div>
+                <div id="otherContainer" class="disabled" style="margin-left: 30px; margin-bottom: 10px;">
+                    <select id="resInputOther">
+                        <optgroup label="XTEink">
+                            <option value="800,480" selected>XTEink X4 (480 x 800) [.bmp]</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="res-option">
+                    <input type="radio" id="resModeCustom" name="resMode" value="custom" onchange="toggleResMode()">
+                    <label for="resModeCustom">Custom Resolution</label>
+                </div>
+                <div id="customContainer" class="custom-res-inputs disabled">
+                    <input type="number" id="customW" value="1080" min="100" max="4000"> <span>px</span>
+                    <span style="font-weight:bold;">X</span>
+                    <input type="number" id="customH" value="1920" min="100" max="4000"> <span>px</span>
+                </div>
+                <span class="warning-text" id="customWarning">Note: Must be Portrait. Values will swap if Landscape.</span>
+            </div>
+
+            <div>
+                <label>Art Style</label>
+                <select id="artStyle">
+                    <option value="pixel" selected>Classic Pixel</option>
+                    <option value="official">Official Artwork</option>
+                    <option value="dream">Dream World</option>
+                    <option value="home">3D Render</option>
+                </select>
+            </div>
+            
+            <div>
+                <label>Text Font</label>
+                <select id="fontMode">
+                    <option value="VT323" selected>VT323 (Retro)</option>
+                    <option value="Pixelify Sans">Pixelify Sans (Clean)</option>
+                    <option value="Courier New">Courier New</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Bottom Panel</label>
+                <select id="infoMode">
+                    <option value="about" selected>Flavor Text (Description)</option>
+                    <option value="stats">Base Stats (Bars)</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Background</label>
+                <select id="bgInput">
+                    <option value="type">Dynamic Type Color</option>
+                    <option value="diagonal" selected>Classic Diagonal (Soft Grey)</option>
+                    <option value="white">All White</option>
+                    <option value="black">All Black</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Sprite Size</label>
+                <input type="range" id="sizeSlider" min="0.5" max="3.0" step="0.1" value="1.2">
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="boldTextCheck" checked onchange="drawSingle()">
+                <label for="boldTextCheck">Bold Text</label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="bwCheck"> 
+                <label for="bwCheck">Force Greyscale Sprites</label>
+            </div>
+
+            <button onclick="drawSingle()">Preview Single Image</button>
+            <button onclick="downloadSingle()" style="background:#555">Download Single</button>
+
+            <h2 id="batchHeading">Batch Download</h2>
+            <div style="grid-column: span 2;">
+                <label>Select Generation</label>
+                <select id="batchGen">
+                    <option value="1,151">Gen 1 (Kanto: 1-151)</option>
+                    <option value="152,251">Gen 2 (Johto: 152-251)</option>
+                    <option value="252,386">Gen 3 (Hoenn: 252-386)</option>
+                    <option value="387,493">Gen 4 (Sinnoh: 387-493)</option>
+                    <option value="494,649">Gen 5 (Unova: 494-649)</option>
+                    <option value="650,721">Gen 6 (Kalos: 650-721)</option>
+                    <option value="722,809">Gen 7 (Alola: 722-809)</option>
+                    <option value="810,905">Gen 8 (Galar: 810-905)</option>
+                    <option value="906,1025">Gen 9 (Paldea: 906-1025)</option>
+                </select>
+            </div>
+            <button onclick="runBatch()" style="background: #27ae60;">Download Complete Gen (ZIP)</button>
+            
+            <div class="progress-container" id="progContainer">
+                <div class="progress-bar" id="progBar"></div>
+            </div>
+            <div class="status-text" id="statusText"></div>
+        </div>
+
+        <div class="preview-area">
+            <canvas id="canvas"></canvas>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const TYPE_COLORS = {
+            normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', electric: '#F7D02C',
+            grass: '#7AC74C', ice: '#96D9D6', fighting: '#C22E28', poison: '#A33EA1',
+            ground: '#E2BF65', flying: '#A98FF3', psychic: '#F95587', bug: '#A6B91A',
+            rock: '#B6A136', ghost: '#735797', dragon: '#6F35FC', steel: '#B7B7CE',
+            dark: '#705746', fairy: '#D685AD'
+        };
+
+        const GENERATIONS = {
+            "generation-i": "Kanto", "generation-ii": "Johto", "generation-iii": "Hoenn",
+            "generation-iv": "Sinnoh", "generation-v": "Unova", "generation-vi": "Kalos",
+            "generation-vii": "Alola", "generation-viii": "Galar", "generation-ix": "Paldea"
+        };
+
+        const X4_WIDTH = 480;
+        const X4_HEIGHT = 800;
+        let fontLoaded = false;
+        document.fonts.ready.then(() => { fontLoaded = true; enforceX4GrayscaleMode(); drawSingle(); });
+
+        // --- Resolution Logic ---
+        function toggleResMode() {
+            const mode = document.querySelector('input[name="resMode"]:checked').value;
+            const presetDiv = document.getElementById('presetContainer');
+            const otherDiv = document.getElementById('otherContainer');
+            const customDiv = document.getElementById('customContainer');
+            const warningText = document.getElementById('customWarning');
+
+            presetDiv.classList.add('disabled');
+            otherDiv.classList.add('disabled');
+            customDiv.classList.add('disabled');
+            warningText.style.opacity = '0.5';
+
+            if (mode === 'preset') {
+                presetDiv.classList.remove('disabled');
+            } else if (mode === 'other') {
+                otherDiv.classList.remove('disabled');
+            } else {
+                customDiv.classList.remove('disabled');
+                warningText.style.opacity = '1';
+            }
+        }
+
+        function enforceX4GrayscaleMode() {
+            const otherMode = document.getElementById('resModeOther');
+            if (otherMode) {
+                otherMode.checked = true;
+            }
+            toggleResMode();
+
+            const otherSelect = document.getElementById('resInputOther');
+            if (otherSelect) {
+                otherSelect.value = '800,480';
+                otherSelect.disabled = true;
+            }
+
+            const disableIds = ['resModePreset', 'resModeOther', 'resModeCustom', 'resInput', 'customW', 'customH'];
+            for (let i = 0; i < disableIds.length; i++) {
+                const element = document.getElementById(disableIds[i]);
+                if (element) {
+                    element.disabled = true;
+                }
+            }
+
+            const resContainer = document.querySelector('.res-container');
+            if (resContainer) {
+                resContainer.style.display = 'none';
+            }
+            const resHeading = document.querySelector('h3');
+            if (resHeading) {
+                resHeading.textContent = 'Resolution: XTEink X4 (Locked)';
+            }
+
+            const bwCheck = document.getElementById('bwCheck');
+            if (bwCheck) {
+                bwCheck.checked = true;
+                bwCheck.disabled = true;
+            }
+            const bwLabel = document.querySelector('label[for="bwCheck"]');
+            if (bwLabel) {
+                bwLabel.textContent = 'Force Greyscale Sprites (Locked On)';
+            }
+
+            const batchHeading = document.getElementById('batchHeading');
+            if (batchHeading) {
+                batchHeading.style.display = 'none';
+            }
+
+            const batchSelect = document.getElementById('batchGen');
+            if (batchSelect && batchSelect.parentElement) {
+                batchSelect.parentElement.style.display = 'none';
+            }
+
+            const batchButton = document.querySelector('button[onclick="runBatch()"]');
+            if (batchButton) {
+                batchButton.style.display = 'none';
+            }
+
+            const progContainer = document.getElementById('progContainer');
+            if (progContainer) {
+                progContainer.style.display = 'none';
+            }
+
+            const statusText = document.getElementById('statusText');
+            if (statusText) {
+                statusText.style.display = 'none';
+            }
+        }
+
+        function getCanvasDimensions() {
+            return { w: X4_WIDTH, h: X4_HEIGHT };
+        }
+
+        function loadRandom() {
+            const randomId = Math.floor(Math.random() * 1025) + 1;
+            document.getElementById('pokeInput').value = randomId;
+            drawSingle();
+        }
+
+        function drawSingle() {
+            const id = document.getElementById('pokeInput').value.toLowerCase().trim();
+            generateAndDraw(id, false);
+        }
+
+        function downloadSingle() {
+            const poke = document.getElementById('pokeInput').value.toLowerCase().trim();
+            const safePoke = poke || 'pokemon';
+            const filename = `${safePoke}_xteink_x4_grayscale`;
+            const bmpBlob = canvasToBMP(canvas);
+            saveAs(bmpBlob, filename + ".bmp");
+        }
+
+        function canvasToBMP(canvas) {
+            const w = canvas.width;
+            const h = canvas.height;
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+            const headerSize = 54;
+            const rowSize = Math.floor((24 * w + 31) / 32) * 4;
+            const fileSize = headerSize + rowSize * h;
+            const buffer = new ArrayBuffer(fileSize);
+            const view = new DataView(buffer);
+            view.setUint16(0, 0x4D42, true); 
+            view.setUint32(2, fileSize, true);
+            view.setUint16(6, 0, true); view.setUint16(8, 0, true);
+            view.setUint32(10, headerSize, true);
+            view.setUint32(14, 40, true); 
+            view.setInt32(18, w, true); 
+            view.setInt32(22, -h, true); 
+            view.setUint16(26, 1, true); 
+            view.setUint16(28, 24, true); 
+            view.setUint32(30, 0, true); 
+            view.setUint32(34, 0, true); 
+            view.setInt32(38, 0, true); 
+            view.setInt32(42, 0, true); 
+            view.setUint32(46, 0, true); 
+            view.setUint32(50, 0, true); 
+            let offset = headerSize;
+            for (let y = 0; y < h; y++) {
+                const rowStart = offset;
+                for (let x = 0; x < w; x++) {
+                    const i = (y * w + x) * 4;
+                    view.setUint8(offset++, data[i + 2]); 
+                    view.setUint8(offset++, data[i + 1]); 
+                    view.setUint8(offset++, data[i + 0]); 
+                }
+                while ((offset - rowStart) % 4 !== 0) view.setUint8(offset++, 0);
+            }
+            return new Blob([buffer], { type: "image/bmp" });
+        }
+
+        async function runBatch() {
+            const range = document.getElementById('batchGen').value.split(',');
+            const start = parseInt(range[0]);
+            const end = parseInt(range[1]);
+            const total = end - start + 1;
+
+            const zip = new JSZip();
+            const folder = zip.folder(`Gen_${start}_${end}_Wallpapers`);
+            
+            const progBar = document.getElementById('progBar');
+            const statusText = document.getElementById('statusText');
+            document.getElementById('progContainer').style.display = 'block';
+            
+            for (let i = start; i <= end; i++) {
+                statusText.innerText = `Generating #${i} of ${end}...`;
+                const percent = ((i - start) / total) * 100;
+                progBar.style.width = `${percent}%`;
+
+                try {
+                    await generateAndDraw(i, true);
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    const filename = `${String(i).padStart(3, '0')}.png`;
+                    folder.file(filename, blob);
+                } catch (e) {
+                    console.error(`Skipped #${i}:`, e);
+                }
+            }
+
+            statusText.innerText = "Zipping files... (This might take a moment)";
+            const content = await zip.generateAsync({type:"blob"});
+            saveAs(content, `Pokemon_Gen_${start}-${end}.zip`);
+            statusText.innerText = "Done! Download started.";
+        }
+
+        function getEvolutionText(details) {
+            if (!details) return null;
+            const fmt = (str) => { if(!str) return ""; return str.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()); };
+            if (details.min_level) return "Lvl " + details.min_level;
+            if (details.item) return fmt(details.item.name);
+            if (details.trigger.name === 'trade') {
+                if (details.held_item) return "Trade w/ " + fmt(details.held_item.name);
+                return "Trade";
+            }
+            if (details.min_happiness) {
+                let str = "Friendship";
+                if (details.time_of_day) str += " (" + fmt(details.time_of_day) + ")";
+                return str;
+            }
+            if (details.location) return "Loc: " + fmt(details.location.name);
+            if (details.known_move) return "Move: " + fmt(details.known_move.name);
+            if (details.trigger && details.trigger.name !== 'level-up') return fmt(details.trigger.name);
+            return "Special";
+        }
+
+        function formatLocation(locName) {
+            if (!locName) return "Special / Event";
+            return locName.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        async function generateAndDraw(inputID, isBatch) {
+            if (!fontLoaded) return;
+            
+            const dims = getCanvasDimensions();
+            const cw = dims.w;
+            const ch = dims.h;
+            const s = Math.min(cw / 480, ch / 800) * 1.1; 
+
+            const style = document.getElementById('artStyle').value;
+            const bgType = document.getElementById('bgInput').value;
+            const infoMode = document.getElementById('infoMode').value;
+            const useBW = true;
+            const sizeMult = parseFloat(document.getElementById('sizeSlider').value);
+            const fontName = document.getElementById('fontMode').value; 
+            const useBold = document.getElementById('boldTextCheck').checked;
+
+            canvas.width = cw; canvas.height = ch;
+            ctx.imageSmoothingEnabled = false; 
+
+            try {
+                const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${inputID}`);
+                if(!res.ok) throw new Error("Pokemon not found");
+                const data = await res.json();
+                const species = await (await fetch(data.species.url)).json();
+                const evo = await (await fetch(species.evolution_chain.url)).json();
+                const encountersRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${data.id}/encounters`);
+                const encounters = await encountersRes.json();
+                
+                const genName = species.generation.name;
+                const region = GENERATIONS[genName] || "Unknown";
+                const location = encounters.length > 0 ? formatLocation(encounters[0].location_area.name) : "Special / Event";
+
+                let bg = "#fff", ink = "#000", headerInk = "#000", pillBg = "#000", pillText = "#fff", diagColor = "#000";
+                const typeName = data.types[0].type.name;
+                const typeColor = TYPE_COLORS[typeName] || "#000";
+
+                if (bgType === 'type') {
+                    bg = "#fff"; ink = "#000"; headerInk = "#fff"; pillBg = typeColor; pillText = "#fff"; diagColor = typeColor; 
+                } else if (bgType === 'black') {
+                    bg = "#000"; ink = "#fff"; headerInk = "#fff"; pillBg = "#fff"; pillText = "#000";
+                } else if (bgType === 'diagonal') {
+                    bg = "#fff"; ink = "#000"; headerInk = "#fff"; diagColor = "#555555"; pillBg = "#555555"; pillText = "#fff";
+                }
+
+                ctx.fillStyle = bg; ctx.fillRect(0, 0, cw, ch);
+                if (bgType === 'diagonal' || bgType === 'type') {
+                    ctx.fillStyle = diagColor; ctx.beginPath();
+                    ctx.moveTo(0, 0); ctx.lineTo(cw, 0); ctx.lineTo(cw, ch * 0.40); ctx.lineTo(0, ch * 0.20);
+                    ctx.closePath(); ctx.fill();
+                }
+
+                let currentY = 0;
+                currentY = drawHeader(data, cw, s, headerInk, fontName, useBold);
+                
+                const maxImgH = 180 * s; 
+                const imgTopMargin = 5 * s;
+                const imgCenterY = currentY + imgTopMargin + (maxImgH / 2);
+                await drawMainImage(data, style, cw, imgCenterY, maxImgH, s, useBW, sizeMult);
+                currentY = imgCenterY + (maxImgH / 2); 
+
+                const typesMargin = 15 * s; 
+                const typesY = currentY + typesMargin;
+                drawTypePills(data, cw, typesY, s, pillBg, pillText, fontName, useBold);
+                currentY = typesY + (18 * s); 
+
+                // Line 1: 15*s margin
+                const line1Margin = 15 * s; 
+                const line1Y = currentY + line1Margin;
+                ctx.lineWidth = 3 * s; ctx.strokeStyle = ink; ctx.beginPath();
+                ctx.moveTo(30 * s, line1Y); ctx.lineTo(cw - (30 * s), line1Y); ctx.stroke();
+                currentY = line1Y;
+
+                const dataMargin = 15 * s; 
+                const dataTopY = currentY + dataMargin;
+                ctx.fillStyle = ink;
+                const weight = useBold ? "bold " : "";
+                
+                ctx.textAlign = "left";
+                ctx.font = `${weight}${22 * s}px '${fontName}'`; 
+                ctx.fillText(`Region: ${region}`, 40 * s, dataTopY);
+                ctx.font = `${weight}${18 * s}px '${fontName}'`;
+                let findLoc = location.length > 25 ? location.substring(0, 22)+"..." : location;
+                ctx.fillText(`Find: ${findLoc}`, 40 * s, dataTopY + (25*s));
+                
+                ctx.textAlign = "right";
+                ctx.font = `${weight}${22 * s}px '${fontName}'`; 
+                ctx.fillText(`Height: ${(data.height / 10).toFixed(1)}m`, cw - (40*s), dataTopY);
+                ctx.fillText(`Weight: ${(data.weight / 10).toFixed(1)}kg`, cw - (40*s), dataTopY + (25*s));
+
+                currentY = dataTopY + (25*s); 
+
+                const evoMargin = 55 * s; 
+                const evoCenterY = currentY + evoMargin;
+                await drawEvo(evo, cw, evoCenterY, s, ink, useBW, fontName, useBold);
+                
+                // ADJUSTMENT: Restore advance to 65*s
+                currentY = evoCenterY + (65*s); 
+
+                // Line 2: 15*s margin (Uniform)
+                const line2Margin = 15 * s; 
+                const line2Y = currentY + line2Margin;
+                ctx.beginPath();
+                ctx.moveTo(30 * s, line2Y); ctx.lineTo(cw - (30 * s), line2Y); ctx.stroke();
+                currentY = line2Y;
+
+                // Footer: 25*s margin (From Untitled.html)
+                const footerMargin = 25 * s;
+                drawInfoPanel(data, species, cw, currentY + footerMargin, s, ink, infoMode, fontName, useBold);
+
+            } catch (e) { 
+                if(!isBatch) alert("Error: " + e.message); 
+                console.error(e);
+            }
+        }
+
+        function drawHeader(data, w, s, color, fontName, useBold) {
+            ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = color;
+            const margin = 40 * s;
+            const weight = useBold ? "bold " : "";
+            ctx.font = `${weight}${48 * s}px '${fontName}'`; 
+            ctx.fillText(data.name.toUpperCase(), w/2, margin);
+            ctx.font = `${28 * s}px '${fontName}'`;
+            const idStr = "№ " + String(data.id).padStart(3, '0');
+            ctx.fillText(idStr, w/2, margin + (55 * s));
+            return margin + (55 * s) + (40 * s); 
+        }
+
+        function drawInfoPanel(data, species, w, y, s, color, mode, fontName, useBold) {
+            ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = color;
+            const weight = useBold ? "bold " : "";
+
+            if (mode === 'about') {
+                ctx.font = `${26 * s}px '${fontName}'`;
+                const entry = species.flavor_text_entries.find(e => e.language.name === "en");
+                const text = entry ? entry.flavor_text.replace(/[\n\f]/g, " ") : "No Data.";
+                wrapText(ctx, text, w/2, y, w * 0.85, 30 * s);
+            } else {
+                const stats = data.stats; 
+                const labels = ["HP", "ATK", "DEF", "SPD"];
+                const statVals = [stats[0].base_stat, stats[1].base_stat, stats[2].base_stat, stats[5].base_stat];
+                const barW = w * 0.6; const barX = (w - barW) / 2; let statY = y;
+                ctx.font = `${22 * s}px '${fontName}'`; 
+                for(let i=0; i<4; i++) {
+                    ctx.textAlign = "right"; ctx.fillText(labels[i], barX - (10*s), statY);
+                    ctx.save(); ctx.globalAlpha = 0.2; ctx.fillStyle = color;
+                    ctx.fillRect(barX, statY + (5*s), barW, 10*s); ctx.restore();
+                    ctx.fillStyle = color;
+                    const fillW = Math.min((statVals[i] / 255) * barW, barW);
+                    ctx.fillRect(barX, statY + (5*s), fillW, 10*s);
+                    ctx.textAlign = "left"; ctx.fillText(statVals[i], barX + barW + (10*s), statY);
+                    statY += 30 * s;
+                }
+            }
+        }
+
+        function drawTypePills(data, w, y, s, bg, txt, fontName, useBold) {
+            const types = data.types.map(t => t.type.name.toUpperCase());
+            const h = 36 * s, f = 22 * s, sp = 15 * s;
+            const weight = useBold ? "bold " : "";
+            ctx.font = `${weight}${f}px '${fontName}'`; ctx.textBaseline = "middle";
+            let totW = 0, widths = types.map(n => { const tw = ctx.measureText(n).width+(30*s); totW+=tw; return tw; });
+            totW += (sp * (types.length-1));
+            let sx = (w/2) - (totW/2);
+            types.forEach((n, i) => {
+                const tw = widths[i];
+                ctx.fillStyle = bg; ctx.beginPath();
+                const r = h/2;
+                ctx.moveTo(sx + r, y - h/2); ctx.lineTo(sx + tw - r, y - h/2);
+                ctx.arc(sx + tw - r, y, r, -Math.PI/2, Math.PI/2);
+                ctx.lineTo(sx + r, y + h/2); ctx.arc(sx + r, y, r, Math.PI/2, -Math.PI/2);
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = txt; ctx.textAlign = "center"; ctx.fillText(n, sx + (tw/2), y + (2*s));
+                sx += tw + sp;
+            });
+        }
+
+        async function drawMainImage(data, style, w, y, maxH, s, useBW, mult) {
+            let src = data.sprites.front_default;
+            if (style === 'official') src = data.sprites.other['official-artwork'].front_default;
+            else if (style === 'dream') src = data.sprites.other.dream_world.front_default;
+            else if (style === 'home') src = data.sprites.other.home.front_default;
+            if(src) {
+                const img = await loadImage(src);
+                let size = Math.floor(Math.min(maxH, 350 * s) * mult); // FIX: Integer size
+                const x = Math.floor((w/2)-(size/2)); 
+                const yPos = Math.floor(y-(size/2));
+                if (useBW) drawGrayscale(ctx, img, x, yPos, size, size);
+                else ctx.drawImage(img, x, yPos, size, size);
+            }
+        }
+
+        // --- FIXED DRAW EVO WITH RESTORED "UNTITLED" OFFSET ---
+        async function drawEvo(data, w, y, s, color, useBW, fontName, useBold) {
+            let chain = data.chain; let forms = [];
+            forms.push({ name: chain.species.name, url: chain.species.url, text: null }); 
+            
+            if(chain.evolves_to.length > 0) {
+                let second = chain.evolves_to[0];
+                let details2 = second.evolution_details[0]; 
+                let text2 = getEvolutionText(details2);
+                forms.push({ name: second.species.name, url: second.species.url, text: text2 });
+                if(second.evolves_to.length > 0) {
+                    let third = second.evolves_to[0];
+                    let details3 = third.evolution_details[0];
+                    let text3 = getEvolutionText(details3);
+                    forms.push({ name: third.species.name, url: third.species.url, text: text3 });
+                }
+            }
+            ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.font = `${20*s}px '${fontName}'`;
+            const segW = w / forms.length;
+            const weight = useBold ? "bold " : "";
+            
+            // ADJUSTMENT: Restore offset to 15*s (from Untitled.html)
+            const spriteTopOffset = 15 * s;
+
+            for(let i=0; i<forms.length; i++) {
+                const f = forms[i];
+                const cx = (segW * i) + (segW/2);
+                
+                const speciesRes = await fetch(f.url);
+                const speciesData = await speciesRes.json();
+                const defaultVariety = speciesData.varieties.find(v => v.is_default);
+                const pokemonUrl = defaultVariety ? defaultVariety.pokemon.url : f.url.replace("-species", ""); 
+                
+                const r = await fetch(pokemonUrl);
+                const d = await r.json();
+                
+                if(d.sprites.front_default) {
+                    const img = await loadImage(d.sprites.front_default);
+                    const eSz = Math.floor(80 * s); 
+                    // Draw Sprite shifted by offset
+                    const spriteY = Math.floor(y - (eSz/2) + spriteTopOffset);
+                    if (useBW) drawGrayscale(ctx, img, Math.floor(cx-(eSz/2)), spriteY, eSz, eSz);
+                    else ctx.drawImage(img, Math.floor(cx-(eSz/2)), spriteY, eSz, eSz);
+                }
+                
+                ctx.fillStyle = color; 
+                ctx.fillText(f.name.toUpperCase(), cx, y + (45*s));
+                
+                if(i < forms.length - 1) {
+                    const arrowX = (segW * (i+1));
+                    const nextForm = forms[i+1];
+                    // Arrows aligned with sprite offset
+                    const arrowY = y - (10*s) + spriteTopOffset; 
+                    
+                    ctx.font = `${weight}${30*s}px '${fontName}'`; 
+                    ctx.fillText("→", arrowX, arrowY); 
+                    
+                    if (nextForm.text) {
+                        ctx.font = `${18*s}px '${fontName}'`;
+                        const detailY = y + (20*s) + spriteTopOffset;
+                        if (nextForm.text.includes("w/")) {
+                            const parts = nextForm.text.split("w/");
+                            ctx.fillText(parts[0] + "w/", arrowX, detailY);
+                            ctx.fillText(parts[1].trim(), arrowX, detailY + (15*s));
+                        } else {
+                            ctx.fillText(nextForm.text, arrowX, detailY);
+                        }
+                    }
+                    ctx.font = `${20*s}px '${fontName}'`;
+                }
+            }
+        }
+
+        function drawGrayscale(targetCtx, img, x, y, w, h) {
+            w = Math.floor(w); h = Math.floor(h);
+            if(w <= 0 || h <= 0) return;
+
+            const tc = document.createElement('canvas');
+            tc.width = w; tc.height = h;
+            const tctx = tc.getContext('2d');
+            tctx.imageSmoothingEnabled = false;
+            tctx.drawImage(img, 0, 0, w, h);
+            const idata = tctx.getImageData(0, 0, w, h);
+            const d = idata.data;
+            for(let i=0; i<d.length; i+=4) {
+                const avg = d[i]*0.3 + d[i+1]*0.59 + d[i+2]*0.11;
+                d[i] = avg; d[i+1] = avg; d[i+2] = avg;
+            }
+            tctx.putImageData(idata, 0, 0);
+            targetCtx.drawImage(tc, x, y);
+        }
+
+        function wrapText(ctx, t, x, y, mw, lh) {
+            const words = t.split(' '); let line = '';
+            for(let n=0; n<words.length; n++) {
+                const test = line + words[n] + ' ';
+                if(ctx.measureText(test).width > mw && n > 0) { ctx.fillText(line, x, y); line = words[n]+' '; y+=lh; }
+                else line = test;
+            }
+            ctx.fillText(line, x, y);
+        }
+
+        function loadImage(url) {
+            return new Promise((r, e) => { 
+                const i = new Image(); 
+                i.crossOrigin = "Anonymous"; 
+                i.onload = () => r(i); 
+                i.onerror = () => e(new Error("Failed to load image"));
+                i.src = url; 
+            });
+        }
+    </script>
+</body>
+</html>

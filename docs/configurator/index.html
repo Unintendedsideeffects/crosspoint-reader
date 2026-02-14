@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CrossPoint Reader Feature Picker</title>
+    <title>CrossPoint Reader Plugin Picker</title>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&display=swap");
 
@@ -385,9 +385,9 @@
     <div class="page">
       <header>
         <div class="eyebrow">CrossPoint Reader</div>
-        <h1>Feature Picker</h1>
+        <h1>Plugin Picker</h1>
         <div class="subtitle">
-          Build a firmware that fits your flash budget. Choose the features you
+          Build a firmware that fits your flash budget. Choose the plugins you
           want, then trigger a custom build on GitHub Actions.
         </div>
       </header>
@@ -415,7 +415,7 @@
             Integrations Base.
           </div>
 
-          <h2 style="margin-top: 24px">Features</h2>
+          <h2 style="margin-top: 24px">Plugins</h2>
           <div class="feature-list">
             <div class="feature-item">
               <div>
@@ -635,10 +635,32 @@
 
           <div class="note">
             OTA stays enabled in every build. The picker only controls optional
-            features that affect flash usage.
+            plugins that affect flash usage.
           </div>
         </section>
       </div>
+
+      <section class="card" style="margin-top: 24px">
+        <h2>Companion Plugins</h2>
+        <div class="feature-item" style="justify-content: space-between">
+          <div>
+            <div class="feature-title">X4 Grayscale Pokedex Wallpaper</div>
+            <div class="feature-meta">
+              Generate `sleep.bmp` wallpapers from Pokemon data. Locked to
+              XTEink X4 dimensions and grayscale output.
+            </div>
+            <div class="feature-size">No firmware size impact</div>
+          </div>
+          <a
+            class="btn btn-secondary"
+            href="../plugins/x4-pokedex-grayscale/"
+            target="_blank"
+            rel="noopener"
+            style="margin-left: 16px; min-width: 170px"
+            >Open Plugin</a
+          >
+        </div>
+      </section>
 
       <section class="card preview-section">
         <div class="preview-header">
@@ -646,7 +668,7 @@
             <h2>Live Screen Previews</h2>
             <div class="preview-subtitle">
               Auto-generated from the latest firmware UI harness and published
-              with this Feature Picker.
+              with this Plugin Picker.
             </div>
           </div>
           <a class="btn btn-secondary" href="./screen-previews/" target="_blank" rel="noopener"
