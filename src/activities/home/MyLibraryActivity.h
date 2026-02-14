@@ -39,8 +39,6 @@ class MyLibraryActivity final : public Activity {
   // Number of items that fit on a page
   int getPageItems() const;
   int getCurrentItemCount() const;
-  int getTotalPages() const;
-  int getCurrentPage() const;
 
   // Data loading
   void loadRecentBooks();

@@ -97,18 +97,6 @@ int MyLibraryActivity::getCurrentItemCount() const {
   return static_cast<int>(files.size());
 }
 
-int MyLibraryActivity::getTotalPages() const {
-  const int itemCount = getCurrentItemCount();
-  const int pageItems = getPageItems();
-  if (itemCount == 0) return 1;
-  return (itemCount + pageItems - 1) / pageItems;
-}
-
-int MyLibraryActivity::getCurrentPage() const {
-  const int pageItems = getPageItems();
-  return selectorIndex / pageItems + 1;
-}
-
 void MyLibraryActivity::loadRecentBooks() {
   recentBooks.clear();
   const auto& books = RECENT_BOOKS.getBooks();
