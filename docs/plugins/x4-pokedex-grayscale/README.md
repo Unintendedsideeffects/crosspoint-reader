@@ -1,0 +1,17 @@
+# X4 Grayscale Pokedex Wallpaper (Companion Plugin)
+
+This companion plugin vendors and constrains:
+- Upstream: https://github.com/m86-tech/BOOX-Pokedex-Wallpaper-Generator
+- Commit: `2cadbb360a42c460c15dd6461185a3c98df7e40c`
+
+CrossPoint-specific constraints in this variant:
+- Locked resolution: `480 x 800` (XTEink X4)
+- Grayscale sprite rendering is always enabled
+- Single-image `.bmp` export is always used
+- Batch-generation and multi-device controls are hidden
+
+Open `index.html` in a browser and generate a wallpaper for `/sleep.bmp`.
+
+## Attribution
+Original project is MIT licensed by m86-tech.
+See `UPSTREAM_README.md` for original upstream documentation.
