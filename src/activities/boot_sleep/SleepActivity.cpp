@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
@@ -79,7 +80,7 @@ struct Guard {
 
 struct SleepImageCache {
   bool scanned = false;
-  bool sleepDirFound = false;
+  uint8_t sourceMode = 0xFF;
   std::vector<std::string> validFiles;
 };
 
@@ -93,76 +94,139 @@ bool tryRenderExternalSleepApp(GfxRenderer& renderer, MappedInputManager& mapped
   return rendered;
 }
 
-void validateSleepImagesOnce() {
-  SleepCacheMutex::Guard guard;
-  if (sleepImageCache.scanned) {
-    return;
+const char* getSleepSourceName(const uint8_t sourceMode) {
+  switch (sourceMode) {
+    case CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SOURCE_POKEDEX:
+      return "pokedex";
+    case CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SOURCE_ALL:
+      return "all";
+    case CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SOURCE_SLEEP:
+    default:
+      return "sleep";
   }
+}
 
-  // Clear before scanning (in case of previous partial scan)
-  sleepImageCache.validFiles.clear();
+std::string getSleepSourcePath(const uint8_t sourceMode) {
+  switch (sourceMode) {
+    case CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SOURCE_POKEDEX:
+      return "/sleep/pokedex";
+    case CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SOURCE_ALL:
+    case CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SOURCE_SLEEP:
+    default:
+      return "/sleep";
+  }
+}
 
-  auto dir = Storage.open("/sleep");
+bool shouldScanRecursively(const uint8_t sourceMode) {
+  return sourceMode == CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SOURCE_ALL;
+}
+
+std::string getEntryName(const std::string& path) {
+  const size_t lastSlash = path.find_last_of('/');
+  if (lastSlash == std::string::npos) {
+    return path;
+  }
+  return path.substr(lastSlash + 1);
+}
+
+std::string joinPath(const std::string& directoryPath, const std::string& entryName) {
+  if (entryName.empty()) return directoryPath;
+  if (!entryName.empty() && entryName[0] == '/') return entryName;
+  if (directoryPath.empty() || directoryPath == "/") return "/" + entryName;
+  if (directoryPath.back() == '/') return directoryPath + entryName;
+  return directoryPath + "/" + entryName;
+}
+
+void scanSleepImagesInDirectory(const std::string& directoryPath, const bool recursive,
+                                std::vector<std::string>& filesOut) {
+  auto dir = Storage.open(directoryPath.c_str());
   if (!(dir && dir.isDirectory())) {
     if (dir) dir.close();
-    sleepImageCache.scanned = true;
-    sleepImageCache.sleepDirFound = false;
     return;
   }
 
-  sleepImageCache.scanned = true;
-  sleepImageCache.sleepDirFound = true;
   char name[500];
   for (auto file = dir.openNextFile(); file; file = dir.openNextFile()) {
-    if (file.isDirectory()) {
-      file.close();
-      continue;
-    }
     file.getName(name, sizeof(name));
-    auto filename = std::string(name);
-    if (filename.empty() || filename[0] == '.') {
+    const std::string entryName(name);
+    const std::string leafName = getEntryName(entryName);
+    if (leafName.empty() || leafName[0] == '.') {
       file.close();
       continue;
     }
 
-    if (isSupportedSleepImage(filename)) {
-      if (isBmpFile(filename)) {
-        // Validate BMP files by parsing headers
-        Bitmap bitmap(file, true);
-        const auto err = bitmap.parseHeaders();
-        if (err == BmpReaderError::Ok) {
-          sleepImageCache.validFiles.emplace_back(filename);
-        } else {
-          Serial.printf("[SLP] Invalid BMP in /sleep: %s (%s)\n", filename.c_str(), Bitmap::errorToString(err));
-        }
+    const std::string fullPath = joinPath(directoryPath, entryName);
+    if (file.isDirectory()) {
+      file.close();
+      if (recursive) {
+        scanSleepImagesInDirectory(fullPath, true, filesOut);
+      }
+      continue;
+    }
+
+    if (!isSupportedSleepImage(leafName)) {
+      file.close();
+      continue;
+    }
+
+    if (isBmpFile(leafName)) {
+      Bitmap bitmap(file, true);
+      const auto err = bitmap.parseHeaders();
+      if (err == BmpReaderError::Ok) {
+        filesOut.emplace_back(fullPath);
       } else {
-        // For PNG/JPEG, validate by checking if decoder can get dimensions
-        std::string fullPath = "/sleep/" + filename;
-        const ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(fullPath);
-        if (decoder) {
-          ImageDimensions dims = {0, 0};
-          if (decoder->getDimensions(fullPath, dims) && dims.width > 0 && dims.height > 0) {
-            sleepImageCache.validFiles.emplace_back(filename);
-            Serial.printf("[SLP] Valid %s in /sleep: %s (%dx%d)\n", decoder->getFormatName(), filename.c_str(),
-                          dims.width, dims.height);
-          } else {
-            Serial.printf("[SLP] Invalid image in /sleep: %s (could not read dimensions)\n", filename.c_str());
-          }
-        }
+        Serial.printf("[SLP] Invalid BMP in %s: %s (%s)\n", directoryPath.c_str(), leafName.c_str(),
+                      Bitmap::errorToString(err));
+      }
+      file.close();
+      continue;
+    }
+
+    const ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(fullPath);
+    if (decoder) {
+      ImageDimensions dims = {0, 0};
+      if (decoder->getDimensions(fullPath, dims) && dims.width > 0 && dims.height > 0) {
+        filesOut.emplace_back(fullPath);
+        Serial.printf("[SLP] Valid %s: %s (%dx%d)\n", decoder->getFormatName(), fullPath.c_str(), dims.width,
+                      dims.height);
+      } else {
+        Serial.printf("[SLP] Invalid image: %s (could not read dimensions)\n", fullPath.c_str());
       }
     }
     file.close();
   }
   dir.close();
+}
 
-  Serial.printf("[%lu] [SLP] Found %d valid sleep images\n", millis(), sleepImageCache.validFiles.size());
+void validateSleepImagesOnce() {
+  SleepCacheMutex::Guard guard;
+  uint8_t sourceMode = SETTINGS.sleepScreenSource;
+  if (sourceMode >= CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SCREEN_SOURCE_COUNT) {
+    sourceMode = CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SOURCE_SLEEP;
+  }
+
+  if (sleepImageCache.scanned && sleepImageCache.sourceMode == sourceMode) {
+    return;
+  }
+
+  sleepImageCache.scanned = false;
+  sleepImageCache.sourceMode = sourceMode;
+  sleepImageCache.validFiles.clear();
+
+  const std::string sourcePath = getSleepSourcePath(sourceMode);
+  const bool recursive = shouldScanRecursively(sourceMode);
+  scanSleepImagesInDirectory(sourcePath, recursive, sleepImageCache.validFiles);
+
+  sleepImageCache.scanned = true;
+  Serial.printf("[%lu] [SLP] Source '%s' found %d valid sleep images\n", millis(), getSleepSourceName(sourceMode),
+                sleepImageCache.validFiles.size());
 }
 }  // namespace
 
 void invalidateSleepImageCache() {
   SleepCacheMutex::Guard guard;
   sleepImageCache.scanned = false;
-  sleepImageCache.sleepDirFound = false;
+  sleepImageCache.sourceMode = 0xFF;
   sleepImageCache.validFiles.clear();
   Serial.printf("[%lu] [SLP] Sleep image cache invalidated\n", millis());
 }
@@ -181,13 +245,8 @@ void SleepActivity::onEnter() {
   }
 
   switch (SETTINGS.sleepScreen) {
-    case (CrossPointSettings::SLEEP_SCREEN_MODE::BLANK):
-      return renderBlankSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM):
       return renderCustomSleepScreen();
-    case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER):
-    case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER_CUSTOM):
-      return renderCoverSleepScreen();
     default:
       return renderDefaultSleepScreen();
   }
@@ -198,7 +257,7 @@ void SleepActivity::renderCustomSleepScreen() const {
   SleepCacheMutex::Guard cacheGuard;
   validateSleepImagesOnce();
   const auto numFiles = sleepImageCache.validFiles.size();
-  if (sleepImageCache.sleepDirFound && numFiles > 0) {
+  if (numFiles > 0) {
     // Generate a random number between 0 and numFiles-1
     auto randomFileIndex = random(numFiles);
     // If we picked the same image as last time, pick the next one
@@ -211,7 +270,7 @@ void SleepActivity::renderCustomSleepScreen() const {
     if (selectionChanged) {
       APP_STATE.saveToFile();
     }
-    const auto filename = "/sleep/" + sleepImageCache.validFiles[randomFileIndex];
+    const auto& filename = sleepImageCache.validFiles[randomFileIndex];
     Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), filename.c_str());
 
     if (isBmpFile(filename)) {
@@ -232,29 +291,29 @@ void SleepActivity::renderCustomSleepScreen() const {
     }
   }
 
-  // Look for sleep image on the root of the sd card
-  // Check multiple formats in order of preference
-  const char* rootSleepImages[] = {"/sleep.bmp", "/sleep.png", "/sleep.jpg", "/sleep.jpeg"};
-  for (const char* sleepImagePath : rootSleepImages) {
-    if (isBmpFile(sleepImagePath)) {
-      FsFile file;
-      if (Storage.openFileForRead("SLP", sleepImagePath, file)) {
-        Bitmap bitmap(file, true);
-        if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-          Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), sleepImagePath);
-          renderBitmapSleepScreen(bitmap);
-          return;
+  // Legacy fallback for source "Sleep": root-level /sleep.bmp|png|jpg|jpeg.
+  if (SETTINGS.sleepScreenSource == CrossPointSettings::SLEEP_SCREEN_SOURCE::SLEEP_SOURCE_SLEEP) {
+    const char* rootSleepImages[] = {"/sleep.bmp", "/sleep.png", "/sleep.jpg", "/sleep.jpeg"};
+    for (const char* sleepImagePath : rootSleepImages) {
+      if (isBmpFile(sleepImagePath)) {
+        FsFile file;
+        if (Storage.openFileForRead("SLP", sleepImagePath, file)) {
+          Bitmap bitmap(file, true);
+          if (bitmap.parseHeaders() == BmpReaderError::Ok) {
+            Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), sleepImagePath);
+            renderBitmapSleepScreen(bitmap);
+            return;
+          }
         }
-      }
-    } else {
-      // Check if PNG/JPEG file exists and is valid
-      const ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(sleepImagePath);
-      if (decoder) {
-        ImageDimensions dims = {0, 0};
-        if (decoder->getDimensions(sleepImagePath, dims) && dims.width > 0 && dims.height > 0) {
-          Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), sleepImagePath);
-          renderImageSleepScreen(sleepImagePath);
-          return;
+      } else {
+        const ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(sleepImagePath);
+        if (decoder) {
+          ImageDimensions dims = {0, 0};
+          if (decoder->getDimensions(sleepImagePath, dims) && dims.width > 0 && dims.height > 0) {
+            Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), sleepImagePath);
+            renderImageSleepScreen(sleepImagePath);
+            return;
+          }
         }
       }
     }

@@ -15,7 +15,16 @@ class CrossPointSettings {
   CrossPointSettings(const CrossPointSettings&) = delete;
   CrossPointSettings& operator=(const CrossPointSettings&) = delete;
 
-  enum SLEEP_SCREEN_MODE { DARK = 0, LIGHT = 1, CUSTOM = 2, COVER = 3, BLANK = 4, SLEEP_SCREEN_MODE_COUNT };
+  enum SLEEP_SCREEN_MODE {
+    DARK = 0,
+    LIGHT = 1,
+    CUSTOM = 2,
+    SLEEP_SCREEN_MODE_COUNT,
+    // Legacy values kept for backward compatibility with old persisted files.
+    COVER = 3,
+    BLANK = 4,
+    COVER_CUSTOM = 5,
+  };
   enum SLEEP_SCREEN_COVER_MODE { FIT = 0, CROP = 1, SLEEP_SCREEN_COVER_MODE_COUNT };
   enum SLEEP_SCREEN_COVER_FILTER {
     NO_FILTER = 0,
@@ -23,14 +32,21 @@ class CrossPointSettings {
     INVERTED_BLACK_AND_WHITE = 2,
     SLEEP_SCREEN_COVER_FILTER_COUNT
   };
+  enum SLEEP_SCREEN_SOURCE {
+    SLEEP_SOURCE_SLEEP = 0,
+    SLEEP_SOURCE_POKEDEX = 1,
+    SLEEP_SOURCE_ALL = 2,
+    SLEEP_SCREEN_SOURCE_COUNT
+  };
 
   // Status bar display type enum
   enum STATUS_BAR_MODE {
     NONE = 0,
     NO_PROGRESS = 1,
     FULL = 2,
-    FULL_WITH_PROGRESS_BAR = 3,
-    ONLY_PROGRESS_BAR = 4,
+    BOOK_PROGRESS_BAR = 3,
+    ONLY_BOOK_PROGRESS_BAR = 4,
+    CHAPTER_PROGRESS_BAR = 5,
     STATUS_BAR_MODE_COUNT
   };
 
@@ -42,7 +58,7 @@ class CrossPointSettings {
     ORIENTATION_COUNT
   };
 
-  // Front button layout options
+  // Front button layout options (legacy)
   // Default: Back, Confirm, Left, Right
   // Swapped: Left, Right, Back, Confirm
   enum FRONT_BUTTON_LAYOUT {
@@ -52,6 +68,15 @@ class CrossPointSettings {
     BACK_CONFIRM_RIGHT_LEFT = 3,
     LEFT_LEFT_RIGHT_RIGHT = 4,
     FRONT_BUTTON_LAYOUT_COUNT
+  };
+
+  // Front button hardware identifiers (for remapping)
+  enum FRONT_BUTTON_HARDWARE {
+    FRONT_HW_BACK = 0,
+    FRONT_HW_CONFIRM = 1,
+    FRONT_HW_LEFT = 2,
+    FRONT_HW_RIGHT = 3,
+    FRONT_BUTTON_HARDWARE_COUNT
   };
 
   // Side button layout options
@@ -69,6 +94,7 @@ class CrossPointSettings {
     LEFT_ALIGN = 1,
     CENTER_ALIGN = 2,
     RIGHT_ALIGN = 3,
+    BOOK_STYLE = 4,
     PARAGRAPH_ALIGNMENT_COUNT
   };
 
@@ -121,6 +147,8 @@ class CrossPointSettings {
   uint8_t sleepScreenCoverMode = FIT;
   // Sleep screen cover filter
   uint8_t sleepScreenCoverFilter = NO_FILTER;
+  // Sleep screen custom-image source
+  uint8_t sleepScreenSource = SLEEP_SOURCE_SLEEP;
   // Status bar settings
   uint8_t statusBar = FULL;
   // Text rendering settings
@@ -134,6 +162,12 @@ class CrossPointSettings {
   // Button layouts
   uint8_t frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
   uint8_t sideButtonLayout = PREV_NEXT;
+  // Front button remap (logical -> hardware)
+  // Used by MappedInputManager to translate logical buttons into physical front buttons.
+  uint8_t frontButtonBack = FRONT_HW_BACK;
+  uint8_t frontButtonConfirm = FRONT_HW_CONFIRM;
+  uint8_t frontButtonLeft = FRONT_HW_LEFT;
+  uint8_t frontButtonRight = FRONT_HW_RIGHT;
   // Reader font settings
   uint8_t fontFamily = BOOKERLY;
   uint8_t fontSize = MEDIUM;

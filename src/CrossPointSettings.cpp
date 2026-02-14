@@ -23,7 +23,7 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 namespace {
 constexpr uint8_t SETTINGS_FILE_VERSION = 1;
 // Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 29;
+constexpr uint8_t SETTINGS_COUNT = 30;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 
 // Validate front button mapping to ensure each hardware button is unique.
@@ -94,6 +94,7 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writePod(outputFile, timeZoneOffset);
   serialization::writePod(outputFile, lastTimeSyncEpoch);
   serialization::writePod(outputFile, releaseChannel);
+  serialization::writePod(outputFile, sleepScreenSource);
   // New fields added at end for backward compatibility
   outputFile.close();
 
@@ -197,6 +198,8 @@ bool CrossPointSettings::loadFromFile() {
     if (++settingsRead >= fileSettingsCount) break;
     readAndValidate(inputFile, releaseChannel, RELEASE_CHANNEL_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
+    readAndValidate(inputFile, sleepScreenSource, SLEEP_SCREEN_SOURCE_COUNT);
+    if (++settingsRead >= fileSettingsCount) break;
     // New fields added at end for backward compatibility
   } while (false);
 
@@ -259,8 +262,9 @@ void CrossPointSettings::enforceButtonLayoutConstraints() {
 
 void CrossPointSettings::validateAndClamp() {
   // Enum bounds - clamp to valid range, reset to default if out of bounds
-  if (sleepScreen > BLANK) sleepScreen = DARK;
+  if (sleepScreen >= SLEEP_SCREEN_MODE_COUNT) sleepScreen = DARK;
   if (sleepScreenCoverMode > CROP) sleepScreenCoverMode = FIT;
+  if (sleepScreenSource >= SLEEP_SCREEN_SOURCE_COUNT) sleepScreenSource = SLEEP_SOURCE_SLEEP;
   if (statusBar > FULL) statusBar = FULL;
   if (orientation > LANDSCAPE_CCW) orientation = PORTRAIT;
   if (frontButtonLayout > LEFT_LEFT_RIGHT_RIGHT) frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
