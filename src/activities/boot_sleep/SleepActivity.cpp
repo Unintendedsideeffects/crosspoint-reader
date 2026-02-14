@@ -232,9 +232,6 @@ void SleepActivity::onEnter() {
   // Skip the "Entering Sleep..." popup to avoid unnecessary screen refresh
   // The sleep screen will be displayed immediately anyway
 
-  // Initialize image decoder factory
-  ImageDecoderFactory::initialize();
-
   // Optional extension point for third-party sleep apps.
   if (tryRenderExternalSleepApp(renderer, mappedInput)) {
     return;

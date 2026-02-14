@@ -179,13 +179,18 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
     progressSetupFn();
   }
 
+  size_t lastSlash = htmlPath.find_last_of('/');
+  std::string contentBase = (lastSlash != std::string::npos) ? htmlPath.substr(0, lastSlash + 1) : "";
+
   ChapterHtmlSlimParser visitor(
-      htmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
-      viewportHeight, hyphenationEnabled,
+      std::shared_ptr<Epub>(), htmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment,
+      viewportWidth, viewportHeight, hyphenationEnabled,
       [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
-      false,     // embeddedStyle - not used for standalone HTML
-      nullptr,   // popupFn - not used for standalone HTML
-      nullptr);  // cssParser - not used for standalone HTML
+      false,        // embeddedStyle - not used for standalone HTML
+      contentBase,  // base path for local image resolution
+      "",           // imageBasePath - not used for standalone HTML
+      nullptr,      // popupFn - not used for standalone HTML
+      nullptr);     // cssParser - not used for standalone HTML
 
   bool success = visitor.parseAndBuildPages();
   if (!success) {

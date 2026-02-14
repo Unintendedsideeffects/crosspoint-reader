@@ -16,6 +16,7 @@
 #include "Epub/ParsedText.h"
 #include "Epub/blocks/BlockStyle.h"
 #include "Epub/blocks/TextBlock.h"
+#include "Epub/converters/ImageDecoderFactory.h"
 
 namespace {
 class MemoryPrint : public Print {
@@ -766,15 +767,6 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
     imagePath = FsHelpers::normalisePath(contentBasePath + src);
   }
 
-  auto format = ImageConverter::detectFormat(imagePath.c_str());
-  if (format == ImageConverter::FORMAT_UNKNOWN) {
-    if (!currentTextBlock) {
-      startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
-    }
-    currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
-    return;
-  }
-
   if (currentTextBlock && !currentTextBlock->isEmpty()) {
     flushTextBlock();
   }
@@ -799,34 +791,32 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
     maxHeight = viewportHeight / 2;
   }
 
-  FsFile imageFile;
-  if (!Storage.openFileForRead("MDR", imagePath, imageFile)) {
+  ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(imagePath);
+  if (!decoder) {
     startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
     return;
   }
 
-  std::vector<uint8_t> bmpData;
-  MemoryPrint bmpOut(bmpData);
-  const bool success = ImageConverter::convertTo1BitBmpStream(imageFile, format, bmpOut, maxWidth, maxHeight, false);
-  imageFile.close();
-
-  if (!success || bmpData.size() < 54) {
+  ImageDimensions dims = {0, 0};
+  if (!decoder->getDimensions(imagePath, dims) || dims.width <= 0 || dims.height <= 0) {
     startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
     currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
     return;
   }
 
-  std::vector<uint8_t> rawData;
-  uint16_t bmpWidth = 0;
-  uint16_t bmpHeight = 0;
-  if (!decode1BitBmpToRaw(bmpData, rawData, bmpWidth, bmpHeight)) {
-    startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
-    currentTextBlock->addWord("[Image failed]", EpdFontFamily::ITALIC);
-    return;
+  float scaleX = (dims.width > maxWidth) ? static_cast<float>(maxWidth) / static_cast<float>(dims.width) : 1.0f;
+  float scaleY = (dims.height > maxHeight) ? static_cast<float>(maxHeight) / static_cast<float>(dims.height) : 1.0f;
+  float scale = std::min(scaleX, scaleY);
+  if (scale > 1.0f) {
+    scale = 1.0f;
   }
 
-  auto pageImage = std::make_shared<PageImage>(std::move(rawData), bmpWidth, bmpHeight, 0, 0);
+  const int16_t displayWidth = static_cast<int16_t>(std::max(1, static_cast<int>(dims.width * scale)));
+  const int16_t displayHeight = static_cast<int16_t>(std::max(1, static_cast<int>(dims.height * scale)));
+
+  auto imageBlock = std::make_shared<ImageBlock>(imagePath, displayWidth, displayHeight);
+  auto pageImage = std::make_shared<PageImage>(imageBlock, 0, 0);
   addImageToPage(pageImage);
 }
 

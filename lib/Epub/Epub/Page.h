@@ -1,14 +1,16 @@
 #pragma once
 #include <HalStorage.h>
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
+#include "blocks/ImageBlock.h"
 #include "blocks/TextBlock.h"
 
 enum PageElementTag : uint8_t {
   TAG_PageLine = 1,
-  TAG_PageImage = 2,
+  TAG_PageImage = 2,  // New tag
 };
 
 // represents something that has been added to a page
@@ -20,7 +22,7 @@ class PageElement {
   virtual ~PageElement() = default;
   virtual void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) = 0;
   virtual bool serialize(FsFile& file) = 0;
-  virtual PageElementTag getTag() const = 0;
+  virtual PageElementTag getTag() const = 0;  // Add type identification
 };
 
 // a line from a block element
@@ -36,22 +38,19 @@ class PageLine final : public PageElement {
   static std::unique_ptr<PageLine> deserialize(FsFile& file);
 };
 
-// an inline image element
+// New PageImage class
 class PageImage final : public PageElement {
-  std::vector<uint8_t> bmpData;  // Inline BMP data (rendered at deserialize time)
-  uint16_t imageWidth;
-  uint16_t imageHeight;
+  std::shared_ptr<ImageBlock> imageBlock;
 
  public:
-  PageImage(std::vector<uint8_t>&& data, uint16_t width, uint16_t height, int16_t xPos, int16_t yPos)
-      : PageElement(xPos, yPos), bmpData(std::move(data)), imageWidth(width), imageHeight(height) {}
+  PageImage(std::shared_ptr<ImageBlock> block, const int16_t xPos, const int16_t yPos)
+      : PageElement(xPos, yPos), imageBlock(std::move(block)) {}
+  int16_t getWidth() const { return imageBlock ? imageBlock->getWidth() : 0; }
+  int16_t getHeight() const { return imageBlock ? imageBlock->getHeight() : 0; }
   void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) override;
   bool serialize(FsFile& file) override;
   PageElementTag getTag() const override { return TAG_PageImage; }
   static std::unique_ptr<PageImage> deserialize(FsFile& file);
-
-  uint16_t getWidth() const { return imageWidth; }
-  uint16_t getHeight() const { return imageHeight; }
 };
 
 class Page {
@@ -61,4 +60,10 @@ class Page {
   void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) const;
   bool serialize(FsFile& file) const;
   static std::unique_ptr<Page> deserialize(FsFile& file);
+
+  // Check if page contains any images (used to force full refresh)
+  bool hasImages() const {
+    return std::any_of(elements.begin(), elements.end(),
+                       [](const std::shared_ptr<PageElement>& el) { return el->getTag() == TAG_PageImage; });
+  }
 };

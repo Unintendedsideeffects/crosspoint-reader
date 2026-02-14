@@ -2,8 +2,8 @@
 
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
-#include <HalStorage.h>
 #include <HardwareSerial.h>
+#include <SDCardManager.h>
 #include <Serialization.h>
 
 #include "../converters/DitherUtils.h"
@@ -17,14 +17,11 @@
 ImageBlock::ImageBlock(const std::string& imagePath, int16_t width, int16_t height)
     : imagePath(imagePath), width(width), height(height) {}
 
-bool ImageBlock::imageExists() const {
-  FsFile file;
-  return Storage.openFileForRead("IMG", imagePath, file);
-}
+bool ImageBlock::imageExists() const { return Storage.exists(imagePath.c_str()); }
 
-void ImageBlock::layout(GfxRenderer& renderer) {}
+namespace {
 
-static std::string getCachePath(const std::string& imagePath) {
+std::string getCachePath(const std::string& imagePath) {
   // Replace extension with .pxc (pixel cache)
   size_t dotPos = imagePath.rfind('.');
   if (dotPos != std::string::npos) {
@@ -33,8 +30,8 @@ static std::string getCachePath(const std::string& imagePath) {
   return imagePath + ".pxc";
 }
 
-static bool renderFromCache(GfxRenderer& renderer, const std::string& cachePath, int x, int y, int expectedWidth,
-                            int expectedHeight) {
+bool renderFromCache(GfxRenderer& renderer, const std::string& cachePath, int x, int y, int expectedWidth,
+                     int expectedHeight) {
   FsFile cacheFile;
   if (!Storage.openFileForRead("IMG", cachePath, cacheFile)) {
     return false;
@@ -95,6 +92,8 @@ static bool renderFromCache(GfxRenderer& renderer, const std::string& cachePath,
   return true;
 }
 
+}  // namespace
+
 void ImageBlock::render(GfxRenderer& renderer, const int x, const int y) {
   Serial.printf("[%lu] [IMG] Rendering image at %d,%d: %s (%dx%d)\n", millis(), x, y, imagePath.c_str(), width, height);
 
@@ -139,7 +138,8 @@ void ImageBlock::render(GfxRenderer& renderer, const int x, const int y) {
   config.useGrayscale = true;
   config.useDithering = true;
   config.performanceMode = false;
-  config.cachePath = cachePath;  // Enable caching during decode
+  config.useExactDimensions = true;  // Use pre-calculated dimensions to avoid rounding mismatches
+  config.cachePath = cachePath;      // Enable caching during decode
 
   ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(imagePath);
   if (!decoder) {

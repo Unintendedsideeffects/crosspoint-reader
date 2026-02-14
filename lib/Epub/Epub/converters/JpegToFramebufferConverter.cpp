@@ -1,8 +1,8 @@
 #include "JpegToFramebufferConverter.h"
 
 #include <GfxRenderer.h>
-#include <HalStorage.h>
 #include <HardwareSerial.h>
+#include <SDCardManager.h>
 #include <SdFat.h>
 #include <picojpeg.h>
 
@@ -69,17 +69,29 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
     return false;
   }
 
-  // Calculate scale factor to fit within maxWidth/maxHeight
-  float scaleX =
-      (config.maxWidth > 0 && imageInfo.m_width > config.maxWidth) ? (float)config.maxWidth / imageInfo.m_width : 1.0f;
-  float scaleY = (config.maxHeight > 0 && imageInfo.m_height > config.maxHeight)
-                     ? (float)config.maxHeight / imageInfo.m_height
-                     : 1.0f;
-  float scale = (scaleX < scaleY) ? scaleX : scaleY;
-  if (scale > 1.0f) scale = 1.0f;
+  // Calculate output dimensions
+  int destWidth, destHeight;
+  float scale;
 
-  int destWidth = (int)(imageInfo.m_width * scale);
-  int destHeight = (int)(imageInfo.m_height * scale);
+  if (config.useExactDimensions && config.maxWidth > 0 && config.maxHeight > 0) {
+    // Use exact dimensions as specified (avoids rounding mismatches with pre-calculated sizes)
+    destWidth = config.maxWidth;
+    destHeight = config.maxHeight;
+    scale = (float)destWidth / imageInfo.m_width;
+  } else {
+    // Calculate scale factor to fit within maxWidth/maxHeight
+    float scaleX = (config.maxWidth > 0 && imageInfo.m_width > config.maxWidth)
+                       ? (float)config.maxWidth / imageInfo.m_width
+                       : 1.0f;
+    float scaleY = (config.maxHeight > 0 && imageInfo.m_height > config.maxHeight)
+                       ? (float)config.maxHeight / imageInfo.m_height
+                       : 1.0f;
+    scale = (scaleX < scaleY) ? scaleX : scaleY;
+    if (scale > 1.0f) scale = 1.0f;
+
+    destWidth = (int)(imageInfo.m_width * scale);
+    destHeight = (int)(imageInfo.m_height * scale);
+  }
 
   Serial.printf("[%lu] [JPG] JPEG %dx%d -> %dx%d (scale %.2f), scan type: %d, MCU: %dx%d\n", millis(),
                 imageInfo.m_width, imageInfo.m_height, destWidth, destHeight, scale, imageInfo.m_scanType,
@@ -277,7 +289,7 @@ unsigned char JpegToFramebufferConverter::jpegReadCallback(unsigned char* pBuf, 
   return 0;
 }
 
-bool JpegToFramebufferConverter::supportsFormat(const std::string& extension) const {
+bool JpegToFramebufferConverter::supportsFormat(const std::string& extension) {
   std::string ext = extension;
   for (auto& c : ext) {
     c = tolower(c);

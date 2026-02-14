@@ -241,6 +241,73 @@ def create_scaling_test_image(filename, is_png=True):
     else:
         img.save(filename, 'JPEG', quality=95)
 
+def create_wide_scaling_test_image(filename, is_png=True):
+    """
+    Create wide image (1807x736) to test scaling with specific dimensions
+    that can trigger cache dimension mismatches due to floating-point rounding.
+    """
+    width, height = 1807, 736
+    img = Image.new('L', (width, height), 240)
+    draw = ImageDraw.Draw(img)
+    font = get_font(48)
+    font_medium = get_font(32)
+    font_small = get_font(24)
+
+    # Border
+    draw.rectangle([0, 0, width-1, height-1], outline=0, width=6)
+    draw.rectangle([15, 15, width-16, height-16], outline=128, width=3)
+
+    # Title
+    draw_text_centered(draw, 40, "WIDE SCALING TEST", font, fill=0)
+    draw_text_centered(draw, 100, f"Original: {width}x{height} (tests rounding edge case)", font_medium, fill=64)
+
+    # Grid pattern to verify scaling quality
+    grid_start_x = 100
+    grid_start_y = 180
+    grid_width = 600
+    grid_height = 300
+    cell_size = 50
+
+    draw.text((grid_start_x, grid_start_y - 35), "Grid pattern (check for artifacts):", font=font_small, fill=0)
+
+    for row in range(grid_height // cell_size):
+        for col in range(grid_width // cell_size):
+            x = grid_start_x + col * cell_size
+            y = grid_start_y + row * cell_size
+            if (row + col) % 2 == 0:
+                draw.rectangle([x, y, x + cell_size, y + cell_size], fill=0)
+            else:
+                draw.rectangle([x, y, x + cell_size, y + cell_size], fill=200)
+
+    # Verification section on the right
+    text_x = 800
+    text_y = 180
+    draw.text((text_x, text_y), "VERIFICATION:", font=font_medium, fill=0)
+    text_y += 50
+    instructions = [
+        "1. Image fits within screen",
+        "2. All borders visible",
+        "3. Grid pattern clear",
+        "4. Text readable",
+        "5. No double-decode in log",
+    ]
+    for i, text in enumerate(instructions):
+        draw.text((text_x, text_y + i * 35), text, font=font_small, fill=64)
+
+    # Dimension info
+    draw.text((text_x, 450), f"Dimensions: {width}x{height}", font=font_small, fill=0)
+    draw.text((text_x, 485), "Tests cache dimension matching", font=font_small, fill=64)
+
+    # Pass/fail at bottom
+    y = height - 80
+    draw_text_centered(draw, y, "PASS: Single decode, cached correctly", font_small, fill=0)
+    draw_text_centered(draw, y + 30, "FAIL: Cache mismatch, multiple decodes", font_small, fill=64)
+
+    if is_png:
+        img.save(filename, 'PNG')
+    else:
+        img.save(filename, 'JPEG', quality=95)
+
 def create_cache_test_image(filename, page_num, is_png=True):
     """
     Create image for cache performance testing.
@@ -470,6 +537,7 @@ def main():
         create_grayscale_test_image(tmpdir / 'grayscale_test.jpg', is_png=False)
         create_centering_test_image(tmpdir / 'centering_test.jpg', is_png=False)
         create_scaling_test_image(tmpdir / 'scaling_test.jpg', is_png=False)
+        create_wide_scaling_test_image(tmpdir / 'wide_scaling_test.jpg', is_png=False)
         create_gradient_test_image(tmpdir / 'gradient_test.jpg', is_png=False)
         create_format_test_image(tmpdir / 'jpeg_format.jpg', 'JPEG', is_png=False)
         create_cache_test_image(tmpdir / 'cache_test_1.jpg', 1, is_png=False)
@@ -479,6 +547,7 @@ def main():
         create_grayscale_test_image(tmpdir / 'grayscale_test.png', is_png=True)
         create_centering_test_image(tmpdir / 'centering_test.png', is_png=True)
         create_scaling_test_image(tmpdir / 'scaling_test.png', is_png=True)
+        create_wide_scaling_test_image(tmpdir / 'wide_scaling_test.png', is_png=True)
         create_gradient_test_image(tmpdir / 'gradient_test.png', is_png=True)
         create_format_test_image(tmpdir / 'png_format.png', 'PNG', is_png=True)
         create_cache_test_image(tmpdir / 'cache_test_1.png', 1, is_png=True)
@@ -523,12 +592,17 @@ def main():
 <p>It should be scaled down to fit.</p>
 <img src="images/scaling_test.jpg" alt="Scaling test"/>
 """), [('scaling_test.jpg', images['scaling_test.jpg'])]),
-            ("6. Cache Test A", make_chapter("Cache Test - Page A", """
+            ("6. Wide Scaling", make_chapter("Wide Scaling Test", """
+<p>This image is 1807x736 pixels - a wide landscape format.</p>
+<p>Tests scaling with dimensions that can cause cache mismatches.</p>
+<img src="images/wide_scaling_test.jpg" alt="Wide scaling test"/>
+"""), [('wide_scaling_test.jpg', images['wide_scaling_test.jpg'])]),
+            ("7. Cache Test A", make_chapter("Cache Test - Page A", """
 <p>First cache test page. Note the load time.</p>
 <img src="images/cache_test_1.jpg" alt="Cache test 1"/>
 <p>Navigate to next page, then come back.</p>
 """), [('cache_test_1.jpg', images['cache_test_1.jpg'])]),
-            ("7. Cache Test B", make_chapter("Cache Test - Page B", """
+            ("8. Cache Test B", make_chapter("Cache Test - Page B", """
 <p>Second cache test page.</p>
 <img src="images/cache_test_2.jpg" alt="Cache test 2"/>
 <p>Navigate back to Page A - it should load faster from cache.</p>
@@ -572,12 +646,17 @@ def main():
 <p>It should be scaled down to fit.</p>
 <img src="images/scaling_test.png" alt="Scaling test"/>
 """), [('scaling_test.png', images['scaling_test.png'])]),
-            ("6. Cache Test A", make_chapter("Cache Test - Page A", """
+            ("6. Wide Scaling", make_chapter("Wide Scaling Test", """
+<p>This image is 1807x736 pixels - a wide landscape format.</p>
+<p>Tests scaling with dimensions that can cause cache mismatches.</p>
+<img src="images/wide_scaling_test.png" alt="Wide scaling test"/>
+"""), [('wide_scaling_test.png', images['wide_scaling_test.png'])]),
+            ("7. Cache Test A", make_chapter("Cache Test - Page A", """
 <p>First cache test page. Note the load time.</p>
 <img src="images/cache_test_1.png" alt="Cache test 1"/>
 <p>Navigate to next page, then come back.</p>
 """), [('cache_test_1.png', images['cache_test_1.png'])]),
-            ("7. Cache Test B", make_chapter("Cache Test - Page B", """
+            ("8. Cache Test B", make_chapter("Cache Test - Page B", """
 <p>Second cache test page.</p>
 <img src="images/cache_test_2.png" alt="Cache test 2"/>
 <p>Navigate back to Page A - it should load faster from cache.</p>

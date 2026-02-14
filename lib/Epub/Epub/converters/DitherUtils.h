@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 // 4x4 Bayer matrix for ordered dithering
-static const uint8_t bayer4x4[4][4] = {
+inline const uint8_t bayer4x4[4][4] = {
     {0, 8, 2, 10},
     {12, 4, 14, 6},
     {3, 11, 1, 9},
