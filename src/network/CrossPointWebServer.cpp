@@ -12,6 +12,7 @@
 #include <cstring>
 
 #include "CrossPointSettings.h"
+#include "FeatureManifest.h"
 #include "RecentBooksStore.h"
 #include "SettingsList.h"
 #include "SpiBusMutex.h"
@@ -119,6 +120,9 @@ void CrossPointWebServer::begin() {
   server->on("/files", HTTP_GET, [this] { handleFileList(); });
 
   server->on("/api/status", HTTP_GET, [this] { handleStatus(); });
+  server->on("/api/plugins", HTTP_GET, [this] { handlePlugins(); });
+  // Backward-compatible alias while tooling migrates terminology.
+  server->on("/api/features", HTTP_GET, [this] { handlePlugins(); });
   server->on("/api/files", HTTP_GET, [this] { handleFileListData(); });
   server->on("/download", HTTP_GET, [this] { handleDownload(); });
 
@@ -313,6 +317,8 @@ void CrossPointWebServer::handleStatus() const {
   serializeJson(doc, json);
   server->send(200, "application/json", json);
 }
+
+void CrossPointWebServer::handlePlugins() const { server->send(200, "application/json", FeatureManifest::toJson()); }
 
 void CrossPointWebServer::scanFiles(const char* path, const std::function<void(FileInfo)>& callback) const {
   FsFile root;
@@ -601,9 +607,9 @@ static bool flushUploadBuffer() {
     writeCount++;
     esp_task_wdt_reset();  // Reset watchdog after SD write
 
-    if (written != state.bufferPos) {
-      LOG_DBG("WEB", "[UPLOAD] Buffer flush failed: expected %d, wrote %d", state.bufferPos, written);
-      state.bufferPos = 0;
+    if (written != uploadBufferPos) {
+      LOG_DBG("WEB", "[UPLOAD] Buffer flush failed: expected %d, wrote %d", uploadBufferPos, written);
+      uploadBufferPos = 0;
       return false;
     }
     uploadBufferPos = 0;
@@ -664,7 +670,7 @@ void CrossPointWebServer::handleUpload() const {
       uploadPath = "/";
     }
 
-    LOG_DBG("WEB", "[UPLOAD] START: %s to path: %s", state.fileName.c_str(), state.path.c_str());
+    LOG_DBG("WEB", "[UPLOAD] START: %s to path: %s", uploadFileName.c_str(), uploadPath.c_str());
     LOG_DBG("WEB", "[UPLOAD] Free heap: %d bytes", ESP.getFreeHeap());
 
     // Create file path
@@ -682,8 +688,8 @@ void CrossPointWebServer::handleUpload() const {
 
     // Open file for writing - this can be slow due to FAT cluster allocation
     esp_task_wdt_reset();
-    if (!Storage.openFileForWrite("WEB", filePath, state.file)) {
-      state.error = "Failed to create file on SD card";
+    if (!Storage.openFileForWrite("WEB", filePath, uploadFile)) {
+      uploadError = "Failed to create file on SD card";
       LOG_DBG("WEB", "[UPLOAD] FAILED to create file: %s", filePath.c_str());
       return;
     }
@@ -724,10 +730,10 @@ void CrossPointWebServer::handleUpload() const {
       // Log progress every 100KB
       if (uploadSize - lastLoggedSize >= 102400) {
         const unsigned long elapsed = millis() - uploadStartTime;
-        const float kbps = (elapsed > 0) ? (state.size / 1024.0) / (elapsed / 1000.0) : 0;
-        LOG_DBG("WEB", "[UPLOAD] %d bytes (%.1f KB), %.1f KB/s, %d writes", state.size, state.size / 1024.0, kbps,
+        const float kbps = (elapsed > 0) ? (uploadSize / 1024.0) / (elapsed / 1000.0) : 0;
+        LOG_DBG("WEB", "[UPLOAD] %d bytes (%.1f KB), %.1f KB/s, %d writes", uploadSize, uploadSize / 1024.0, kbps,
                 writeCount);
-        lastLoggedSize = state.size;
+        lastLoggedSize = uploadSize;
       }
     }
   } else if (upload.status == UPLOAD_FILE_END) {
@@ -746,7 +752,7 @@ void CrossPointWebServer::handleUpload() const {
         const unsigned long elapsed = millis() - uploadStartTime;
         const float avgKbps = (elapsed > 0) ? (uploadSize / 1024.0) / (elapsed / 1000.0) : 0;
         const float writePercent = (elapsed > 0) ? (totalWriteTime * 100.0 / elapsed) : 0;
-        LOG_DBG("WEB", "[UPLOAD] Complete: %s (%d bytes in %lu ms, avg %.1f KB/s)", state.fileName.c_str(), state.size,
+        LOG_DBG("WEB", "[UPLOAD] Complete: %s (%d bytes in %lu ms, avg %.1f KB/s)", uploadFileName.c_str(), uploadSize,
                 elapsed, avgKbps);
         LOG_DBG("WEB", "[UPLOAD] Diagnostics: %d writes, total write time: %lu ms (%.1f%%)", writeCount, totalWriteTime,
                 writePercent);
@@ -770,7 +776,7 @@ void CrossPointWebServer::handleUpload() const {
       filePath += uploadFileName;
       Storage.remove(filePath.c_str());
     }
-    state.error = "Upload aborted";
+    uploadError = "Upload aborted";
     LOG_DBG("WEB", "Upload aborted");
   }
 }

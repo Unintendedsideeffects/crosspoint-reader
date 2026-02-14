@@ -1,6 +1,7 @@
 #include "OtaUpdater.h"
 
 #include <ArduinoJson.h>
+#include <HalStorage.h>
 #include <Logging.h>
 
 #include "CrossPointSettings.h"
@@ -222,13 +223,12 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     return JSON_PARSE_ERROR;
   }
 
-  latestVersion = release["tag_name"].as<std::string>();
+  latestVersion = doc["tag_name"].as<std::string>();
 
-  const auto assets = release["assets"].as<JsonArray>();
-  for (const auto& asset : assets) {
-    if (asset["name"] == "firmware.bin") {
-      otaUrl = asset["browser_download_url"].as<std::string>();
-      otaSize = asset["size"].as<size_t>();
+  for (int i = 0; i < doc["assets"].size(); i++) {
+    if (doc["assets"][i]["name"] == "firmware.bin") {
+      otaUrl = doc["assets"][i]["browser_download_url"].as<std::string>();
+      otaSize = doc["assets"][i]["size"].as<size_t>();
       totalSize = otaSize;
       updateAvailable = true;
       break;

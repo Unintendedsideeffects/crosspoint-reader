@@ -189,8 +189,8 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
     TimeSync::syncTimeWithNtpLowMemory();
 
     // Start mDNS for hostname resolution
-    if (MDNS.begin(AP_HOSTNAME)) {
-      LOG_DBG("WEBACT", "mDNS started: http://%s.local/", AP_HOSTNAME);
+    if (MDNS.begin(HOSTNAME)) {
+      LOG_DBG("WEBACT", "mDNS started: http://%s.local/", HOSTNAME);
     }
 
     // Start the web server
@@ -242,8 +242,8 @@ void CrossPointWebServerActivity::startAccessPoint() {
   LOG_DBG("WEBACT", "IP: %s", connectedIP.c_str());
 
   // Start mDNS for hostname resolution
-  if (MDNS.begin(AP_HOSTNAME)) {
-    LOG_DBG("WEBACT", "mDNS started: http://%s.local/", AP_HOSTNAME);
+  if (MDNS.begin(HOSTNAME)) {
+    LOG_DBG("WEBACT", "mDNS started: http://%s.local/", HOSTNAME);
   } else {
     LOG_DBG("WEBACT", "WARNING: mDNS failed to start");
   }
