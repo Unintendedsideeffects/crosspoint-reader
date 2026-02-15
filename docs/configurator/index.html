@@ -3,242 +3,253 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CrossPoint Reader - Skill Tree</title>
+    <title>CrossPoint Reader — Skill Tree</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;500;600&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
       :root {
-        --ink: #111111;
-        --ink-mid: #3d3d3d;
-        --ink-light: #5b5b5b;
-        --ink-faint: #777777;
-        --paper: #efefeb;
-        --paper-warm: #e6e6e0;
-        --paper-bright: #f9f9f4;
-        --active-fill: #1f1f1f;
-        --active-stroke: #111111;
-        --locked-fill: #ddddd7;
-        --locked-stroke: #8a8a82;
-        --locked-text: #74746e;
-        --bar-fill: linear-gradient(90deg, #111111 0%, #4b4b4b 100%);
-        --bar-track: #cacac3;
-        --border: #7a7a72;
-        --border-light: #afafa7;
-        --radius: 12px;
-        --shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
-        --constellation-glow: 0 0 0 rgba(0, 0, 0, 0);
+        --blk: #111;
+        --dk: #333;
+        --md: #666;
+        --lt: #999;
+        --pale: #bbb;
+        --bone: #d4d4d4;
+        --fog: #e8e8e8;
+        --paper: #f2f2f2;
+        --white: #fafafa;
+        --px: 2px;
+        --bevel-hi: #ddd;
+        --bevel-lo: #888;
       }
 
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
       body {
-        font-family: 'Source Sans 3', sans-serif;
-        background:
-          radial-gradient(130% 95% at 50% -8%, #ffffff 0%, #f3f3ee 52%, #ecece6 100%),
+        font-family: 'Silkscreen', 'IBM Plex Mono', monospace;
+        background: var(--paper);
+        color: var(--blk);
+        min-height: 100vh;
+        image-rendering: pixelated;
+        -webkit-font-smoothing: none;
+        -moz-osx-font-smoothing: unset;
+        background-image:
           repeating-linear-gradient(
             0deg,
-            rgba(0, 0, 0, 0.014) 0px,
-            rgba(0, 0, 0, 0.014) 1px,
-            transparent 1px,
-            transparent 3px
+            transparent,
+            transparent 7px,
+            rgba(0,0,0,0.018) 7px,
+            rgba(0,0,0,0.018) 8px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 7px,
+            rgba(0,0,0,0.018) 7px,
+            rgba(0,0,0,0.018) 8px
           );
-        color: var(--ink);
-        min-height: 100vh;
-        -webkit-font-smoothing: antialiased;
       }
 
       .page {
-        max-width: 1180px;
+        max-width: 1100px;
         margin: 0 auto;
-        padding: 40px 20px 80px;
+        padding: 32px 16px 64px;
       }
 
-      /* Header */
+      /* ── Pixel bevel mixin ── */
+      .bevel {
+        border: var(--px) solid var(--blk);
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-hi),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo);
+      }
+
+      .bevel-inset {
+        border: var(--px) solid var(--blk);
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-lo),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-hi);
+      }
+
+      /* ── Header ── */
       .header {
         text-align: center;
-        margin-bottom: 36px;
-        padding-bottom: 24px;
-        border-bottom: 1px solid var(--border-light);
+        margin-bottom: 24px;
+        padding: 20px 16px 18px;
+        background: var(--white);
       }
 
       .header-eyebrow {
-        font-family: 'IBM Plex Mono', monospace;
-        letter-spacing: 0.34em;
+        font-size: 8px;
+        letter-spacing: 0.25em;
         text-transform: uppercase;
-        font-size: 0.64rem;
-        color: var(--ink-light);
+        color: var(--md);
         margin-bottom: 8px;
       }
 
       .header h1 {
-        font-family: 'Cinzel', serif;
+        font-size: clamp(16px, 3.2vw, 26px);
         font-weight: 700;
-        font-size: clamp(2.1rem, 4.2vw, 3.2rem);
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: var(--ink);
-        text-shadow: none;
+        color: var(--blk);
+        line-height: 1.6;
       }
 
       .header-sub {
-        color: var(--ink-mid);
-        font-size: 0.95rem;
-        margin-top: 10px;
-        font-weight: 400;
+        font-size: 8px;
+        color: var(--dk);
+        margin-top: 8px;
+        line-height: 1.6;
       }
 
-      /* Flash meter */
+      /* ── Flash meter ── */
       .flash-meter {
         display: flex;
         align-items: center;
-        gap: 16px;
-        padding: 16px 18px;
-        background: var(--paper-bright);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        margin-bottom: 20px;
+        gap: 12px;
+        padding: 12px 14px;
+        background: var(--white);
+        margin-bottom: 16px;
         flex-wrap: wrap;
-        box-shadow: var(--shadow);
       }
 
       .flash-label {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.65rem;
+        font-size: 8px;
         letter-spacing: 0.2em;
         text-transform: uppercase;
-        color: var(--ink-light);
+        color: var(--md);
       }
 
       .flash-value {
-        font-family: 'Cinzel', serif;
-        font-size: 1.55rem;
+        font-size: 16px;
         font-weight: 700;
-        color: var(--ink);
-        min-width: 70px;
-        letter-spacing: 0.04em;
+        color: var(--blk);
+        min-width: 72px;
       }
 
       .flash-track {
         flex: 1;
-        min-width: 180px;
-        height: 8px;
-        background: var(--bar-track);
-        border-radius: 99px;
+        min-width: 140px;
+        height: 16px;
+        background: var(--fog);
         overflow: hidden;
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+        /* Pixelated block look */
+        background-image: repeating-linear-gradient(
+          90deg,
+          var(--fog) 0px,
+          var(--fog) 6px,
+          var(--bone) 6px,
+          var(--bone) 8px
+        );
       }
 
       .flash-fill {
         height: 100%;
-        background: var(--bar-fill);
-        border-radius: 99px;
-        transition: width 0.35s ease;
+        background: repeating-linear-gradient(
+          90deg,
+          var(--blk) 0px,
+          var(--blk) 6px,
+          var(--dk) 6px,
+          var(--dk) 8px
+        );
+        transition: width 0.2s steps(20);
       }
 
       .flash-fill.over {
         background: repeating-linear-gradient(
-          45deg,
-          #222 0px,
-          #222 4px,
-          #555 4px,
-          #555 8px
+          90deg,
+          var(--blk) 0px,
+          var(--blk) 4px,
+          var(--md) 4px,
+          var(--md) 8px
         );
       }
 
       .flash-context {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.72rem;
-        color: var(--ink-light);
+        font-size: 8px;
+        color: var(--md);
       }
 
-      /* Loadout / profiles */
+      /* ── Loadout ── */
       .loadout-bar {
         display: flex;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 6px;
+        gap: 6px;
+        margin-bottom: 4px;
         flex-wrap: wrap;
       }
 
       .loadout-label {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.65rem;
+        font-size: 8px;
         letter-spacing: 0.2em;
         text-transform: uppercase;
-        color: var(--ink-mid);
+        color: var(--dk);
         margin-right: 4px;
       }
 
       .preset-btn {
-        background: var(--paper-bright);
-        border: 1px solid var(--border);
-        color: var(--ink);
-        padding: 6px 15px;
-        border-radius: 6px;
-        font-family: 'Cinzel', serif;
-        font-size: 0.82rem;
-        font-weight: 600;
-        letter-spacing: 0.08em;
+        background: var(--white);
+        border: var(--px) solid var(--blk);
+        color: var(--blk);
+        padding: 6px 14px;
+        font-family: 'Silkscreen', monospace;
+        font-size: 10px;
+        font-weight: 700;
         text-transform: uppercase;
         cursor: pointer;
-        transition: all 0.18s ease;
+        transition: none;
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-hi),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo);
       }
 
       .preset-btn:hover {
-        border-color: var(--active-stroke);
-        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.16);
+        background: var(--fog);
+      }
+
+      .preset-btn:active {
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-lo),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-hi);
       }
 
       .preset-btn.active {
-        background: linear-gradient(180deg, #2b2b2b 0%, #151515 100%);
-        color: #f3f3ef;
-        border-color: #101010;
+        background: var(--blk);
+        color: var(--white);
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--dk),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 #000;
       }
 
       .profile-status {
-        font-size: 0.78rem;
-        color: var(--ink-light);
-        margin-bottom: 28px;
+        font-size: 8px;
+        color: var(--md);
+        margin-bottom: 20px;
+        padding-left: 2px;
       }
 
       .profile-status strong {
-        color: var(--ink);
-        font-weight: 600;
+        color: var(--blk);
+        font-weight: 700;
       }
 
-      /* Skill Graph */
+      /* ── Skill Tree ── */
       .skill-tree {
-        margin-bottom: 36px;
-        padding: 30px 20px 20px;
-        background:
-          linear-gradient(180deg, #f8f8f3 0%, #ecece5 100%);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        box-shadow: var(--shadow);
+        margin-bottom: 24px;
+        padding: 20px 16px 16px;
+        background: var(--white);
         position: relative;
         overflow: hidden;
       }
 
+      /* Dither overlay */
       .skill-tree::before {
         content: "";
         position: absolute;
         inset: 0;
         pointer-events: none;
-        opacity: 0.24;
-        background-image:
-          radial-gradient(circle at 14% 22%, rgba(0, 0, 0, 0.16) 0, rgba(0, 0, 0, 0.16) 1px, transparent 2px),
-          radial-gradient(circle at 69% 17%, rgba(0, 0, 0, 0.12) 0, rgba(0, 0, 0, 0.12) 1px, transparent 2px),
-          radial-gradient(circle at 41% 64%, rgba(0, 0, 0, 0.11) 0, rgba(0, 0, 0, 0.11) 1px, transparent 2px),
-          radial-gradient(circle at 86% 53%, rgba(0, 0, 0, 0.12) 0, rgba(0, 0, 0, 0.12) 1px, transparent 2px);
-      }
-
-      .skill-tree::after {
-        content: "";
-        position: absolute;
-        inset: 6px;
-        border: 1px solid rgba(0, 0, 0, 0.12);
-        border-radius: 12px;
-        pointer-events: none;
+        opacity: 0.04;
+        background: repeating-conic-gradient(var(--blk) 0% 25%, transparent 0% 50%) 0 0 / 4px 4px;
       }
 
       .graph-links {
@@ -251,21 +262,20 @@
       }
 
       .graph-edge {
-        stroke: rgba(0, 0, 0, 0.24);
-        stroke-width: 1.4;
-        stroke-linecap: round;
-        transition: stroke 0.2s ease;
+        stroke: var(--bone);
+        stroke-width: 2;
+        shape-rendering: crispEdges;
+        transition: stroke 0.15s steps(4);
       }
 
       .graph-edge.active {
-        stroke: #101010;
-        stroke-width: 2;
-        filter: none;
+        stroke: var(--blk);
+        stroke-width: 3;
       }
 
       .graph-edge.locked {
-        stroke: var(--locked-stroke);
-        stroke-dasharray: 3 4;
+        stroke: var(--pale);
+        stroke-dasharray: 4 4;
       }
 
       .graph-layout {
@@ -273,14 +283,14 @@
         z-index: 1;
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 18px 14px;
+        gap: 14px 10px;
         align-items: start;
       }
 
       .graph-root {
         grid-column: 1 / -1;
         justify-self: center;
-        margin-bottom: 2px;
+        margin-bottom: 6px;
       }
 
       .graph-hub {
@@ -291,26 +301,27 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
       }
 
       .lane-header {
-        font-family: 'Cinzel', serif;
-        font-size: 0.68rem;
-        font-weight: 600;
-        letter-spacing: 0.24em;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
         text-transform: uppercase;
-        color: #2d2d2d;
-        margin-bottom: 4px;
-        text-shadow: none;
+        color: var(--dk);
+        margin-bottom: 2px;
+        padding: 3px 8px;
+        background: var(--fog);
+        border: 1px solid var(--bone);
       }
 
-      /* Node */
+      /* ── Nodes ── */
       .skill-node,
       .anchor-node {
         position: relative;
         width: 100%;
-        max-width: 150px;
+        max-width: 130px;
         cursor: pointer;
         -webkit-user-select: none;
         user-select: none;
@@ -332,175 +343,179 @@
       }
 
       .node-ring {
-        width: 58px;
-        height: 58px;
-        border-radius: 50%;
-        border: 1px solid rgba(0, 0, 0, 0.32);
-        background: radial-gradient(circle at 35% 25%, #ffffff 0%, #ecece7 58%, #dbdbd4 100%);
+        width: 48px;
+        height: 48px;
+        border: var(--px) solid var(--dk);
+        background: var(--white);
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.24s ease;
+        transition: background 0.1s steps(4), border-color 0.1s steps(4);
         position: relative;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
         box-shadow:
-          inset 0 0 0 1px rgba(255, 255, 255, 0.42),
-          0 3px 7px rgba(0, 0, 0, 0.12);
-      }
-
-      .node-ring::after {
-        content: "";
-        position: absolute;
-        inset: 6px;
-        border-radius: 50%;
-        border: 1px solid rgba(0, 0, 0, 0.13);
+          inset var(--px) var(--px) 0 var(--bevel-hi),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo);
       }
 
       .graph-root .node-ring {
-        width: 72px;
-        height: 72px;
-        border-color: #111111;
-        background: radial-gradient(circle at 36% 24%, #ffffff 0%, #ebebe6 58%, #d7d7d0 100%);
-      }
-
-      .graph-root .node-size {
-        color: #202020;
+        width: 56px;
+        height: 56px;
+        border-color: var(--blk);
+        border-width: 3px;
+        background: var(--fog);
       }
 
       .graph-hub .node-ring {
-        width: 52px;
-        height: 52px;
+        width: 42px;
+        height: 42px;
       }
 
       .node-icon {
-        font-size: 1.05rem;
+        font-size: 16px;
         line-height: 1;
-        color: #2a2a2a;
-        text-shadow: none;
-        transition: all 0.25s ease;
+        color: var(--dk);
+        filter: grayscale(1) contrast(1.8);
+        transition: filter 0.1s steps(4);
         z-index: 1;
       }
 
+      .graph-root .node-icon {
+        font-size: 18px;
+      }
+
+      /* Active */
       .skill-node.active .node-ring,
       .anchor-node.active .node-ring {
-        background: radial-gradient(circle at 32% 22%, #ffffff 0%, #e8e8e2 54%, #d2d2cb 100%);
-        border-color: var(--active-stroke);
+        background: var(--blk);
+        border-color: var(--blk);
         box-shadow:
-          inset 0 0 0 2px rgba(0, 0, 0, 0.09),
-          0 0 0 1px rgba(0, 0, 0, 0.12);
+          inset var(--px) var(--px) 0 var(--dk),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 #000;
       }
 
       .skill-node.active .node-icon,
       .anchor-node.active .node-icon {
-        color: #101010;
+        color: var(--white);
+        filter: grayscale(1) contrast(1.2) invert(1);
       }
 
+      /* Locked */
       .skill-node.locked .node-ring {
-        background: radial-gradient(circle at 35% 25%, #e5e5de 0%, #d7d7cf 100%);
-        border-color: var(--locked-stroke);
+        background: var(--fog);
+        border-color: var(--pale);
         border-style: dashed;
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+        box-shadow: none;
+        /* Dither fill for locked state */
+        background-image: repeating-conic-gradient(var(--bone) 0% 25%, var(--fog) 0% 50%);
+        background-size: 4px 4px;
       }
 
       .skill-node.locked .node-icon {
-        color: var(--locked-text);
-        font-size: 0.82rem;
-        text-shadow: none;
+        color: var(--lt);
+        filter: grayscale(1) contrast(0.8);
+        font-size: 12px;
       }
 
       .node-label {
         text-align: center;
-        font-size: 0.73rem;
-        font-weight: 600;
-        letter-spacing: 0.04em;
+        font-size: 8px;
+        font-weight: 700;
         text-transform: uppercase;
-        color: #424242;
-        line-height: 1.2;
-        transition: color 0.2s ease;
+        color: var(--dk);
+        line-height: 1.4;
+        transition: color 0.1s steps(4);
+        max-width: 120px;
       }
 
       .skill-node.active .node-label,
       .anchor-node.active .node-label {
-        color: #101010;
-        text-shadow: none;
+        color: var(--blk);
       }
 
       .skill-node.locked .node-label {
-        color: var(--locked-text);
+        color: var(--lt);
       }
 
       .node-size {
         text-align: center;
-        font-size: 0.62rem;
+        font-size: 8px;
         font-family: 'IBM Plex Mono', monospace;
-        color: #666660;
+        color: var(--md);
         margin-top: 1px;
       }
 
       .skill-node.active .node-size,
       .anchor-node.active .node-size {
-        color: #202020;
+        color: var(--dk);
+      }
+
+      .graph-root .node-size {
+        color: var(--dk);
       }
 
       .skill-node.dependent-node {
-        transform: translateX(14px);
+        transform: translateX(12px);
       }
 
+      /* Note nodes — smaller, subordinate */
       .graph-note {
-        max-width: 190px;
+        max-width: 140px;
         cursor: default;
       }
 
       .graph-note .node-ring {
-        width: 38px;
-        height: 38px;
-        margin-bottom: 4px;
+        width: 28px;
+        height: 28px;
+        margin-bottom: 2px;
         border-style: dashed;
-        background: radial-gradient(circle at 34% 24%, #ffffff 0%, #efefe9 55%, #dfdfd9 100%);
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
-      }
-
-      .graph-note .node-ring::after {
-        inset: 4px;
+        border-color: var(--pale);
+        background: var(--paper);
+        box-shadow: none;
       }
 
       .graph-note .node-icon {
-        font-size: 0.72rem;
+        font-size: 10px;
+        filter: grayscale(1);
       }
 
       .graph-note .node-label {
+        font-size: 7px;
+        font-weight: 400;
         text-transform: none;
-        letter-spacing: 0.02em;
-        font-size: 0.66rem;
-        color: #555555;
+        color: var(--lt);
+        letter-spacing: 0;
+        line-height: 1.3;
       }
 
       .graph-note.active .node-ring {
-        border-color: #111111;
-        background: radial-gradient(circle at 34% 24%, #ffffff 0%, #e9e9e3 55%, #d5d5ce 100%);
+        border-color: var(--dk);
+        background: var(--fog);
       }
 
       .graph-note.active .node-label {
-        color: #151515;
+        color: var(--dk);
       }
 
-      /* Tooltip */
+      /* ── Tooltip ── */
       .skill-node .tooltip {
         position: absolute;
-        bottom: calc(100% + 6px);
+        bottom: calc(100% + 8px);
         left: 50%;
         transform: translateX(-50%);
-        background: linear-gradient(180deg, #fcfcf7 0%, #efefe8 100%);
-        border: 1px solid #8c8c84;
-        border-radius: 8px;
-        padding: 11px 12px;
-        min-width: 190px;
-        max-width: 240px;
+        background: var(--white);
+        border: var(--px) solid var(--blk);
+        padding: 8px 10px;
+        min-width: 170px;
+        max-width: 220px;
         pointer-events: none;
         opacity: 0;
-        transition: opacity 0.12s ease;
+        transition: opacity 0.05s steps(2);
         z-index: 100;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-hi),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo),
+          4px 4px 0 rgba(0,0,0,0.15);
       }
 
       .skill-node:hover .tooltip {
@@ -508,31 +523,30 @@
       }
 
       .tooltip-title {
-        font-family: 'Cinzel', serif;
+        font-size: 9px;
         font-weight: 700;
-        font-size: 0.8rem;
-        letter-spacing: 0.07em;
         text-transform: uppercase;
-        color: #111111;
-        margin-bottom: 3px;
+        color: var(--blk);
+        margin-bottom: 4px;
       }
 
       .tooltip-desc {
-        font-size: 0.75rem;
-        color: #353535;
-        line-height: 1.4;
+        font-size: 8px;
+        color: var(--dk);
+        line-height: 1.5;
         margin-bottom: 4px;
+        font-weight: 400;
       }
 
       .tooltip-size {
         font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.68rem;
-        color: #282828;
+        font-size: 8px;
+        color: var(--md);
       }
 
       .tooltip-req {
-        font-size: 0.68rem;
-        color: #555555;
+        font-size: 8px;
+        color: var(--lt);
         margin-top: 3px;
         font-style: italic;
       }
@@ -543,291 +557,274 @@
         top: 100%;
         left: 50%;
         transform: translateX(-50%);
-        border: 4px solid transparent;
-        border-top-color: #8c8c84;
+        border: 5px solid transparent;
+        border-top-color: var(--blk);
       }
 
-      /* Panels */
+      /* ── Panels ── */
       .panel {
-        background: var(--paper-bright);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 18px 19px;
-        margin-bottom: 14px;
-        box-shadow: var(--shadow);
+        background: var(--white);
+        border: var(--px) solid var(--blk);
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-hi),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo);
       }
 
       .panel-heading {
-        font-family: 'Cinzel', serif;
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.2em;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
         text-transform: uppercase;
-        color: #252525;
-        margin-bottom: 12px;
+        color: var(--blk);
+        margin-bottom: 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--bone);
       }
 
       .outputs-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 12px;
+        gap: 10px;
       }
 
-      .output { margin-bottom: 0; }
-
       .output-label {
-        font-size: 0.72rem;
-        font-weight: 500;
-        color: #4a4a4a;
+        font-size: 8px;
+        font-weight: 700;
+        color: var(--dk);
         margin-bottom: 4px;
+        text-transform: uppercase;
       }
 
       .output textarea {
         width: 100%;
-        min-height: 72px;
-        background: #f3f3ed;
-        border: 1px solid var(--border-light);
-        border-radius: 6px;
-        padding: 8px 10px;
+        min-height: 64px;
+        background: var(--fog);
+        border: var(--px) solid var(--dk);
+        padding: 6px 8px;
         font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.72rem;
-        color: #1c1c1c;
+        font-size: 10px;
+        color: var(--blk);
         resize: vertical;
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-lo),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-hi);
       }
 
       .output textarea:focus {
         outline: none;
-        border-color: #181818;
-        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+        border-color: var(--blk);
       }
 
       .actions {
         display: flex;
         gap: 6px;
         flex-wrap: wrap;
-        margin-top: 12px;
+        margin-top: 10px;
       }
 
       .btn {
-        border: none;
-        border-radius: 6px;
-        padding: 7px 13px;
-        font-family: 'Source Sans 3', sans-serif;
-        font-size: 0.78rem;
-        font-weight: 600;
+        border: var(--px) solid var(--blk);
+        padding: 6px 12px;
+        font-family: 'Silkscreen', monospace;
+        font-size: 8px;
+        font-weight: 700;
         cursor: pointer;
-        transition: all 0.18s ease;
+        text-transform: uppercase;
         text-decoration: none;
         text-align: center;
+        transition: none;
       }
 
       .btn-outline {
-        background: #f1f1eb;
-        color: #1e1e1e;
-        border: 1px solid var(--border);
+        background: var(--white);
+        color: var(--blk);
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-hi),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo);
       }
 
       .btn-outline:hover {
-        border-color: #111111;
-        color: #111111;
-        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.16);
+        background: var(--fog);
+      }
+
+      .btn-outline:active {
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-lo),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-hi);
       }
 
       .btn-outline.copied {
-        background: #2b2b2b;
-        color: #f5f5f1;
-        border-color: #111111;
+        background: var(--blk);
+        color: var(--white);
       }
 
       .btn-solid {
-        background: linear-gradient(180deg, #2d2d2d 0%, #151515 100%);
-        color: #f5f5f1;
-        border: 1px solid #111111;
+        background: var(--blk);
+        color: var(--white);
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--dk),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 #000;
       }
 
       .btn-solid:hover {
-        filter: brightness(1.04);
+        background: var(--dk);
       }
 
       .info-bar {
         margin-top: 10px;
-        padding: 8px 12px;
-        border-left: 2px solid #1f1f1f;
-        font-size: 0.78rem;
-        color: #434343;
-        font-style: italic;
-        background: rgba(0, 0, 0, 0.04);
-        border-radius: 0 6px 6px 0;
+        padding: 6px 10px;
+        border-left: 3px solid var(--blk);
+        font-size: 8px;
+        color: var(--dk);
+        background: var(--fog);
+        line-height: 1.5;
       }
 
-      /* Companion */
+      /* ── Companion ── */
       .companion-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 14px;
+        gap: 12px;
         flex-wrap: wrap;
       }
 
       .companion-title {
-        font-weight: 600;
-        font-size: 0.88rem;
+        font-size: 10px;
+        font-weight: 700;
       }
 
       .companion-desc {
-        font-size: 0.78rem;
-        color: #4b4b4b;
+        font-size: 8px;
+        color: var(--dk);
         margin-top: 3px;
+        line-height: 1.5;
       }
 
       .companion-desc code {
-        background: #e8e8e2;
-        padding: 1px 4px;
-        border-radius: 2px;
+        background: var(--fog);
+        border: 1px solid var(--bone);
+        padding: 0 3px;
         font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.7rem;
+        font-size: 8px;
       }
 
-      /* Preview */
+      /* ── Preview ── */
       .preview-top {
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
         gap: 12px;
         flex-wrap: wrap;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
       }
 
       .preview-sub {
-        font-size: 0.78rem;
-        color: #4d4d4d;
+        font-size: 8px;
+        color: var(--md);
         margin-top: 3px;
       }
 
       .preview-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 8px;
       }
 
       .preview-card {
-        border: 1px solid var(--border-light);
-        border-radius: 8px;
+        border: var(--px) solid var(--dk);
         overflow: hidden;
-        background: #f6f6f0;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
+        background: var(--fog);
       }
 
       .preview-card img {
         width: 100%;
         height: auto;
         display: block;
+        filter: grayscale(1);
+        image-rendering: pixelated;
       }
 
       .preview-card figcaption {
-        padding: 6px 8px;
-        font-size: 0.72rem;
-        color: #3e3e3e;
+        padding: 4px 6px;
+        font-size: 7px;
+        color: var(--dk);
+        border-top: 1px solid var(--bone);
       }
 
       .preview-meta {
-        margin-top: 8px;
-        font-size: 0.7rem;
-        color: #666666;
+        margin-top: 6px;
+        font-size: 7px;
+        color: var(--lt);
       }
 
       .footer {
         text-align: center;
-        margin-top: 24px;
-        font-size: 0.75rem;
-        color: #5f5f5f;
+        margin-top: 20px;
+        font-size: 7px;
+        color: var(--lt);
+        letter-spacing: 0.05em;
       }
 
-      /* Responsive */
+      .note-bar {
+        padding: 6px 10px;
+        border-left: 3px solid var(--dk);
+        font-size: 8px;
+        color: var(--dk);
+        background: var(--fog);
+      }
+
+      /* ── Hover ── */
+      .skill-node:not(.locked):hover .node-ring {
+        border-color: var(--blk);
+        background: var(--fog);
+      }
+
+      .skill-node.active:hover .node-ring {
+        background: var(--dk);
+      }
+
+      /* ── Responsive ── */
       @media (max-width: 800px) {
         .graph-layout {
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px 10px;
+          gap: 12px 8px;
         }
-        .graph-root {
-          margin-bottom: 8px;
-        }
-        .graph-hub {
-          margin-bottom: 4px;
-        }
-        .skill-node.dependent-node {
-          transform: translateX(10px);
-        }
-        .outputs-grid {
-          grid-template-columns: 1fr;
-        }
+        .graph-root { margin-bottom: 6px; }
+        .skill-node.dependent-node { transform: translateX(8px); }
+        .outputs-grid { grid-template-columns: 1fr; }
       }
 
       @media (max-width: 480px) {
         .graph-layout {
           grid-template-columns: 1fr;
-          gap: 14px;
-        }
-        .graph-root {
-          justify-self: center;
-        }
-        .graph-hub {
-          justify-self: center;
-        }
-        .graph-lane {
           gap: 10px;
         }
-        .skill-node.dependent-node {
-          transform: translateX(0);
-        }
-        .flash-meter {
-          flex-direction: column;
-          align-items: stretch;
-        }
-      }
-
-      /* Hover ring effect */
-      .skill-node:not(.locked):hover .node-ring {
-        border-color: #111111;
-        box-shadow:
-          inset 0 0 0 1px rgba(0, 0, 0, 0.12),
-          0 2px 6px rgba(0, 0, 0, 0.16);
-      }
-
-      .skill-node.active:hover .node-ring {
-        box-shadow:
-          inset 0 0 0 2px rgba(0, 0, 0, 0.16),
-          0 3px 7px rgba(0, 0, 0, 0.2);
-      }
-
-      /* Note style */
-      .note-bar {
-        padding: 8px 12px;
-        border-left: 2px solid #1f1f1f;
-        font-size: 0.78rem;
-        color: #434343;
-        margin-top: 10px;
-        font-style: italic;
-        background: rgba(0, 0, 0, 0.04);
-        border-radius: 0 6px 6px 0;
+        .graph-root { justify-self: center; }
+        .graph-hub { justify-self: center; }
+        .graph-lane { gap: 8px; }
+        .skill-node.dependent-node { transform: translateX(0); }
+        .flash-meter { flex-direction: column; align-items: stretch; }
       }
     </style>
   </head>
   <body>
     <div class="page">
-      <div class="header">
+      <div class="header bevel">
         <div class="header-eyebrow">CrossPoint Reader</div>
-        <h1>CrossPoint Capability Tree</h1>
+        <h1>Capability Tree</h1>
         <div class="header-sub">
-          Structured from the product canvas: compile-time flags remain exact, and conceptual branches stay visible.
+          Compile-time feature flags. Toggle nodes to configure your firmware build.
         </div>
       </div>
 
       <!-- Flash meter -->
-      <div class="flash-meter">
+      <div class="flash-meter bevel">
         <span class="flash-label">Flash</span>
         <span class="flash-value" id="size-value">6.0 MB</span>
-        <div class="flash-track">
+        <div class="flash-track bevel-inset">
           <div class="flash-fill" id="size-bar" style="width: 0%"></div>
         </div>
         <span class="flash-context" id="size-context">94% of 6.4 MB</span>
@@ -843,58 +840,37 @@
       <div class="profile-status" id="profile-status"></div>
 
       <!-- Skill Tree -->
-      <div class="skill-tree" id="skill-tree">
+      <div class="skill-tree bevel" id="skill-tree">
         <svg class="graph-links" id="graph-links" aria-hidden="true"></svg>
         <div class="graph-layout">
+          <!-- Root -->
           <div class="graph-root anchor-node active" data-node-id="root">
-            <div class="node-ring"><span class="node-icon">&#x1F5A5;</span></div>
+            <div class="node-ring"><span class="node-icon">&#x25C6;</span></div>
             <div class="node-label">CrossPoint Core</div>
-            <div class="node-size">1.66 MB core</div>
+            <div class="node-size">1.66 MB base</div>
           </div>
 
+          <!-- Hub row -->
           <div class="graph-hub anchor-node" data-node-id="reading_hub">
-            <div class="node-ring"><span class="node-icon">&#x1F4DA;</span></div>
-            <div class="node-label">Reading Stack</div>
+            <div class="node-ring"><span class="node-icon">&#x25A0;</span></div>
+            <div class="node-label">Reading</div>
           </div>
           <div class="graph-hub anchor-node" data-node-id="interface_hub">
-            <div class="node-ring"><span class="node-icon">&#x1F58C;</span></div>
-            <div class="node-label">UI Stack</div>
+            <div class="node-ring"><span class="node-icon">&#x25B2;</span></div>
+            <div class="node-label">Interface</div>
           </div>
           <div class="graph-hub anchor-node" data-node-id="network_hub">
-            <div class="node-ring"><span class="node-icon">&#x1F6DC;</span></div>
-            <div class="node-label">WiFi Support</div>
+            <div class="node-ring"><span class="node-icon">&#x25CF;</span></div>
+            <div class="node-label">Network</div>
           </div>
           <div class="graph-hub anchor-node" data-node-id="extras_hub">
-            <div class="node-ring"><span class="node-icon">&#x2726;</span></div>
+            <div class="node-ring"><span class="node-icon">&#x2605;</span></div>
             <div class="node-label">Roadmap</div>
           </div>
 
+          <!-- ── Reading lane ── -->
           <div class="graph-lane" data-lane="reading">
-            <div class="lane-header">Reading &amp; Notes</div>
-
-            <label class="skill-node" data-feature="markdown" data-node-id="markdown">
-              <input type="checkbox" id="markdown" data-feature="markdown" />
-              <div class="tooltip">
-                <div class="tooltip-title">Markdown Support</div>
-                <div class="tooltip-desc">Markdown and Obsidian vault reading support</div>
-                <div class="tooltip-size"></div>
-              </div>
-              <div class="node-ring"><span class="node-icon">&#x270D;</span></div>
-              <div class="node-label">Markdown Support</div>
-              <div class="node-size"></div>
-            </label>
-
-            <label class="skill-node" data-feature="xtc_support" data-node-id="xtc_support">
-              <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
-              <div class="tooltip">
-                <div class="tooltip-title">XTC Support</div>
-                <div class="tooltip-desc">XTC format reader with chapter navigation</div>
-                <div class="tooltip-size"></div>
-              </div>
-              <div class="node-ring"><span class="node-icon">&#x1F4DC;</span></div>
-              <div class="node-label">XTC Support</div>
-              <div class="node-size"></div>
-            </label>
+            <div class="lane-header">Reading</div>
 
             <label class="skill-node" data-feature="epub_support" data-node-id="epub_support">
               <input type="checkbox" id="epub_support" data-feature="epub_support" />
@@ -903,8 +879,8 @@
                 <div class="tooltip-desc">EPUB e-book reader with CSS, images, and chapter navigation</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x1F4D6;</span></div>
-              <div class="node-label">EPUB Support</div>
+              <div class="node-ring"><span class="node-icon">&#x25A3;</span></div>
+              <div class="node-label">EPUB</div>
               <div class="node-size"></div>
             </label>
 
@@ -916,8 +892,32 @@
                 <div class="tooltip-size"></div>
                 <div class="tooltip-req">Requires EPUB Support</div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x2E17;</span></div>
-              <div class="node-label">Hyphenation</div>
+              <div class="node-ring"><span class="node-icon">&#x2500;</span></div>
+              <div class="node-label">Hyphen</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="markdown" data-node-id="markdown">
+              <input type="checkbox" id="markdown" data-feature="markdown" />
+              <div class="tooltip">
+                <div class="tooltip-title">Markdown</div>
+                <div class="tooltip-desc">Markdown and Obsidian vault reading support</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x00B6;</span></div>
+              <div class="node-label">Markdown</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="xtc_support" data-node-id="xtc_support">
+              <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
+              <div class="tooltip">
+                <div class="tooltip-title">XTC Support</div>
+                <div class="tooltip-desc">XTC format reader with chapter navigation</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x25C7;</span></div>
+              <div class="node-label">XTC</div>
               <div class="node-size"></div>
             </label>
 
@@ -928,12 +928,13 @@
                 <div class="tooltip-desc">Daily markdown notes and task tracking</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x1F4C5;</span></div>
+              <div class="node-ring"><span class="node-icon">&#x2713;</span></div>
               <div class="node-label">Agenda</div>
               <div class="node-size"></div>
             </label>
           </div>
 
+          <!-- ── Interface lane ── -->
           <div class="graph-lane" data-lane="interface">
             <div class="lane-header">UI / Sleep</div>
 
@@ -944,25 +945,25 @@
                 <div class="tooltip-desc">12/16/18pt fonts and OpenDyslexic support</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x1D5D4;</span></div>
-              <div class="node-label">Custom Fonts</div>
+              <div class="node-ring"><span class="node-icon">A</span></div>
+              <div class="node-label">Fonts</div>
               <div class="node-size"></div>
             </label>
 
             <div class="graph-note anchor-node" data-node-id="specific_fonts_note">
-              <div class="node-ring"><span class="node-icon">&#x270E;</span></div>
-              <div class="node-label">Specific font support (smaller and targeted)</div>
+              <div class="node-ring"><span class="node-icon">&#x25AA;</span></div>
+              <div class="node-label">Targeted fonts</div>
             </div>
 
             <label class="skill-node" data-feature="home_media_picker" data-node-id="home_media_picker">
               <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
               <div class="tooltip">
-                <div class="tooltip-title">Home Screen Customization</div>
+                <div class="tooltip-title">Home Screen</div>
                 <div class="tooltip-desc">Streamlined home UI with horizontal book shelf + vertical menu</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x1F3E0;</span></div>
-              <div class="node-label">Home Screen Customization</div>
+              <div class="node-ring"><span class="node-icon">&#x2302;</span></div>
+              <div class="node-label">Home UI</div>
               <div class="node-size"></div>
             </label>
 
@@ -973,7 +974,7 @@
                 <div class="tooltip-desc">Alternative UI theme with refined spacing and layout</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x2726;</span></div>
+              <div class="node-ring"><span class="node-icon">&#x2606;</span></div>
               <div class="node-label">Lyra</div>
               <div class="node-size"></div>
             </label>
@@ -985,12 +986,12 @@
 
             <div class="graph-note anchor-node" data-node-id="future_themes_note">
               <div class="node-ring"><span class="node-icon">&#x22EF;</span></div>
-              <div class="node-label">{future themes}</div>
+              <div class="node-label">{themes}</div>
             </div>
 
             <div class="graph-note anchor-node" data-node-id="dark_theme_note">
               <div class="node-ring"><span class="node-icon">&#x25D0;</span></div>
-              <div class="node-label">Dark theme</div>
+              <div class="node-label">Dark mode</div>
             </div>
 
             <label class="skill-node" data-feature="image_sleep" data-node-id="image_sleep">
@@ -1000,8 +1001,8 @@
                 <div class="tooltip-desc">PNG and JPEG sleep screen support (BMP always included)</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x263D;</span></div>
-              <div class="node-label">Sleep Screen</div>
+              <div class="node-ring"><span class="node-icon">&#x263E;</span></div>
+              <div class="node-label">Sleep Art</div>
               <div class="node-size"></div>
             </label>
 
@@ -1013,34 +1014,35 @@
                 <div class="tooltip-size"></div>
               </div>
               <div class="node-ring"><span class="node-icon">&#x26A1;</span></div>
-              <div class="node-label">Pokedex Sleep</div>
+              <div class="node-label">Pokedex</div>
               <div class="node-size"></div>
             </label>
           </div>
 
+          <!-- ── Network lane ── -->
           <div class="graph-lane" data-lane="network">
-            <div class="lane-header">Connectivity</div>
+            <div class="lane-header">Network</div>
 
             <label class="skill-node" data-feature="background_server" data-node-id="background_server">
               <input type="checkbox" id="background_server" data-feature="background_server" />
               <div class="tooltip">
-                <div class="tooltip-title">Background Web Server</div>
+                <div class="tooltip-title">Web Server</div>
                 <div class="tooltip-desc">Background web server for file management</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x1F310;</span></div>
-              <div class="node-label">Webserver</div>
+              <div class="node-ring"><span class="node-icon">&#x25A1;</span></div>
+              <div class="node-label">Server</div>
               <div class="node-size"></div>
             </label>
 
             <div class="graph-note anchor-node" data-node-id="webserver_always_on_note">
               <div class="node-ring"><span class="node-icon">&#x221E;</span></div>
-              <div class="node-label">Webserver always on</div>
+              <div class="node-label">Always on</div>
             </div>
 
             <div class="graph-note anchor-node" data-node-id="webserver_on_charge_note">
               <div class="node-ring"><span class="node-icon">&#x26A1;</span></div>
-              <div class="node-label">Webserver on charge</div>
+              <div class="node-label">On charge</div>
             </div>
 
             <label class="skill-node" data-feature="ota_updates" data-node-id="ota_updates">
@@ -1050,7 +1052,7 @@
                 <div class="tooltip-desc">Over-the-air firmware updates via WiFi</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x2B06;</span></div>
+              <div class="node-ring"><span class="node-icon">&#x25B2;</span></div>
               <div class="node-label">OTA</div>
               <div class="node-size"></div>
             </label>
@@ -1058,11 +1060,11 @@
             <label class="skill-node" data-feature="integrations" data-node-id="integrations">
               <input type="checkbox" id="integrations" data-feature="integrations" />
               <div class="tooltip">
-                <div class="tooltip-title">Integrations Base</div>
+                <div class="tooltip-title">Integrations</div>
                 <div class="tooltip-desc">Shared runtime hooks for remote sync integrations</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x1F517;</span></div>
+              <div class="node-ring"><span class="node-icon">&#x253C;</span></div>
               <div class="node-label">Sync Base</div>
               <div class="node-size"></div>
             </label>
@@ -1075,8 +1077,8 @@
                 <div class="tooltip-size"></div>
                 <div class="tooltip-req">Requires Integrations</div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x1F4F1;</span></div>
-              <div class="node-label">KOReader Sync</div>
+              <div class="node-ring"><span class="node-icon">&#x25B6;</span></div>
+              <div class="node-label">KOReader</div>
               <div class="node-size"></div>
             </label>
 
@@ -1088,23 +1090,24 @@
                 <div class="tooltip-size"></div>
                 <div class="tooltip-req">Requires Integrations</div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x1F4DA;</span></div>
-              <div class="node-label">Calibre Sync</div>
+              <div class="node-ring"><span class="node-icon">&#x25C0;</span></div>
+              <div class="node-label">Calibre</div>
               <div class="node-size"></div>
             </label>
           </div>
 
+          <!-- ── Extras lane ── -->
           <div class="graph-lane" data-lane="extras">
-            <div class="lane-header">Canvas Notes</div>
+            <div class="lane-header">Canvas</div>
 
             <div class="graph-note anchor-node" data-node-id="obsidian_xte_sync_note">
-              <div class="node-ring"><span class="node-icon">&#x1F4DD;</span></div>
+              <div class="node-ring"><span class="node-icon">&#x25AB;</span></div>
               <div class="node-label">Obsidian XTE sync</div>
             </div>
 
             <div class="graph-note anchor-node" data-node-id="feature_store_note">
-              <div class="node-ring"><span class="node-icon">&#x1F6D2;</span></div>
-              <div class="node-label">Feature store: select features then pull by OTA</div>
+              <div class="node-ring"><span class="node-icon">&#x25AB;</span></div>
+              <div class="node-label">Feature store: select then pull OTA</div>
             </div>
           </div>
         </div>
@@ -1132,14 +1135,14 @@
           </div>
         </div>
         <div class="actions">
-          <button class="btn btn-outline" id="copy-command">Copy command</button>
-          <button class="btn btn-outline" id="copy-flags">Copy flags</button>
+          <button class="btn btn-outline" id="copy-command">Copy Cmd</button>
+          <button class="btn btn-outline" id="copy-flags">Copy Flags</button>
           <button class="btn btn-outline" id="copy-share">Copy URL</button>
           <button class="btn btn-outline" id="download-ini">Download .ini</button>
-          <a class="btn btn-solid" id="build-link" href="#" target="_blank" rel="noopener">Build on GitHub Actions</a>
+          <a class="btn btn-solid" id="build-link" href="#" target="_blank" rel="noopener">Build on GitHub</a>
         </div>
         <div class="info-bar">
-          Compile-time dependencies are enforced automatically. Canvas note links are directional and do not hard-block builds.
+          Compile-time dependencies are enforced automatically. Canvas notes are directional and do not hard-block builds.
         </div>
       </div>
 
@@ -1148,13 +1151,13 @@
         <div class="panel-heading">Companion Plugins</div>
         <div class="companion-row">
           <div>
-            <div class="companion-title">X4 Grayscale Pokedex Wallpaper</div>
+            <div class="companion-title">Grayscale Pokedex Wallpaper</div>
             <div class="companion-desc">
               Generate wallpapers from Pokemon data. Upload to
               <code>/sleep/pokedex</code> for Sleep Source mode.
             </div>
           </div>
-          <a class="btn btn-outline" href="../plugins/x4-pokedex-grayscale/" target="_blank" rel="noopener">Open Plugin</a>
+          <a class="btn btn-outline" href="../plugins/x4-pokedex-grayscale/" target="_blank" rel="noopener">Open</a>
         </div>
       </div>
 
@@ -1162,16 +1165,16 @@
       <div class="panel">
         <div class="preview-top">
           <div>
-            <div class="panel-heading" style="margin-bottom: 0">Live Screen Previews</div>
+            <div class="panel-heading" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0">Screen Previews</div>
             <div class="preview-sub">Auto-generated from the latest firmware UI harness.</div>
           </div>
-          <a class="btn btn-outline" href="./screen-previews/" target="_blank" rel="noopener">Open Folder</a>
+          <a class="btn btn-outline" href="./screen-previews/" target="_blank" rel="noopener">Open</a>
         </div>
         <div class="preview-grid" id="preview-grid"></div>
         <div class="preview-meta" id="preview-meta"></div>
       </div>
 
-      <div class="footer">Future roadmap: this picker will live inside the OTA update menu.</div>
+      <div class="footer">Future: this picker will live inside the OTA update menu.</div>
     </div>
 
     <script>
@@ -1562,7 +1565,7 @@
         } else {
           const remaining = MAX_FLASH_MB - size;
           sizeContext.textContent = `${percentage.toFixed(0)}% of 6.4 MB \u2014 ${remaining.toFixed(1)} MB free`;
-          sizeValue.style.color = "var(--ink)";
+          sizeValue.style.color = "var(--blk)";
           sizeBar.classList.remove("over");
         }
       }
@@ -1681,7 +1684,7 @@
           const iconEl = node.querySelector(".node-icon");
           if (isBlocked && iconEl) {
             iconEl.dataset.origIcon = iconEl.dataset.origIcon || iconEl.innerHTML;
-            iconEl.innerHTML = "&#x1F512;";
+            iconEl.innerHTML = "&#x25A0;";
           } else if (iconEl && iconEl.dataset.origIcon) {
             iconEl.innerHTML = iconEl.dataset.origIcon;
           }
