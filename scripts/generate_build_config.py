@@ -31,13 +31,13 @@ FEATURES = {
     'image_sleep': Feature(
         name='PNG/JPEG Sleep Images',
         flag='ENABLE_IMAGE_SLEEP',
-        size_kb=33,
+        size_kb=0,
         description='PNG and JPEG sleep screen support (BMP always included)'
     ),
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=158,
+        size_kb=127,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -49,31 +49,31 @@ FEATURES = {
     'koreader_sync': Feature(
         name='KOReader Sync',
         flag='ENABLE_KOREADER_SYNC',
-        size_kb=2,
+        size_kb=1,
         description='Sync reading progress with KOReader'
     ),
     'calibre_sync': Feature(
         name='Calibre Sync',
         flag='ENABLE_CALIBRE_SYNC',
-        size_kb=17,
+        size_kb=11,
         description='Calibre OPDS browser and metadata sync settings'
     ),
     'background_server': Feature(
         name='Background Server',
         flag='ENABLE_BACKGROUND_SERVER',
-        size_kb=4,
+        size_kb=0,
         description='Background web server for file management'
     ),
     'home_media_picker': Feature(
         name='Home Media Picker',
         flag='ENABLE_HOME_MEDIA_PICKER',
-        size_kb=0,
+        size_kb=-4,
         description='Streamlined home UI with horizontal book shelf + vertical menu'
     ),
     'web_pokedex_plugin': Feature(
         name='Web Pokedex Plugin',
         flag='ENABLE_WEB_POKEDEX_PLUGIN',
-        size_kb=34,
+        size_kb=4,
         description='Browser-side Pokemon wallpaper generator at /plugins/pokedex'
     ),
 }
@@ -290,7 +290,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 2.62  # Lean profile size baseline (measured)
+    base_size_mb = 2.40  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
