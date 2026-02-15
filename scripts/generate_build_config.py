@@ -37,7 +37,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=127,
+        size_kb=126,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -49,13 +49,13 @@ FEATURES = {
     'koreader_sync': Feature(
         name='KOReader Sync',
         flag='ENABLE_KOREADER_SYNC',
-        size_kb=1,
+        size_kb=52,
         description='Sync reading progress with KOReader'
     ),
     'calibre_sync': Feature(
         name='Calibre Sync',
         flag='ENABLE_CALIBRE_SYNC',
-        size_kb=11,
+        size_kb=44,
         description='Calibre OPDS browser and metadata sync settings'
     ),
     'background_server': Feature(
@@ -73,7 +73,7 @@ FEATURES = {
     'web_pokedex_plugin': Feature(
         name='Web Pokedex Plugin',
         flag='ENABLE_WEB_POKEDEX_PLUGIN',
-        size_kb=4,
+        size_kb=-4,
         description='Browser-side Pokemon wallpaper generator at /plugins/pokedex'
     ),
 }
@@ -290,7 +290,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 2.40  # Lean profile size baseline (measured)
+    base_size_mb = 2.35  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
