@@ -22,6 +22,7 @@ import sys
 import re
 import os
 from pathlib import Path
+from generate_build_config import FEATURES as BUILD_FEATURES
 
 # Available only when invoked by PlatformIO as an extra script.
 try:
@@ -36,17 +37,7 @@ YELLOW = '\033[1;33m'
 GREEN = '\033[0;32m'
 NC = '\033[0m'  # No Color
 
-REQUIRED_FLAGS = [
-    "ENABLE_EXTENDED_FONTS",
-    "ENABLE_IMAGE_SLEEP",
-    "ENABLE_MARKDOWN",
-    "ENABLE_INTEGRATIONS",
-    "ENABLE_KOREADER_SYNC",
-    "ENABLE_CALIBRE_SYNC",
-    "ENABLE_BACKGROUND_SERVER",
-    "ENABLE_HOME_MEDIA_PICKER",
-    "ENABLE_WEB_POKEDEX_PLUGIN",
-]
+REQUIRED_FLAGS = [feature.flag for feature in BUILD_FEATURES.values()]
 
 
 def _extract_flags(config: str) -> dict[str, bool]:
