@@ -2,14 +2,21 @@
 
 #include <HalStorage.h>
 
-#include "Epub.h"
-#include "EpubReaderActivity.h"
+#include "FeatureFlags.h"
 #include "Txt.h"
 #include "TxtReaderActivity.h"
-#include "Xtc.h"
-#include "XtcReaderActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
 #include "util/StringUtils.h"
+
+#if ENABLE_EPUB_SUPPORT
+#include "Epub.h"
+#include "EpubReaderActivity.h"
+#endif
+
+#if ENABLE_XTC_SUPPORT
+#include "Xtc.h"
+#include "XtcReaderActivity.h"
+#endif
 
 #if ENABLE_MARKDOWN
 #include "Markdown.h"
@@ -24,14 +31,17 @@ std::string ReaderActivity::extractFolderPath(const std::string& filePath) {
   return filePath.substr(0, lastSlash);
 }
 
+#if ENABLE_XTC_SUPPORT
 bool ReaderActivity::isXtcFile(const std::string& path) {
   return StringUtils::checkFileExtension(path, ".xtc") || StringUtils::checkFileExtension(path, ".xtch");
 }
+#endif
 
 bool ReaderActivity::isTxtFile(const std::string& path) { return StringUtils::checkFileExtension(path, ".txt"); }
 
 bool ReaderActivity::isMarkdownFile(const std::string& path) { return StringUtils::checkFileExtension(path, ".md"); }
 
+#if ENABLE_EPUB_SUPPORT
 std::unique_ptr<Epub> ReaderActivity::loadEpub(const std::string& path) {
   if (!Storage.exists(path.c_str())) {
     LOG_ERR("READER", "File does not exist: %s", path.c_str());
@@ -46,7 +56,9 @@ std::unique_ptr<Epub> ReaderActivity::loadEpub(const std::string& path) {
   LOG_ERR("READER", "Failed to load epub");
   return nullptr;
 }
+#endif
 
+#if ENABLE_XTC_SUPPORT
 std::unique_ptr<Xtc> ReaderActivity::loadXtc(const std::string& path) {
   if (!Storage.exists(path.c_str())) {
     LOG_ERR("READER", "File does not exist: %s", path.c_str());
@@ -61,6 +73,7 @@ std::unique_ptr<Xtc> ReaderActivity::loadXtc(const std::string& path) {
   LOG_ERR("READER", "Failed to load XTC");
   return nullptr;
 }
+#endif
 
 std::unique_ptr<Txt> ReaderActivity::loadTxt(const std::string& path) {
   if (!Storage.exists(path.c_str())) {
@@ -100,6 +113,7 @@ void ReaderActivity::goToLibrary(const std::string& fromBookPath) {
   onGoToLibrary(initialPath);
 }
 
+#if ENABLE_EPUB_SUPPORT
 void ReaderActivity::onGoToEpubReader(std::unique_ptr<Epub> epub) {
   const auto epubPath = epub->getPath();
   currentBookPath = epubPath;
@@ -107,7 +121,9 @@ void ReaderActivity::onGoToEpubReader(std::unique_ptr<Epub> epub) {
   enterNewActivity(new EpubReaderActivity(
       renderer, mappedInput, std::move(epub), [this, epubPath] { goToLibrary(epubPath); }, [this] { onGoBack(); }));
 }
+#endif
 
+#if ENABLE_XTC_SUPPORT
 void ReaderActivity::onGoToXtcReader(std::unique_ptr<Xtc> xtc) {
   const auto xtcPath = xtc->getPath();
   currentBookPath = xtcPath;
@@ -115,6 +131,7 @@ void ReaderActivity::onGoToXtcReader(std::unique_ptr<Xtc> xtc) {
   enterNewActivity(new XtcReaderActivity(
       renderer, mappedInput, std::move(xtc), [this, xtcPath] { goToLibrary(xtcPath); }, [this] { onGoBack(); }));
 }
+#endif
 
 void ReaderActivity::onGoToTxtReader(std::unique_ptr<Txt> txt) {
   const auto txtPath = txt->getPath();
@@ -147,6 +164,7 @@ void ReaderActivity::onEnter() {
 
   currentBookPath = initialBookPath;
 
+#if ENABLE_XTC_SUPPORT
   if (isXtcFile(initialBookPath)) {
     auto xtc = loadXtc(initialBookPath);
     if (!xtc) {
@@ -154,7 +172,9 @@ void ReaderActivity::onEnter() {
       return;
     }
     onGoToXtcReader(std::move(xtc));
-  } else if (isMarkdownFile(initialBookPath)) {
+  } else
+#endif
+      if (isMarkdownFile(initialBookPath)) {
 #if ENABLE_MARKDOWN
     Serial.printf("[%lu] [RDR] Detected as Markdown file\n", millis());
     auto markdown = loadMarkdown(initialBookPath);
@@ -184,11 +204,18 @@ void ReaderActivity::onEnter() {
     Serial.printf("[%lu] [RDR] TXT loaded, opening reader\n", millis());
     onGoToTxtReader(std::move(txt));
   } else {
+#if ENABLE_EPUB_SUPPORT
     auto epub = loadEpub(initialBookPath);
     if (!epub) {
       onGoBack();
       return;
     }
     onGoToEpubReader(std::move(epub));
+#else
+    Serial.printf("[%lu] [RDR] EPUB support disabled in this build\n", millis());
+    exitActivity();
+    enterNewActivity(new FullScreenMessageActivity(renderer, mappedInput, "EPUB support\nnot available\nin this build",
+                                                   EpdFontFamily::BOLD, [this] { onGoBack(); }));
+#endif  // ENABLE_EPUB_SUPPORT
   }
 }

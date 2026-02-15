@@ -1,11 +1,14 @@
 #include "Section.h"
 
+#include <FeatureFlags.h>
 #include <HalStorage.h>
 #include <Logging.h>
 #include <Serialization.h>
 
 #include "Page.h"
+#if ENABLE_HYPHENATION
 #include "hyphenation/Hyphenator.h"
+#endif
 #include "parsers/ChapterHtmlSlimParser.h"
 
 namespace {
@@ -191,7 +194,9 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
       viewportHeight, hyphenationEnabled,
       [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
       embeddedStyle, contentBase, imageBasePath, popupFn, embeddedStyle ? epub->getCssParser() : nullptr);
+#if ENABLE_HYPHENATION
   Hyphenator::setPreferredLanguage(epub->getLanguage());
+#endif
   success = visitor.parseAndBuildPages();
 
   Storage.remove(tmpHtmlPath.c_str());

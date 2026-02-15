@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <Epub.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
@@ -24,8 +23,10 @@
 #include "activities/network/CrossPointWebServerActivity.h"
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
+#if ENABLE_TODO_PLANNER
 #include "activities/todo/TodoActivity.h"
 #include "activities/todo/TodoFallbackActivity.h"
+#endif
 #include "activities/util/FullScreenMessageActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -254,7 +255,9 @@ void enterDeepSleep() {
 
 void onGoHome();
 void onGoToMyLibraryWithPath(const std::string& path);
+#if ENABLE_TODO_PLANNER
 void onGoToTodo();
+#endif
 void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
   (void)fromTab;
   exitActivity();
@@ -293,6 +296,7 @@ void onGoToBrowser() {
 #endif
 }
 
+#if ENABLE_TODO_PLANNER
 void onGoToTodo() {
   exitActivity();
 
@@ -334,11 +338,17 @@ void onGoToTodo() {
   enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoTxtPath, today, onGoHome));
 #endif
 }
+#endif  // ENABLE_TODO_PLANNER
 
 void onGoHome() {
   exitActivity();
+#if ENABLE_TODO_PLANNER
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
                                     onGoToFileTransfer, onGoToBrowser, onGoToTodo));
+#else
+  enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
+                                    onGoToFileTransfer, onGoToBrowser, [] {}));
+#endif
 }
 
 void setupDisplayAndFonts() {

@@ -1,5 +1,6 @@
 #include "ParsedText.h"
 
+#include <FeatureFlags.h>
 #include <GfxRenderer.h>
 
 #include <algorithm>
@@ -9,7 +10,9 @@
 #include <limits>
 #include <vector>
 
+#if ENABLE_HYPHENATION
 #include "hyphenation/Hyphenator.h"
+#endif
 
 constexpr int MAX_COST = std::numeric_limits<int>::max();
 
@@ -84,10 +87,13 @@ void ParsedText::layoutAndExtractLines(const GfxRenderer& renderer, const int fo
   std::vector<bool> continuesVec(wordContinues.begin(), wordContinues.end());
 
   std::vector<size_t> lineBreakIndices;
+#if ENABLE_HYPHENATION
   if (hyphenationEnabled) {
     // Use greedy layout that can split words mid-loop when a hyphenated prefix fits.
     lineBreakIndices = computeHyphenatedLineBreaks(renderer, fontId, pageWidth, spaceWidth, wordWidths, continuesVec);
-  } else {
+  } else
+#endif
+  {
     lineBreakIndices = computeLineBreaks(renderer, fontId, pageWidth, spaceWidth, wordWidths, continuesVec);
   }
   const size_t lineCount = includeLastLine ? lineBreakIndices.size() : lineBreakIndices.size() - 1;
@@ -242,6 +248,7 @@ void ParsedText::applyParagraphIndent() {
   }
 }
 
+#if ENABLE_HYPHENATION
 // Builds break indices while opportunistically splitting the word that would overflow the current line.
 std::vector<size_t> ParsedText::computeHyphenatedLineBreaks(const GfxRenderer& renderer, const int fontId,
                                                             const int pageWidth, const int spaceWidth,
@@ -310,12 +317,16 @@ std::vector<size_t> ParsedText::computeHyphenatedLineBreaks(const GfxRenderer& r
 
   return lineBreakIndices;
 }
+#endif  // ENABLE_HYPHENATION
 
 // Splits words[wordIndex] into prefix (adding a hyphen only when needed) and remainder when a legal breakpoint fits the
 // available width.
 bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availableWidth, const GfxRenderer& renderer,
                                       const int fontId, std::vector<uint16_t>& wordWidths,
                                       const bool allowFallbackBreaks, std::vector<bool>* continuesVec) {
+#if !ENABLE_HYPHENATION
+  return false;
+#else
   // Guard against invalid indices or zero available width before attempting to split.
   if (availableWidth <= 0 || wordIndex >= words.size()) {
     return false;
@@ -397,6 +408,7 @@ bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availabl
   const uint16_t remainderWidth = measureWordWidth(renderer, fontId, remainder, style);
   wordWidths.insert(wordWidths.begin() + wordIndex + 1, remainderWidth);
   return true;
+#endif  // ENABLE_HYPHENATION
 }
 
 void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const int spaceWidth,

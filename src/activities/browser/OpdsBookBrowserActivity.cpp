@@ -1,7 +1,10 @@
 #include "OpdsBookBrowserActivity.h"
 
-#include <Epub.h>
+#include <FeatureFlags.h>
 #include <GfxRenderer.h>
+#if ENABLE_EPUB_SUPPORT
+#include <Epub.h>
+#endif
 #include <Logging.h>
 #include <OpdsStream.h>
 #include <WiFi.h>
@@ -369,9 +372,11 @@ void OpdsBookBrowserActivity::downloadBook(const OpdsEntry& book) {
     LOG_DBG("OPDS", "Download complete: %s", filename.c_str());
 
     // Invalidate any existing cache for this file to prevent stale metadata issues
+#if ENABLE_EPUB_SUPPORT
     Epub epub(filename, "/.crosspoint");
     epub.clearCache();
     LOG_DBG("OPDS", "Cleared cache for: %s", filename.c_str());
+#endif
 
     state = BrowserState::BROWSING;
     updateRequired = true;

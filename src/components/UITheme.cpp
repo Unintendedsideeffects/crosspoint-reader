@@ -1,5 +1,6 @@
 #include "UITheme.h"
 
+#include <FeatureFlags.h>
 #include <GfxRenderer.h>
 #include <Logging.h>
 
@@ -7,7 +8,9 @@
 
 #include "RecentBooksStore.h"
 #include "components/themes/BaseTheme.h"
+#if ENABLE_LYRA_THEME
 #include "components/themes/lyra/LyraTheme.h"
+#endif
 
 UITheme UITheme::instance;
 
@@ -28,11 +31,13 @@ void UITheme::setTheme(CrossPointSettings::UI_THEME type) {
       currentTheme = new BaseTheme();
       currentMetrics = &BaseMetrics::values;
       break;
+#if ENABLE_LYRA_THEME
     case CrossPointSettings::UI_THEME::LYRA:
       LOG_DBG("UI", "Using Lyra theme");
       currentTheme = new LyraTheme();
       currentMetrics = &LyraMetrics::values;
       break;
+#endif
   }
 }
 
