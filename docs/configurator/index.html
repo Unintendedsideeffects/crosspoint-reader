@@ -710,12 +710,12 @@
           default: true,
         },
         image_sleep: {
-          sizeKb: 33,
+          sizeKb: 0,
           flag: "ENABLE_IMAGE_SLEEP",
           default: true,
         },
         markdown: {
-          sizeKb: 158,
+          sizeKb: 127,
           flag: "ENABLE_MARKDOWN",
           default: true,
         },
@@ -725,33 +725,33 @@
           default: false,
         },
         koreader_sync: {
-          sizeKb: 2,
+          sizeKb: 1,
           flag: "ENABLE_KOREADER_SYNC",
           default: false,
         },
         calibre_sync: {
-          sizeKb: 17,
+          sizeKb: 11,
           flag: "ENABLE_CALIBRE_SYNC",
           default: false,
         },
         background_server: {
-          sizeKb: 4,
+          sizeKb: 0,
           flag: "ENABLE_BACKGROUND_SERVER",
           default: true,
         },
         home_media_picker: {
-          sizeKb: 0,
+          sizeKb: -4,
           flag: "ENABLE_HOME_MEDIA_PICKER",
           default: true,
         },
         web_pokedex_plugin: {
-          sizeKb: 34,
+          sizeKb: 4,
           flag: "ENABLE_WEB_POKEDEX_PLUGIN",
           default: false,
         },
       };
 
-      const BASE_SIZE_MB = 2.62;
+      const BASE_SIZE_MB = 2.40;
       const MAX_FLASH_MB = 6.4;
       const FEATURE_DEPENDENCIES = {
         koreader_sync: ["integrations"],
