@@ -4,12 +4,16 @@
 #include <Logging.h>
 
 #include "ButtonRemapActivity.h"
-#include "CalibreSettingsActivity.h"
 #include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
 #include "FactoryResetActivity.h"
 #include "FeatureFlags.h"
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+#include "CalibreSettingsActivity.h"
+#endif
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 #include "KOReaderSettingsActivity.h"
+#endif
 #include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
 #include "SettingsList.h"
@@ -245,12 +249,16 @@ void SettingsActivity::toggleCurrentSetting() {
       case SettingAction::RemapFrontButtons:
         enterSubActivity(new ButtonRemapActivity(renderer, mappedInput, onComplete));
         break;
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
       case SettingAction::KOReaderSync:
         enterSubActivity(new KOReaderSettingsActivity(renderer, mappedInput, onComplete));
         break;
+#endif
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
       case SettingAction::OPDSBrowser:
         enterSubActivity(new CalibreSettingsActivity(renderer, mappedInput, onComplete));
         break;
+#endif
       case SettingAction::Network:
         enterSubActivity(new WifiSelectionActivity(renderer, mappedInput, onCompleteBool, false));
         break;

@@ -11,8 +11,11 @@
 #include "CrossPointState.h"
 #include "EpubReaderChapterSelectionActivity.h"
 #include "EpubReaderPercentSelectionActivity.h"
+#include "FeatureFlags.h"
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 #include "KOReaderCredentialStore.h"
 #include "KOReaderSyncActivity.h"
+#endif
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
@@ -477,6 +480,7 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
       break;
     }
     case EpubReaderMenuActivity::MenuAction::SYNC: {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
       if (KOREADER_STORE.hasCredentials()) {
         xSemaphoreTake(renderingMutex, portMAX_DELAY);
         const int currentPage = section ? section->currentPage : 0;
@@ -499,6 +503,7 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
             }));
         xSemaphoreGive(renderingMutex);
       }
+#endif
       break;
     }
   }

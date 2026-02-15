@@ -3,8 +3,11 @@
 #include <vector>
 
 #include "CrossPointSettings.h"
-#include "KOReaderCredentialStore.h"
+#include "FeatureFlags.h"
 #include "activities/settings/SettingsActivity.h"
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+#include "KOReaderCredentialStore.h"
+#endif
 
 // Shared settings list used by both the device settings UI and the web settings API.
 // Each entry has a key (for JSON API) and category (for grouping).
@@ -69,6 +72,7 @@ inline std::vector<SettingInfo> getSettingsList() {
       SettingInfo::Enum("Release Channel", &CrossPointSettings::releaseChannel,
                         {"Release", "Nightly", "Latest", "Reset"}, "releaseChannel", "System"),
 
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
       // --- KOReader Sync (web-only, uses KOReaderCredentialStore) ---
       SettingInfo::DynamicString(
           "KOReader Username", [] { return KOREADER_STORE.getUsername(); },
@@ -99,6 +103,7 @@ inline std::vector<SettingInfo> getSettingsList() {
             KOREADER_STORE.saveToFile();
           },
           "koMatchMethod", "KOReader Sync"),
+#endif
 
       // --- OPDS Browser (web-only, uses CrossPointSettings char arrays) ---
       SettingInfo::String("OPDS Server URL", SETTINGS.opdsServerUrl, sizeof(SETTINGS.opdsServerUrl), "opdsServerUrl",
