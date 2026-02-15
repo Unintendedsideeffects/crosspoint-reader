@@ -194,13 +194,10 @@
         font-weight: 600;
       }
 
-      /* Skill Tree Grid */
+      /* Skill Graph */
       .skill-tree {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 0 12px;
         margin-bottom: 36px;
-        padding: 26px 18px 16px;
+        padding: 30px 20px 20px;
         background:
           radial-gradient(120% 120% at 50% 0%, rgba(123, 169, 206, 0.16) 0%, rgba(22, 28, 37, 0) 58%),
           linear-gradient(180deg, #1b222e 0%, #121821 100%);
@@ -233,41 +230,86 @@
         pointer-events: none;
       }
 
-      .skill-branch {
+      .graph-links {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .graph-edge {
+        stroke: rgba(134, 150, 173, 0.42);
+        stroke-width: 1.4;
+        stroke-linecap: round;
+        transition: stroke 0.2s ease;
+      }
+
+      .graph-edge.active {
+        stroke: #9bd3fb;
+        stroke-width: 1.8;
+        filter: drop-shadow(0 0 4px rgba(131, 204, 252, 0.42));
+      }
+
+      .graph-edge.locked {
+        stroke: var(--locked-stroke);
+        stroke-dasharray: 3 4;
+      }
+
+      .graph-layout {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px 14px;
+        align-items: start;
+      }
+
+      .graph-root {
+        grid-column: 1 / -1;
+        justify-self: center;
+        margin-bottom: 2px;
+      }
+
+      .graph-hub {
+        justify-self: center;
+      }
+
+      .graph-lane {
         display: flex;
         flex-direction: column;
         align-items: center;
-        position: relative;
-        z-index: 1;
+        gap: 12px;
       }
 
-      .branch-header {
+      .lane-header {
         font-family: 'Cinzel', serif;
-        font-size: 0.72rem;
+        font-size: 0.68rem;
         font-weight: 600;
-        letter-spacing: 0.22em;
+        letter-spacing: 0.24em;
         text-transform: uppercase;
         color: #d8e5f4;
-        margin-bottom: 18px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid rgba(132, 163, 193, 0.35);
-        width: 100%;
-        text-align: center;
+        margin-bottom: 4px;
         text-shadow: 0 0 10px rgba(138, 188, 223, 0.25);
       }
 
-      /* Skill Node */
-      .skill-node {
+      /* Node */
+      .skill-node,
+      .anchor-node {
         position: relative;
         width: 100%;
-        max-width: 140px;
-        margin-bottom: 10px;
+        max-width: 150px;
         cursor: pointer;
         -webkit-user-select: none;
         user-select: none;
         display: flex;
         flex-direction: column;
         align-items: center;
+      }
+
+      .anchor-node {
+        cursor: default;
       }
 
       .skill-node input[type="checkbox"] {
@@ -303,6 +345,22 @@
         border: 1px solid rgba(209, 226, 248, 0.25);
       }
 
+      .graph-root .node-ring {
+        width: 72px;
+        height: 72px;
+        border-color: #8ad5ff;
+        background: radial-gradient(circle at 36% 24%, #4e7698 0%, #2e4760 54%, #182738 100%);
+      }
+
+      .graph-root .node-size {
+        color: #a5d8f8;
+      }
+
+      .graph-hub .node-ring {
+        width: 52px;
+        height: 52px;
+      }
+
       .node-icon {
         font-size: 1.05rem;
         line-height: 1;
@@ -312,7 +370,8 @@
         z-index: 1;
       }
 
-      .skill-node.active .node-ring {
+      .skill-node.active .node-ring,
+      .anchor-node.active .node-ring {
         background: radial-gradient(circle at 32% 22%, #4a6d8d 0%, #2d4459 48%, #192734 100%);
         border-color: var(--active-stroke);
         box-shadow:
@@ -320,9 +379,9 @@
           var(--constellation-glow);
       }
 
-      .skill-node.active .node-icon {
+      .skill-node.active .node-icon,
+      .anchor-node.active .node-icon {
         color: #f2fbff;
-        filter: none;
       }
 
       .skill-node.locked .node-ring {
@@ -349,9 +408,9 @@
         transition: color 0.2s ease;
       }
 
-      .skill-node.active .node-label {
+      .skill-node.active .node-label,
+      .anchor-node.active .node-label {
         color: #e4f3ff;
-        font-weight: 600;
         text-shadow: 0 0 10px rgba(137, 201, 245, 0.25);
       }
 
@@ -367,98 +426,13 @@
         margin-top: 1px;
       }
 
-      .skill-node.active .node-size {
+      .skill-node.active .node-size,
+      .anchor-node.active .node-size {
         color: #a9d5f2;
       }
 
-      /* Connector */
-      .connector {
-        width: 1px;
-        height: 16px;
-        margin: -2px auto 2px;
-        position: relative;
-      }
-
-      .connector-line {
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(180deg, rgba(166, 182, 206, 0.2) 0%, rgba(120, 132, 152, 0.42) 100%);
-        transition: background 0.25s ease;
-      }
-
-      .connector.active .connector-line {
-        background: linear-gradient(180deg, #7cc0ea 0%, #b6e6ff 100%);
-        box-shadow: 0 0 10px rgba(130, 206, 255, 0.38);
-      }
-
-      .connector.locked .connector-line {
-        background: var(--locked-stroke);
-        /* dashed via repeating gradient */
-        background: repeating-linear-gradient(
-          to bottom,
-          var(--locked-stroke) 0px,
-          var(--locked-stroke) 3px,
-          transparent 3px,
-          transparent 6px
-        );
-      }
-
-      /* Fork connector */
-      .fork-container {
-        display: flex;
-        width: 100%;
-      }
-
-      .fork-branch {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        flex: 1;
-      }
-
-      .fork-top {
-        width: 100%;
-        height: 14px;
-        position: relative;
-        margin-bottom: 0;
-      }
-
-      .fork-top-line {
-        position: absolute;
-        top: 0;
-        height: 100%;
-        border-color: rgba(134, 150, 173, 0.42);
-        border-style: solid;
-        transition: all 0.25s ease;
-      }
-
-      .fork-top-line.left {
-        right: 0;
-        left: 50%;
-        border-width: 0 0 1px 1px;
-        border-bottom-left-radius: 6px;
-      }
-
-      .fork-top-line.right {
-        left: 0;
-        right: 50%;
-        border-width: 0 1px 1px 0;
-        border-bottom-right-radius: 6px;
-      }
-
-      .fork-top.active .fork-top-line {
-        border-color: #9bd3fb;
-        box-shadow: 0 0 8px rgba(131, 204, 252, 0.3);
-      }
-
-      .fork-top.locked .fork-top-line {
-        border-color: var(--locked-stroke);
-        border-style: dashed;
-      }
-
-      /* Spacer between unconnected nodes */
-      .node-gap {
-        height: 12px;
+      .skill-node.dependent-node {
+        transform: translateX(14px);
       }
 
       /* Tooltip */
@@ -722,9 +696,18 @@
 
       /* Responsive */
       @media (max-width: 800px) {
-        .skill-tree {
-          grid-template-columns: repeat(2, 1fr);
-          gap: 18px 12px;
+        .graph-layout {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px 10px;
+        }
+        .graph-root {
+          margin-bottom: 8px;
+        }
+        .graph-hub {
+          margin-bottom: 4px;
+        }
+        .skill-node.dependent-node {
+          transform: translateX(10px);
         }
         .outputs-grid {
           grid-template-columns: 1fr;
@@ -732,9 +715,21 @@
       }
 
       @media (max-width: 480px) {
-        .skill-tree {
-          grid-template-columns: 1fr 1fr;
-          gap: 16px 8px;
+        .graph-layout {
+          grid-template-columns: 1fr;
+          gap: 14px;
+        }
+        .graph-root {
+          justify-self: center;
+        }
+        .graph-hub {
+          justify-self: center;
+        }
+        .graph-lane {
+          gap: 10px;
+        }
+        .skill-node.dependent-node {
+          transform: translateX(0);
         }
         .flash-meter {
           flex-direction: column;
@@ -799,237 +794,230 @@
       <div class="profile-status" id="profile-status"></div>
 
       <!-- Skill Tree -->
-      <div class="skill-tree">
-        <!-- READING -->
-        <div class="skill-branch">
-          <div class="branch-header">Reading</div>
-
-          <label class="skill-node" data-feature="epub_support">
-            <input type="checkbox" id="epub_support" data-feature="epub_support" />
-            <div class="tooltip">
-              <div class="tooltip-title">EPUB Support</div>
-              <div class="tooltip-desc">EPUB e-book reader with CSS, images, and chapter navigation</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x1F4D6;</span></div>
-            <div class="node-label">EPUB</div>
-            <div class="node-size"></div>
-          </label>
-
-          <div class="connector" data-conn="epub_support-hyphenation"><div class="connector-line"></div></div>
-
-          <label class="skill-node" data-feature="hyphenation">
-            <input type="checkbox" id="hyphenation" data-feature="hyphenation" />
-            <div class="tooltip">
-              <div class="tooltip-title">Hyphenation</div>
-              <div class="tooltip-desc">Language-aware hyphenation for justified EPUB text</div>
-              <div class="tooltip-size"></div>
-              <div class="tooltip-req">Requires EPUB Support</div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x2E17;</span></div>
-            <div class="node-label">Hyphenation</div>
-            <div class="node-size"></div>
-          </label>
-
-          <div class="node-gap"></div>
-
-          <label class="skill-node" data-feature="markdown">
-            <input type="checkbox" id="markdown" data-feature="markdown" />
-            <div class="tooltip">
-              <div class="tooltip-title">Markdown &amp; Obsidian</div>
-              <div class="tooltip-desc">Markdown and Obsidian vault reading support</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x270D;</span></div>
-            <div class="node-label">Markdown</div>
-            <div class="node-size"></div>
-          </label>
-
-          <div class="node-gap"></div>
-
-          <label class="skill-node" data-feature="xtc_support">
-            <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
-            <div class="tooltip">
-              <div class="tooltip-title">XTC Support</div>
-              <div class="tooltip-desc">XTC format reader with chapter navigation</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x1F4DC;</span></div>
-            <div class="node-label">XTC</div>
-            <div class="node-size"></div>
-          </label>
-        </div>
-
-        <!-- INTERFACE -->
-        <div class="skill-branch">
-          <div class="branch-header">Interface</div>
-
-          <label class="skill-node" data-feature="extended_fonts">
-            <input type="checkbox" id="extended_fonts" data-feature="extended_fonts" />
-            <div class="tooltip">
-              <div class="tooltip-title">Extended Fonts</div>
-              <div class="tooltip-desc">12/16/18pt fonts and OpenDyslexic support</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x1D5D4;</span></div>
-            <div class="node-label">Fonts</div>
-            <div class="node-size"></div>
-          </label>
-
-          <div class="node-gap"></div>
-
-          <label class="skill-node" data-feature="lyra_theme">
-            <input type="checkbox" id="lyra_theme" data-feature="lyra_theme" />
-            <div class="tooltip">
-              <div class="tooltip-title">Lyra Theme</div>
-              <div class="tooltip-desc">Alternative UI theme with refined spacing and layout</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x2726;</span></div>
-            <div class="node-label">Lyra Theme</div>
-            <div class="node-size"></div>
-          </label>
-
-          <div class="node-gap"></div>
-
-          <label class="skill-node" data-feature="home_media_picker">
-            <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
-            <div class="tooltip">
-              <div class="tooltip-title">Home Media Picker</div>
-              <div class="tooltip-desc">Streamlined home UI with horizontal book shelf + vertical menu</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x1F3E0;</span></div>
-            <div class="node-label">Home UI</div>
-            <div class="node-size"></div>
-          </label>
-
-          <div class="node-gap"></div>
-
-          <label class="skill-node" data-feature="image_sleep">
-            <input type="checkbox" id="image_sleep" data-feature="image_sleep" />
-            <div class="tooltip">
-              <div class="tooltip-title">PNG/JPEG Sleep Images</div>
-              <div class="tooltip-desc">PNG and JPEG sleep screen support (BMP always included)</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x263D;</span></div>
-            <div class="node-label">Sleep Art</div>
-            <div class="node-size"></div>
-          </label>
-        </div>
-
-        <!-- NETWORK -->
-        <div class="skill-branch">
-          <div class="branch-header">Network</div>
-
-          <label class="skill-node" data-feature="background_server">
-            <input type="checkbox" id="background_server" data-feature="background_server" />
-            <div class="tooltip">
-              <div class="tooltip-title">Background Web Server</div>
-              <div class="tooltip-desc">Background web server for file management</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x1F310;</span></div>
-            <div class="node-label">Web Server</div>
-            <div class="node-size"></div>
-          </label>
-
-          <div class="node-gap"></div>
-
-          <label class="skill-node" data-feature="ota_updates">
-            <input type="checkbox" id="ota_updates" data-feature="ota_updates" />
-            <div class="tooltip">
-              <div class="tooltip-title">OTA Updates</div>
-              <div class="tooltip-desc">Over-the-air firmware updates via WiFi</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x2B06;</span></div>
-            <div class="node-label">OTA</div>
-            <div class="node-size"></div>
-          </label>
-
-          <div class="node-gap"></div>
-
-          <label class="skill-node" data-feature="integrations">
-            <input type="checkbox" id="integrations" data-feature="integrations" />
-            <div class="tooltip">
-              <div class="tooltip-title">Integrations Base</div>
-              <div class="tooltip-desc">Shared runtime hooks for remote sync integrations</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x1F517;</span></div>
-            <div class="node-label">Integrations</div>
-            <div class="node-size"></div>
-          </label>
-
-          <div class="fork-container">
-            <div class="fork-branch">
-              <div class="fork-top" data-conn="integrations-koreader_sync">
-                <div class="fork-top-line left"></div>
-              </div>
-              <label class="skill-node" data-feature="koreader_sync">
-                <input type="checkbox" id="koreader_sync" data-feature="koreader_sync" />
-                <div class="tooltip">
-                  <div class="tooltip-title">KOReader Sync</div>
-                  <div class="tooltip-desc">Sync reading progress with KOReader</div>
-                  <div class="tooltip-size"></div>
-                  <div class="tooltip-req">Requires Integrations</div>
-                </div>
-                <div class="node-ring"><span class="node-icon">&#x1F4F1;</span></div>
-                <div class="node-label">KOReader</div>
-                <div class="node-size"></div>
-              </label>
-            </div>
-            <div class="fork-branch">
-              <div class="fork-top" data-conn="integrations-calibre_sync">
-                <div class="fork-top-line right"></div>
-              </div>
-              <label class="skill-node" data-feature="calibre_sync">
-                <input type="checkbox" id="calibre_sync" data-feature="calibre_sync" />
-                <div class="tooltip">
-                  <div class="tooltip-title">Calibre Sync</div>
-                  <div class="tooltip-desc">Calibre OPDS browser and metadata sync settings</div>
-                  <div class="tooltip-size"></div>
-                  <div class="tooltip-req">Requires Integrations</div>
-                </div>
-                <div class="node-ring"><span class="node-icon">&#x1F4DA;</span></div>
-                <div class="node-label">Calibre</div>
-                <div class="node-size"></div>
-              </label>
-            </div>
+      <div class="skill-tree" id="skill-tree">
+        <svg class="graph-links" id="graph-links" aria-hidden="true"></svg>
+        <div class="graph-layout">
+          <div class="graph-root anchor-node active" data-node-id="root">
+            <div class="node-ring"><span class="node-icon">&#x1F5A5;</span></div>
+            <div class="node-label">E-Ink Base</div>
+            <div class="node-size">2.35 MB core</div>
           </div>
-        </div>
 
-        <!-- EXTRAS -->
-        <div class="skill-branch">
-          <div class="branch-header">Extras</div>
+          <div class="graph-hub anchor-node" data-node-id="reading_hub">
+            <div class="node-ring"><span class="node-icon">&#x1F4DA;</span></div>
+            <div class="node-label">Reading</div>
+          </div>
+          <div class="graph-hub anchor-node" data-node-id="interface_hub">
+            <div class="node-ring"><span class="node-icon">&#x1F58C;</span></div>
+            <div class="node-label">Interface</div>
+          </div>
+          <div class="graph-hub anchor-node" data-node-id="network_hub">
+            <div class="node-ring"><span class="node-icon">&#x1F6DC;</span></div>
+            <div class="node-label">Network</div>
+          </div>
+          <div class="graph-hub anchor-node" data-node-id="extras_hub">
+            <div class="node-ring"><span class="node-icon">&#x2726;</span></div>
+            <div class="node-label">Extras</div>
+          </div>
 
-          <label class="skill-node" data-feature="web_pokedex_plugin">
-            <input type="checkbox" id="web_pokedex_plugin" data-feature="web_pokedex_plugin" />
-            <div class="tooltip">
-              <div class="tooltip-title">Web Pokedex Plugin</div>
-              <div class="tooltip-desc">Browser-side Pokemon wallpaper generator at /plugins/pokedex</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x26A1;</span></div>
-            <div class="node-label">Pokedex</div>
-            <div class="node-size"></div>
-          </label>
+          <div class="graph-lane" data-lane="reading">
+            <div class="lane-header">Reading</div>
 
-          <div class="node-gap"></div>
+            <label class="skill-node" data-feature="epub_support" data-node-id="epub_support">
+              <input type="checkbox" id="epub_support" data-feature="epub_support" />
+              <div class="tooltip">
+                <div class="tooltip-title">EPUB Support</div>
+                <div class="tooltip-desc">EPUB e-book reader with CSS, images, and chapter navigation</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1F4D6;</span></div>
+              <div class="node-label">EPUB</div>
+              <div class="node-size"></div>
+            </label>
 
-          <label class="skill-node" data-feature="todo_planner">
-            <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
-            <div class="tooltip">
-              <div class="tooltip-title">Todo Planner</div>
-              <div class="tooltip-desc">Daily markdown notes and task tracking</div>
-              <div class="tooltip-size"></div>
-            </div>
-            <div class="node-ring"><span class="node-icon">&#x2611;</span></div>
-            <div class="node-label">Todo</div>
-            <div class="node-size"></div>
-          </label>
+            <label class="skill-node dependent-node" data-feature="hyphenation" data-node-id="hyphenation">
+              <input type="checkbox" id="hyphenation" data-feature="hyphenation" />
+              <div class="tooltip">
+                <div class="tooltip-title">Hyphenation</div>
+                <div class="tooltip-desc">Language-aware hyphenation for justified EPUB text</div>
+                <div class="tooltip-size"></div>
+                <div class="tooltip-req">Requires EPUB Support</div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x2E17;</span></div>
+              <div class="node-label">Hyphenation</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="markdown" data-node-id="markdown">
+              <input type="checkbox" id="markdown" data-feature="markdown" />
+              <div class="tooltip">
+                <div class="tooltip-title">Markdown &amp; Obsidian</div>
+                <div class="tooltip-desc">Markdown and Obsidian vault reading support</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x270D;</span></div>
+              <div class="node-label">Markdown</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="xtc_support" data-node-id="xtc_support">
+              <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
+              <div class="tooltip">
+                <div class="tooltip-title">XTC Support</div>
+                <div class="tooltip-desc">XTC format reader with chapter navigation</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1F4DC;</span></div>
+              <div class="node-label">XTC</div>
+              <div class="node-size"></div>
+            </label>
+          </div>
+
+          <div class="graph-lane" data-lane="interface">
+            <div class="lane-header">Interface</div>
+
+            <label class="skill-node" data-feature="extended_fonts" data-node-id="extended_fonts">
+              <input type="checkbox" id="extended_fonts" data-feature="extended_fonts" />
+              <div class="tooltip">
+                <div class="tooltip-title">Extended Fonts</div>
+                <div class="tooltip-desc">12/16/18pt fonts and OpenDyslexic support</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1D5D4;</span></div>
+              <div class="node-label">Fonts</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="lyra_theme" data-node-id="lyra_theme">
+              <input type="checkbox" id="lyra_theme" data-feature="lyra_theme" />
+              <div class="tooltip">
+                <div class="tooltip-title">Lyra Theme</div>
+                <div class="tooltip-desc">Alternative UI theme with refined spacing and layout</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x2726;</span></div>
+              <div class="node-label">Lyra Theme</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="home_media_picker" data-node-id="home_media_picker">
+              <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
+              <div class="tooltip">
+                <div class="tooltip-title">Home Media Picker</div>
+                <div class="tooltip-desc">Streamlined home UI with horizontal book shelf + vertical menu</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1F3E0;</span></div>
+              <div class="node-label">Home UI</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="image_sleep" data-node-id="image_sleep">
+              <input type="checkbox" id="image_sleep" data-feature="image_sleep" />
+              <div class="tooltip">
+                <div class="tooltip-title">PNG/JPEG Sleep Images</div>
+                <div class="tooltip-desc">PNG and JPEG sleep screen support (BMP always included)</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x263D;</span></div>
+              <div class="node-label">Sleep Art</div>
+              <div class="node-size"></div>
+            </label>
+          </div>
+
+          <div class="graph-lane" data-lane="network">
+            <div class="lane-header">Network</div>
+
+            <label class="skill-node" data-feature="background_server" data-node-id="background_server">
+              <input type="checkbox" id="background_server" data-feature="background_server" />
+              <div class="tooltip">
+                <div class="tooltip-title">Background Web Server</div>
+                <div class="tooltip-desc">Background web server for file management</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1F310;</span></div>
+              <div class="node-label">Web Server</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="ota_updates" data-node-id="ota_updates">
+              <input type="checkbox" id="ota_updates" data-feature="ota_updates" />
+              <div class="tooltip">
+                <div class="tooltip-title">OTA Updates</div>
+                <div class="tooltip-desc">Over-the-air firmware updates via WiFi</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x2B06;</span></div>
+              <div class="node-label">OTA</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="integrations" data-node-id="integrations">
+              <input type="checkbox" id="integrations" data-feature="integrations" />
+              <div class="tooltip">
+                <div class="tooltip-title">Integrations Base</div>
+                <div class="tooltip-desc">Shared runtime hooks for remote sync integrations</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1F517;</span></div>
+              <div class="node-label">Integrations</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node dependent-node" data-feature="koreader_sync" data-node-id="koreader_sync">
+              <input type="checkbox" id="koreader_sync" data-feature="koreader_sync" />
+              <div class="tooltip">
+                <div class="tooltip-title">KOReader Sync</div>
+                <div class="tooltip-desc">Sync reading progress with KOReader</div>
+                <div class="tooltip-size"></div>
+                <div class="tooltip-req">Requires Integrations</div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1F4F1;</span></div>
+              <div class="node-label">KOReader</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node dependent-node" data-feature="calibre_sync" data-node-id="calibre_sync">
+              <input type="checkbox" id="calibre_sync" data-feature="calibre_sync" />
+              <div class="tooltip">
+                <div class="tooltip-title">Calibre Sync</div>
+                <div class="tooltip-desc">Calibre OPDS browser and metadata sync settings</div>
+                <div class="tooltip-size"></div>
+                <div class="tooltip-req">Requires Integrations</div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1F4DA;</span></div>
+              <div class="node-label">Calibre</div>
+              <div class="node-size"></div>
+            </label>
+          </div>
+
+          <div class="graph-lane" data-lane="extras">
+            <div class="lane-header">Extras</div>
+
+            <label class="skill-node" data-feature="web_pokedex_plugin" data-node-id="web_pokedex_plugin">
+              <input type="checkbox" id="web_pokedex_plugin" data-feature="web_pokedex_plugin" />
+              <div class="tooltip">
+                <div class="tooltip-title">Web Pokedex Plugin</div>
+                <div class="tooltip-desc">Browser-side Pokemon wallpaper generator at /plugins/pokedex</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x26A1;</span></div>
+              <div class="node-label">Pokedex</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="todo_planner" data-node-id="todo_planner">
+              <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
+              <div class="tooltip">
+                <div class="tooltip-title">Todo Planner</div>
+                <div class="tooltip-desc">Daily markdown notes and task tracking</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x2611;</span></div>
+              <div class="node-label">Todo</div>
+              <div class="node-size"></div>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -1183,6 +1171,35 @@
         calibre_sync: ["integrations"],
         hyphenation: ["epub_support"],
       };
+
+      const HUB_FEATURES = {
+        reading_hub: ["epub_support", "hyphenation", "markdown", "xtc_support"],
+        interface_hub: ["extended_fonts", "lyra_theme", "home_media_picker", "image_sleep"],
+        network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync"],
+        extras_hub: ["web_pokedex_plugin", "todo_planner"],
+      };
+
+      const GRAPH_EDGES = [
+        { from: "root", to: "reading_hub" },
+        { from: "root", to: "interface_hub" },
+        { from: "root", to: "network_hub" },
+        { from: "root", to: "extras_hub" },
+        { from: "reading_hub", to: "epub_support" },
+        { from: "epub_support", to: "hyphenation" },
+        { from: "reading_hub", to: "markdown" },
+        { from: "reading_hub", to: "xtc_support" },
+        { from: "interface_hub", to: "extended_fonts" },
+        { from: "interface_hub", to: "lyra_theme" },
+        { from: "interface_hub", to: "home_media_picker" },
+        { from: "interface_hub", to: "image_sleep" },
+        { from: "network_hub", to: "background_server" },
+        { from: "network_hub", to: "ota_updates" },
+        { from: "network_hub", to: "integrations" },
+        { from: "integrations", to: "koreader_sync" },
+        { from: "integrations", to: "calibre_sync" },
+        { from: "extras_hub", to: "web_pokedex_plugin" },
+        { from: "extras_hub", to: "todo_planner" },
+      ];
 
       const PROFILES = {
         lean: {},
@@ -1439,51 +1456,117 @@
         }
       }
 
-      function updateSkillTreeVisuals(selections) {
-        document.querySelectorAll('.skill-node[data-feature]').forEach(node => {
-          const feature = node.dataset.feature;
-          const isEnabled = selections[feature];
-          const parents = FEATURE_DEPENDENCIES[feature] || [];
-          const isBlocked = parents.some(p => !selections[p]);
-          const checkbox = node.querySelector('input');
+      function isFeatureNode(nodeId) {
+        return Object.prototype.hasOwnProperty.call(FEATURES, nodeId);
+      }
 
-          node.classList.toggle('active', isEnabled);
-          node.classList.toggle('locked', isBlocked);
-          checkbox.disabled = isBlocked;
+      function isFeatureBlocked(feature, selections) {
+        const parents = FEATURE_DEPENDENCIES[feature] || [];
+        return parents.some((parent) => !selections[parent]);
+      }
 
-          const sizeEl = node.querySelector('.tooltip-size');
-          if (sizeEl) {
-            const s = formatSize(FEATURES[feature].sizeKb);
-            sizeEl.textContent = s ? `Flash: ${s}` : '';
+      function updateHubVisuals(selections) {
+        document.querySelectorAll(".graph-hub[data-node-id]").forEach((hub) => {
+          const hubId = hub.dataset.nodeId;
+          const hasAnySelected = (HUB_FEATURES[hubId] || []).some((feature) => selections[feature]);
+          hub.classList.toggle("active", hasAnySelected);
+        });
+      }
+
+      function getNodeCenter(containerRect, nodeEl) {
+        const centerTarget = nodeEl.querySelector(".node-ring") || nodeEl;
+        const rect = centerTarget.getBoundingClientRect();
+        return {
+          x: rect.left - containerRect.left + rect.width / 2,
+          y: rect.top - containerRect.top + rect.height / 2,
+        };
+      }
+
+      function renderGraphEdges(selections) {
+        const tree = document.getElementById("skill-tree");
+        const svg = document.getElementById("graph-links");
+        if (!tree || !svg) return;
+
+        const width = tree.clientWidth;
+        const height = tree.clientHeight;
+        if (!width || !height) return;
+
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        svg.innerHTML = "";
+
+        const treeRect = tree.getBoundingClientRect();
+        const hubStates = {};
+        Object.keys(HUB_FEATURES).forEach((hubId) => {
+          hubStates[hubId] = HUB_FEATURES[hubId].some((feature) => selections[feature]);
+        });
+
+        GRAPH_EDGES.forEach((edge) => {
+          const fromEl = tree.querySelector(`[data-node-id="${edge.from}"]`);
+          const toEl = tree.querySelector(`[data-node-id="${edge.to}"]`);
+          if (!fromEl || !toEl) return;
+
+          const fromPoint = getNodeCenter(treeRect, fromEl);
+          const toPoint = getNodeCenter(treeRect, toEl);
+          const toIsFeature = isFeatureNode(edge.to);
+          const fromIsFeature = isFeatureNode(edge.from);
+
+          let active = false;
+          let locked = false;
+
+          if (Object.prototype.hasOwnProperty.call(HUB_FEATURES, edge.to)) {
+            active = hubStates[edge.to];
+          } else if (toIsFeature) {
+            active = selections[edge.to] && (!fromIsFeature || selections[edge.from]);
+            locked = isFeatureBlocked(edge.to, selections);
           }
 
-          const nodeSizeEl = node.querySelector('.node-size');
+          if (locked) active = false;
+
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("x1", fromPoint.x.toFixed(2));
+          line.setAttribute("y1", fromPoint.y.toFixed(2));
+          line.setAttribute("x2", toPoint.x.toFixed(2));
+          line.setAttribute("y2", toPoint.y.toFixed(2));
+          line.classList.add("graph-edge");
+          if (active) line.classList.add("active");
+          if (locked) line.classList.add("locked");
+          svg.appendChild(line);
+        });
+      }
+
+      function updateSkillTreeVisuals(selections) {
+        document.querySelectorAll(".skill-node[data-feature]").forEach((node) => {
+          const feature = node.dataset.feature;
+          const isEnabled = selections[feature];
+          const isBlocked = isFeatureBlocked(feature, selections);
+          const checkbox = node.querySelector("input");
+
+          node.classList.toggle("active", isEnabled);
+          node.classList.toggle("locked", isBlocked);
+          checkbox.disabled = isBlocked;
+
+          const sizeEl = node.querySelector(".tooltip-size");
+          if (sizeEl) {
+            const featureSize = formatSize(FEATURES[feature].sizeKb);
+            sizeEl.textContent = featureSize ? `Flash: ${featureSize}` : "";
+          }
+
+          const nodeSizeEl = node.querySelector(".node-size");
           if (nodeSizeEl) {
             nodeSizeEl.textContent = formatSize(FEATURES[feature].sizeKb);
           }
 
-          const iconEl = node.querySelector('.node-icon');
+          const iconEl = node.querySelector(".node-icon");
           if (isBlocked && iconEl) {
             iconEl.dataset.origIcon = iconEl.dataset.origIcon || iconEl.innerHTML;
-            iconEl.innerHTML = '&#x1F512;';
+            iconEl.innerHTML = "&#x1F512;";
           } else if (iconEl && iconEl.dataset.origIcon) {
             iconEl.innerHTML = iconEl.dataset.origIcon;
           }
         });
 
-        document.querySelectorAll('.connector[data-conn]').forEach(conn => {
-          const [parent, child] = conn.dataset.conn.split('-');
-          const childBlocked = (FEATURE_DEPENDENCIES[child] || []).some(p => !selections[p]);
-          conn.classList.toggle('active', selections[parent] && selections[child]);
-          conn.classList.toggle('locked', childBlocked);
-        });
-
-        document.querySelectorAll('.fork-top[data-conn]').forEach(fork => {
-          const [parent, child] = fork.dataset.conn.split('-');
-          const childBlocked = (FEATURE_DEPENDENCIES[child] || []).some(p => !selections[p]);
-          fork.classList.toggle('active', selections[parent] && selections[child]);
-          fork.classList.toggle('locked', childBlocked);
-        });
+        updateHubVisuals(selections);
+        renderGraphEdges(selections);
       }
 
       function updateDependencyUi(selections) {
@@ -1557,6 +1640,21 @@
           link.remove();
           URL.revokeObjectURL(url);
         });
+
+        let resizeFrame = null;
+        window.addEventListener("resize", () => {
+          if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+          resizeFrame = requestAnimationFrame(() => {
+            resizeFrame = null;
+            renderGraphEdges(readSelections());
+          });
+        });
+
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(() => {
+            renderGraphEdges(readSelections());
+          });
+        }
       }
 
       async function loadScreenPreviews() {
