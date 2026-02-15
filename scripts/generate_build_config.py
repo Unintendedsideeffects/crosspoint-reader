@@ -37,7 +37,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=126,
+        size_kb=231,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -49,13 +49,13 @@ FEATURES = {
     'koreader_sync': Feature(
         name='KOReader Sync',
         flag='ENABLE_KOREADER_SYNC',
-        size_kb=52,
+        size_kb=142,
         description='Sync reading progress with KOReader'
     ),
     'calibre_sync': Feature(
         name='Calibre Sync',
         flag='ENABLE_CALIBRE_SYNC',
-        size_kb=44,
+        size_kb=223,
         description='Calibre OPDS browser and metadata sync settings'
     ),
     'background_server': Feature(
@@ -79,37 +79,37 @@ FEATURES = {
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=0,
+        size_kb=157,
         description='EPUB e-book reader with CSS, images, and chapter navigation'
     ),
     'hyphenation': Feature(
         name='Hyphenation',
         flag='ENABLE_HYPHENATION',
-        size_kb=0,
+        size_kb=447,
         description='Language-aware hyphenation for justified EPUB text'
     ),
     'xtc_support': Feature(
         name='XTC Support',
         flag='ENABLE_XTC_SUPPORT',
-        size_kb=0,
+        size_kb=13,
         description='XTC format reader with chapter navigation'
     ),
     'lyra_theme': Feature(
         name='Lyra Theme',
         flag='ENABLE_LYRA_THEME',
-        size_kb=0,
+        size_kb=5,
         description='Alternative UI theme with refined spacing and layout'
     ),
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=0,
+        size_kb=230,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
         name='Todo Planner',
         flag='ENABLE_TODO_PLANNER',
-        size_kb=0,
+        size_kb=6,
         description='Daily markdown notes and task tracking'
     ),
 }
@@ -379,7 +379,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 2.35  # Lean profile size baseline (measured)
+    base_size_mb = 1.66  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
