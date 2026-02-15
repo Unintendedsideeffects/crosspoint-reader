@@ -446,6 +446,44 @@
         transform: translateX(14px);
       }
 
+      .graph-note {
+        max-width: 190px;
+        cursor: default;
+      }
+
+      .graph-note .node-ring {
+        width: 38px;
+        height: 38px;
+        margin-bottom: 4px;
+        border-style: dashed;
+        background: radial-gradient(circle at 34% 24%, #ffffff 0%, #efefe9 55%, #dfdfd9 100%);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+      }
+
+      .graph-note .node-ring::after {
+        inset: 4px;
+      }
+
+      .graph-note .node-icon {
+        font-size: 0.72rem;
+      }
+
+      .graph-note .node-label {
+        text-transform: none;
+        letter-spacing: 0.02em;
+        font-size: 0.66rem;
+        color: #555555;
+      }
+
+      .graph-note.active .node-ring {
+        border-color: #111111;
+        background: radial-gradient(circle at 34% 24%, #ffffff 0%, #e9e9e3 55%, #d5d5ce 100%);
+      }
+
+      .graph-note.active .node-label {
+        color: #151515;
+      }
+
       /* Tooltip */
       .skill-node .tooltip {
         position: absolute;
@@ -779,9 +817,9 @@
     <div class="page">
       <div class="header">
         <div class="header-eyebrow">CrossPoint Reader</div>
-        <h1>E-Ink Skill Graph</h1>
+        <h1>CrossPoint Capability Tree</h1>
         <div class="header-sub">
-          Shape your firmware graph in a high-contrast e-ink style within the 6.4 MB flash limit.
+          Structured from the product canvas: compile-time flags remain exact, and conceptual branches stay visible.
         </div>
       </div>
 
@@ -810,29 +848,53 @@
         <div class="graph-layout">
           <div class="graph-root anchor-node active" data-node-id="root">
             <div class="node-ring"><span class="node-icon">&#x1F5A5;</span></div>
-            <div class="node-label">E-Ink Base</div>
-            <div class="node-size">2.35 MB core</div>
+            <div class="node-label">CrossPoint Core</div>
+            <div class="node-size">1.66 MB core</div>
           </div>
 
           <div class="graph-hub anchor-node" data-node-id="reading_hub">
             <div class="node-ring"><span class="node-icon">&#x1F4DA;</span></div>
-            <div class="node-label">Reading</div>
+            <div class="node-label">Reading Stack</div>
           </div>
           <div class="graph-hub anchor-node" data-node-id="interface_hub">
             <div class="node-ring"><span class="node-icon">&#x1F58C;</span></div>
-            <div class="node-label">Interface</div>
+            <div class="node-label">UI Stack</div>
           </div>
           <div class="graph-hub anchor-node" data-node-id="network_hub">
             <div class="node-ring"><span class="node-icon">&#x1F6DC;</span></div>
-            <div class="node-label">Network</div>
+            <div class="node-label">WiFi Support</div>
           </div>
           <div class="graph-hub anchor-node" data-node-id="extras_hub">
             <div class="node-ring"><span class="node-icon">&#x2726;</span></div>
-            <div class="node-label">Extras</div>
+            <div class="node-label">Roadmap</div>
           </div>
 
           <div class="graph-lane" data-lane="reading">
-            <div class="lane-header">Reading</div>
+            <div class="lane-header">Reading &amp; Notes</div>
+
+            <label class="skill-node" data-feature="markdown" data-node-id="markdown">
+              <input type="checkbox" id="markdown" data-feature="markdown" />
+              <div class="tooltip">
+                <div class="tooltip-title">Markdown Support</div>
+                <div class="tooltip-desc">Markdown and Obsidian vault reading support</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x270D;</span></div>
+              <div class="node-label">Markdown Support</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="xtc_support" data-node-id="xtc_support">
+              <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
+              <div class="tooltip">
+                <div class="tooltip-title">XTC Support</div>
+                <div class="tooltip-desc">XTC format reader with chapter navigation</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1F4DC;</span></div>
+              <div class="node-label">XTC Support</div>
+              <div class="node-size"></div>
+            </label>
 
             <label class="skill-node" data-feature="epub_support" data-node-id="epub_support">
               <input type="checkbox" id="epub_support" data-feature="epub_support" />
@@ -842,7 +904,7 @@
                 <div class="tooltip-size"></div>
               </div>
               <div class="node-ring"><span class="node-icon">&#x1F4D6;</span></div>
-              <div class="node-label">EPUB</div>
+              <div class="node-label">EPUB Support</div>
               <div class="node-size"></div>
             </label>
 
@@ -859,43 +921,48 @@
               <div class="node-size"></div>
             </label>
 
-            <label class="skill-node" data-feature="markdown" data-node-id="markdown">
-              <input type="checkbox" id="markdown" data-feature="markdown" />
+            <label class="skill-node" data-feature="todo_planner" data-node-id="todo_planner">
+              <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
               <div class="tooltip">
-                <div class="tooltip-title">Markdown &amp; Obsidian</div>
-                <div class="tooltip-desc">Markdown and Obsidian vault reading support</div>
+                <div class="tooltip-title">Agenda</div>
+                <div class="tooltip-desc">Daily markdown notes and task tracking</div>
                 <div class="tooltip-size"></div>
               </div>
-              <div class="node-ring"><span class="node-icon">&#x270D;</span></div>
-              <div class="node-label">Markdown</div>
-              <div class="node-size"></div>
-            </label>
-
-            <label class="skill-node" data-feature="xtc_support" data-node-id="xtc_support">
-              <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
-              <div class="tooltip">
-                <div class="tooltip-title">XTC Support</div>
-                <div class="tooltip-desc">XTC format reader with chapter navigation</div>
-                <div class="tooltip-size"></div>
-              </div>
-              <div class="node-ring"><span class="node-icon">&#x1F4DC;</span></div>
-              <div class="node-label">XTC</div>
+              <div class="node-ring"><span class="node-icon">&#x1F4C5;</span></div>
+              <div class="node-label">Agenda</div>
               <div class="node-size"></div>
             </label>
           </div>
 
           <div class="graph-lane" data-lane="interface">
-            <div class="lane-header">Interface</div>
+            <div class="lane-header">UI / Sleep</div>
 
             <label class="skill-node" data-feature="extended_fonts" data-node-id="extended_fonts">
               <input type="checkbox" id="extended_fonts" data-feature="extended_fonts" />
               <div class="tooltip">
-                <div class="tooltip-title">Extended Fonts</div>
+                <div class="tooltip-title">Custom Fonts</div>
                 <div class="tooltip-desc">12/16/18pt fonts and OpenDyslexic support</div>
                 <div class="tooltip-size"></div>
               </div>
               <div class="node-ring"><span class="node-icon">&#x1D5D4;</span></div>
-              <div class="node-label">Fonts</div>
+              <div class="node-label">Custom Fonts</div>
+              <div class="node-size"></div>
+            </label>
+
+            <div class="graph-note anchor-node" data-node-id="specific_fonts_note">
+              <div class="node-ring"><span class="node-icon">&#x270E;</span></div>
+              <div class="node-label">Specific font support (smaller and targeted)</div>
+            </div>
+
+            <label class="skill-node" data-feature="home_media_picker" data-node-id="home_media_picker">
+              <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
+              <div class="tooltip">
+                <div class="tooltip-title">Home Screen Customization</div>
+                <div class="tooltip-desc">Streamlined home UI with horizontal book shelf + vertical menu</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x1F3E0;</span></div>
+              <div class="node-label">Home Screen Customization</div>
               <div class="node-size"></div>
             </label>
 
@@ -907,37 +974,52 @@
                 <div class="tooltip-size"></div>
               </div>
               <div class="node-ring"><span class="node-icon">&#x2726;</span></div>
-              <div class="node-label">Lyra Theme</div>
+              <div class="node-label">Lyra</div>
               <div class="node-size"></div>
             </label>
 
-            <label class="skill-node" data-feature="home_media_picker" data-node-id="home_media_picker">
-              <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
-              <div class="tooltip">
-                <div class="tooltip-title">Home Media Picker</div>
-                <div class="tooltip-desc">Streamlined home UI with horizontal book shelf + vertical menu</div>
-                <div class="tooltip-size"></div>
-              </div>
-              <div class="node-ring"><span class="node-icon">&#x1F3E0;</span></div>
-              <div class="node-label">Home UI</div>
-              <div class="node-size"></div>
-            </label>
+            <div class="graph-note anchor-node" data-node-id="fork_drift_note">
+              <div class="node-ring"><span class="node-icon">&#x21BB;</span></div>
+              <div class="node-label">Fork-drift</div>
+            </div>
+
+            <div class="graph-note anchor-node" data-node-id="future_themes_note">
+              <div class="node-ring"><span class="node-icon">&#x22EF;</span></div>
+              <div class="node-label">{future themes}</div>
+            </div>
+
+            <div class="graph-note anchor-node" data-node-id="dark_theme_note">
+              <div class="node-ring"><span class="node-icon">&#x25D0;</span></div>
+              <div class="node-label">Dark theme</div>
+            </div>
 
             <label class="skill-node" data-feature="image_sleep" data-node-id="image_sleep">
               <input type="checkbox" id="image_sleep" data-feature="image_sleep" />
               <div class="tooltip">
-                <div class="tooltip-title">PNG/JPEG Sleep Images</div>
+                <div class="tooltip-title">Sleep Screen</div>
                 <div class="tooltip-desc">PNG and JPEG sleep screen support (BMP always included)</div>
                 <div class="tooltip-size"></div>
               </div>
               <div class="node-ring"><span class="node-icon">&#x263D;</span></div>
-              <div class="node-label">Sleep Art</div>
+              <div class="node-label">Sleep Screen</div>
+              <div class="node-size"></div>
+            </label>
+
+            <label class="skill-node" data-feature="web_pokedex_plugin" data-node-id="web_pokedex_plugin">
+              <input type="checkbox" id="web_pokedex_plugin" data-feature="web_pokedex_plugin" />
+              <div class="tooltip">
+                <div class="tooltip-title">Pokedex Sleep</div>
+                <div class="tooltip-desc">Browser-side Pokemon wallpaper generator at /plugins/pokedex</div>
+                <div class="tooltip-size"></div>
+              </div>
+              <div class="node-ring"><span class="node-icon">&#x26A1;</span></div>
+              <div class="node-label">Pokedex Sleep</div>
               <div class="node-size"></div>
             </label>
           </div>
 
           <div class="graph-lane" data-lane="network">
-            <div class="lane-header">Network</div>
+            <div class="lane-header">Connectivity</div>
 
             <label class="skill-node" data-feature="background_server" data-node-id="background_server">
               <input type="checkbox" id="background_server" data-feature="background_server" />
@@ -947,9 +1029,19 @@
                 <div class="tooltip-size"></div>
               </div>
               <div class="node-ring"><span class="node-icon">&#x1F310;</span></div>
-              <div class="node-label">Web Server</div>
+              <div class="node-label">Webserver</div>
               <div class="node-size"></div>
             </label>
+
+            <div class="graph-note anchor-node" data-node-id="webserver_always_on_note">
+              <div class="node-ring"><span class="node-icon">&#x221E;</span></div>
+              <div class="node-label">Webserver always on</div>
+            </div>
+
+            <div class="graph-note anchor-node" data-node-id="webserver_on_charge_note">
+              <div class="node-ring"><span class="node-icon">&#x26A1;</span></div>
+              <div class="node-label">Webserver on charge</div>
+            </div>
 
             <label class="skill-node" data-feature="ota_updates" data-node-id="ota_updates">
               <input type="checkbox" id="ota_updates" data-feature="ota_updates" />
@@ -971,7 +1063,7 @@
                 <div class="tooltip-size"></div>
               </div>
               <div class="node-ring"><span class="node-icon">&#x1F517;</span></div>
-              <div class="node-label">Integrations</div>
+              <div class="node-label">Sync Base</div>
               <div class="node-size"></div>
             </label>
 
@@ -984,7 +1076,7 @@
                 <div class="tooltip-req">Requires Integrations</div>
               </div>
               <div class="node-ring"><span class="node-icon">&#x1F4F1;</span></div>
-              <div class="node-label">KOReader</div>
+              <div class="node-label">KOReader Sync</div>
               <div class="node-size"></div>
             </label>
 
@@ -997,37 +1089,23 @@
                 <div class="tooltip-req">Requires Integrations</div>
               </div>
               <div class="node-ring"><span class="node-icon">&#x1F4DA;</span></div>
-              <div class="node-label">Calibre</div>
+              <div class="node-label">Calibre Sync</div>
               <div class="node-size"></div>
             </label>
           </div>
 
           <div class="graph-lane" data-lane="extras">
-            <div class="lane-header">Extras</div>
+            <div class="lane-header">Canvas Notes</div>
 
-            <label class="skill-node" data-feature="web_pokedex_plugin" data-node-id="web_pokedex_plugin">
-              <input type="checkbox" id="web_pokedex_plugin" data-feature="web_pokedex_plugin" />
-              <div class="tooltip">
-                <div class="tooltip-title">Web Pokedex Plugin</div>
-                <div class="tooltip-desc">Browser-side Pokemon wallpaper generator at /plugins/pokedex</div>
-                <div class="tooltip-size"></div>
-              </div>
-              <div class="node-ring"><span class="node-icon">&#x26A1;</span></div>
-              <div class="node-label">Pokedex</div>
-              <div class="node-size"></div>
-            </label>
+            <div class="graph-note anchor-node" data-node-id="obsidian_xte_sync_note">
+              <div class="node-ring"><span class="node-icon">&#x1F4DD;</span></div>
+              <div class="node-label">Obsidian XTE sync</div>
+            </div>
 
-            <label class="skill-node" data-feature="todo_planner" data-node-id="todo_planner">
-              <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
-              <div class="tooltip">
-                <div class="tooltip-title">Todo Planner</div>
-                <div class="tooltip-desc">Daily markdown notes and task tracking</div>
-                <div class="tooltip-size"></div>
-              </div>
-              <div class="node-ring"><span class="node-icon">&#x2611;</span></div>
-              <div class="node-label">Todo</div>
-              <div class="node-size"></div>
-            </label>
+            <div class="graph-note anchor-node" data-node-id="feature_store_note">
+              <div class="node-ring"><span class="node-icon">&#x1F6D2;</span></div>
+              <div class="node-label">Feature store: select features then pull by OTA</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1061,7 +1139,7 @@
           <a class="btn btn-solid" id="build-link" href="#" target="_blank" rel="noopener">Build on GitHub Actions</a>
         </div>
         <div class="info-bar">
-          Dependencies are enforced automatically. Enabling a child skill unlocks its parent.
+          Compile-time dependencies are enforced automatically. Canvas note links are directional and do not hard-block builds.
         </div>
       </div>
 
@@ -1139,7 +1217,7 @@
           default: true,
         },
         web_pokedex_plugin: {
-          sizeKb: 4,
+          sizeKb: -4,
           flag: "ENABLE_WEB_POKEDEX_PLUGIN",
           default: false,
         },
@@ -1184,10 +1262,21 @@
       };
 
       const HUB_FEATURES = {
-        reading_hub: ["epub_support", "hyphenation", "markdown", "xtc_support"],
-        interface_hub: ["extended_fonts", "lyra_theme", "home_media_picker", "image_sleep"],
+        reading_hub: ["markdown", "xtc_support", "epub_support", "hyphenation", "todo_planner"],
+        interface_hub: ["extended_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin"],
         network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync"],
-        extras_hub: ["web_pokedex_plugin", "todo_planner"],
+        extras_hub: ["ota_updates", "integrations", "home_media_picker"],
+      };
+
+      const NOTE_FEATURES = {
+        specific_fonts_note: ["extended_fonts"],
+        dark_theme_note: ["lyra_theme"],
+        fork_drift_note: ["home_media_picker"],
+        future_themes_note: ["home_media_picker", "lyra_theme"],
+        webserver_always_on_note: ["background_server"],
+        webserver_on_charge_note: ["background_server"],
+        obsidian_xte_sync_note: ["integrations"],
+        feature_store_note: ["ota_updates"],
       };
 
       const GRAPH_EDGES = [
@@ -1195,21 +1284,32 @@
         { from: "root", to: "interface_hub" },
         { from: "root", to: "network_hub" },
         { from: "root", to: "extras_hub" },
-        { from: "reading_hub", to: "epub_support" },
-        { from: "epub_support", to: "hyphenation" },
         { from: "reading_hub", to: "markdown" },
         { from: "reading_hub", to: "xtc_support" },
+        { from: "reading_hub", to: "epub_support" },
+        { from: "epub_support", to: "hyphenation" },
+        { from: "reading_hub", to: "todo_planner" },
+        { from: "markdown", to: "todo_planner" },
         { from: "interface_hub", to: "extended_fonts" },
-        { from: "interface_hub", to: "lyra_theme" },
+        { from: "extended_fonts", to: "specific_fonts_note" },
         { from: "interface_hub", to: "home_media_picker" },
+        { from: "home_media_picker", to: "lyra_theme" },
+        { from: "home_media_picker", to: "fork_drift_note" },
+        { from: "home_media_picker", to: "future_themes_note" },
+        { from: "lyra_theme", to: "dark_theme_note" },
         { from: "interface_hub", to: "image_sleep" },
+        { from: "image_sleep", to: "web_pokedex_plugin" },
         { from: "network_hub", to: "background_server" },
+        { from: "background_server", to: "webserver_always_on_note" },
+        { from: "background_server", to: "webserver_on_charge_note" },
         { from: "network_hub", to: "ota_updates" },
         { from: "network_hub", to: "integrations" },
         { from: "integrations", to: "koreader_sync" },
         { from: "integrations", to: "calibre_sync" },
-        { from: "extras_hub", to: "web_pokedex_plugin" },
-        { from: "extras_hub", to: "todo_planner" },
+        { from: "integrations", to: "obsidian_xte_sync_note" },
+        { from: "ota_updates", to: "feature_store_note" },
+        { from: "extras_hub", to: "obsidian_xte_sync_note" },
+        { from: "extras_hub", to: "feature_store_note" },
       ];
 
       const PROFILES = {
@@ -1471,6 +1571,14 @@
         return Object.prototype.hasOwnProperty.call(FEATURES, nodeId);
       }
 
+      function isNoteNode(nodeId) {
+        return Object.prototype.hasOwnProperty.call(NOTE_FEATURES, nodeId);
+      }
+
+      function isNoteActive(noteId, selections) {
+        return (NOTE_FEATURES[noteId] || []).some((feature) => selections[feature]);
+      }
+
       function isFeatureBlocked(feature, selections) {
         const parents = FEATURE_DEPENDENCIES[feature] || [];
         return parents.some((parent) => !selections[parent]);
@@ -1519,6 +1627,7 @@
           const fromPoint = getNodeCenter(treeRect, fromEl);
           const toPoint = getNodeCenter(treeRect, toEl);
           const toIsFeature = isFeatureNode(edge.to);
+          const toIsNote = isNoteNode(edge.to);
           const fromIsFeature = isFeatureNode(edge.from);
 
           let active = false;
@@ -1529,6 +1638,8 @@
           } else if (toIsFeature) {
             active = selections[edge.to] && (!fromIsFeature || selections[edge.from]);
             locked = isFeatureBlocked(edge.to, selections);
+          } else if (toIsNote) {
+            active = isNoteActive(edge.to, selections) && (!fromIsFeature || selections[edge.from]);
           }
 
           if (locked) active = false;
@@ -1577,6 +1688,10 @@
         });
 
         updateHubVisuals(selections);
+        document.querySelectorAll(".graph-note[data-node-id]").forEach((note) => {
+          const noteId = note.dataset.nodeId;
+          note.classList.toggle("active", isNoteActive(noteId, selections));
+        });
         renderGraphEdges(selections);
       }
 
