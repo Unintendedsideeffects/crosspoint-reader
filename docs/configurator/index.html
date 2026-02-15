@@ -3,703 +3,1016 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CrossPoint Reader Plugin Picker</title>
+    <title>CrossPoint Reader - Skill Tree</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap");
 
       :root {
-        color-scheme: light;
-        --ink: #0f1115;
-        --ink-soft: #3e4656;
-        --paper: #f6f1ea;
-        --paper-2: #ffffff;
-        --accent: #f05d5e;
-        --accent-2: #0f7173;
-        --accent-3: #f5a623;
-        --border: #e3dcd2;
-        --shadow: 0 10px 30px rgba(15, 17, 21, 0.12);
-        --radius: 18px;
+        --ink: #1a1a1a;
+        --ink-mid: #555;
+        --ink-light: #888;
+        --ink-faint: #bbb;
+        --paper: #f5f3ef;
+        --paper-warm: #eae6df;
+        --paper-bright: #fff;
+        --active-fill: var(--ink);
+        --active-stroke: var(--ink);
+        --locked-fill: var(--paper-warm);
+        --locked-stroke: #ccc;
+        --locked-text: #bbb;
+        --bar-fill: var(--ink);
+        --bar-track: #ddd;
+        --border: #d8d4cc;
+        --border-light: #e8e4dc;
+        --radius: 10px;
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
 
       body {
-        margin: 0;
-        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        font-family: 'DM Sans', sans-serif;
+        background: var(--paper);
         color: var(--ink);
-        background: radial-gradient(
-            1200px 600px at 10% 10%,
-            rgba(240, 93, 94, 0.08),
-            transparent 70%
-          ),
-          radial-gradient(
-            900px 500px at 90% 20%,
-            rgba(15, 113, 115, 0.1),
-            transparent 70%
-          ),
-          linear-gradient(135deg, #f6f1ea 0%, #eef3f4 100%);
         min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
       }
 
       .page {
         max-width: 1100px;
         margin: 0 auto;
-        padding: 48px 22px 80px;
+        padding: 40px 20px 80px;
       }
 
-      header {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
+      /* Header */
+      .header {
+        text-align: center;
         margin-bottom: 36px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
       }
 
-      .eyebrow {
-        letter-spacing: 0.22em;
+      .header-eyebrow {
+        font-family: 'IBM Plex Mono', monospace;
+        letter-spacing: 0.3em;
         text-transform: uppercase;
-        font-size: 0.75rem;
-        color: var(--accent-2);
-        font-weight: 600;
+        font-size: 0.65rem;
+        color: var(--ink-light);
+        margin-bottom: 6px;
       }
 
-      h1 {
-        font-family: "Fraunces", "Georgia", serif;
+      .header h1 {
+        font-family: 'Cormorant Garamond', serif;
         font-weight: 700;
-        font-size: clamp(2.2rem, 3.5vw, 3.2rem);
-        margin: 0;
+        font-size: clamp(2rem, 4vw, 3rem);
+        letter-spacing: 0.02em;
+        color: var(--ink);
       }
 
-      .subtitle {
-        color: var(--ink-soft);
-        max-width: 760px;
-        font-size: 1.05rem;
-      }
-
-      .grid {
-        display: grid;
-        gap: 24px;
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      @media (min-width: 960px) {
-        .grid {
-          grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-        }
-      }
-
-      .card {
-        background: var(--paper-2);
-        border-radius: var(--radius);
-        padding: 24px;
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-      }
-
-      .card h2 {
-        font-family: "Fraunces", "Georgia", serif;
-        margin: 0 0 18px;
-        font-size: 1.6rem;
-      }
-
-      .preset-row {
-        display: grid;
-        gap: 12px;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      }
-
-      .preset-btn {
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 14px 16px;
-        background: var(--paper);
-        font-weight: 600;
-        cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.15s ease, border 0.15s;
-      }
-
-      .preset-btn span {
-        display: block;
-        color: var(--ink-soft);
-        font-weight: 500;
+      .header-sub {
+        color: var(--ink-mid);
+        font-size: 0.9rem;
         margin-top: 6px;
-        font-size: 0.9rem;
+        font-weight: 300;
       }
 
-      .preset-btn.active {
-        border-color: var(--accent);
-        box-shadow: 0 8px 18px rgba(240, 93, 94, 0.2);
-        transform: translateY(-1px);
-        background: #fff7f7;
-      }
-
-      .feature-list {
-        display: grid;
-        gap: 14px;
-      }
-
-      .profile-status {
-        margin-top: 10px;
-        font-size: 0.9rem;
-        color: var(--ink-soft);
-      }
-
-      .profile-status strong {
-        color: var(--accent-2);
-      }
-
-      .feature-item {
+      /* Flash meter */
+      .flash-meter {
         display: flex;
         align-items: center;
-        gap: 18px;
-        padding: 14px 16px;
-        border-radius: 14px;
+        gap: 16px;
+        padding: 14px 18px;
+        background: var(--paper-bright);
         border: 1px solid var(--border);
-        background: #fbfaf8;
-      }
-
-      .feature-item.disabled {
-        opacity: 0.6;
-      }
-
-      .feature-title {
-        font-weight: 600;
-        font-size: 1rem;
-      }
-
-      .feature-meta {
-        color: var(--ink-soft);
-        font-size: 0.9rem;
-        margin-top: 4px;
-      }
-
-      .feature-size {
-        color: var(--accent);
-        font-size: 0.85rem;
-        font-weight: 600;
-      }
-
-      .toggle {
-        margin-left: auto;
-        position: relative;
-        width: 52px;
-        height: 28px;
-      }
-
-      .toggle input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-      }
-
-      .slider {
-        position: absolute;
-        inset: 0;
-        background: #d2d6df;
-        border-radius: 999px;
-        transition: background 0.2s ease;
-      }
-
-      .slider::after {
-        content: "";
-        position: absolute;
-        height: 20px;
-        width: 20px;
-        left: 4px;
-        top: 4px;
-        background: #fff;
-        border-radius: 50%;
-        transition: transform 0.2s ease;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-      }
-
-      .toggle input:checked + .slider {
-        background: var(--accent-2);
-      }
-
-      .toggle input:checked + .slider::after {
-        transform: translateX(24px);
-      }
-
-      .size-panel {
-        background: linear-gradient(145deg, #101418, #1d2530);
-        color: #f8f4ef;
         border-radius: var(--radius);
-        padding: 24px;
-        box-shadow: var(--shadow);
+        margin-bottom: 20px;
+        flex-wrap: wrap;
       }
 
-      .size-label {
+      .flash-label {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.65rem;
+        letter-spacing: 0.2em;
         text-transform: uppercase;
-        letter-spacing: 0.18em;
-        font-size: 0.75rem;
-        opacity: 0.7;
+        color: var(--ink-light);
       }
 
-      .size-value {
-        font-size: 2.6rem;
+      .flash-value {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.6rem;
         font-weight: 700;
-        margin: 10px 0 6px;
+        color: var(--ink);
+        min-width: 70px;
       }
 
-      .size-bar {
-        height: 12px;
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 999px;
+      .flash-track {
+        flex: 1;
+        min-width: 180px;
+        height: 6px;
+        background: var(--bar-track);
+        border-radius: 99px;
         overflow: hidden;
       }
 
-      .size-bar-fill {
+      .flash-fill {
         height: 100%;
-        background: linear-gradient(90deg, #f05d5e, #f5a623);
-        width: 0;
-        transition: width 0.2s ease;
+        background: var(--ink);
+        border-radius: 99px;
+        transition: width 0.35s ease;
       }
 
-      .size-context {
-        margin-top: 12px;
-        font-size: 0.95rem;
-        color: rgba(255, 255, 255, 0.7);
+      .flash-fill.over {
+        background: #c00;
       }
 
-      .output {
+      .flash-context {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.72rem;
+        color: var(--ink-light);
+      }
+
+      /* Loadout / profiles */
+      .loadout-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+      }
+
+      .loadout-label {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.65rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--ink-light);
+        margin-right: 4px;
+      }
+
+      .preset-btn {
+        background: var(--paper-bright);
+        border: 1px solid var(--border);
+        color: var(--ink-mid);
+        padding: 5px 14px;
+        border-radius: 4px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.82rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .preset-btn:hover {
+        border-color: var(--ink-light);
+        color: var(--ink);
+      }
+
+      .preset-btn.active {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+
+      .profile-status {
+        font-size: 0.78rem;
+        color: var(--ink-light);
+        margin-bottom: 28px;
+      }
+
+      .profile-status strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      /* Skill Tree Grid */
+      .skill-tree {
         display: grid;
-        gap: 14px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0 12px;
+        margin-bottom: 36px;
+      }
+
+      .skill-branch {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .branch-header {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--ink-mid);
+        margin-bottom: 18px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+        width: 100%;
+        text-align: center;
+      }
+
+      /* Skill Node */
+      .skill-node {
+        position: relative;
+        width: 100%;
+        max-width: 140px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        -webkit-user-select: none;
+        user-select: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .skill-node input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+
+      .node-ring {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: 2px solid var(--border);
+        background: var(--paper-bright);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.25s ease;
+        position: relative;
+        margin-bottom: 5px;
+      }
+
+      .node-icon {
+        font-size: 1.15rem;
+        line-height: 1;
+        color: var(--ink-light);
+        transition: all 0.25s ease;
+      }
+
+      .skill-node.active .node-ring {
+        background: var(--ink);
+        border-color: var(--ink);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      }
+
+      .skill-node.active .node-icon {
+        color: var(--paper);
+        filter: none;
+      }
+
+      .skill-node.locked .node-ring {
+        background: var(--paper-warm);
+        border-color: var(--locked-stroke);
+        border-style: dashed;
+      }
+
+      .skill-node.locked .node-icon {
+        color: var(--locked-text);
+        font-size: 0.85rem;
+      }
+
+      .node-label {
+        text-align: center;
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--ink-mid);
+        line-height: 1.2;
+        transition: color 0.2s ease;
+      }
+
+      .skill-node.active .node-label {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      .skill-node.locked .node-label {
+        color: var(--locked-text);
+      }
+
+      .node-size {
+        text-align: center;
+        font-size: 0.62rem;
+        font-family: 'IBM Plex Mono', monospace;
+        color: var(--ink-faint);
+        margin-top: 1px;
+      }
+
+      .skill-node.active .node-size {
+        color: var(--ink-mid);
+      }
+
+      /* Connector */
+      .connector {
+        width: 1px;
+        height: 14px;
+        margin: -2px auto 2px;
+        position: relative;
+      }
+
+      .connector-line {
+        width: 100%;
+        height: 100%;
+        background: var(--border);
+        transition: background 0.25s ease;
+      }
+
+      .connector.active .connector-line {
+        background: var(--ink);
+      }
+
+      .connector.locked .connector-line {
+        background: var(--locked-stroke);
+        /* dashed via repeating gradient */
+        background: repeating-linear-gradient(
+          to bottom,
+          var(--locked-stroke) 0px,
+          var(--locked-stroke) 3px,
+          transparent 3px,
+          transparent 6px
+        );
+      }
+
+      /* Fork connector */
+      .fork-container {
+        display: flex;
+        width: 100%;
+      }
+
+      .fork-branch {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+      }
+
+      .fork-top {
+        width: 100%;
+        height: 14px;
+        position: relative;
+        margin-bottom: 0;
+      }
+
+      .fork-top-line {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        border-color: var(--border);
+        border-style: solid;
+        transition: all 0.25s ease;
+      }
+
+      .fork-top-line.left {
+        right: 0;
+        left: 50%;
+        border-width: 0 0 1px 1px;
+        border-bottom-left-radius: 6px;
+      }
+
+      .fork-top-line.right {
+        left: 0;
+        right: 50%;
+        border-width: 0 1px 1px 0;
+        border-bottom-right-radius: 6px;
+      }
+
+      .fork-top.active .fork-top-line {
+        border-color: var(--ink);
+      }
+
+      .fork-top.locked .fork-top-line {
+        border-color: var(--locked-stroke);
+        border-style: dashed;
+      }
+
+      /* Spacer between unconnected nodes */
+      .node-gap {
+        height: 10px;
+      }
+
+      /* Tooltip */
+      .skill-node .tooltip {
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--paper-bright);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        min-width: 190px;
+        max-width: 240px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.12s ease;
+        z-index: 100;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      }
+
+      .skill-node:hover .tooltip {
+        opacity: 1;
+      }
+
+      .tooltip-title {
+        font-family: 'Cormorant Garamond', serif;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--ink);
+        margin-bottom: 3px;
+      }
+
+      .tooltip-desc {
+        font-size: 0.75rem;
+        color: var(--ink-mid);
+        line-height: 1.4;
+        margin-bottom: 4px;
+      }
+
+      .tooltip-size {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.68rem;
+        color: var(--ink-light);
+      }
+
+      .tooltip-req {
+        font-size: 0.68rem;
+        color: #a00;
+        margin-top: 3px;
+        font-style: italic;
+      }
+
+      .tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 4px solid transparent;
+        border-top-color: var(--border);
+      }
+
+      /* Panels */
+      .panel {
+        background: var(--paper-bright);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px;
+        margin-bottom: 14px;
+      }
+
+      .panel-heading {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-light);
+        margin-bottom: 12px;
+      }
+
+      .outputs-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .output { margin-bottom: 0; }
+
+      .output-label {
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--ink-mid);
+        margin-bottom: 4px;
       }
 
       .output textarea {
         width: 100%;
-        min-height: 150px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        padding: 14px;
-        font-family: "SF Mono", "Fira Code", monospace;
-        background: #f8f6f2;
-        color: #2d323a;
+        min-height: 72px;
+        background: var(--paper);
+        border: 1px solid var(--border-light);
+        border-radius: 4px;
+        padding: 8px 10px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.72rem;
+        color: var(--ink);
         resize: vertical;
       }
 
+      .output textarea:focus {
+        outline: none;
+        border-color: var(--ink-light);
+      }
+
       .actions {
-        display: grid;
-        gap: 12px;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 12px;
       }
 
       .btn {
         border: none;
-        border-radius: 14px;
-        padding: 14px 16px;
-        font-weight: 600;
+        border-radius: 4px;
+        padding: 7px 13px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.78rem;
+        font-weight: 500;
         cursor: pointer;
-        text-align: center;
+        transition: all 0.12s ease;
         text-decoration: none;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        text-align: center;
       }
 
-      .btn-primary {
-        background: linear-gradient(135deg, #f05d5e, #f68d58);
-        color: #fff;
-        box-shadow: 0 8px 20px rgba(240, 93, 94, 0.3);
-      }
-
-      .btn-secondary {
-        background: #f0ebe3;
-        color: #2e3643;
+      .btn-outline {
+        background: var(--paper);
+        color: var(--ink-mid);
         border: 1px solid var(--border);
       }
 
-      .btn:hover {
-        transform: translateY(-1px);
+      .btn-outline:hover {
+        border-color: var(--ink-light);
+        color: var(--ink);
       }
 
-      .note {
-        margin-top: 14px;
-        padding: 12px 14px;
-        border-left: 3px solid var(--accent-3);
-        background: #fff7e8;
-        border-radius: 12px;
-        font-size: 0.95rem;
-        color: #5f4b2e;
+      .btn-outline.copied {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
       }
 
-      .footer {
-        margin-top: 32px;
-        font-size: 0.9rem;
-        color: var(--ink-soft);
+      .btn-solid {
+        background: var(--ink);
+        color: var(--paper);
       }
 
-      .preview-section {
-        margin-top: 24px;
+      .btn-solid:hover {
+        opacity: 0.85;
       }
 
-      .preview-header {
+      .info-bar {
+        margin-top: 10px;
+        padding: 8px 12px;
+        border-left: 2px solid var(--border);
+        font-size: 0.78rem;
+        color: var(--ink-light);
+        font-style: italic;
+      }
+
+      /* Companion */
+      .companion-row {
         display: flex;
-        flex-wrap: wrap;
+        align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        align-items: flex-end;
+        gap: 14px;
+        flex-wrap: wrap;
       }
 
-      .preview-subtitle {
-        color: var(--ink-soft);
-        max-width: 680px;
-        margin-top: 8px;
+      .companion-title {
+        font-weight: 600;
+        font-size: 0.88rem;
+      }
+
+      .companion-desc {
+        font-size: 0.78rem;
+        color: var(--ink-mid);
+        margin-top: 3px;
+      }
+
+      .companion-desc code {
+        background: var(--paper);
+        padding: 1px 4px;
+        border-radius: 2px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.7rem;
+      }
+
+      /* Preview */
+      .preview-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .preview-sub {
+        font-size: 0.78rem;
+        color: var(--ink-light);
+        margin-top: 3px;
       }
 
       .preview-grid {
-        margin-top: 18px;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 10px;
       }
 
       .preview-card {
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        background: #fbfaf8;
+        border: 1px solid var(--border-light);
+        border-radius: 6px;
         overflow: hidden;
+        background: var(--paper);
       }
 
       .preview-card img {
         width: 100%;
         height: auto;
         display: block;
-        background: #f2eee8;
       }
 
       .preview-card figcaption {
-        padding: 10px 12px;
-        font-size: 0.9rem;
-        color: var(--ink-soft);
+        padding: 6px 8px;
+        font-size: 0.72rem;
+        color: var(--ink-light);
       }
 
       .preview-meta {
-        margin-top: 14px;
-        color: var(--ink-soft);
-        font-size: 0.86rem;
+        margin-top: 8px;
+        font-size: 0.7rem;
+        color: var(--ink-faint);
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 0.75rem;
+        color: var(--ink-faint);
+      }
+
+      /* Responsive */
+      @media (max-width: 800px) {
+        .skill-tree {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 18px 12px;
+        }
+        .outputs-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .skill-tree {
+          grid-template-columns: 1fr 1fr;
+          gap: 16px 8px;
+        }
+        .flash-meter {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+
+      /* Hover ring effect */
+      .skill-node:not(.locked):hover .node-ring {
+        border-color: var(--ink-mid);
+        box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      }
+
+      .skill-node.active:hover .node-ring {
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+      }
+
+      /* Note style */
+      .note-bar {
+        padding: 8px 12px;
+        border-left: 2px solid var(--border);
+        font-size: 0.78rem;
+        color: var(--ink-light);
+        margin-top: 10px;
+        font-style: italic;
       }
     </style>
   </head>
   <body>
     <div class="page">
-      <header>
-        <div class="eyebrow">CrossPoint Reader</div>
-        <h1>Plugin Picker</h1>
-        <div class="subtitle">
-          Build a firmware that fits your flash budget. Choose the plugins you
-          want, then trigger a custom build on GitHub Actions.
+      <div class="header">
+        <div class="header-eyebrow">CrossPoint Reader</div>
+        <h1>Skill Tree</h1>
+        <div class="header-sub">
+          Allocate firmware abilities within your 6.4 MB flash budget.
         </div>
-      </header>
-
-      <div class="grid">
-        <section class="card">
-          <h2>Profiles</h2>
-          <div class="preset-row">
-            <button class="preset-btn" data-preset="lean">
-              Lean
-              <span>Core reader only</span>
-            </button>
-            <button class="preset-btn active" data-preset="standard">
-              Standard
-              <span>Balanced defaults</span>
-            </button>
-            <button class="preset-btn" data-preset="full">
-              Full
-              <span>All optional modules</span>
-            </button>
-          </div>
-          <div class="profile-status" id="profile-status"></div>
-          <div class="note" style="margin-top: 12px">
-            KOReader Sync and Calibre Sync are downstream toggles and require
-            Integrations Base.
-          </div>
-
-          <h2 style="margin-top: 24px">Plugins</h2>
-          <div class="feature-list">
-            <div class="feature-item">
-              <div>
-                <div class="feature-title">Extended Fonts</div>
-                <div class="feature-meta">
-                  Adds more reading sizes + OpenDyslexic support.
-                </div>
-                <div class="feature-size">~3.5 MB</div>
-              </div>
-              <label class="toggle">
-                <input
-                  type="checkbox"
-                  id="extended_fonts"
-                  checked
-                  data-feature="extended_fonts"
-                />
-                <span class="slider"></span>
-              </label>
-            </div>
-
-            <div class="feature-item">
-              <div>
-                <div class="feature-title">PNG/JPEG Sleep Images</div>
-                <div class="feature-meta">
-                  Enables PNG and JPEG sleep screens. BMP stays on.
-                </div>
-                <div class="feature-size">~33 KB</div>
-              </div>
-              <label class="toggle">
-                <input
-                  type="checkbox"
-                  id="image_sleep"
-                  checked
-                  data-feature="image_sleep"
-                />
-                <span class="slider"></span>
-              </label>
-            </div>
-
-            <div class="feature-item">
-              <div>
-                <div class="feature-title">Markdown & Obsidian</div>
-                <div class="feature-meta">
-                  Full Markdown rendering and Obsidian compatibility.
-                </div>
-                <div class="feature-size">~158 KB</div>
-              </div>
-              <label class="toggle">
-                <input
-                  type="checkbox"
-                  id="markdown"
-                  checked
-                  data-feature="markdown"
-                />
-                <span class="slider"></span>
-              </label>
-            </div>
-
-            <div class="feature-item">
-              <div>
-                <div class="feature-title">Integrations Base</div>
-                <div class="feature-meta">
-                  Shared hooks for remote sync integrations.
-                </div>
-                <div class="feature-size">~0 KB</div>
-              </div>
-              <label class="toggle">
-                <input
-                  type="checkbox"
-                  id="integrations"
-                  data-feature="integrations"
-                />
-                <span class="slider"></span>
-              </label>
-            </div>
-
-            <div class="feature-item">
-              <div>
-                <div class="feature-title">KOReader Sync</div>
-                <div class="feature-meta">
-                  Sync reading progress with KOReader service.
-                </div>
-                <div class="feature-size">~2 KB</div>
-              </div>
-              <label class="toggle">
-                <input
-                  type="checkbox"
-                  id="koreader_sync"
-                  data-feature="koreader_sync"
-                />
-                <span class="slider"></span>
-              </label>
-            </div>
-
-            <div class="feature-item">
-              <div>
-                <div class="feature-title">Calibre Sync</div>
-                <div class="feature-meta">
-                  OPDS browser + metadata sync settings for Calibre.
-                </div>
-                <div class="feature-size">~17 KB</div>
-              </div>
-              <label class="toggle">
-                <input
-                  type="checkbox"
-                  id="calibre_sync"
-                  data-feature="calibre_sync"
-                />
-                <span class="slider"></span>
-              </label>
-            </div>
-
-            <div class="feature-item">
-              <div>
-                <div class="feature-title">Background Web Server</div>
-                <div class="feature-meta">
-                  Keeps the file server alive while reading.
-                </div>
-                <div class="feature-size">~4 KB</div>
-              </div>
-              <label class="toggle">
-                <input
-                  type="checkbox"
-                  id="background_server"
-                  checked
-                  data-feature="background_server"
-                />
-                <span class="slider"></span>
-              </label>
-            </div>
-
-            <div class="feature-item">
-              <div>
-                <div class="feature-title">Home Media Picker</div>
-                <div class="feature-meta">
-                  Horizontal book shelf + vertical menu navigation on Home.
-                </div>
-                <div class="feature-size">~0 KB</div>
-              </div>
-              <label class="toggle">
-                <input
-                  type="checkbox"
-                  id="home_media_picker"
-                  checked
-                  data-feature="home_media_picker"
-                />
-                <span class="slider"></span>
-              </label>
-            </div>
-
-            <div class="feature-item">
-              <div>
-                <div class="feature-title">Web Pokedex Plugin</div>
-                <div class="feature-meta">
-                  Browser-side Pokemon wallpaper generator in Files page.
-                </div>
-                <div class="feature-size">~34 KB</div>
-              </div>
-              <label class="toggle">
-                <input
-                  type="checkbox"
-                  id="web_pokedex_plugin"
-                  data-feature="web_pokedex_plugin"
-                />
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="size-panel">
-            <div class="size-label">Estimated Firmware Size</div>
-            <div class="size-value" id="size-value">6.2 MB</div>
-            <div class="size-bar">
-              <div class="size-bar-fill" id="size-bar"></div>
-            </div>
-            <div class="size-context" id="size-context">
-              97% of 6.4 MB flash budget
-            </div>
-          </div>
-
-          <h2 style="margin-top: 26px">Build Outputs</h2>
-          <div class="output">
-            <label for="flags-output" class="feature-title"
-              >Build flags</label
-            >
-            <textarea id="flags-output" readonly></textarea>
-          </div>
-
-          <div class="output">
-            <label for="command-output" class="feature-title"
-              >Local generate command</label
-            >
-            <textarea id="command-output" readonly></textarea>
-          </div>
-
-          <div class="output">
-            <label for="ini-output" class="feature-title"
-              >platformio-custom.ini</label
-            >
-            <textarea id="ini-output" readonly></textarea>
-          </div>
-
-          <div class="output">
-            <label for="share-output" class="feature-title"
-              >Shareable picker URL</label
-            >
-            <textarea id="share-output" readonly></textarea>
-          </div>
-
-          <div class="actions">
-            <button class="btn btn-secondary" id="copy-command">
-              Copy generate command
-            </button>
-            <button class="btn btn-secondary" id="copy-flags">
-              Copy build flags
-            </button>
-            <button class="btn btn-secondary" id="copy-share">
-              Copy share URL
-            </button>
-            <button class="btn btn-secondary" id="download-ini">
-              Download platformio-custom.ini
-            </button>
-            <a
-              class="btn btn-primary"
-              id="build-link"
-              href="#"
-              target="_blank"
-              rel="noopener"
-            >
-              Build on GitHub Actions
-            </a>
-          </div>
-
-          <div class="note">
-            OTA stays enabled in every build. The picker only controls optional
-            plugins that affect flash usage.
-          </div>
-        </section>
       </div>
 
-      <section class="card" style="margin-top: 24px">
-        <h2>Companion Plugins</h2>
-        <div class="feature-item" style="justify-content: space-between">
-          <div>
-            <div class="feature-title">X4 Grayscale Pokedex Wallpaper</div>
-            <div class="feature-meta">
-              Generate wallpapers from Pokemon data. Upload to
-              <code>/sleep/pokedex</code> for the new Sleep Source mode.
-            </div>
-            <div class="feature-size">No firmware size impact</div>
-          </div>
-          <a
-            class="btn btn-secondary"
-            href="../plugins/x4-pokedex-grayscale/"
-            target="_blank"
-            rel="noopener"
-            style="margin-left: 16px; min-width: 170px"
-            >Open Plugin</a
-          >
+      <!-- Flash meter -->
+      <div class="flash-meter">
+        <span class="flash-label">Flash</span>
+        <span class="flash-value" id="size-value">6.0 MB</span>
+        <div class="flash-track">
+          <div class="flash-fill" id="size-bar" style="width: 0%"></div>
         </div>
-      </section>
+        <span class="flash-context" id="size-context">94% of 6.4 MB</span>
+      </div>
 
-      <section class="card preview-section">
-        <div class="preview-header">
-          <div>
-            <h2>Live Screen Previews</h2>
-            <div class="preview-subtitle">
-              Auto-generated from the latest firmware UI harness and published
-              with this Plugin Picker.
+      <!-- Loadout -->
+      <div class="loadout-bar">
+        <span class="loadout-label">Loadout</span>
+        <button class="preset-btn" data-preset="lean">Lean</button>
+        <button class="preset-btn active" data-preset="standard">Standard</button>
+        <button class="preset-btn" data-preset="full">Full</button>
+      </div>
+      <div class="profile-status" id="profile-status"></div>
+
+      <!-- Skill Tree -->
+      <div class="skill-tree">
+        <!-- READING -->
+        <div class="skill-branch">
+          <div class="branch-header">Reading</div>
+
+          <label class="skill-node" data-feature="epub_support">
+            <input type="checkbox" id="epub_support" data-feature="epub_support" />
+            <div class="tooltip">
+              <div class="tooltip-title">EPUB Support</div>
+              <div class="tooltip-desc">EPUB e-book reader with CSS, images, and chapter navigation</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x1F4D6;</span></div>
+            <div class="node-label">EPUB</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="connector" data-conn="epub_support-hyphenation"><div class="connector-line"></div></div>
+
+          <label class="skill-node" data-feature="hyphenation">
+            <input type="checkbox" id="hyphenation" data-feature="hyphenation" />
+            <div class="tooltip">
+              <div class="tooltip-title">Hyphenation</div>
+              <div class="tooltip-desc">Language-aware hyphenation for justified EPUB text</div>
+              <div class="tooltip-size"></div>
+              <div class="tooltip-req">Requires EPUB Support</div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x2E17;</span></div>
+            <div class="node-label">Hyphenation</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="node-gap"></div>
+
+          <label class="skill-node" data-feature="markdown">
+            <input type="checkbox" id="markdown" data-feature="markdown" />
+            <div class="tooltip">
+              <div class="tooltip-title">Markdown &amp; Obsidian</div>
+              <div class="tooltip-desc">Markdown and Obsidian vault reading support</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x270D;</span></div>
+            <div class="node-label">Markdown</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="node-gap"></div>
+
+          <label class="skill-node" data-feature="xtc_support">
+            <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
+            <div class="tooltip">
+              <div class="tooltip-title">XTC Support</div>
+              <div class="tooltip-desc">XTC format reader with chapter navigation</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x1F4DC;</span></div>
+            <div class="node-label">XTC</div>
+            <div class="node-size"></div>
+          </label>
+        </div>
+
+        <!-- INTERFACE -->
+        <div class="skill-branch">
+          <div class="branch-header">Interface</div>
+
+          <label class="skill-node" data-feature="extended_fonts">
+            <input type="checkbox" id="extended_fonts" data-feature="extended_fonts" />
+            <div class="tooltip">
+              <div class="tooltip-title">Extended Fonts</div>
+              <div class="tooltip-desc">12/16/18pt fonts and OpenDyslexic support</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x1D5D4;</span></div>
+            <div class="node-label">Fonts</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="node-gap"></div>
+
+          <label class="skill-node" data-feature="lyra_theme">
+            <input type="checkbox" id="lyra_theme" data-feature="lyra_theme" />
+            <div class="tooltip">
+              <div class="tooltip-title">Lyra Theme</div>
+              <div class="tooltip-desc">Alternative UI theme with refined spacing and layout</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x2726;</span></div>
+            <div class="node-label">Lyra Theme</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="node-gap"></div>
+
+          <label class="skill-node" data-feature="home_media_picker">
+            <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
+            <div class="tooltip">
+              <div class="tooltip-title">Home Media Picker</div>
+              <div class="tooltip-desc">Streamlined home UI with horizontal book shelf + vertical menu</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x1F3E0;</span></div>
+            <div class="node-label">Home UI</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="node-gap"></div>
+
+          <label class="skill-node" data-feature="image_sleep">
+            <input type="checkbox" id="image_sleep" data-feature="image_sleep" />
+            <div class="tooltip">
+              <div class="tooltip-title">PNG/JPEG Sleep Images</div>
+              <div class="tooltip-desc">PNG and JPEG sleep screen support (BMP always included)</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x263D;</span></div>
+            <div class="node-label">Sleep Art</div>
+            <div class="node-size"></div>
+          </label>
+        </div>
+
+        <!-- NETWORK -->
+        <div class="skill-branch">
+          <div class="branch-header">Network</div>
+
+          <label class="skill-node" data-feature="background_server">
+            <input type="checkbox" id="background_server" data-feature="background_server" />
+            <div class="tooltip">
+              <div class="tooltip-title">Background Web Server</div>
+              <div class="tooltip-desc">Background web server for file management</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x1F310;</span></div>
+            <div class="node-label">Web Server</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="node-gap"></div>
+
+          <label class="skill-node" data-feature="ota_updates">
+            <input type="checkbox" id="ota_updates" data-feature="ota_updates" />
+            <div class="tooltip">
+              <div class="tooltip-title">OTA Updates</div>
+              <div class="tooltip-desc">Over-the-air firmware updates via WiFi</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x2B06;</span></div>
+            <div class="node-label">OTA</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="node-gap"></div>
+
+          <label class="skill-node" data-feature="integrations">
+            <input type="checkbox" id="integrations" data-feature="integrations" />
+            <div class="tooltip">
+              <div class="tooltip-title">Integrations Base</div>
+              <div class="tooltip-desc">Shared runtime hooks for remote sync integrations</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x1F517;</span></div>
+            <div class="node-label">Integrations</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="fork-container">
+            <div class="fork-branch">
+              <div class="fork-top" data-conn="integrations-koreader_sync">
+                <div class="fork-top-line left"></div>
+              </div>
+              <label class="skill-node" data-feature="koreader_sync">
+                <input type="checkbox" id="koreader_sync" data-feature="koreader_sync" />
+                <div class="tooltip">
+                  <div class="tooltip-title">KOReader Sync</div>
+                  <div class="tooltip-desc">Sync reading progress with KOReader</div>
+                  <div class="tooltip-size"></div>
+                  <div class="tooltip-req">Requires Integrations</div>
+                </div>
+                <div class="node-ring"><span class="node-icon">&#x1F4F1;</span></div>
+                <div class="node-label">KOReader</div>
+                <div class="node-size"></div>
+              </label>
+            </div>
+            <div class="fork-branch">
+              <div class="fork-top" data-conn="integrations-calibre_sync">
+                <div class="fork-top-line right"></div>
+              </div>
+              <label class="skill-node" data-feature="calibre_sync">
+                <input type="checkbox" id="calibre_sync" data-feature="calibre_sync" />
+                <div class="tooltip">
+                  <div class="tooltip-title">Calibre Sync</div>
+                  <div class="tooltip-desc">Calibre OPDS browser and metadata sync settings</div>
+                  <div class="tooltip-size"></div>
+                  <div class="tooltip-req">Requires Integrations</div>
+                </div>
+                <div class="node-ring"><span class="node-icon">&#x1F4DA;</span></div>
+                <div class="node-label">Calibre</div>
+                <div class="node-size"></div>
+              </label>
             </div>
           </div>
-          <a class="btn btn-secondary" href="./screen-previews/" target="_blank" rel="noopener"
-            >Open Preview Folder</a
-          >
+        </div>
+
+        <!-- EXTRAS -->
+        <div class="skill-branch">
+          <div class="branch-header">Extras</div>
+
+          <label class="skill-node" data-feature="web_pokedex_plugin">
+            <input type="checkbox" id="web_pokedex_plugin" data-feature="web_pokedex_plugin" />
+            <div class="tooltip">
+              <div class="tooltip-title">Web Pokedex Plugin</div>
+              <div class="tooltip-desc">Browser-side Pokemon wallpaper generator at /plugins/pokedex</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x26A1;</span></div>
+            <div class="node-label">Pokedex</div>
+            <div class="node-size"></div>
+          </label>
+
+          <div class="node-gap"></div>
+
+          <label class="skill-node" data-feature="todo_planner">
+            <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
+            <div class="tooltip">
+              <div class="tooltip-title">Todo Planner</div>
+              <div class="tooltip-desc">Daily markdown notes and task tracking</div>
+              <div class="tooltip-size"></div>
+            </div>
+            <div class="node-ring"><span class="node-icon">&#x2611;</span></div>
+            <div class="node-label">Todo</div>
+            <div class="node-size"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Build Outputs -->
+      <div class="panel">
+        <div class="panel-heading">Build Output</div>
+        <div class="outputs-grid">
+          <div class="output">
+            <div class="output-label">Build flags</div>
+            <textarea id="flags-output" readonly></textarea>
+          </div>
+          <div class="output">
+            <div class="output-label">Generate command</div>
+            <textarea id="command-output" readonly></textarea>
+          </div>
+          <div class="output">
+            <div class="output-label">platformio-custom.ini</div>
+            <textarea id="ini-output" readonly></textarea>
+          </div>
+          <div class="output">
+            <div class="output-label">Share URL</div>
+            <textarea id="share-output" readonly></textarea>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-outline" id="copy-command">Copy command</button>
+          <button class="btn btn-outline" id="copy-flags">Copy flags</button>
+          <button class="btn btn-outline" id="copy-share">Copy URL</button>
+          <button class="btn btn-outline" id="download-ini">Download .ini</button>
+          <a class="btn btn-solid" id="build-link" href="#" target="_blank" rel="noopener">Build on GitHub Actions</a>
+        </div>
+        <div class="info-bar">
+          Dependencies are enforced automatically. Enabling a child skill unlocks its parent.
+        </div>
+      </div>
+
+      <!-- Companion -->
+      <div class="panel">
+        <div class="panel-heading">Companion Plugins</div>
+        <div class="companion-row">
+          <div>
+            <div class="companion-title">X4 Grayscale Pokedex Wallpaper</div>
+            <div class="companion-desc">
+              Generate wallpapers from Pokemon data. Upload to
+              <code>/sleep/pokedex</code> for Sleep Source mode.
+            </div>
+          </div>
+          <a class="btn btn-outline" href="../plugins/x4-pokedex-grayscale/" target="_blank" rel="noopener">Open Plugin</a>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="panel">
+        <div class="preview-top">
+          <div>
+            <div class="panel-heading" style="margin-bottom: 0">Live Screen Previews</div>
+            <div class="preview-sub">Auto-generated from the latest firmware UI harness.</div>
+          </div>
+          <a class="btn btn-outline" href="./screen-previews/" target="_blank" rel="noopener">Open Folder</a>
         </div>
         <div class="preview-grid" id="preview-grid"></div>
         <div class="preview-meta" id="preview-meta"></div>
-      </section>
-
-      <div class="footer">
-        Future roadmap: this picker will live inside the OTA update menu.
       </div>
+
+      <div class="footer">Future roadmap: this picker will live inside the OTA update menu.</div>
     </div>
 
     <script>
@@ -749,6 +1062,36 @@
           flag: "ENABLE_WEB_POKEDEX_PLUGIN",
           default: false,
         },
+        epub_support: {
+          sizeKb: 0,
+          flag: "ENABLE_EPUB_SUPPORT",
+          default: true,
+        },
+        hyphenation: {
+          sizeKb: 0,
+          flag: "ENABLE_HYPHENATION",
+          default: true,
+        },
+        xtc_support: {
+          sizeKb: 0,
+          flag: "ENABLE_XTC_SUPPORT",
+          default: true,
+        },
+        lyra_theme: {
+          sizeKb: 0,
+          flag: "ENABLE_LYRA_THEME",
+          default: true,
+        },
+        ota_updates: {
+          sizeKb: 0,
+          flag: "ENABLE_OTA_UPDATES",
+          default: true,
+        },
+        todo_planner: {
+          sizeKb: 0,
+          flag: "ENABLE_TODO_PLANNER",
+          default: false,
+        },
       };
 
       const BASE_SIZE_MB = 2.35;
@@ -756,6 +1099,7 @@
       const FEATURE_DEPENDENCIES = {
         koreader_sync: ["integrations"],
         calibre_sync: ["integrations"],
+        hyphenation: ["epub_support"],
       };
 
       const PROFILES = {
@@ -763,6 +1107,11 @@
         standard: {
           extended_fonts: true,
           image_sleep: true,
+          epub_support: true,
+          hyphenation: true,
+          xtc_support: true,
+          lyra_theme: true,
+          ota_updates: true,
           background_server: true,
           home_media_picker: true,
         },
@@ -773,6 +1122,12 @@
           integrations: true,
           koreader_sync: true,
           calibre_sync: true,
+          epub_support: true,
+          hyphenation: true,
+          xtc_support: true,
+          lyra_theme: true,
+          ota_updates: true,
+          todo_planner: true,
           background_server: true,
           home_media_picker: true,
           web_pokedex_plugin: true,
@@ -791,26 +1146,10 @@
       }
 
       function parseBooleanParam(value) {
-        if (value == null) {
-          return null;
-        }
+        if (value == null) return null;
         const normalized = value.toLowerCase();
-        if (
-          normalized === "1" ||
-          normalized === "true" ||
-          normalized === "yes" ||
-          normalized === "on"
-        ) {
-          return true;
-        }
-        if (
-          normalized === "0" ||
-          normalized === "false" ||
-          normalized === "no" ||
-          normalized === "off"
-        ) {
-          return false;
-        }
+        if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on") return true;
+        if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") return false;
         return null;
       }
 
@@ -858,45 +1197,10 @@
             disableDependents(changedFeature, selections);
           }
         }
-
         Object.keys(FEATURE_DEPENDENCIES).forEach((child) => {
           const parents = FEATURE_DEPENDENCIES[child] || [];
           const missingParent = parents.some((parent) => !selections[parent]);
-          if (missingParent) {
-            selections[child] = false;
-          }
-        });
-      }
-
-      function updateDependencyUi(selections) {
-        Object.keys(FEATURES).forEach((feature) => {
-          const checkbox = document.getElementById(feature);
-          const parents = FEATURE_DEPENDENCIES[feature] || [];
-          const blocked = parents.some((parent) => !selections[parent]);
-          checkbox.disabled = blocked;
-          if (blocked) {
-            const childLabel = checkbox
-              .closest(".feature-item")
-              .querySelector(".feature-title")
-              .textContent.trim();
-            const parentLabels = parents.map((parent) =>
-              document
-                .getElementById(parent)
-                .closest(".feature-item")
-                .querySelector(".feature-title")
-                .textContent.trim()
-            );
-            checkbox.title = `${childLabel} requires ${parentLabels.join(
-              ", "
-            )}`;
-          } else {
-            checkbox.title = "";
-          }
-
-          const item = checkbox.closest(".feature-item");
-          if (item) {
-            item.classList.toggle("disabled", blocked);
-          }
+          if (missingParent) selections[child] = false;
         });
       }
 
@@ -912,17 +1216,13 @@
           const isMatch = Object.keys(FEATURES).every(
             (feature) => selections[feature] === profileSelections[feature]
           );
-          if (isMatch) {
-            return profileName;
-          }
+          if (isMatch) return profileName;
         }
         return null;
       }
 
       function applyProfile(name) {
-        if (!PROFILES[name]) {
-          return;
-        }
+        if (!PROFILES[name]) return;
         baseProfile = name;
         setSelections(profileToSelections(name));
         highlightProfile(name);
@@ -932,9 +1232,9 @@
       function updateProfileStatus(matchingProfile) {
         const status = document.getElementById("profile-status");
         if (matchingProfile) {
-          status.innerHTML = `Active profile: <strong>${matchingProfile}</strong>`;
+          status.innerHTML = `Active loadout: <strong>${matchingProfile}</strong>`;
         } else {
-          status.innerHTML = `Active profile: <strong>custom</strong> (manual overrides from ${baseProfile})`;
+          status.innerHTML = `Active loadout: <strong>custom</strong> (modified from ${baseProfile})`;
         }
       }
 
@@ -949,34 +1249,9 @@
       function computeSize(selections) {
         let size = BASE_SIZE_MB;
         Object.keys(FEATURES).forEach((feature) => {
-          if (selections[feature]) {
-            size += FEATURES[feature].sizeKb / 1024;
-          }
+          if (selections[feature]) size += FEATURES[feature].sizeKb / 1024;
         });
         return size;
-      }
-
-      function updateSizeDisplay(size) {
-        const percentage = (size / MAX_FLASH_MB) * 100;
-        const sizeValue = document.getElementById("size-value");
-        const sizeBar = document.getElementById("size-bar");
-        const sizeContext = document.getElementById("size-context");
-
-        sizeValue.textContent = `${size.toFixed(1)} MB`;
-        sizeBar.style.width = `${Math.min(percentage, 100)}%`;
-
-        if (size > MAX_FLASH_MB) {
-          sizeContext.textContent = `${percentage.toFixed(
-            0
-          )}% of 6.4 MB flash budget - Over capacity`;
-          sizeValue.style.color = "#ffb4b4";
-        } else {
-          const remaining = MAX_FLASH_MB - size;
-          sizeContext.textContent = `${percentage.toFixed(
-            0
-          )}% of 6.4 MB flash budget - ${remaining.toFixed(1)} MB free`;
-          sizeValue.style.color = "#f8f4ef";
-        }
       }
 
       function buildFlags(selections) {
@@ -997,31 +1272,23 @@
         if (matchingProfile) {
           return `uv run python scripts/generate_build_config.py --profile ${matchingProfile}`;
         }
-
         const baseSelections = profileToSelections(baseProfileName);
         const args = [
           "uv run python scripts/generate_build_config.py",
           `--profile ${baseProfileName}`,
         ];
-
         Object.keys(FEATURES).forEach((feature) => {
           if (selections[feature] !== baseSelections[feature]) {
-            args.push(
-              selections[feature]
-                ? `--enable ${feature}`
-                : `--disable ${feature}`
-            );
+            args.push(selections[feature] ? `--enable ${feature}` : `--disable ${feature}`);
           }
         });
-
         return args.join(" ");
       }
 
       function buildShareUrl(selections, selectedProfile) {
         const url = new URL(window.location.href);
         url.search = "";
-        const shareProfile =
-          selectedProfile === "custom" ? baseProfile : selectedProfile;
+        const shareProfile = selectedProfile === "custom" ? baseProfile : selectedProfile;
         url.searchParams.set("profile", shareProfile);
         Object.keys(FEATURES).forEach((feature) => {
           url.searchParams.set(feature, selections[feature] ? "1" : "0");
@@ -1032,37 +1299,21 @@
       function parseInitialStateFromUrl() {
         const params = new URLSearchParams(window.location.search);
         const requestedProfile = params.get("profile");
-        const initialProfile = PROFILES[requestedProfile]
-          ? requestedProfile
-          : "standard";
+        const initialProfile = PROFILES[requestedProfile] ? requestedProfile : "standard";
         const selections = profileToSelections(initialProfile);
-
         Object.keys(FEATURES).forEach((feature) => {
           const parsed = parseBooleanParam(params.get(feature));
-          if (parsed !== null) {
-            selections[feature] = parsed;
-          }
+          if (parsed !== null) selections[feature] = parsed;
         });
-
         applyDependencyRules(selections, null, null);
         return { initialProfile, selections };
       }
 
       function updateOutputs(selections, selectedProfile, matchingProfile) {
         document.getElementById("flags-output").value = buildFlags(selections);
-        document.getElementById("command-output").value = buildGenerateCommand(
-          selections,
-          matchingProfile,
-          baseProfile
-        );
-        document.getElementById("ini-output").value = buildIni(
-          selections,
-          selectedProfile
-        );
-        document.getElementById("share-output").value = buildShareUrl(
-          selections,
-          selectedProfile
-        );
+        document.getElementById("command-output").value = buildGenerateCommand(selections, matchingProfile, baseProfile);
+        document.getElementById("ini-output").value = buildIni(selections, selectedProfile);
+        document.getElementById("share-output").value = buildShareUrl(selections, selectedProfile);
       }
 
       function updateBuildLink(selections, selectedProfile) {
@@ -1075,6 +1326,86 @@
         });
         const url = `https://github.com/${repo.owner}/${repo.repo}/actions/workflows/${workflow}?${params.toString()}`;
         document.getElementById("build-link").href = url;
+      }
+
+      /* Skill tree visuals */
+
+      function formatSize(sizeKb) {
+        if (sizeKb === 0) return '';
+        if (Math.abs(sizeKb) >= 1024) return `~${(sizeKb / 1024).toFixed(1)} MB`;
+        return `~${sizeKb} KB`;
+      }
+
+      function updateSizeDisplay(size) {
+        const percentage = (size / MAX_FLASH_MB) * 100;
+        const sizeValue = document.getElementById("size-value");
+        const sizeBar = document.getElementById("size-bar");
+        const sizeContext = document.getElementById("size-context");
+
+        sizeValue.textContent = `${size.toFixed(1)} MB`;
+        sizeBar.style.width = `${Math.min(percentage, 100)}%`;
+
+        if (size > MAX_FLASH_MB) {
+          sizeContext.textContent = `${percentage.toFixed(0)}% \u2014 over capacity`;
+          sizeValue.style.color = "#c00";
+          sizeBar.classList.add("over");
+        } else {
+          const remaining = MAX_FLASH_MB - size;
+          sizeContext.textContent = `${percentage.toFixed(0)}% of 6.4 MB \u2014 ${remaining.toFixed(1)} MB free`;
+          sizeValue.style.color = "var(--ink)";
+          sizeBar.classList.remove("over");
+        }
+      }
+
+      function updateSkillTreeVisuals(selections) {
+        document.querySelectorAll('.skill-node[data-feature]').forEach(node => {
+          const feature = node.dataset.feature;
+          const isEnabled = selections[feature];
+          const parents = FEATURE_DEPENDENCIES[feature] || [];
+          const isBlocked = parents.some(p => !selections[p]);
+          const checkbox = node.querySelector('input');
+
+          node.classList.toggle('active', isEnabled);
+          node.classList.toggle('locked', isBlocked);
+          checkbox.disabled = isBlocked;
+
+          const sizeEl = node.querySelector('.tooltip-size');
+          if (sizeEl) {
+            const s = formatSize(FEATURES[feature].sizeKb);
+            sizeEl.textContent = s ? `Flash: ${s}` : '';
+          }
+
+          const nodeSizeEl = node.querySelector('.node-size');
+          if (nodeSizeEl) {
+            nodeSizeEl.textContent = formatSize(FEATURES[feature].sizeKb);
+          }
+
+          const iconEl = node.querySelector('.node-icon');
+          if (isBlocked && iconEl) {
+            iconEl.dataset.origIcon = iconEl.dataset.origIcon || iconEl.innerHTML;
+            iconEl.innerHTML = '&#x1F512;';
+          } else if (iconEl && iconEl.dataset.origIcon) {
+            iconEl.innerHTML = iconEl.dataset.origIcon;
+          }
+        });
+
+        document.querySelectorAll('.connector[data-conn]').forEach(conn => {
+          const [parent, child] = conn.dataset.conn.split('-');
+          const childBlocked = (FEATURE_DEPENDENCIES[child] || []).some(p => !selections[p]);
+          conn.classList.toggle('active', selections[parent] && selections[child]);
+          conn.classList.toggle('locked', childBlocked);
+        });
+
+        document.querySelectorAll('.fork-top[data-conn]').forEach(fork => {
+          const [parent, child] = fork.dataset.conn.split('-');
+          const childBlocked = (FEATURE_DEPENDENCIES[child] || []).some(p => !selections[p]);
+          fork.classList.toggle('active', selections[parent] && selections[child]);
+          fork.classList.toggle('locked', childBlocked);
+        });
+      }
+
+      function updateDependencyUi(selections) {
+        updateSkillTreeVisuals(selections);
       }
 
       function updateAll(changedFeature = null, enabled = null) {
@@ -1092,55 +1423,58 @@
         updateBuildLink(selections, selectedProfile);
       }
 
+      function flashCopyButton(btn) {
+        btn.classList.add('copied');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.textContent = orig;
+        }, 1200);
+      }
+
       function setupEvents() {
         document.querySelectorAll(".preset-btn").forEach((btn) => {
           btn.addEventListener("click", () => applyProfile(btn.dataset.preset));
         });
 
-        document
-          .querySelectorAll("input[data-feature]")
-          .forEach((checkbox) => {
-            checkbox.addEventListener("change", (event) => {
-              const feature = event.target.dataset.feature;
-              updateAll(feature, event.target.checked);
-            });
+        document.querySelectorAll("input[data-feature]").forEach((checkbox) => {
+          checkbox.addEventListener("change", (event) => {
+            const feature = event.target.dataset.feature;
+            updateAll(feature, event.target.checked);
           });
+        });
 
-        document
-          .getElementById("copy-command")
-          .addEventListener("click", async () => {
-            const text = document.getElementById("command-output").value;
-            await navigator.clipboard.writeText(text);
-          });
+        const copyCommand = document.getElementById("copy-command");
+        copyCommand.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(document.getElementById("command-output").value);
+          flashCopyButton(copyCommand);
+        });
 
-        document
-          .getElementById("copy-flags")
-          .addEventListener("click", async () => {
-            const text = document.getElementById("flags-output").value;
-            await navigator.clipboard.writeText(text);
-          });
+        const copyFlags = document.getElementById("copy-flags");
+        copyFlags.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(document.getElementById("flags-output").value);
+          flashCopyButton(copyFlags);
+        });
 
-        document
-          .getElementById("copy-share")
-          .addEventListener("click", async () => {
-            const text = document.getElementById("share-output").value;
-            await navigator.clipboard.writeText(text);
-          });
+        const copyShare = document.getElementById("copy-share");
+        copyShare.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(document.getElementById("share-output").value);
+          flashCopyButton(copyShare);
+        });
 
-        document
-          .getElementById("download-ini")
-          .addEventListener("click", () => {
-            const content = document.getElementById("ini-output").value;
-            const blob = new Blob([content], { type: "text/plain" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "platformio-custom.ini";
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            URL.revokeObjectURL(url);
-          });
+        document.getElementById("download-ini").addEventListener("click", () => {
+          const content = document.getElementById("ini-output").value;
+          const blob = new Blob([content], { type: "text/plain" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "platformio-custom.ini";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+        });
       }
 
       async function loadScreenPreviews() {
@@ -1150,15 +1484,11 @@
 
         try {
           const response = await fetch(manifestUrl, { cache: "no-store" });
-          if (!response.ok) {
-            throw new Error(`manifest fetch failed (${response.status})`);
-          }
+          if (!response.ok) throw new Error(`manifest fetch failed (${response.status})`);
           const manifest = await response.json();
 
           const files = Array.isArray(manifest.files) ? manifest.files : [];
-          if (files.length === 0) {
-            throw new Error("manifest is empty");
-          }
+          if (files.length === 0) throw new Error("manifest is empty");
 
           const cards = files
             .map((file) => {
@@ -1174,8 +1504,7 @@
             : "Updated recently";
           meta.textContent = generatedAt;
         } catch (error) {
-          grid.innerHTML =
-            '<div class="note">Preview images are publishing. Check back in a minute.</div>';
+          grid.innerHTML = '<div class="note-bar">Preview images are publishing. Check back in a minute.</div>';
           meta.textContent = "";
         }
       }

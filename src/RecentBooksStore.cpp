@@ -1,8 +1,15 @@
 #include "RecentBooksStore.h"
 
-#include <HardwareSerial.h>
-#include <SDCardManager.h>
+#include <FeatureFlags.h>
+#include <HalStorage.h>
+#include <Logging.h>
 #include <Serialization.h>
+#if ENABLE_EPUB_SUPPORT
+#include <Epub.h>
+#endif
+#if ENABLE_XTC_SUPPORT
+#include <Xtc.h>
+#endif
 
 #include <algorithm>
 
@@ -10,14 +17,15 @@
 #include "util/StringUtils.h"
 
 namespace {
-constexpr uint8_t RECENT_BOOKS_FILE_VERSION = 2;
+constexpr uint8_t RECENT_BOOKS_FILE_VERSION = 3;
 constexpr char RECENT_BOOKS_FILE[] = "/.crosspoint/recent.bin";
 constexpr int MAX_RECENT_BOOKS = 10;
 }  // namespace
 
 RecentBooksStore RecentBooksStore::instance;
 
-void RecentBooksStore::addBook(const std::string& path, const std::string& title, const std::string& author) {
+void RecentBooksStore::addBook(const std::string& path, const std::string& title, const std::string& author,
+                               const std::string& coverBmpPath) {
   // Remove existing entry if present
   auto it =
       std::find_if(recentBooks.begin(), recentBooks.end(), [&](const RecentBook& book) { return book.path == path; });
@@ -26,7 +34,7 @@ void RecentBooksStore::addBook(const std::string& path, const std::string& title
   }
 
   // Add to front
-  recentBooks.insert(recentBooks.begin(), {path, title, author});
+  recentBooks.insert(recentBooks.begin(), {path, title, author, coverBmpPath});
 
   // Trim to max size
   if (recentBooks.size() > MAX_RECENT_BOOKS) {
@@ -36,13 +44,26 @@ void RecentBooksStore::addBook(const std::string& path, const std::string& title
   saveToFile();
 }
 
+void RecentBooksStore::updateBook(const std::string& path, const std::string& title, const std::string& author,
+                                  const std::string& coverBmpPath) {
+  auto it =
+      std::find_if(recentBooks.begin(), recentBooks.end(), [&](const RecentBook& book) { return book.path == path; });
+  if (it != recentBooks.end()) {
+    RecentBook& book = *it;
+    book.title = title;
+    book.author = author;
+    book.coverBmpPath = coverBmpPath;
+    saveToFile();
+  }
+}
+
 bool RecentBooksStore::saveToFile() const {
   SpiBusMutex::Guard guard;
   // Make sure the directory exists
-  SdMan.mkdir("/.crosspoint");
+  Storage.mkdir("/.crosspoint");
 
   FsFile outputFile;
-  if (!SdMan.openFileForWrite("RBS", RECENT_BOOKS_FILE, outputFile)) {
+  if (!Storage.openFileForWrite("RBS", RECENT_BOOKS_FILE, outputFile)) {
     return false;
   }
 
@@ -54,17 +75,52 @@ bool RecentBooksStore::saveToFile() const {
     serialization::writeString(outputFile, book.path);
     serialization::writeString(outputFile, book.title);
     serialization::writeString(outputFile, book.author);
+    serialization::writeString(outputFile, book.coverBmpPath);
   }
 
   outputFile.close();
-  Serial.printf("[%lu] [RBS] Recent books saved to file (%d entries)\n", millis(), count);
+  LOG_DBG("RBS", "Recent books saved to file (%d entries)", count);
   return true;
+}
+
+RecentBook RecentBooksStore::getDataFromBook(std::string path) const {
+  std::string lastBookFileName = "";
+  const size_t lastSlash = path.find_last_of('/');
+  if (lastSlash != std::string::npos) {
+    lastBookFileName = path.substr(lastSlash + 1);
+  }
+
+  LOG_DBG("RBS", "Loading recent book: %s", path.c_str());
+
+  // If epub, try to load the metadata for title/author and cover
+#if ENABLE_EPUB_SUPPORT
+  if (StringUtils::checkFileExtension(lastBookFileName, ".epub")) {
+    Epub epub(path, "/.crosspoint");
+    epub.load(false);
+    return RecentBook{path, epub.getTitle(), epub.getAuthor(), epub.getThumbBmpPath()};
+  } else
+#endif
+#if ENABLE_XTC_SUPPORT
+      if (StringUtils::checkFileExtension(lastBookFileName, ".xtch") ||
+          StringUtils::checkFileExtension(lastBookFileName, ".xtc")) {
+    // Handle XTC file
+    Xtc xtc(path, "/.crosspoint");
+    if (xtc.load()) {
+      return RecentBook{path, xtc.getTitle(), xtc.getAuthor(), xtc.getThumbBmpPath()};
+    }
+  } else
+#endif
+      if (StringUtils::checkFileExtension(lastBookFileName, ".txt") ||
+          StringUtils::checkFileExtension(lastBookFileName, ".md")) {
+    return RecentBook{path, lastBookFileName, "", ""};
+  }
+  return RecentBook{path, "", "", ""};
 }
 
 bool RecentBooksStore::loadFromFile() {
   SpiBusMutex::Guard guard;
   FsFile inputFile;
-  if (!SdMan.openFileForRead("RBS", RECENT_BOOKS_FILE, inputFile)) {
+  if (!Storage.openFileForRead("RBS", RECENT_BOOKS_FILE, inputFile)) {
     return false;
   }
 
@@ -76,7 +132,7 @@ bool RecentBooksStore::loadFromFile() {
   }
 
   if (version != RECENT_BOOKS_FILE_VERSION) {
-    if (version == 1) {
+    if (version == 1 || version == 2) {
       // Old version, just read paths
       uint8_t count;
       if (!serialization::readPod(inputFile, count)) {
@@ -98,7 +154,7 @@ bool RecentBooksStore::loadFromFile() {
         recentBooks.push_back({path, "", ""});
       }
     } else {
-      Serial.printf("[%lu] [RBS] Deserialization failed: Unknown version %u\n", millis(), version);
+      LOG_ERR("RBS", "Deserialization failed: Unknown version %u", version);
       inputFile.close();
       return false;
     }
@@ -126,6 +182,6 @@ bool RecentBooksStore::loadFromFile() {
   }
 
   inputFile.close();
-  Serial.printf("[%lu] [RBS] Recent books loaded from file (%d entries)\n", millis(), recentBooks.size());
+  LOG_DBG("RBS", "Recent books loaded from file (%d entries)", recentBooks.size());
   return true;
 }

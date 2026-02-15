@@ -1,11 +1,15 @@
 #include "HomeActivity.h"
 
 #include <Bitmap.h>
-#include <Epub.h>
 #include <GfxRenderer.h>
 #include <SDCardManager.h>
 #include <Utf8.h>
+#if ENABLE_EPUB_SUPPORT
+#include <Epub.h>
+#endif
+#if ENABLE_XTC_SUPPORT
 #include <Xtc.h>
+#endif
 
 #include <algorithm>
 #include <cstring>
@@ -289,6 +293,7 @@ void HomeActivity::onEnter() {
     }
 
     // If epub, try to load the metadata for title/author and cover
+#if ENABLE_EPUB_SUPPORT
     if (StringUtils::checkFileExtension(lastBookTitle, ".epub")) {
       Epub epub(APP_STATE.openEpubPath, "/.crosspoint");
       epub.load(false);
@@ -304,8 +309,11 @@ void HomeActivity::onEnter() {
         coverBmpPath = epub.getThumbBmpPath();
         hasCoverImage = true;
       }
-    } else if (StringUtils::checkFileExtension(lastBookTitle, ".xtch") ||
-               StringUtils::checkFileExtension(lastBookTitle, ".xtc")) {
+    } else
+#endif
+#if ENABLE_XTC_SUPPORT
+        if (StringUtils::checkFileExtension(lastBookTitle, ".xtch") ||
+            StringUtils::checkFileExtension(lastBookTitle, ".xtc")) {
       // Handle XTC file
       Xtc xtc(APP_STATE.openEpubPath, "/.crosspoint");
       if (xtc.load()) {
@@ -328,6 +336,10 @@ void HomeActivity::onEnter() {
       } else if (StringUtils::checkFileExtension(lastBookTitle, ".xtc")) {
         lastBookTitle.resize(lastBookTitle.length() - 4);
       }
+    } else
+#endif
+    {
+      // No format-specific metadata available
     }
   }
 

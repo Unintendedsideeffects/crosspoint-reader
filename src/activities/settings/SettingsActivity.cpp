@@ -15,7 +15,9 @@
 #include "KOReaderSettingsActivity.h"
 #endif
 #include "MappedInputManager.h"
+#if ENABLE_OTA_UPDATES
 #include "OtaUpdateActivity.h"
+#endif
 #include "SettingsList.h"
 #include "activities/TaskShutdown.h"
 #include "activities/network/WifiSelectionActivity.h"
@@ -67,7 +69,9 @@ void SettingsActivity::onEnter() {
 #endif
   systemSettings.push_back(SettingInfo::Action("Clear Cache", SettingAction::ClearCache));
   systemSettings.push_back(SettingInfo::Action("Factory Reset", SettingAction::FactoryReset));
+#if ENABLE_OTA_UPDATES
   systemSettings.push_back(SettingInfo::Action("Check for updates", SettingAction::CheckForUpdates));
+#endif
 
   // Reset selection to first category
   selectedCategoryIndex = 0;
@@ -268,9 +272,11 @@ void SettingsActivity::toggleCurrentSetting() {
       case SettingAction::FactoryReset:
         enterSubActivity(new FactoryResetActivity(renderer, mappedInput, onComplete));
         break;
+#if ENABLE_OTA_UPDATES
       case SettingAction::CheckForUpdates:
         enterSubActivity(new OtaUpdateActivity(renderer, mappedInput, onComplete));
         break;
+#endif
       case SettingAction::None:
         // Do nothing
         break;

@@ -76,6 +76,42 @@ FEATURES = {
         size_kb=-4,
         description='Browser-side Pokemon wallpaper generator at /plugins/pokedex'
     ),
+    'epub_support': Feature(
+        name='EPUB Support',
+        flag='ENABLE_EPUB_SUPPORT',
+        size_kb=0,
+        description='EPUB e-book reader with CSS, images, and chapter navigation'
+    ),
+    'hyphenation': Feature(
+        name='Hyphenation',
+        flag='ENABLE_HYPHENATION',
+        size_kb=0,
+        description='Language-aware hyphenation for justified EPUB text'
+    ),
+    'xtc_support': Feature(
+        name='XTC Support',
+        flag='ENABLE_XTC_SUPPORT',
+        size_kb=0,
+        description='XTC format reader with chapter navigation'
+    ),
+    'lyra_theme': Feature(
+        name='Lyra Theme',
+        flag='ENABLE_LYRA_THEME',
+        size_kb=0,
+        description='Alternative UI theme with refined spacing and layout'
+    ),
+    'ota_updates': Feature(
+        name='OTA Updates',
+        flag='ENABLE_OTA_UPDATES',
+        size_kb=0,
+        description='Over-the-air firmware updates via WiFi'
+    ),
+    'todo_planner': Feature(
+        name='Todo Planner',
+        flag='ENABLE_TODO_PLANNER',
+        size_kb=0,
+        description='Daily markdown notes and task tracking'
+    ),
 }
 
 
@@ -155,6 +191,48 @@ FEATURE_METADATA = {
         requires=[],
         conflicts=[],
         recommends=[]
+    ),
+    'epub_support': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'hyphenation': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=['epub_support'],
+        conflicts=[],
+        recommends=[]
+    ),
+    'xtc_support': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'lyra_theme': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'ota_updates': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'todo_planner': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=['markdown']
     ),
 }
 
@@ -252,6 +330,11 @@ PROFILES = {
         'features': {
             'extended_fonts': True,
             'image_sleep': True,
+            'epub_support': True,
+            'hyphenation': True,
+            'xtc_support': True,
+            'lyra_theme': True,
+            'ota_updates': True,
             'background_server': True,
             'home_media_picker': True,
         },
@@ -265,6 +348,12 @@ PROFILES = {
             'integrations': True,
             'koreader_sync': True,
             'calibre_sync': True,
+            'epub_support': True,
+            'hyphenation': True,
+            'xtc_support': True,
+            'lyra_theme': True,
+            'ota_updates': True,
+            'todo_planner': True,
             'background_server': True,
             'home_media_picker': True,
             'web_pokedex_plugin': True,

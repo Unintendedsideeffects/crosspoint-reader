@@ -1,8 +1,11 @@
 #include "CrossPointWebServer.h"
 
 #include <ArduinoJson.h>
-#include <Epub.h>
+#include <FeatureFlags.h>
 #include <FsHelpers.h>
+#if ENABLE_EPUB_SUPPORT
+#include <Epub.h>
+#endif
 #include <HalStorage.h>
 #include <Logging.h>
 #include <WiFi.h>
@@ -52,11 +55,15 @@ unsigned long wsLastCompleteAt = 0;
 
 // Helper function to clear epub cache after upload
 void clearEpubCacheIfNeeded(const String& filePath) {
+#if ENABLE_EPUB_SUPPORT
   // Only clear cache for .epub files
   if (StringUtils::checkFileExtension(filePath, ".epub")) {
     Epub(filePath.c_str(), "/.crosspoint").clearCache();
     LOG_DBG("WEB", "Cleared epub cache for: %s", filePath.c_str());
   }
+#else
+  (void)filePath;
+#endif
 }
 
 // Helper to invalidate sleep image cache when /sleep/ or sleep images are modified
@@ -1454,12 +1461,16 @@ void CrossPointWebServer::handleCover() const {
   if (coverPath.empty()) {
     String lower = bookPath;
     lower.toLowerCase();
+#if ENABLE_EPUB_SUPPORT
     if (lower.endsWith(".epub")) {
       Epub epub(bookPath.c_str(), "/.crosspoint");
       SpiBusMutex::Guard guard;
       if (epub.load(false)) {
         coverPath = epub.getThumbBmpPath();
       }
+#else
+    if (false) {
+#endif
     }
   }
 

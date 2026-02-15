@@ -39,6 +39,12 @@ FEATURES = [
     'background_server',
     'home_media_picker',
     'web_pokedex_plugin',
+    'epub_support',
+    'hyphenation',
+    'xtc_support',
+    'lyra_theme',
+    'ota_updates',
+    'todo_planner',
 ]
 
 HAS_UV = shutil.which("uv") is not None
