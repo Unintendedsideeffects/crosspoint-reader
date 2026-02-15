@@ -165,3 +165,50 @@ jobs:
           echo "- full-minus-markdown" >> $GITHUB_STEP_SUMMARY
           echo "- lean-plus-markdown" >> $GITHUB_STEP_SUMMARY
           echo "- standard-plus-sync" >> $GITHUB_STEP_SUMMARY
+
+  update-feature-sizes:
+    name: Update Feature Sizes
+    runs-on: ubuntu-latest
+    needs: test-profiles
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/fork-drift')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Ensure pip for PlatformIO
+        run: |
+          uv run python -m ensurepip --upgrade || true
+          uv run python -m pip --version
+
+      - name: Measure feature sizes
+        run: uv run python scripts/measure_feature_sizes.py --quick
+
+      - name: Apply measured sizes
+        run: uv run python scripts/apply_feature_sizes.py
+
+      - name: Commit updated sizes
+        run: |
+          git diff --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/generate_build_config.py docs/configurator/index.html
+          git commit -m "chore: update feature sizes from CI measurements [skip ci]"
+          git push
