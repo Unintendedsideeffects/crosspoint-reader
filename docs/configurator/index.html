@@ -1737,7 +1737,21 @@
         const repo = getRepoInfo();
         const workflow = "build-custom.yml";
         const params = new URLSearchParams();
-        params.set("profile", selectedProfile);
+        
+        // If we have any overrides compared to a standard profile, we MUST use 'custom' 
+        // as the profile input, otherwise individual toggles are ignored by the workflow.
+        const isStandard = ["lean", "standard", "full"].includes(selectedProfile);
+        let finalProfile = selectedProfile;
+        
+        if (isStandard) {
+          const profileDefaults = profileToSelections(selectedProfile);
+          const hasOverrides = Object.keys(FEATURES).some(f => selections[f] !== profileDefaults[f]);
+          if (hasOverrides) {
+            finalProfile = "custom";
+          }
+        }
+
+        params.set("profile", finalProfile);
         
         // Map features to workflow inputs
         Object.keys(FEATURES).forEach((feature) => {

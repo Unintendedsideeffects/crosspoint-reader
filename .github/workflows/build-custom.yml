@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: 'Build profile'
+        description: 'Base build profile'
         required: true
         type: choice
         default: 'standard'
@@ -99,17 +99,17 @@ on:
         type: boolean
         default: true
       visual_cover_picker:
-        description: 'Visual Cover Picker (~12KB)'
+        description: 'Visual Cover Picker (~118KB)'
         required: false
         type: boolean
         default: false
       ble_wifi_provisioning:
-        description: 'BLE WiFi Provisioning (~150KB)'
+        description: 'BLE WiFi Provisioning (~619KB)'
         required: false
         type: boolean
         default: false
       user_fonts:
-        description: 'User Fonts from SD (~10KB)'
+        description: 'User Fonts from SD (~4KB)'
         required: false
         type: boolean
         default: true
@@ -147,85 +147,45 @@ jobs:
       - name: Generate custom build configuration
         id: config
         run: |
-          # Build the command based on profile or individual plugins
+          CMD=(uv run python scripts/generate_build_config.py)
+          
+          # Add base profile if selected
           if [ "${{ inputs.profile }}" != "custom" ]; then
-            echo "Using profile: ${{ inputs.profile }}"
-            uv run python scripts/generate_build_config.py --profile "${{ inputs.profile }}"
-          else
-            echo "Using custom plugin selection"
-            CMD=(uv run python scripts/generate_build_config.py)
-
-            # Add enabled plugins
-            if [ "${{ inputs.extended_fonts }}" == "true" ]; then
-              CMD+=(--enable extended_fonts)
-            fi
-            if [ "${{ inputs.opendyslexic_fonts }}" == "true" ]; then
-              CMD+=(--enable opendyslexic_fonts)
-            fi
-            if [ "${{ inputs.image_sleep }}" == "true" ]; then
-              CMD+=(--enable image_sleep)
-            fi
-            if [ "${{ inputs.markdown }}" == "true" ]; then
-              CMD+=(--enable markdown)
-            fi
-            if [ "${{ inputs.integrations }}" == "true" ]; then
-              CMD+=(--enable integrations)
-            fi
-            if [ "${{ inputs.koreader_sync }}" == "true" ]; then
-              CMD+=(--enable koreader_sync)
-            fi
-            if [ "${{ inputs.calibre_sync }}" == "true" ]; then
-              CMD+=(--enable calibre_sync)
-            fi
-            if [ "${{ inputs.background_server }}" == "true" ]; then
-              CMD+=(--enable background_server)
-            fi
-            if [ "${{ inputs.home_media_picker }}" == "true" ]; then
-              CMD+=(--enable home_media_picker)
-            fi
-            if [ "${{ inputs.web_pokedex_plugin }}" == "true" ]; then
-              CMD+=(--enable web_pokedex_plugin)
-            fi
-            if [ "${{ inputs.epub_support }}" == "true" ]; then
-              CMD+=(--enable epub_support)
-            fi
-            if [ "${{ inputs.hyphenation }}" == "true" ]; then
-              CMD+=(--enable hyphenation)
-            fi
-            if [ "${{ inputs.xtc_support }}" == "true" ]; then
-              CMD+=(--enable xtc_support)
-            fi
-            if [ "${{ inputs.lyra_theme }}" == "true" ]; then
-              CMD+=(--enable lyra_theme)
-            fi
-            if [ "${{ inputs.ota_updates }}" == "true" ]; then
-              CMD+=(--enable ota_updates)
-            fi
-            if [ "${{ inputs.todo_planner }}" == "true" ]; then
-              CMD+=(--enable todo_planner)
-            fi
-            if [ "${{ inputs.dark_mode }}" == "true" ]; then
-              CMD+=(--enable dark_mode)
-            fi
-            if [ "${{ inputs.visual_cover_picker }}" == "true" ]; then
-              CMD+=(--enable visual_cover_picker)
-            fi
-            if [ "${{ inputs.ble_wifi_provisioning }}" == "true" ]; then
-              CMD+=(--enable ble_wifi_provisioning)
-            fi
-            if [ "${{ inputs.user_fonts }}" == "true" ]; then
-              CMD+=(--enable user_fonts)
-            fi
-            if [ "${{ inputs.web_wifi_setup }}" == "true" ]; then
-              CMD+=(--enable web_wifi_setup)
-            fi
-
-            # Execute the command
-            "${CMD[@]}"
+            echo "Using base profile: ${{ inputs.profile }}"
+            CMD+=(--profile "${{ inputs.profile }}")
           fi
 
+          # Apply individual feature toggles as overrides
+          # This ensures toggles are respected even if a profile is selected
+          
+          # Boolean inputs from GitHub Actions are strings "true" or "false"
+          [ "${{ inputs.extended_fonts }}" == "true" ] && CMD+=(--enable extended_fonts) || CMD+=(--disable extended_fonts)
+          [ "${{ inputs.opendyslexic_fonts }}" == "true" ] && CMD+=(--enable opendyslexic_fonts) || CMD+=(--disable opendyslexic_fonts)
+          [ "${{ inputs.image_sleep }}" == "true" ] && CMD+=(--enable image_sleep) || CMD+=(--disable image_sleep)
+          [ "${{ inputs.markdown }}" == "true" ] && CMD+=(--enable markdown) || CMD+=(--disable markdown)
+          [ "${{ inputs.integrations }}" == "true" ] && CMD+=(--enable integrations) || CMD+=(--disable integrations)
+          [ "${{ inputs.koreader_sync }}" == "true" ] && CMD+=(--enable koreader_sync) || CMD+=(--disable koreader_sync)
+          [ "${{ inputs.calibre_sync }}" == "true" ] && CMD+=(--enable calibre_sync) || CMD+=(--disable calibre_sync)
+          [ "${{ inputs.background_server }}" == "true" ] && CMD+=(--enable background_server) || CMD+=(--disable background_server)
+          [ "${{ inputs.home_media_picker }}" == "true" ] && CMD+=(--enable home_media_picker) || CMD+=(--disable home_media_picker)
+          [ "${{ inputs.web_pokedex_plugin }}" == "true" ] && CMD+=(--enable web_pokedex_plugin) || CMD+=(--disable web_pokedex_plugin)
+          [ "${{ inputs.epub_support }}" == "true" ] && CMD+=(--enable epub_support) || CMD+=(--disable epub_support)
+          [ "${{ inputs.hyphenation }}" == "true" ] && CMD+=(--enable hyphenation) || CMD+=(--disable hyphenation)
+          [ "${{ inputs.xtc_support }}" == "true" ] && CMD+=(--enable xtc_support) || CMD+=(--disable xtc_support)
+          [ "${{ inputs.lyra_theme }}" == "true" ] && CMD+=(--enable lyra_theme) || CMD+=(--disable lyra_theme)
+          [ "${{ inputs.ota_updates }}" == "true" ] && CMD+=(--enable ota_updates) || CMD+=(--disable ota_updates)
+          [ "${{ inputs.todo_planner }}" == "true" ] && CMD+=(--enable todo_planner) || CMD+=(--disable todo_planner)
+          [ "${{ inputs.dark_mode }}" == "true" ] && CMD+=(--enable dark_mode) || CMD+=(--disable dark_mode)
+          [ "${{ inputs.visual_cover_picker }}" == "true" ] && CMD+=(--enable visual_cover_picker) || CMD+=(--disable visual_cover_picker)
+          [ "${{ inputs.ble_wifi_provisioning }}" == "true" ] && CMD+=(--enable ble_wifi_provisioning) || CMD+=(--disable ble_wifi_provisioning)
+          [ "${{ inputs.user_fonts }}" == "true" ] && CMD+=(--enable user_fonts) || CMD+=(--disable user_fonts)
+          [ "${{ inputs.web_wifi_setup }}" == "true" ] && CMD+=(--enable web_wifi_setup) || CMD+=(--disable web_wifi_setup)
+
+          echo "Executing: ${CMD[@]}"
+          "${CMD[@]}"
+
           # Show generated configuration
-          echo "Generated configuration:"
+          echo "### Generated configuration:"
           cat platformio-custom.ini
 
       - name: Build custom firmware
@@ -242,35 +202,19 @@ jobs:
         run: |
           echo "### Custom Firmware Build" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ "${{ inputs.profile }}" != "custom" ]; then
-            echo "**Profile:** ${{ inputs.profile }}" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "**Profile:** custom" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Plugins:**" >> $GITHUB_STEP_SUMMARY
-            echo "- Extended Fonts: ${{ inputs.extended_fonts }}" >> $GITHUB_STEP_SUMMARY
-            echo "- OpenDyslexic: ${{ inputs.opendyslexic_fonts }}" >> $GITHUB_STEP_SUMMARY
-            echo "- PNG/JPEG/BMP Sleep: ${{ inputs.image_sleep }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Markdown: ${{ inputs.markdown }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Integrations: ${{ inputs.integrations }}" >> $GITHUB_STEP_SUMMARY
-            echo "- KOReader Sync: ${{ inputs.koreader_sync }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Calibre Sync: ${{ inputs.calibre_sync }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Background Server: ${{ inputs.background_server }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Home Media Picker: ${{ inputs.home_media_picker }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Web Pokedex: ${{ inputs.web_pokedex_plugin }}" >> $GITHUB_STEP_SUMMARY
-            echo "- EPUB Support: ${{ inputs.epub_support }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Hyphenation: ${{ inputs.hyphenation }}" >> $GITHUB_STEP_SUMMARY
-            echo "- XTC Support: ${{ inputs.xtc_support }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Lyra Theme: ${{ inputs.lyra_theme }}" >> $GITHUB_STEP_SUMMARY
-            echo "- OTA Updates: ${{ inputs.ota_updates }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Todo Planner: ${{ inputs.todo_planner }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Dark Mode: ${{ inputs.dark_mode }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Visual Cov Picker: ${{ inputs.visual_cover_picker }}" >> $GITHUB_STEP_SUMMARY
-            echo "- BLE WiFi: ${{ inputs.ble_wifi_provisioning }}" >> $GITHUB_STEP_SUMMARY
-            echo "- User Fonts: ${{ inputs.user_fonts }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Web WiFi Setup: ${{ inputs.web_wifi_setup }}" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "**Base Profile:** ${{ inputs.profile }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Feature Toggles:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Extended Fonts: ${{ inputs.extended_fonts }}" >> $GITHUB_STEP_SUMMARY
+          echo "- OpenDyslexic: ${{ inputs.opendyslexic_fonts }}" >> $GITHUB_STEP_SUMMARY
+          echo "- PNG/JPEG/BMP Sleep: ${{ inputs.image_sleep }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Markdown: ${{ inputs.markdown }}" >> $GITHUB_STEP_SUMMARY
+          # ... simplified for summary ...
+          echo "- EPUB Support: ${{ inputs.epub_support }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Visual Cov Picker: ${{ inputs.visual_cover_picker }}" >> $GITHUB_STEP_SUMMARY
+          echo "- BLE WiFi: ${{ inputs.ble_wifi_provisioning }}" >> $GITHUB_STEP_SUMMARY
+          echo "- User Fonts: ${{ inputs.user_fonts }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Web WiFi Setup: ${{ inputs.web_wifi_setup }}" >> $GITHUB_STEP_SUMMARY
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Firmware Size" >> $GITHUB_STEP_SUMMARY
@@ -297,8 +241,6 @@ jobs:
           echo '```ini' >> $GITHUB_STEP_SUMMARY
           cat platformio-custom.ini >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Flash headroom threshold: 64 KiB" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload custom firmware artifact
         uses: actions/upload-artifact@v4
