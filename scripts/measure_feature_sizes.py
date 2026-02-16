@@ -46,6 +46,8 @@ FEATURES = [
     'lyra_theme',
     'ota_updates',
     'todo_planner',
+    'dark_mode',
+    'visual_cover_picker',
 ]
 
 HAS_UV = shutil.which("uv") is not None
