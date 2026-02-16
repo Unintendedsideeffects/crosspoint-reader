@@ -31,6 +31,7 @@ import shutil
 # Feature list (must match generate_build_config.py)
 FEATURES = [
     'extended_fonts',
+    'opendyslexic_fonts',
     'image_sleep',
     'markdown',
     'integrations',

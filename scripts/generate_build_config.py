@@ -25,8 +25,14 @@ FEATURES = {
     'extended_fonts': Feature(
         name='Extended Fonts',
         flag='ENABLE_EXTENDED_FONTS',
-        size_kb=3630,
-        description='12/16/18pt fonts and OpenDyslexic support'
+        size_kb=2566,
+        description='12/16/18pt Bookerly and Noto Sans families'
+    ),
+    'opendyslexic_fonts': Feature(
+        name='OpenDyslexic Font Pack',
+        flag='ENABLE_OPENDYSLEXIC_FONTS',
+        size_kb=1064,
+        description='Optional OpenDyslexic 8/10/12/14pt family'
     ),
     'image_sleep': Feature(
         name='PNG/JPEG Sleep Images',
@@ -136,6 +142,13 @@ FEATURE_METADATA = {
         conflicts=[],
         recommends=[]
     ),
+    'opendyslexic_fonts': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=['extended_fonts'],
+        conflicts=[],
+        recommends=[]
+    ),
     'image_sleep': FeatureMetadata(
         implemented=True,
         stable=True,
@@ -230,7 +243,7 @@ FEATURE_METADATA = {
     'todo_planner': FeatureMetadata(
         implemented=True,
         stable=True,
-        requires=[],
+        requires=['markdown'],
         conflicts=[],
         recommends=['markdown']
     ),
@@ -322,11 +335,11 @@ def apply_dependency_defaults(enabled_features: Dict[str, bool]) -> List[str]:
 
 PROFILES = {
     'lean': {
-        'description': 'Core reader only (~2.6MB, maximum flash headroom)',
+        'description': 'Core reader only (~1.7MB, maximum flash headroom)',
         'features': {},
     },
     'standard': {
-        'description': 'Balanced defaults (~6.2MB, recommended)',
+        'description': 'Balanced defaults (~5.0MB, recommended)',
         'features': {
             'extended_fonts': True,
             'image_sleep': True,
@@ -340,9 +353,10 @@ PROFILES = {
         },
     },
     'full': {
-        'description': 'All optional features enabled (~6.4MB, tight fit)',
+        'description': 'All optional features enabled (~6.0MB, still under flash cap)',
         'features': {
             'extended_fonts': True,
+            'opendyslexic_fonts': True,
             'image_sleep': True,
             'markdown': True,
             'integrations': True,
