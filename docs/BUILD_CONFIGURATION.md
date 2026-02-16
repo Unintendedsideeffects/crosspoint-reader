@@ -40,15 +40,14 @@ uv run pio run -e custom --target upload
 ### Extended Fonts
 
 **Flag:** `ENABLE_EXTENDED_FONTS`
-**Size Impact:** ~3.5MB
+**Size Impact:** ~2.5MB
 **Default:** Enabled
 
-Includes additional font sizes and OpenDyslexic font support for better reading accessibility.
+Includes additional Bookerly and Noto Sans font sizes.
 
 **What's included when enabled:**
 - Bookerly 12pt, 16pt, 18pt (Regular, Bold, Italic, Bold-Italic)
 - Noto Sans 12pt, 14pt, 16pt, 18pt (Regular, Bold, Italic, Bold-Italic)
-- OpenDyslexic 8pt, 10pt, 12pt, 14pt (Regular, Bold, Italic, Bold-Italic)
 
 **What's always included:**
 - Bookerly 14pt (default reading font)
@@ -60,6 +59,19 @@ Includes additional font sizes and OpenDyslexic font support for better reading 
 - Settings will not show unavailable font sizes
 
 **Use case:** Disable if you only read at 14pt and want maximum space savings.
+
+---
+
+### OpenDyslexic Font Pack
+
+**Flag:** `ENABLE_OPENDYSLEXIC_FONTS`
+**Size Impact:** ~1.0MB
+**Default:** Disabled
+**Depends on:** `ENABLE_EXTENDED_FONTS`
+
+Adds OpenDyslexic 8pt, 10pt, 12pt, and 14pt fonts.
+
+**Use case:** Enable if you want the OpenDyslexic reading family.
 
 ---
 
@@ -439,7 +451,7 @@ The ESP32-C3 in the Xteink X4 has:
 1. **Start with Standard profile** - best balance for most users
 2. **Disable unused features** - save space for more books
 3. **Use BMP sleep images** - if you don't need PNG/JPEG
-4. **Skip Extended Fonts** - largest single feature at ~3.5MB
+4. **Skip Extended Fonts** - largest single feature at ~2.5MB
 5. **Monitor OTA updates** - custom builds may be larger than default
 
 ---
@@ -453,7 +465,7 @@ The ESP32-C3 in the Xteink X4 has:
 **Solutions:**
 1. Disable one or more features
 2. Use a smaller profile (Standard instead of Full)
-3. Specifically disable large features like Extended Fonts (~3.5MB)
+3. Specifically disable large features like Extended Fonts (~2.5MB)
 
 Example:
 ```bash

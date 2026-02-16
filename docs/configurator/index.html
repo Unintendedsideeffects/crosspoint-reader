@@ -1166,27 +1166,30 @@
           <div class="cat-body">
             <div class="skill-grid">
 
-              <label class="skill-card" data-feature="background_server" data-node-id="background_server">
-                <input type="checkbox" id="background_server" data-feature="background_server" />
-                <div class="card-icon"><span>&#x25A1;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Web Server</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Background web server for file management</div>
+              <div class="dep-group" data-dep-parent="background_server">
+                <label class="skill-card dep-parent" data-feature="background_server" data-node-id="background_server">
+                  <input type="checkbox" id="background_server" data-feature="background_server" />
+                  <div class="card-icon"><span>&#x25A1;</span></div>
+                  <div class="card-body">
+                    <div class="card-name">Web Server</div>
+                    <div class="card-size"></div>
+                    <div class="card-desc">Background web server for file management</div>
+                  </div>
+                  <div class="card-toggle"><span class="toggle-box"></span></div>
+                </label>
+                <div class="dep-children">
+                  <label class="skill-card dep-child" data-feature="web_wifi_setup" data-node-id="web_wifi_setup">
+                    <input type="checkbox" id="web_wifi_setup" data-feature="web_wifi_setup" />
+                    <div class="card-icon"><span>&#x21D4;</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Web WiFi</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Manage WiFi networks directly from the web interface</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
                 </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
-              <label class="skill-card" data-feature="web_wifi_setup" data-node-id="web_wifi_setup">
-                <input type="checkbox" id="web_wifi_setup" data-feature="web_wifi_setup" />
-                <div class="card-icon"><span>&#x21D4;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Web WiFi</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Manage WiFi networks directly from the web interface</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
+              </div>
 
               <label class="skill-card" data-feature="ota_updates" data-node-id="ota_updates">
                 <input type="checkbox" id="ota_updates" data-feature="ota_updates" />
@@ -1429,7 +1432,7 @@
           default: true,
         },
         opendyslexic_fonts: {
-          sizeKb: 3630,
+          sizeKb: 1024,
           flag: "ENABLE_OPENDYSLEXIC_FONTS",
           default: false,
         },
@@ -1558,7 +1561,7 @@
 
       const NOTE_FEATURES = {
         specific_fonts_note: ["extended_fonts", "user_fonts"],
-        dark_theme_note: ["lyra_theme"],
+        dark_theme_note: ["dark_mode"],
         fork_drift_note: ["home_media_picker"],
         future_themes_note: ["home_media_picker", "lyra_theme"],
         webserver_always_on_note: ["background_server"],
@@ -1582,6 +1585,7 @@
           background_server: true,
           home_media_picker: true,
           dark_mode: true,
+          user_fonts: true,
         },
         full: {
           extended_fonts: true,
