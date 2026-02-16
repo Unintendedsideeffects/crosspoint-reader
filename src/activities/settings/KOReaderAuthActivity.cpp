@@ -14,18 +14,20 @@ void KOReaderAuthActivity::onWifiSelectionComplete(const bool success) {
   exitActivity();
 
   if (!success) {
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = FAILED;
-    errorMessage = "WiFi connection failed";
-    xSemaphoreGive(renderingMutex);
+    {
+      RenderLock lock(*this);
+      state = FAILED;
+      errorMessage = "WiFi connection failed";
+    }
     requestUpdate();
     return;
   }
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  state = AUTHENTICATING;
-  statusMessage = "Authenticating...";
-  xSemaphoreGive(renderingMutex);
+  {
+    RenderLock lock(*this);
+    state = AUTHENTICATING;
+    statusMessage = "Authenticating...";
+  }
   requestUpdate();
 
   performAuthentication();
@@ -34,15 +36,16 @@ void KOReaderAuthActivity::onWifiSelectionComplete(const bool success) {
 void KOReaderAuthActivity::performAuthentication() {
   const auto result = KOReaderSyncClient::authenticate();
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (result == KOReaderSyncClient::OK) {
-    state = SUCCESS;
-    statusMessage = "Successfully authenticated!";
-  } else {
-    state = FAILED;
-    errorMessage = KOReaderSyncClient::errorString(result);
+  {
+    RenderLock lock(*this);
+    if (result == KOReaderSyncClient::OK) {
+      state = SUCCESS;
+      statusMessage = "Successfully authenticated!";
+    } else {
+      state = FAILED;
+      errorMessage = KOReaderSyncClient::errorString(result);
+    }
   }
-  xSemaphoreGive(renderingMutex);
   requestUpdate();
 }
 

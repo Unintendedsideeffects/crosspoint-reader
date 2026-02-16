@@ -118,9 +118,10 @@ void ClearCacheActivity::loop() {
   if (state == WARNING) {
     if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
       LOG_DBG("CLEAR_CACHE", "User confirmed, starting cache clear");
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      state = CLEARING;
-      xSemaphoreGive(renderingMutex);
+      {
+        RenderLock lock(*this);
+        state = CLEARING;
+      }
       requestUpdateAndWait();
 
       clearCache();

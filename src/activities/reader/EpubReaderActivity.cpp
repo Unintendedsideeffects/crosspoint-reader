@@ -221,11 +221,12 @@ void EpubReaderActivity::loop() {
 
   if (skipChapter) {
     // We don't want to delete the section mid-render, so grab the semaphore
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    nextPageNumber = 0;
-    currentSpineIndex = nextTriggered ? currentSpineIndex + 1 : currentSpineIndex - 1;
-    section.reset();
-    xSemaphoreGive(renderingMutex);
+    {
+      RenderLock lock(*this);
+      nextPageNumber = 0;
+      currentSpineIndex = nextTriggered ? currentSpineIndex + 1 : currentSpineIndex - 1;
+      section.reset();
+    }
     requestUpdate();
     return;
   }
@@ -241,11 +242,12 @@ void EpubReaderActivity::loop() {
       section->currentPage--;
     } else {
       // We don't want to delete the section mid-render, so grab the semaphore
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      nextPageNumber = UINT16_MAX;
-      currentSpineIndex--;
-      section.reset();
-      xSemaphoreGive(renderingMutex);
+      {
+        RenderLock lock(*this);
+        nextPageNumber = UINT16_MAX;
+        currentSpineIndex--;
+        section.reset();
+      }
     }
     requestUpdate();
   } else {
@@ -253,11 +255,12 @@ void EpubReaderActivity::loop() {
       section->currentPage++;
     } else {
       // We don't want to delete the section mid-render, so grab the semaphore
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      nextPageNumber = 0;
-      currentSpineIndex++;
-      section.reset();
-      xSemaphoreGive(renderingMutex);
+      {
+        RenderLock lock(*this);
+        nextPageNumber = 0;
+        currentSpineIndex++;
+        section.reset();
+      }
     }
     requestUpdate();
   }
@@ -325,12 +328,13 @@ void EpubReaderActivity::jumpToPercent(int percent) {
   }
 
   // Reset state so render() reloads and repositions on the target spine.
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  currentSpineIndex = targetSpineIndex;
-  nextPageNumber = 0;
-  pendingPercentJump = true;
-  section.reset();
-  xSemaphoreGive(renderingMutex);
+  {
+    RenderLock lock(*this);
+    currentSpineIndex = targetSpineIndex;
+    nextPageNumber = 0;
+    pendingPercentJump = true;
+    section.reset();
+  }
 }
 
 void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action) {
@@ -403,24 +407,25 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
       break;
     }
     case EpubReaderMenuActivity::MenuAction::DELETE_CACHE: {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (epub) {
-        // 2. BACKUP: Read current progress
-        // We use the current variables that track our position
-        uint16_t backupSpine = currentSpineIndex;
-        uint16_t backupPage = section->currentPage;
-        uint16_t backupPageCount = section->pageCount;
+      {
+        RenderLock lock(*this);
+        if (epub) {
+          // 2. BACKUP: Read current progress
+          // We use the current variables that track our position
+          uint16_t backupSpine = currentSpineIndex;
+          uint16_t backupPage = section->currentPage;
+          uint16_t backupPageCount = section->pageCount;
 
-        section.reset();
-        // 3. WIPE: Clear the cache directory
-        epub->clearCache();
+          section.reset();
+          // 3. WIPE: Clear the cache directory
+          epub->clearCache();
 
-        // 4. RESTORE: Re-setup the directory and rewrite the progress file
-        epub->setupCacheDir();
+          // 4. RESTORE: Re-setup the directory and rewrite the progress file
+          epub->setupCacheDir();
 
-        saveProgress(backupSpine, backupPage, backupPageCount);
+          saveProgress(backupSpine, backupPage, backupPageCount);
+        }
       }
-      xSemaphoreGive(renderingMutex);
       // Defer go home to avoid race condition with display task
       pendingGoHome = true;
       break;
@@ -458,23 +463,24 @@ void EpubReaderActivity::applyOrientation(const uint8_t orientation) {
   }
 
   // Preserve current reading position so we can restore after reflow.
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (section) {
-    cachedSpineIndex = currentSpineIndex;
-    cachedChapterTotalPageCount = section->pageCount;
-    nextPageNumber = section->currentPage;
+  {
+    RenderLock lock(*this);
+    if (section) {
+      cachedSpineIndex = currentSpineIndex;
+      cachedChapterTotalPageCount = section->pageCount;
+      nextPageNumber = section->currentPage;
+    }
+
+    // Persist the selection so the reader keeps the new orientation on next launch.
+    SETTINGS.orientation = orientation;
+    SETTINGS.saveToFile();
+
+    // Update renderer orientation to match the new logical coordinate system.
+    applyReaderOrientation(renderer, SETTINGS.orientation);
+
+    // Reset section to force re-layout in the new orientation.
+    section.reset();
   }
-
-  // Persist the selection so the reader keeps the new orientation on next launch.
-  SETTINGS.orientation = orientation;
-  SETTINGS.saveToFile();
-
-  // Update renderer orientation to match the new logical coordinate system.
-  applyReaderOrientation(renderer, SETTINGS.orientation);
-
-  // Reset section to force re-layout in the new orientation.
-  section.reset();
-  xSemaphoreGive(renderingMutex);
 }
 
 // TODO: Failure handling

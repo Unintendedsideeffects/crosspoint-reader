@@ -51,18 +51,20 @@ void KOReaderSyncActivity::onWifiSelectionComplete(const bool success) {
 
   LOG_DBG("KOSync", "WiFi connected, starting sync");
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  state = SYNCING;
-  statusMessage = "Syncing time...";
-  xSemaphoreGive(renderingMutex);
+  {
+    RenderLock lock(*this);
+    state = SYNCING;
+    statusMessage = "Syncing time...";
+  }
   requestUpdate();
 
   // Sync time with NTP before making API requests
   syncTimeWithNTP();
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  statusMessage = "Calculating document hash...";
-  xSemaphoreGive(renderingMutex);
+  {
+    RenderLock lock(*this);
+    statusMessage = "Calculating document hash...";
+  }
   requestUpdate();
 
   performSync();
@@ -76,19 +78,21 @@ void KOReaderSyncActivity::performSync() {
     documentHash = KOReaderDocumentId::calculate(epubPath);
   }
   if (documentHash.empty()) {
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = SYNC_FAILED;
-    statusMessage = "Failed to calculate document hash";
-    xSemaphoreGive(renderingMutex);
+    {
+      RenderLock lock(*this);
+      state = SYNC_FAILED;
+      statusMessage = "Failed to calculate document hash";
+    }
     requestUpdate();
     return;
   }
 
   LOG_DBG("KOSync", "Document hash: %s", documentHash.c_str());
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  statusMessage = "Fetching remote progress...";
-  xSemaphoreGive(renderingMutex);
+  {
+    RenderLock lock(*this);
+    statusMessage = "Fetching remote progress...";
+  }
   requestUpdateAndWait();
 
   // Fetch remote progress
@@ -96,19 +100,21 @@ void KOReaderSyncActivity::performSync() {
 
   if (result == KOReaderSyncClient::NOT_FOUND) {
     // No remote progress - offer to upload
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = NO_REMOTE_PROGRESS;
-    hasRemoteProgress = false;
-    xSemaphoreGive(renderingMutex);
+    {
+      RenderLock lock(*this);
+      state = NO_REMOTE_PROGRESS;
+      hasRemoteProgress = false;
+    }
     requestUpdate();
     return;
   }
 
   if (result != KOReaderSyncClient::OK) {
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = SYNC_FAILED;
-    statusMessage = KOReaderSyncClient::errorString(result);
-    xSemaphoreGive(renderingMutex);
+    {
+      RenderLock lock(*this);
+      state = SYNC_FAILED;
+      statusMessage = KOReaderSyncClient::errorString(result);
+    }
     requestUpdate();
     return;
   }
@@ -122,18 +128,20 @@ void KOReaderSyncActivity::performSync() {
   CrossPointPosition localPos = {currentSpineIndex, currentPage, totalPagesInSpine};
   localProgress = ProgressMapper::toKOReader(epub, localPos);
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  state = SHOWING_RESULT;
-  selectedOption = 0;  // Default to "Apply"
-  xSemaphoreGive(renderingMutex);
+  {
+    RenderLock lock(*this);
+    state = SHOWING_RESULT;
+    selectedOption = 0;  // Default to "Apply"
+  }
   requestUpdate();
 }
 
 void KOReaderSyncActivity::performUpload() {
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  state = UPLOADING;
-  statusMessage = "Uploading progress...";
-  xSemaphoreGive(renderingMutex);
+  {
+    RenderLock lock(*this);
+    state = UPLOADING;
+    statusMessage = "Uploading progress...";
+  }
   requestUpdate();
   requestUpdateAndWait();
 
@@ -149,17 +157,19 @@ void KOReaderSyncActivity::performUpload() {
   const auto result = KOReaderSyncClient::updateProgress(progress);
 
   if (result != KOReaderSyncClient::OK) {
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = SYNC_FAILED;
-    statusMessage = KOReaderSyncClient::errorString(result);
-    xSemaphoreGive(renderingMutex);
+    {
+      RenderLock lock(*this);
+      state = SYNC_FAILED;
+      statusMessage = KOReaderSyncClient::errorString(result);
+    }
     requestUpdate();
     return;
   }
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  state = UPLOAD_COMPLETE;
-  xSemaphoreGive(renderingMutex);
+  {
+    RenderLock lock(*this);
+    state = UPLOAD_COMPLETE;
+  }
   requestUpdate();
 }
 
@@ -190,9 +200,10 @@ void KOReaderSyncActivity::onEnter() {
           auto* self = static_cast<KOReaderSyncActivity*>(param);
           // Sync time first
           syncTimeWithNTP();
-          xSemaphoreTake(self->renderingMutex, portMAX_DELAY);
-          self->statusMessage = "Calculating document hash...";
-          xSemaphoreGive(self->renderingMutex);
+          {
+            RenderLock lock(*self);
+            self->statusMessage = "Calculating document hash...";
+          }
           self->requestUpdate();
           self->performSync();
           vTaskDelete(nullptr);
