@@ -31,7 +31,7 @@ FEATURES = {
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
-        size_kb=1064,
+        size_kb=3630,
         description='Optional OpenDyslexic 8/10/12/14pt family'
     ),
     'image_sleep': Feature(
@@ -115,7 +115,7 @@ FEATURES = {
     'todo_planner': Feature(
         name='Todo Planner',
         flag='ENABLE_TODO_PLANNER',
-        size_kb=6,
+        size_kb=237,
         description='Daily markdown notes and task tracking'
     ),
 }
