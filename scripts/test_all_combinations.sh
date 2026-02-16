@@ -12,7 +12,7 @@ else
   PIO_CMD="pio"
 fi
 
-FEATURES=("extended_fonts" "opendyslexic_fonts" "image_sleep" "markdown" "integrations" "koreader_sync" "calibre_sync" "background_server" "home_media_picker" "web_pokedex_plugin" "epub_support" "hyphenation" "xtc_support" "lyra_theme" "ota_updates" "todo_planner" "dark_mode" "visual_cover_picker" "ble_wifi_provisioning")
+FEATURES=("extended_fonts" "image_sleep" "markdown" "integrations" "koreader_sync" "calibre_sync" "background_server" "home_media_picker" "web_pokedex_plugin" "epub_support" "hyphenation" "xtc_support" "lyra_theme" "ota_updates" "todo_planner" "dark_mode" "visual_cover_picker" "ble_wifi_provisioning")
 TOTAL=$((2 ** ${#FEATURES[@]}))
 FAILED=0
 PASSED=0
