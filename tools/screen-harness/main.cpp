@@ -12,9 +12,6 @@
 #include "activities/boot_sleep/BootActivity.h"
 #include "fontIds.h"
 
-HardwareSerial Serial;
-SPIClass SPI;
-
 // Activity constructors use this type by reference. For the host harness we only
 // render static snapshots and don't consume input.
 class MappedInputManager {};

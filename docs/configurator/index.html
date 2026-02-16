@@ -1185,6 +1185,17 @@
                 </div>
               </div>
 
+              <label class="skill-card" data-feature="ble_wifi_provisioning" data-node-id="ble_wifi_provisioning">
+                <input type="checkbox" id="ble_wifi_provisioning" data-feature="ble_wifi_provisioning" />
+                <div class="card-icon"><span>&#x264B;</span></div>
+                <div class="card-body">
+                  <div class="card-name">BLE WiFi</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Initial WiFi setup via Bluetooth LE</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
+
             </div>
 
             <!-- Network notes -->
@@ -1385,6 +1396,11 @@
           flag: "ENABLE_VISUAL_COVER_PICKER",
           default: false,
         },
+        ble_wifi_provisioning: {
+          sizeKb: 150,
+          flag: "ENABLE_BLE_WIFI_PROVISIONING",
+          default: false,
+        },
       };
 
       const BASE_SIZE_MB = 1.66;
@@ -1400,7 +1416,7 @@
       const HUB_FEATURES = {
         reading_hub: ["markdown", "xtc_support", "epub_support", "hyphenation", "todo_planner"],
         interface_hub: ["extended_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin", "dark_mode", "visual_cover_picker"],
-        network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync"],
+        network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync", "ble_wifi_provisioning"],
         extras_hub: ["ota_updates", "integrations", "home_media_picker"],
       };
 
@@ -1431,7 +1447,7 @@
         },
         full: {
           extended_fonts: true,
-          opendyslexic_fonts: true,
+          opendyslexic_fonts: false,
           image_sleep: true,
           markdown: true,
           integrations: true,
@@ -1448,6 +1464,7 @@
           web_pokedex_plugin: true,
           dark_mode: true,
           visual_cover_picker: true,
+          ble_wifi_provisioning: true,
         },
       };
 

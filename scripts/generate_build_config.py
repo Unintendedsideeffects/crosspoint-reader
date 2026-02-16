@@ -130,6 +130,12 @@ FEATURES = {
         size_kb=12,
         description='Grid-based book explorer with thumbnails'
     ),
+    'ble_wifi_provisioning': Feature(
+        name='BLE WiFi Provisioning',
+        flag='ENABLE_BLE_WIFI_PROVISIONING',
+        size_kb=150,
+        description='Initial WiFi setup via Bluetooth LE'
+    ),
 }
 
 
@@ -273,6 +279,13 @@ FEATURE_METADATA = {
         conflicts=[],
         recommends=[]
     ),
+    'ble_wifi_provisioning': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
 }
 
 
@@ -380,10 +393,10 @@ PROFILES = {
         },
     },
     'full': {
-        'description': 'All optional features enabled (~6.0MB, still under flash cap)',
+        'description': 'Feature-rich build (~6.0MB, fits in flash)',
         'features': {
             'extended_fonts': True,
-            'opendyslexic_fonts': True,
+            'opendyslexic_fonts': False,  # Too large to include with other fonts
             'image_sleep': True,
             'markdown': True,
             'integrations': True,
@@ -400,6 +413,7 @@ PROFILES = {
             'web_pokedex_plugin': True,
             'dark_mode': True,
             'visual_cover_picker': True,
+            'ble_wifi_provisioning': True,
         },
     },
 }
