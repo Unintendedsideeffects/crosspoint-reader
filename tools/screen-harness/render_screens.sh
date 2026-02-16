@@ -27,6 +27,8 @@ pushd "$ROOT_DIR" >/dev/null
   -Ilib/EpdFont \
   -Ilib/EpdFont/builtinFonts \
   -Ilib/Utf8 \
+  -Ilib/Logging \
+  -Ilib/Serialization \
   -Iopen-x4-sdk/libs/display/EInkDisplay/include \
   -Isrc \
   tools/screen-harness/main.cpp \
@@ -35,6 +37,7 @@ pushd "$ROOT_DIR" >/dev/null
   lib/EpdFont/EpdFont.cpp \
   lib/EpdFont/EpdFontFamily.cpp \
   lib/Utf8/Utf8.cpp \
+  lib/Logging/Logging.cpp \
   lib/hal/HalDisplay.cpp \
   open-x4-sdk/libs/display/EInkDisplay/src/EInkDisplay.cpp \
   -o "$BIN_PATH"
