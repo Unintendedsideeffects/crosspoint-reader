@@ -54,7 +54,7 @@ inline int digitalRead(int /*pin*/) { return LOW; }
 
 class HardwareSerial {
  public:
-  explicit operator bool() const { return false; }
+  operator bool() const { return true; }
 
   void printf(const char* /*fmt*/, ...) const {
     // Intentionally silent for deterministic host harness output.
@@ -64,7 +64,7 @@ class HardwareSerial {
     // Intentionally silent for deterministic host harness output.
   }
 
-  void print(const char* /*text*/) const {}
+  size_t print(const char* /*text*/) const { return 0; }
 
   size_t write(uint8_t) { return 0; }
   size_t write(const uint8_t*, size_t) { return 0; }
