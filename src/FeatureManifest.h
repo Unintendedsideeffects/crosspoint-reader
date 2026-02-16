@@ -32,6 +32,7 @@ class FeatureManifest {
   static constexpr bool hasLyraTheme() { return ENABLE_LYRA_THEME != 0; }
   static constexpr bool hasOtaUpdates() { return ENABLE_OTA_UPDATES != 0; }
   static constexpr bool hasTodoPlanner() { return ENABLE_TODO_PLANNER != 0; }
+  static constexpr bool hasDarkMode() { return ENABLE_DARK_MODE != 0; }
   static constexpr bool hasBleWifiProvisioning() { return ENABLE_BLE_WIFI_PROVISIONING != 0; }
 
   /**
@@ -42,7 +43,7 @@ class FeatureManifest {
     return hasExtendedFonts() + hasOpenDyslexicFonts() + hasImageSleep() + hasMarkdown() + hasIntegrations() +
            hasKOReaderSync() + hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin() +
            hasEpubSupport() + hasHyphenation() + hasXtcSupport() + hasLyraTheme() + hasOtaUpdates() + hasTodoPlanner() +
-           hasBleWifiProvisioning();
+           hasDarkMode() + hasBleWifiProvisioning();
   }
 
   /**
@@ -77,6 +78,7 @@ class FeatureManifest {
     addFeature(hasLyraTheme(), "lyra_theme");
     addFeature(hasOtaUpdates(), "ota_updates");
     addFeature(hasTodoPlanner(), "todo_planner");
+    addFeature(hasDarkMode(), "dark_mode");
     addFeature(hasBleWifiProvisioning(), "ble_wifi_provisioning");
 
     return build.isEmpty() ? "lean" : build;
@@ -104,6 +106,7 @@ class FeatureManifest {
     json += ",\"lyra_theme\":" + String(hasLyraTheme() ? "true" : "false");
     json += ",\"ota_updates\":" + String(hasOtaUpdates() ? "true" : "false");
     json += ",\"todo_planner\":" + String(hasTodoPlanner() ? "true" : "false");
+    json += ",\"dark_mode\":" + String(hasDarkMode() ? "true" : "false");
     json += ",\"ble_wifi_provisioning\":" + String(hasBleWifiProvisioning() ? "true" : "false");
     json += "}";
     return json;
@@ -131,8 +134,9 @@ class FeatureManifest {
     Serial.printf("  Lyra Theme:        %s\n", hasLyraTheme() ? "ENABLED " : "DISABLED");
     Serial.printf("  OTA Updates:       %s\n", hasOtaUpdates() ? "ENABLED " : "DISABLED");
     Serial.printf("  Todo Planner:      %s\n", hasTodoPlanner() ? "ENABLED " : "DISABLED");
+    Serial.printf("  Dark Mode:         %s\n", hasDarkMode() ? "ENABLED " : "DISABLED");
     Serial.printf("  BLE WiFi Provision: %s\n", hasBleWifiProvisioning() ? "ENABLED " : "DISABLED");
-    Serial.printf("[FEATURES] %d/17 compile-time features enabled\n", enabledFeatureCount());
+    Serial.printf("[FEATURES] %d/18 compile-time features enabled\n", enabledFeatureCount());
     Serial.printf("[FEATURES] Build: %s\n", getBuildString().c_str());
   }
 };

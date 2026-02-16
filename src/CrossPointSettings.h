@@ -207,6 +207,7 @@ class CrossPointSettings {
   uint32_t lastTimeSyncEpoch = 0;
   // OTA release channel selection
   uint8_t releaseChannel = RELEASE_STABLE;
+  uint8_t darkMode = 0;
 
   ~CrossPointSettings() = default;
 

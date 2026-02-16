@@ -33,6 +33,9 @@ inline std::vector<SettingInfo> getSettingsList() {
                         {"1 page", "5 pages", "10 pages", "15 pages", "30 pages"}, "refreshFrequency", "Display"),
       SettingInfo::Enum("UI Theme", &CrossPointSettings::uiTheme, {"Classic", "Lyra"}, "uiTheme", "Display"),
       SettingInfo::Toggle("Sunlight Fading Fix", &CrossPointSettings::fadingFix, "fadingFix", "Display"),
+#if ENABLE_DARK_MODE
+      SettingInfo::Toggle("Dark Mode", &CrossPointSettings::darkMode, "darkMode", "Display"),
+#endif
 
       // --- Reader ---
       SettingInfo::Enum("Font Family", &CrossPointSettings::fontFamily,

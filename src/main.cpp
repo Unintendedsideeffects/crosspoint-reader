@@ -241,6 +241,7 @@ void waitForPowerRelease() {
 // Enter deep sleep mode
 void enterDeepSleep() {
   exitActivity();
+  renderer.setDarkMode(false);
   enterNewActivity(new SleepActivity(renderer, mappedInputManager));
 
   display.deepSleep();
@@ -405,6 +406,7 @@ void setup() {
   applyPendingFactoryReset();
 
   SETTINGS.loadFromFile();
+  renderer.setDarkMode(SETTINGS.darkMode);
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.loadFromFile();
 #endif
