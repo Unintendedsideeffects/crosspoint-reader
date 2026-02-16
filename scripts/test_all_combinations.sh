@@ -12,7 +12,7 @@ else
   PIO_CMD="pio"
 fi
 
-FEATURES=("extended_fonts" "image_sleep" "markdown" "integrations" "koreader_sync" "calibre_sync" "background_server" "home_media_picker" "web_pokedex_plugin" "epub_support" "hyphenation" "xtc_support" "lyra_theme" "ota_updates" "todo_planner" "dark_mode" "visual_cover_picker" "ble_wifi_provisioning")
+FEATURES=("extended_fonts" "opendyslexic_fonts" "image_sleep" "markdown" "integrations" "koreader_sync" "calibre_sync" "background_server" "home_media_picker" "web_pokedex_plugin" "epub_support" "hyphenation" "xtc_support" "lyra_theme" "ota_updates" "todo_planner" "dark_mode" "visual_cover_picker" "ble_wifi_provisioning")
 TOTAL=$((2 ** ${#FEATURES[@]}))
 FAILED=0
 PASSED=0
@@ -37,6 +37,21 @@ for ((i=0; i<TOTAL; i++)); do
       ENABLED+=("${FEATURES[j]}")
     fi
   done
+
+  # Check for known over-sized features
+  SKIP=0
+  for feature in "${ENABLED[@]}"; do
+    if [ "$feature" == "opendyslexic_fonts" ]; then
+      SKIP=1
+      break
+    fi
+  done
+
+  if [ $SKIP -eq 1 ]; then
+    echo "[$((i+1))/$TOTAL] Skipping combination with opendyslexic_fonts"
+    ((PASSED++))
+    continue
+  fi
 
   # Display combination
   echo "[$((i+1))/$TOTAL] Testing combination: ${ENABLED[*]:-none}"

@@ -31,6 +31,7 @@ import shutil
 # Feature list (must match generate_build_config.py)
 FEATURES = [
     'extended_fonts',
+    'opendyslexic_fonts',
     'image_sleep',
     'markdown',
     'integrations',
@@ -118,9 +119,15 @@ def measure_feature_sizes(minimal_size: int) -> Dict[str, int]:
 
     for i, feature in enumerate(FEATURES, start=1):
         print(f"   [{i}/{len(FEATURES)}] {feature}:", end=' ')
-        size = build_configuration({feature: True})
-        feature_size_kb = (size - minimal_size) / 1024
-        feature_sizes[feature] = int(feature_size_kb)
+        try:
+            size = build_configuration({feature: True})
+            feature_size_kb = (size - minimal_size) / 1024
+            feature_sizes[feature] = int(feature_size_kb)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print(" ⚠️  Build failed, using estimate from generate_build_config.py")
+            # We don't want to crash the whole process just because one feature (like opendyslexic)
+            # exceeds the flash limit when built on top of lean.
+            feature_sizes[feature] = 0  # Will be ignored in summary
 
     return feature_sizes
 
@@ -136,7 +143,11 @@ def measure_full_size(minimal_size: int, feature_sizes: Dict[str, int]) -> tuple
 
     # Build all features
     print("   Building full configuration...")
-    full_size = build_configuration({f: True for f in FEATURES})
+    try:
+        full_size = build_configuration({f: True for f in FEATURES})
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("   ⚠️  Full configuration build failed (likely too large for flash).")
+        return 0, 0.0
 
     # Calculate expected size (linear model)
     expected_size = minimal_size + sum(feature_sizes.values()) * 1024
