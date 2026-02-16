@@ -1072,6 +1072,28 @@
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
 
+              <label class="skill-card" data-feature="dark_mode" data-node-id="dark_mode">
+                <input type="checkbox" id="dark_mode" data-feature="dark_mode" />
+                <div class="card-icon"><span>&#x25D0;</span></div>
+                <div class="card-body">
+                  <div class="card-name">Dark Mode</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">System-wide inverted color scheme for reading in the dark</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
+
+              <label class="skill-card" data-feature="visual_cover_picker" data-node-id="visual_cover_picker">
+                <input type="checkbox" id="visual_cover_picker" data-feature="visual_cover_picker" />
+                <div class="card-icon"><span>&#x25A6;</span></div>
+                <div class="card-body">
+                  <div class="card-name">Visual Covers</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Grid-based book explorer with cached cover art thumbnails</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
+
             </div>
 
             <!-- Interface notes -->
@@ -1353,6 +1375,16 @@
           flag: "ENABLE_TODO_PLANNER",
           default: false,
         },
+        dark_mode: {
+          sizeKb: 0,
+          flag: "ENABLE_DARK_MODE",
+          default: true,
+        },
+        visual_cover_picker: {
+          sizeKb: 12,
+          flag: "ENABLE_VISUAL_COVER_PICKER",
+          default: false,
+        },
       };
 
       const BASE_SIZE_MB = 1.66;
@@ -1367,7 +1399,7 @@
 
       const HUB_FEATURES = {
         reading_hub: ["markdown", "xtc_support", "epub_support", "hyphenation", "todo_planner"],
-        interface_hub: ["extended_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin"],
+        interface_hub: ["extended_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin", "dark_mode", "visual_cover_picker"],
         network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync"],
         extras_hub: ["ota_updates", "integrations", "home_media_picker"],
       };
@@ -1395,6 +1427,7 @@
           ota_updates: true,
           background_server: true,
           home_media_picker: true,
+          dark_mode: true,
         },
         full: {
           extended_fonts: true,
@@ -1413,6 +1446,8 @@
           background_server: true,
           home_media_picker: true,
           web_pokedex_plugin: true,
+          dark_mode: true,
+          visual_cover_picker: true,
         },
       };
 

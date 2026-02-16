@@ -118,6 +118,18 @@ FEATURES = {
         size_kb=237,
         description='Daily markdown notes and task tracking'
     ),
+    'dark_mode': Feature(
+        name='Dark Mode',
+        flag='ENABLE_DARK_MODE',
+        size_kb=0,
+        description='System-wide inverted color scheme'
+    ),
+    'visual_cover_picker': Feature(
+        name='Visual Covers',
+        flag='ENABLE_VISUAL_COVER_PICKER',
+        size_kb=12,
+        description='Grid-based book explorer with thumbnails'
+    ),
 }
 
 
@@ -247,6 +259,20 @@ FEATURE_METADATA = {
         conflicts=[],
         recommends=['markdown']
     ),
+    'dark_mode': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'visual_cover_picker': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
 }
 
 
@@ -350,6 +376,7 @@ PROFILES = {
             'ota_updates': True,
             'background_server': True,
             'home_media_picker': True,
+            'dark_mode': True,
         },
     },
     'full': {
@@ -371,6 +398,8 @@ PROFILES = {
             'background_server': True,
             'home_media_picker': True,
             'web_pokedex_plugin': True,
+            'dark_mode': True,
+            'visual_cover_picker': True,
         },
     },
 }
