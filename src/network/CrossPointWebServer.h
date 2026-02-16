@@ -1,5 +1,6 @@
 #pragma once
 
+#include <FeatureFlags.h>
 #include <HalStorage.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
@@ -92,4 +93,11 @@ class CrossPointWebServer {
   // API handlers for web UI
   void handleRecentBooks() const;
   void handleCover() const;
+
+  // WiFi handlers
+#if ENABLE_WEB_WIFI_SETUP
+  void handleWifiScan() const;
+  void handleWifiConnect() const;
+  void handleWifiForget() const;
+#endif
 };

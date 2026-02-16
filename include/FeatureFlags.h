@@ -83,6 +83,10 @@
 #define ENABLE_USER_FONTS 1
 #endif
 
+#ifndef ENABLE_WEB_WIFI_SETUP
+#define ENABLE_WEB_WIFI_SETUP 1
+#endif
+
 // Enforce downstream dependencies at compile time.
 #if !ENABLE_INTEGRATIONS
 #undef ENABLE_KOREADER_SYNC

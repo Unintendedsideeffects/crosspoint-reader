@@ -159,6 +159,13 @@ void CrossPointWebServer::begin() {
   server->on("/api/settings", HTTP_GET, [this] { handleGetSettings(); });
   server->on("/api/settings", HTTP_POST, [this] { handlePostSettings(); });
 
+  // WiFi endpoints
+#if ENABLE_WEB_WIFI_SETUP
+  server->on("/api/wifi/scan", HTTP_GET, [this] { handleWifiScan(); });
+  server->on("/api/wifi/connect", HTTP_POST, [this] { handleWifiConnect(); });
+  server->on("/api/wifi/forget", HTTP_POST, [this] { handleWifiForget(); });
+#endif
+
   // API endpoints for web UI (recent books, cover images)
   server->on("/api/recent", HTTP_GET, [this] { handleRecentBooks(); });
   server->on("/api/cover", HTTP_GET, [this] { handleCover(); });
@@ -1711,3 +1718,66 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       break;
   }
 }
+
+#include "WifiCredentialStore.h"
+
+#if ENABLE_WEB_WIFI_SETUP
+void CrossPointWebServer::handleWifiScan() const {
+  int n = WiFi.scanNetworks();
+  JsonDocument doc;
+  JsonArray array = doc.to<JsonArray>();
+
+  for (int i = 0; i < n; ++i) {
+    JsonObject obj = array.add<JsonObject>();
+    obj["ssid"] = WiFi.SSID(i);
+    obj["rssi"] = WiFi.RSSI(i);
+    obj["encrypted"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+    obj["saved"] = WIFI_STORE.hasSavedCredential(WiFi.SSID(i).c_str());
+  }
+  WiFi.scanDelete();
+
+  String json;
+  serializeJson(doc, json);
+  server->send(200, "application/json", json);
+}
+
+void CrossPointWebServer::handleWifiConnect() const {
+  if (!server->hasArg("plain")) {
+    server->send(400, "text/plain", "Missing body");
+    return;
+  }
+  JsonDocument doc;
+  deserializeJson(doc, server->arg("plain"));
+
+  String ssid = doc["ssid"];
+  String password = doc["password"];
+
+  if (ssid.length() == 0) {
+    server->send(400, "text/plain", "SSID required");
+    return;
+  }
+
+  WIFI_STORE.addCredential(ssid.c_str(), password.c_str());
+  WIFI_STORE.saveToFile();
+
+  server->send(200, "text/plain", "WiFi credentials saved");
+}
+
+void CrossPointWebServer::handleWifiForget() const {
+  if (!server->hasArg("plain")) {
+    server->send(400, "text/plain", "Missing body");
+    return;
+  }
+  JsonDocument doc;
+  deserializeJson(doc, server->arg("plain"));
+  String ssid = doc["ssid"];
+
+  if (ssid.length() > 0) {
+    WIFI_STORE.removeCredential(ssid.c_str());
+    WIFI_STORE.saveToFile();
+    server->send(200, "text/plain", "WiFi credentials removed");
+  } else {
+    server->send(400, "text/plain", "SSID required");
+  }
+}
+#endif

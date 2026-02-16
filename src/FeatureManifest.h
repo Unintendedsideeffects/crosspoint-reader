@@ -36,6 +36,7 @@ class FeatureManifest {
   static constexpr bool hasVisualCoverPicker() { return ENABLE_VISUAL_COVER_PICKER != 0; }
   static constexpr bool hasBleWifiProvisioning() { return ENABLE_BLE_WIFI_PROVISIONING != 0; }
   static constexpr bool hasUserFonts() { return ENABLE_USER_FONTS != 0; }
+  static constexpr bool hasWebWifiSetup() { return ENABLE_WEB_WIFI_SETUP != 0; }
 
   /**
    * Count how many compile-time features are enabled.
@@ -45,7 +46,7 @@ class FeatureManifest {
     return hasExtendedFonts() + hasOpenDyslexicFonts() + hasImageSleep() + hasMarkdown() + hasIntegrations() +
            hasKOReaderSync() + hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin() +
            hasEpubSupport() + hasHyphenation() + hasXtcSupport() + hasLyraTheme() + hasOtaUpdates() + hasTodoPlanner() +
-           hasDarkMode() + hasVisualCoverPicker() + hasBleWifiProvisioning() + hasUserFonts();
+           hasDarkMode() + hasVisualCoverPicker() + hasBleWifiProvisioning() + hasUserFonts() + hasWebWifiSetup();
   }
 
   /**
@@ -84,6 +85,7 @@ class FeatureManifest {
     addFeature(hasVisualCoverPicker(), "visual_cover_picker");
     addFeature(hasBleWifiProvisioning(), "ble_wifi_provisioning");
     addFeature(hasUserFonts(), "user_fonts");
+    addFeature(hasWebWifiSetup(), "web_wifi_setup");
 
     return build.isEmpty() ? "lean" : build;
   }
@@ -114,6 +116,7 @@ class FeatureManifest {
     json += ",\"visual_cover_picker\":" + String(hasVisualCoverPicker() ? "true" : "false");
     json += ",\"ble_wifi_provisioning\":" + String(hasBleWifiProvisioning() ? "true" : "false");
     json += ",\"user_fonts\":" + String(hasUserFonts() ? "true" : "false");
+    json += ",\"web_wifi_setup\":" + String(hasWebWifiSetup() ? "true" : "false");
     json += "}";
     return json;
   }
@@ -144,7 +147,8 @@ class FeatureManifest {
     Serial.printf("  Visual Cov Picker: %s\n", hasVisualCoverPicker() ? "ENABLED " : "DISABLED");
     Serial.printf("  BLE WiFi Provision: %s\n", hasBleWifiProvisioning() ? "ENABLED " : "DISABLED");
     Serial.printf("  User Fonts:        %s\n", hasUserFonts() ? "ENABLED " : "DISABLED");
-    Serial.printf("[FEATURES] %d/20 compile-time features enabled\n", enabledFeatureCount());
+    Serial.printf("  Web WiFi Setup:    %s\n", hasWebWifiSetup() ? "ENABLED " : "DISABLED");
+    Serial.printf("[FEATURES] %d/21 compile-time features enabled\n", enabledFeatureCount());
     Serial.printf("[FEATURES] Build: %s\n", getBuildString().c_str());
   }
 };

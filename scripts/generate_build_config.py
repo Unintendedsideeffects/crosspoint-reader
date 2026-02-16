@@ -142,6 +142,12 @@ FEATURES = {
         size_kb=4,
         description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
     ),
+    'web_wifi_setup': Feature(
+        name='Web WiFi Setup',
+        flag='ENABLE_WEB_WIFI_SETUP',
+        size_kb=4,
+        description='Manage WiFi networks directly from the web interface'
+    ),
 }
 
 
@@ -299,6 +305,13 @@ FEATURE_METADATA = {
         conflicts=[],
         recommends=[]
     ),
+    'web_wifi_setup': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=['background_server'],
+        conflicts=[],
+        recommends=[]
+    ),
 }
 
 
@@ -428,6 +441,7 @@ PROFILES = {
             'visual_cover_picker': True,
             'ble_wifi_provisioning': True,
             'user_fonts': True,
+            'web_wifi_setup': True,
         },
     },
 }
