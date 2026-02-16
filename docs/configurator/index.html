@@ -303,6 +303,74 @@
         gap: 8px;
       }
 
+      /* ── Dependency groups — parent + children visually linked ── */
+      .dep-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        position: relative;
+      }
+
+      .dep-group .skill-card {
+        border-radius: 0;
+      }
+
+      /* Parent card in a group: no bottom border radius, connect to children */
+      .dep-group .dep-parent {
+        z-index: 1;
+      }
+
+      /* Child connector strip */
+      .dep-children {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        margin-left: 12px;
+        border-left: 2px solid var(--bone);
+        padding-left: 0;
+        position: relative;
+      }
+
+      .dep-children .skill-card {
+        border-left: none;
+        margin-left: -1px;
+      }
+
+      /* Connector tick mark for each child */
+      .dep-child {
+        position: relative;
+      }
+
+      .dep-child::before {
+        content: '';
+        position: absolute;
+        left: -13px;
+        top: 50%;
+        width: 12px;
+        height: 0;
+        border-top: 2px solid var(--bone);
+      }
+
+      /* Active state: connector highlights */
+      .dep-group.group-active .dep-children {
+        border-left-color: var(--dk);
+      }
+
+      .dep-group.group-active .dep-child::before {
+        border-top-color: var(--dk);
+      }
+
+      /* Locked state: connector dims */
+      .dep-group.group-locked .dep-children {
+        border-left-color: var(--bone);
+        border-left-style: dashed;
+      }
+
+      .dep-group.group-locked .dep-child::before {
+        border-top-color: var(--bone);
+        border-top-style: dashed;
+      }
+
       /* ══════════════════════════════════════════════
          SKILL CARDS — subordinate interactive tiles
          ══════════════════════════════════════════════ */
@@ -860,39 +928,55 @@
           <div class="cat-body">
             <div class="skill-grid">
 
-              <label class="skill-card" data-feature="epub_support" data-node-id="epub_support">
-                <input type="checkbox" id="epub_support" data-feature="epub_support" />
-                <div class="card-icon"><span>&#x25A3;</span></div>
-                <div class="card-body">
-                  <div class="card-name">EPUB</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">EPUB e-book reader with CSS, images, and chapter navigation</div>
+              <div class="dep-group" data-dep-parent="epub_support">
+                <label class="skill-card dep-parent" data-feature="epub_support" data-node-id="epub_support">
+                  <input type="checkbox" id="epub_support" data-feature="epub_support" />
+                  <div class="card-icon"><span>&#x25A3;</span></div>
+                  <div class="card-body">
+                    <div class="card-name">EPUB</div>
+                    <div class="card-size"></div>
+                    <div class="card-desc">EPUB e-book reader with CSS, images, and chapter navigation</div>
+                  </div>
+                  <div class="card-toggle"><span class="toggle-box"></span></div>
+                </label>
+                <div class="dep-children">
+                  <label class="skill-card dep-child" data-feature="hyphenation" data-node-id="hyphenation">
+                    <input type="checkbox" id="hyphenation" data-feature="hyphenation" />
+                    <div class="card-icon"><span>&#x2500;</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Hyphenation</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Language-aware hyphenation for justified EPUB text</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
                 </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
+              </div>
 
-              <label class="skill-card" data-feature="hyphenation" data-node-id="hyphenation">
-                <input type="checkbox" id="hyphenation" data-feature="hyphenation" />
-                <div class="card-icon"><span>&#x2500;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Hyphenation</div>
-                  <div class="card-size"></div>
-                  <div class="card-dep">Requires EPUB</div>
-                  <div class="card-desc">Language-aware hyphenation for justified EPUB text</div>
+              <div class="dep-group" data-dep-parent="markdown">
+                <label class="skill-card dep-parent" data-feature="markdown" data-node-id="markdown">
+                  <input type="checkbox" id="markdown" data-feature="markdown" />
+                  <div class="card-icon"><span>&#x00B6;</span></div>
+                  <div class="card-body">
+                    <div class="card-name">Markdown</div>
+                    <div class="card-size"></div>
+                    <div class="card-desc">Markdown and Obsidian vault reading support</div>
+                  </div>
+                  <div class="card-toggle"><span class="toggle-box"></span></div>
+                </label>
+                <div class="dep-children">
+                  <label class="skill-card dep-child" data-feature="todo_planner" data-node-id="todo_planner">
+                    <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
+                    <div class="card-icon"><span>&#x2713;</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Agenda</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Daily markdown notes and task tracking</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
                 </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
-              <label class="skill-card" data-feature="markdown" data-node-id="markdown">
-                <input type="checkbox" id="markdown" data-feature="markdown" />
-                <div class="card-icon"><span>&#x00B6;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Markdown</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Markdown and Obsidian vault reading support</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
+              </div>
 
               <label class="skill-card" data-feature="xtc_support" data-node-id="xtc_support">
                 <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
@@ -901,17 +985,6 @@
                   <div class="card-name">XTC</div>
                   <div class="card-size"></div>
                   <div class="card-desc">XTC format reader with chapter navigation</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
-              <label class="skill-card" data-feature="todo_planner" data-node-id="todo_planner">
-                <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
-                <div class="card-icon"><span>&#x2713;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Agenda</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Daily markdown notes and task tracking</div>
                 </div>
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
@@ -930,16 +1003,30 @@
           <div class="cat-body">
             <div class="skill-grid">
 
-              <label class="skill-card" data-feature="extended_fonts" data-node-id="extended_fonts">
-                <input type="checkbox" id="extended_fonts" data-feature="extended_fonts" />
-                <div class="card-icon"><span>A</span></div>
-                <div class="card-body">
-                  <div class="card-name">Fonts</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">12/16/18pt fonts and OpenDyslexic support</div>
+              <div class="dep-group" data-dep-parent="extended_fonts">
+                <label class="skill-card dep-parent" data-feature="extended_fonts" data-node-id="extended_fonts">
+                  <input type="checkbox" id="extended_fonts" data-feature="extended_fonts" />
+                  <div class="card-icon"><span>A</span></div>
+                  <div class="card-body">
+                    <div class="card-name">Fonts</div>
+                    <div class="card-size"></div>
+                    <div class="card-desc">12/16/18pt Bookerly and Noto Sans families</div>
+                  </div>
+                  <div class="card-toggle"><span class="toggle-box"></span></div>
+                </label>
+                <div class="dep-children">
+                  <label class="skill-card dep-child" data-feature="opendyslexic_fonts" data-node-id="opendyslexic_fonts">
+                    <input type="checkbox" id="opendyslexic_fonts" data-feature="opendyslexic_fonts" />
+                    <div class="card-icon"><span>OD</span></div>
+                    <div class="card-body">
+                      <div class="card-name">OpenDyslexic</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Optional OpenDyslexic 8/10/12/14pt family</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
                 </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
+              </div>
 
               <label class="skill-card" data-feature="home_media_picker" data-node-id="home_media_picker">
                 <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
@@ -1041,40 +1128,40 @@
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
 
-              <label class="skill-card" data-feature="integrations" data-node-id="integrations">
-                <input type="checkbox" id="integrations" data-feature="integrations" />
-                <div class="card-icon"><span>&#x253C;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Sync Base</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Shared runtime hooks for remote sync integrations</div>
+              <div class="dep-group" data-dep-parent="integrations">
+                <label class="skill-card dep-parent" data-feature="integrations" data-node-id="integrations">
+                  <input type="checkbox" id="integrations" data-feature="integrations" />
+                  <div class="card-icon"><span>&#x253C;</span></div>
+                  <div class="card-body">
+                    <div class="card-name">Sync Base</div>
+                    <div class="card-size"></div>
+                    <div class="card-desc">Shared runtime hooks for remote sync integrations</div>
+                  </div>
+                  <div class="card-toggle"><span class="toggle-box"></span></div>
+                </label>
+                <div class="dep-children">
+                  <label class="skill-card dep-child" data-feature="koreader_sync" data-node-id="koreader_sync">
+                    <input type="checkbox" id="koreader_sync" data-feature="koreader_sync" />
+                    <div class="card-icon"><span>&#x25B6;</span></div>
+                    <div class="card-body">
+                      <div class="card-name">KOReader Sync</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Sync reading progress with KOReader</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
+                  <label class="skill-card dep-child" data-feature="calibre_sync" data-node-id="calibre_sync">
+                    <input type="checkbox" id="calibre_sync" data-feature="calibre_sync" />
+                    <div class="card-icon"><span>&#x25C0;</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Calibre Sync</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Calibre OPDS browser and metadata sync settings</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
                 </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
-              <label class="skill-card" data-feature="koreader_sync" data-node-id="koreader_sync">
-                <input type="checkbox" id="koreader_sync" data-feature="koreader_sync" />
-                <div class="card-icon"><span>&#x25B6;</span></div>
-                <div class="card-body">
-                  <div class="card-name">KOReader Sync</div>
-                  <div class="card-size"></div>
-                  <div class="card-dep">Requires Sync Base</div>
-                  <div class="card-desc">Sync reading progress with KOReader</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
-              <label class="skill-card" data-feature="calibre_sync" data-node-id="calibre_sync">
-                <input type="checkbox" id="calibre_sync" data-feature="calibre_sync" />
-                <div class="card-icon"><span>&#x25C0;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Calibre Sync</div>
-                  <div class="card-size"></div>
-                  <div class="card-dep">Requires Sync Base</div>
-                  <div class="card-desc">Calibre OPDS browser and metadata sync settings</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
+              </div>
 
             </div>
 
@@ -1108,6 +1195,10 @@
               <div class="note-item" data-node-id="feature_store_note">
                 <span class="note-icon">&#x25AB;</span>
                 <span class="note-label">Feature store: select then pull OTA</span>
+              </div>
+              <div class="note-item" data-node-id="custom_font_pipeline_note">
+                <span class="note-icon">&#x25AB;</span>
+                <span class="note-label">Custom font pipeline: upload TTF/OTF, convert locally to bitmap pack, bake into build</span>
               </div>
             </div>
           </div>
@@ -1145,6 +1236,7 @@
         </div>
         <div class="info-bar">
           Compile-time dependencies are enforced automatically. Roadmap items are directional and do not affect builds.
+          Candidate under evaluation: custom font pipeline (TTF/OTF upload in picker, local conversion on user machine, baked bitmap pack). We should validate value and performance impact before committing to implementation.
         </div>
       </div>
 
@@ -1182,9 +1274,14 @@
     <script>
       const FEATURES = {
         extended_fonts: {
-          sizeKb: 3630,
+          sizeKb: 2566,
           flag: "ENABLE_EXTENDED_FONTS",
           default: true,
+        },
+        opendyslexic_fonts: {
+          sizeKb: 1064,
+          flag: "ENABLE_OPENDYSLEXIC_FONTS",
+          default: false,
         },
         image_sleep: {
           sizeKb: 0,
@@ -1263,12 +1360,14 @@
       const FEATURE_DEPENDENCIES = {
         koreader_sync: ["integrations"],
         calibre_sync: ["integrations"],
+        opendyslexic_fonts: ["extended_fonts"],
         hyphenation: ["epub_support"],
+        todo_planner: ["markdown"],
       };
 
       const HUB_FEATURES = {
         reading_hub: ["markdown", "xtc_support", "epub_support", "hyphenation", "todo_planner"],
-        interface_hub: ["extended_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin"],
+        interface_hub: ["extended_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin"],
         network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync"],
         extras_hub: ["ota_updates", "integrations", "home_media_picker"],
       };
@@ -1299,6 +1398,7 @@
         },
         full: {
           extended_fonts: true,
+          opendyslexic_fonts: true,
           image_sleep: true,
           markdown: true,
           integrations: true,
@@ -1583,6 +1683,17 @@
         });
       }
 
+      function updateDepGroups(selections) {
+        document.querySelectorAll(".dep-group[data-dep-parent]").forEach((group) => {
+          const parentFeature = group.dataset.depParent;
+          const parentActive = selections[parentFeature];
+          const anyChildActive = Array.from(group.querySelectorAll(".dep-child[data-feature]"))
+            .some((child) => selections[child.dataset.feature]);
+          group.classList.toggle("group-active", parentActive && anyChildActive);
+          group.classList.toggle("group-locked", !parentActive);
+        });
+      }
+
       function updateNotes(selections) {
         document.querySelectorAll(".note-item[data-node-id]").forEach((note) => {
           const noteId = note.dataset.nodeId;
@@ -1592,6 +1703,7 @@
 
       function updateVisuals(selections) {
         updateSkillCards(selections);
+        updateDepGroups(selections);
         updateCategoryStats(selections);
         updateNotes(selections);
       }
