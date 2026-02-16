@@ -99,6 +99,7 @@ void SettingsActivity::onExit() {
   vSemaphoreDelete(renderingMutex);
   renderingMutex = nullptr;
 
+  renderer.setDarkMode(SETTINGS.darkMode);
   UITheme::getInstance().reload();  // Re-apply theme in case it was changed
 }
 
@@ -286,6 +287,7 @@ void SettingsActivity::toggleCurrentSetting() {
   }
 
   SETTINGS.enforceButtonLayoutConstraints();
+  renderer.setDarkMode(SETTINGS.darkMode);
   SETTINGS.saveToFile();
 }
 

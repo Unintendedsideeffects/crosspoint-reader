@@ -684,15 +684,22 @@ void GfxRenderer::clearScreen(const uint8_t color) const {
 }
 
 void GfxRenderer::invertScreen() const {
-  for (int i = 0; i < HalDisplay::BUFFER_SIZE; i++) {
-    frameBuffer[i] = ~frameBuffer[i];
+  uint32_t* p = reinterpret_cast<uint32_t*>(frameBuffer);
+  for (size_t i = 0; i < HalDisplay::BUFFER_SIZE / 4; i++) {
+    p[i] = ~p[i];
   }
 }
 
 void GfxRenderer::displayBuffer(const HalDisplay::RefreshMode refreshMode) const {
   auto elapsed = millis() - start_ms;
   LOG_DBG("GFX", "Time = %lu ms from clearScreen to displayBuffer", elapsed);
+  if (darkMode) {
+    invertScreen();
+  }
   display.displayBuffer(refreshMode, fadingFix);
+  if (darkMode) {
+    invertScreen();
+  }
 }
 
 std::string GfxRenderer::truncatedText(const int fontId, const char* text, const int maxWidth,
@@ -882,9 +889,17 @@ size_t GfxRenderer::getBufferSize() { return HalDisplay::BUFFER_SIZE; }
 // unused
 // void GfxRenderer::grayscaleRevert() const { display.grayscaleRevert(); }
 
-void GfxRenderer::copyGrayscaleLsbBuffers() const { display.copyGrayscaleLsbBuffers(frameBuffer); }
+void GfxRenderer::copyGrayscaleLsbBuffers() const {
+  if (darkMode) invertScreen();
+  display.copyGrayscaleLsbBuffers(frameBuffer);
+  if (darkMode) invertScreen();
+}
 
-void GfxRenderer::copyGrayscaleMsbBuffers() const { display.copyGrayscaleMsbBuffers(frameBuffer); }
+void GfxRenderer::copyGrayscaleMsbBuffers() const {
+  if (darkMode) invertScreen();
+  display.copyGrayscaleMsbBuffers(frameBuffer);
+  if (darkMode) invertScreen();
+}
 
 void GfxRenderer::displayGrayBuffer() const { display.displayGrayBuffer(fadingFix); }
 

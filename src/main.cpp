@@ -246,6 +246,7 @@ void enterDeepSleep() {
   APP_STATE.lastSleepFromReader = currentActivity && currentActivity->isReaderActivity();
   APP_STATE.saveToFile();
   exitActivity();
+  renderer.setDarkMode(false);
   enterNewActivity(new SleepActivity(renderer, mappedInputManager));
 
   display.deepSleep();
@@ -411,6 +412,7 @@ void setup() {
   applyPendingFactoryReset();
 
   SETTINGS.loadFromFile();
+  renderer.setDarkMode(SETTINGS.darkMode);
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.loadFromFile();
 #endif

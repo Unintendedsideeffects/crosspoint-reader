@@ -67,6 +67,10 @@
 #define ENABLE_TODO_PLANNER 1
 #endif
 
+#ifndef ENABLE_DARK_MODE
+#define ENABLE_DARK_MODE 1
+#endif
+
 #ifndef ENABLE_BLE_WIFI_PROVISIONING
 #define ENABLE_BLE_WIFI_PROVISIONING 0
 #endif
