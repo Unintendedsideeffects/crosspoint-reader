@@ -48,6 +48,7 @@ FEATURES = [
     'todo_planner',
     'dark_mode',
     'visual_cover_picker',
+    'ble_wifi_provisioning',
 ]
 
 HAS_UV = shutil.which("uv") is not None

@@ -20,6 +20,7 @@ pushd "$ROOT_DIR" >/dev/null
   -Wno-bidi-chars \
   -Wl,--gc-sections \
   -DEINK_DISPLAY_SINGLE_BUFFER_MODE=1 \
+  -DHOST_BUILD=1 \
   '-DCROSSPOINT_VERSION="screen-harness"' \
   -Itools/screen-harness/stubs \
   -Ilib/hal \
@@ -32,6 +33,7 @@ pushd "$ROOT_DIR" >/dev/null
   -Iopen-x4-sdk/libs/display/EInkDisplay/include \
   -Isrc \
   tools/screen-harness/main.cpp \
+  tools/screen-harness/stubs/stubs.cpp \
   src/activities/boot_sleep/BootActivity.cpp \
   lib/GfxRenderer/GfxRenderer.cpp \
   lib/EpdFont/EpdFont.cpp \

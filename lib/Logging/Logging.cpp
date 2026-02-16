@@ -3,6 +3,7 @@
 #include <cstdarg>
 #include <cstdio>
 
+#ifndef HOST_BUILD
 MySerialImpl MySerialImpl::instance;
 
 size_t MySerialImpl::printf(const char* format, ...) {
@@ -22,6 +23,7 @@ size_t MySerialImpl::write(const uint8_t b) { return logSerial.write(b); }
 size_t MySerialImpl::write(const uint8_t* buffer, const size_t size) { return logSerial.write(buffer, size); }
 
 void MySerialImpl::flush() { logSerial.flush(); }
+#endif
 
 // Since logging can take a large amount of flash, we want to make the format string as short as possible.
 // This logPrintf prepend the timestamp, level and origin to the user-provided message, so that the user only needs to

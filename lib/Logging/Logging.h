@@ -53,19 +53,29 @@ void logPrintf(const char* level, const char* origin, const char* format, ...);
 #define LOG_INF(origin, format, ...)
 #endif
 
+#ifndef HOST_BUILD
+
 class MySerialImpl : public Print {
  public:
   void begin(unsigned long baud) { logSerial.begin(baud); }
 
   // Support boolean conversion for compatibility with code like:
+
   //   if (Serial) or while (!Serial)
+
   operator bool() const { return logSerial; }
 
   __attribute__((deprecated("Use LOG_* macro instead"))) size_t printf(const char* format, ...);
+
   size_t write(uint8_t b) override;
+
   size_t write(const uint8_t* buffer, size_t size) override;
+
   void flush() override;
+
   static MySerialImpl instance;
 };
 
 #define Serial MySerialImpl::instance
+
+#endif
