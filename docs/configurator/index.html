@@ -1113,6 +1113,10 @@
                 <span class="note-icon">&#x25AA;</span>
                 <span class="note-label">Targeted fonts</span>
               </div>
+              <div class="note-item" data-node-id="font_converter_note">
+                <span class="note-icon">&#x2702;</span>
+                <span class="note-label">Font converter</span>
+              </div>
               <div class="note-item" data-node-id="fork_drift_note">
                 <span class="note-icon">&#x21BB;</span>
                 <span class="note-label">Fork-drift</span>
@@ -1230,6 +1234,10 @@
                 <span class="note-icon">&#x26A1;</span>
                 <span class="note-label">On charge</span>
               </div>
+              <div class="note-item" data-node-id="ble_setup_note">
+                <span class="note-icon">&#x25AA;</span>
+                <span class="note-label">BLE setup</span>
+              </div>
             </div>
           </div>
         </section>
@@ -1250,10 +1258,6 @@
               <div class="note-item" data-node-id="feature_store_note">
                 <span class="note-icon">&#x25AB;</span>
                 <span class="note-label">Feature store: select then pull OTA</span>
-              </div>
-              <div class="note-item" data-node-id="custom_font_pipeline_note">
-                <span class="note-icon">&#x25AB;</span>
-                <span class="note-label">Custom font pipeline: upload TTF/OTF, convert locally to bitmap pack, bake into build</span>
               </div>
             </div>
           </div>
@@ -1291,7 +1295,6 @@
         </div>
         <div class="info-bar">
           Compile-time dependencies are enforced automatically. Roadmap items are directional and do not affect builds.
-          Candidate under evaluation: custom font pipeline (TTF/OTF upload in picker, local conversion on user machine, baked bitmap pack). We should validate value and performance impact before committing to implementation.
         </div>
       </div>
 
@@ -1483,7 +1486,7 @@
       };
 
       const NOTE_FEATURES = {
-        specific_fonts_note: ["extended_fonts"],
+        specific_fonts_note: ["extended_fonts", "user_fonts"],
         dark_theme_note: ["lyra_theme"],
         fork_drift_note: ["home_media_picker"],
         future_themes_note: ["home_media_picker", "lyra_theme"],
@@ -1491,6 +1494,8 @@
         webserver_on_charge_note: ["background_server"],
         obsidian_xte_sync_note: ["integrations"],
         feature_store_note: ["ota_updates"],
+        ble_setup_note: ["ble_wifi_provisioning"],
+        font_converter_note: ["user_fonts"],
       };
 
       const PROFILES = {
