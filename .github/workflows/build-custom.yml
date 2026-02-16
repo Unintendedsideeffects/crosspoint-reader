@@ -19,7 +19,7 @@ on:
         type: boolean
         default: true
       opendyslexic_fonts:
-        description: 'OpenDyslexic Fonts (~3.6MB)'
+        description: 'OpenDyslexic Fonts (~1.0MB, requires Extended Fonts)'
         required: false
         type: boolean
         default: false
