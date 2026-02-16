@@ -12,7 +12,8 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
-  build:
+  # ── Gate: validation checks run once before any builds ──────────
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -49,52 +50,154 @@ jobs:
       - name: Static checks (cppcheck)
         run: uv run pio check -e default
 
-      - name: Set build environment
-        id: build-env
+  # ── Build: 3 profiles in parallel ──────────────────────────────
+  build:
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: lean
+            version_suffix: "-lean"
+          - profile: standard
+            version_suffix: ""
+          - profile: full
+            version_suffix: "-full"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Ensure pip for PlatformIO
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "env=gh_release" >> $GITHUB_OUTPUT
-          else
-            echo "env=default" >> $GITHUB_OUTPUT
-          fi
+          uv run python -m ensurepip --upgrade || true
+          uv run python -m pip --version
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
+          restore-keys: ${{ runner.os }}-platformio-
+
+      - name: Generate build configuration
+        run: |
+          uv run python scripts/generate_build_config.py --profile "${{ matrix.profile }}"
+          cat platformio-custom.ini
+
+      - name: Patch version string
+        run: |
+          sed -i 's/-custom\\"/${{ matrix.version_suffix }}\\"/g' platformio-custom.ini
+          grep CROSSPOINT_VERSION platformio-custom.ini
 
       - name: Build firmware
-        run: uv run pio run -e "${{ steps.build-env.outputs.env }}" | tee pio.log
+        run: uv run pio run -e custom | tee pio.log
 
       - name: Enforce flash headroom
         run: |
           uv run python scripts/check_flash_headroom.py \
             --log pio.log \
-            --firmware .pio/build/${{ steps.build-env.outputs.env }}/firmware.bin \
+            --firmware .pio/build/custom/firmware.bin \
             --min-headroom-kb 64
 
       - name: Report firmware size
         run: |
-          echo "### Firmware Size" >> $GITHUB_STEP_SUMMARY
+          echo "### Firmware Size (${{ matrix.profile }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f ".pio/build/${{ steps.build-env.outputs.env }}/firmware.bin" ]; then
-            ls -lh ".pio/build/${{ steps.build-env.outputs.env }}/firmware.bin" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "ERROR: No firmware.bin found!" >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
+          ls -lh .pio/build/custom/firmware.bin >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Flash headroom threshold: 64 KiB" >> $GITHUB_STEP_SUMMARY
 
+      - name: Prepare artifact
+        run: |
+          mkdir -p artifact
+          cp .pio/build/custom/firmware.bin artifact/
+          cp .pio/build/custom/partitions.bin artifact/
+
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
-          name: firmware
-          path: |
-            .pio/build/${{ steps.build-env.outputs.env }}/firmware.bin
-            .pio/build/${{ steps.build-env.outputs.env }}/partitions.bin
+          name: firmware-${{ matrix.profile }}
+          path: artifact/
           retention-days: 30
 
-  release:
+  # ── Publish: update rolling release channels on fork-drift push ─
+  publish-channels:
     needs: build
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    if: >-
+      !startsWith(github.ref, 'refs/tags/')
+      && github.ref == 'refs/heads/fork-drift'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - profile: lean
+            tag: latest-lean
+            name: Latest Lean
+          - profile: standard
+            tag: latest
+            name: Latest
+          - profile: full
+            tag: latest-full
+            name: Latest Full
+    steps:
+      - name: Download firmware
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-${{ matrix.profile }}
+          path: firmware
+
+      - name: Remove existing assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/${{ matrix.tag }} \
+            --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' \
+            2>/dev/null || true)"
+          if [ -z "$asset_ids" ]; then
+            echo "No existing ${{ matrix.tag }} assets to remove."
+            exit 0
+          fi
+          for asset_id in $asset_ids; do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
+          done
+
+      - name: Publish ${{ matrix.tag }} release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ matrix.tag }}
+          name: ${{ matrix.name }}
+          prerelease: true
+          draft: false
+          generate_release_notes: false
+          files: |
+            firmware/firmware.bin
+            firmware/partitions.bin
+
+  # ── Publish: reset channel (standard firmware) on fork-drift push
+  publish-reset:
+    needs: build
+    if: >-
+      !startsWith(github.ref, 'refs/tags/')
+      && github.ref == 'refs/heads/fork-drift'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -102,47 +205,105 @@ jobs:
       - name: Download firmware
         uses: actions/download-artifact@v4
         with:
-          name: firmware
+          name: firmware-standard
           path: firmware
+
+      - name: Remove existing reset assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/reset \
+            --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' \
+            2>/dev/null || true)"
+          if [ -z "$asset_ids" ]; then
+            echo "No existing reset assets to remove."
+            exit 0
+          fi
+          for asset_id in $asset_ids; do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
+          done
+
+      - name: Publish reset release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: reset
+          name: Reset
+          prerelease: true
+          draft: false
+          generate_release_notes: false
+          files: |
+            firmware/firmware.bin
+            firmware/partitions.bin
+
+  # ── Release: versioned release + rolling channel on tag push ────
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all firmware artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Prepare release assets
         run: |
-          # Show actual structure for debugging
-          find firmware -type f
-          # Locate firmware.bin (artifact preserves directory structure)
-          FIRMWARE_BIN="$(find firmware -type f -name 'firmware.bin' -print -quit)"
-          if [ -z "$FIRMWARE_BIN" ]; then
-            echo "ERROR: firmware.bin not found in downloaded artifact"
-            exit 1
-          fi
-          cp "$FIRMWARE_BIN" firmware.bin
-          cp "$FIRMWARE_BIN" crosspoint-${{ github.ref_name }}.bin
-          # Optionally include partitions.bin if present
-          PARTITIONS_BIN="$(find firmware -type f -name 'partitions.bin' -print -quit)"
-          if [ -n "$PARTITIONS_BIN" ]; then
-            cp "$PARTITIONS_BIN" partitions.bin
-            cp "$PARTITIONS_BIN" crosspoint-${{ github.ref_name }}-partitions.bin
-          fi
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+
+          # Standard firmware (default names)
+          cp artifacts/firmware-standard/firmware.bin firmware.bin
+          cp artifacts/firmware-standard/partitions.bin partitions.bin
+          cp firmware.bin "crosspoint-${TAG}.bin"
+          cp partitions.bin "crosspoint-${TAG}-partitions.bin"
+
+          # Lean firmware
+          cp artifacts/firmware-lean/firmware.bin firmware-lean.bin
+          cp artifacts/firmware-lean/partitions.bin partitions-lean.bin
+          cp firmware-lean.bin "crosspoint-${TAG}-lean.bin"
+          cp partitions-lean.bin "crosspoint-${TAG}-lean-partitions.bin"
+
+          # Full firmware
+          cp artifacts/firmware-full/firmware.bin firmware-full.bin
+          cp artifacts/firmware-full/partitions.bin partitions-full.bin
+          cp firmware-full.bin "crosspoint-${TAG}-full.bin"
+          cp partitions-full.bin "crosspoint-${TAG}-full-partitions.bin"
+
+          echo "Release assets:"
+          ls -lh *.bin
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             firmware.bin
-            partitions.bin*
+            partitions.bin
+            firmware-lean.bin
+            partitions-lean.bin
+            firmware-full.bin
+            partitions-full.bin
             crosspoint-${{ github.ref_name }}.bin
-            crosspoint-${{ github.ref_name }}-partitions.bin*
+            crosspoint-${{ github.ref_name }}-partitions.bin
+            crosspoint-${{ github.ref_name }}-lean.bin
+            crosspoint-${{ github.ref_name }}-lean-partitions.bin
+            crosspoint-${{ github.ref_name }}-full.bin
+            crosspoint-${{ github.ref_name }}-full-partitions.bin
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
 
-      - name: Remove existing release channel assets (if any)
+      - name: Remove existing release channel assets
         if: ${{ !contains(github.ref_name, '-') }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/release --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/release \
+            --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' \
+            2>/dev/null || true)"
           if [ -z "$asset_ids" ]; then
             echo "No existing release channel assets to remove."
             exit 0
@@ -162,120 +323,4 @@ jobs:
           generate_release_notes: false
           files: |
             firmware.bin
-            partitions.bin*
-
-  latest:
-    needs: build
-    if: ${{ !startsWith(github.ref, 'refs/tags/') && github.ref == 'refs/heads/fork-drift' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download firmware
-        uses: actions/download-artifact@v4
-        with:
-          name: firmware
-          path: firmware
-
-      - name: Prepare CI release assets
-        run: |
-          # Show actual structure for debugging
-          find firmware -type f
-          # Locate firmware.bin (artifact preserves directory structure)
-          FIRMWARE_BIN="$(find firmware -type f -name 'firmware.bin' -print -quit)"
-          if [ -z "$FIRMWARE_BIN" ]; then
-            echo "ERROR: firmware.bin not found in downloaded artifact"
-            exit 1
-          fi
-          cp "$FIRMWARE_BIN" firmware.bin
-
-          PARTITIONS_BIN="$(find firmware -type f -name 'partitions.bin' -print -quit)"
-          if [ -n "$PARTITIONS_BIN" ]; then
-            cp "$PARTITIONS_BIN" partitions.bin
-          fi
-
-      - name: Remove existing latest assets (if any)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/latest --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
-          if [ -z "$asset_ids" ]; then
-            echo "No existing latest assets to remove."
-            exit 0
-          fi
-          for asset_id in $asset_ids; do
-            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
-          done
-
-      - name: Publish latest release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: Latest
-          prerelease: true
-          draft: false
-          generate_release_notes: false
-          files: |
-            firmware.bin
-            partitions.bin*
-
-      - name: Remove existing reset assets (if any)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/reset --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' 2>/dev/null || true)"
-          if [ -z "$asset_ids" ]; then
-            echo "No existing reset assets to remove."
-            exit 0
-          fi
-          for asset_id in $asset_ids; do
-            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
-          done
-
-      - name: Publish reset release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: reset
-          name: Reset
-          prerelease: true
-          draft: false
-          generate_release_notes: false
-          files: |
-            firmware.bin
-            partitions.bin*
-
-      - name: Prune legacy CI channel releases
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          legacy_releases="$(
-            gh api repos/${{ github.repository }}/releases --paginate --jq '
-              [
-                .[]
-                | select(
-                    .tag_name == "ci-latest"
-                    or .tag_name == "ci-latest_factory-reset"
-                    or (.tag_name | test("^ci-latest-[0-9]+$"))
-                  )
-              ]
-              | .[]
-              | [.id, .tag_name]
-              | @tsv
-            '
-          )"
-
-          if [ -z "$legacy_releases" ]; then
-            echo "No legacy CI channel releases to prune."
-            exit 0
-          fi
-
-          while IFS=$'\t' read -r release_id tag_name; do
-            [ -n "$release_id" ] || continue
-            echo "Deleting legacy release ${tag_name} (id ${release_id})"
-            gh api -X DELETE "repos/${{ github.repository }}/releases/${release_id}" || true
-            gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/${tag_name}" || true
-          done <<< "$legacy_releases"
+            partitions.bin
