@@ -6,6 +6,7 @@
 
 #include <cstring>
 
+#include "FeatureFlags.h"
 #include "SpiBusMutex.h"
 #include "fontIds.h"
 
@@ -209,6 +210,7 @@ bool CrossPointSettings::loadFromFile() {
     applyLegacyFrontButtonLayout(*this);
   }
 
+  validateAndClamp();
   inputFile.close();
   LOG_DBG("CPS", "Settings loaded from file");
   return true;
@@ -267,6 +269,12 @@ void CrossPointSettings::validateAndClamp() {
   if (sideButtonLayout > NEXT_PREV) sideButtonLayout = PREV_NEXT;
   if (fontFamily > OPENDYSLEXIC) fontFamily = BOOKERLY;
   if (fontSize > EXTRA_LARGE) fontSize = MEDIUM;
+#if !ENABLE_EXTENDED_FONTS
+  fontFamily = BOOKERLY;
+  fontSize = MEDIUM;
+#elif !ENABLE_OPENDYSLEXIC_FONTS
+  if (fontFamily == OPENDYSLEXIC) fontFamily = NOTOSANS;
+#endif
   if (lineSpacing > WIDE) lineSpacing = NORMAL;
   if (paragraphAlignment > RIGHT_ALIGN) paragraphAlignment = JUSTIFIED;
   if (sleepTimeout > SLEEP_30_MIN) sleepTimeout = SLEEP_10_MIN;
@@ -367,7 +375,15 @@ int CrossPointSettings::getTimeZoneOffsetSeconds() const {
 }
 
 int CrossPointSettings::getReaderFontId() const {
-  switch (fontFamily) {
+#if !ENABLE_EXTENDED_FONTS
+  return BOOKERLY_14_FONT_ID;
+#else
+  uint8_t effectiveFamily = fontFamily;
+#if !ENABLE_OPENDYSLEXIC_FONTS
+  if (effectiveFamily == OPENDYSLEXIC) effectiveFamily = NOTOSANS;
+#endif
+
+  switch (effectiveFamily) {
     case BOOKERLY:
     default:
       switch (fontSize) {
@@ -406,4 +422,5 @@ int CrossPointSettings::getReaderFontId() const {
           return OPENDYSLEXIC_14_FONT_ID;
       }
   }
+#endif
 }
