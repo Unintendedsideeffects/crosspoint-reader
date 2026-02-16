@@ -31,7 +31,7 @@ FEATURES = {
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
-        size_kb=3630,
+        size_kb=0,
         description='Optional OpenDyslexic 8/10/12/14pt family'
     ),
     'image_sleep': Feature(
