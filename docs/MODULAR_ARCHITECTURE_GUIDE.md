@@ -393,6 +393,7 @@ python scripts/measure_feature_sizes.py
 - OPDS browser (toggleable)
 - Advanced hyphenation (toggleable)
 - Experimental formats (toggleable)
+- Custom font pipeline in web picker (user uploads TTF/OTF, conversion runs locally, generated bitmap pack is baked into custom build) - roadmap only, pending value/performance tradeoff review
 
 ### System Improvements
 

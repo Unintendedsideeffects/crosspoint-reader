@@ -17,6 +17,7 @@ class FeatureManifest {
  public:
   // Compile-time feature detection (constexpr for zero runtime cost)
   static constexpr bool hasExtendedFonts() { return ENABLE_EXTENDED_FONTS != 0; }
+  static constexpr bool hasOpenDyslexicFonts() { return ENABLE_OPENDYSLEXIC_FONTS != 0; }
   static constexpr bool hasImageSleep() { return ENABLE_IMAGE_SLEEP != 0; }
   static constexpr bool hasMarkdown() { return ENABLE_MARKDOWN != 0; }
   static constexpr bool hasIntegrations() { return ENABLE_INTEGRATIONS != 0; }
@@ -38,9 +39,9 @@ class FeatureManifest {
    * Useful for debugging and capacity planning.
    */
   static constexpr int enabledFeatureCount() {
-    return hasExtendedFonts() + hasImageSleep() + hasMarkdown() + hasIntegrations() + hasKOReaderSync() +
-           hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin() + hasEpubSupport() +
-           hasHyphenation() + hasXtcSupport() + hasLyraTheme() + hasOtaUpdates() + hasTodoPlanner() +
+    return hasExtendedFonts() + hasOpenDyslexicFonts() + hasImageSleep() + hasMarkdown() + hasIntegrations() +
+           hasKOReaderSync() + hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin() +
+           hasEpubSupport() + hasHyphenation() + hasXtcSupport() + hasLyraTheme() + hasOtaUpdates() + hasTodoPlanner() +
            hasBleWifiProvisioning();
   }
 
@@ -61,6 +62,7 @@ class FeatureManifest {
     };
 
     addFeature(hasExtendedFonts(), "extended_fonts");
+    addFeature(hasOpenDyslexicFonts(), "opendyslexic_fonts");
     addFeature(hasImageSleep(), "image_sleep");
     addFeature(hasMarkdown(), "markdown");
     addFeature(hasIntegrations(), "integrations");
@@ -87,6 +89,7 @@ class FeatureManifest {
   static String toJson() {
     String json = "{";
     json += "\"extended_fonts\":" + String(hasExtendedFonts() ? "true" : "false");
+    json += ",\"opendyslexic_fonts\":" + String(hasOpenDyslexicFonts() ? "true" : "false");
     json += ",\"image_sleep\":" + String(hasImageSleep() ? "true" : "false");
     json += ",\"markdown\":" + String(hasMarkdown() ? "true" : "false");
     json += ",\"integrations\":" + String(hasIntegrations() ? "true" : "false");
@@ -113,6 +116,7 @@ class FeatureManifest {
   static void printToSerial() {
     Serial.println("[FEATURES] CrossPoint Reader build configuration:");
     Serial.printf("  Extended Fonts:    %s\n", hasExtendedFonts() ? "ENABLED " : "DISABLED");
+    Serial.printf("  OpenDyslexic:      %s\n", hasOpenDyslexicFonts() ? "ENABLED " : "DISABLED");
     Serial.printf("  Image Sleep:       %s\n", hasImageSleep() ? "ENABLED " : "DISABLED");
     Serial.printf("  Markdown:          %s\n", hasMarkdown() ? "ENABLED " : "DISABLED");
     Serial.printf("  Integrations:      %s\n", hasIntegrations() ? "ENABLED " : "DISABLED");
@@ -128,7 +132,7 @@ class FeatureManifest {
     Serial.printf("  OTA Updates:       %s\n", hasOtaUpdates() ? "ENABLED " : "DISABLED");
     Serial.printf("  Todo Planner:      %s\n", hasTodoPlanner() ? "ENABLED " : "DISABLED");
     Serial.printf("  BLE WiFi Provision: %s\n", hasBleWifiProvisioning() ? "ENABLED " : "DISABLED");
-    Serial.printf("[FEATURES] %d/16 compile-time features enabled\n", enabledFeatureCount());
+    Serial.printf("[FEATURES] %d/17 compile-time features enabled\n", enabledFeatureCount());
     Serial.printf("[FEATURES] Build: %s\n", getBuildString().c_str());
   }
 };
