@@ -757,6 +757,29 @@
         line-height: 1.5;
       }
 
+      .device-inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+
+      .device-input {
+        min-width: 210px;
+        background: var(--fog);
+        border: var(--px) solid var(--dk);
+        padding: 5px 8px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 10px;
+        color: var(--blk);
+      }
+
+      .device-input:focus {
+        outline: none;
+        border-color: var(--blk);
+      }
+
       /* ── Companion ── */
       .companion-row {
         display: flex;
@@ -1295,6 +1318,46 @@
         </div>
         <div class="info-bar">
           Compile-time dependencies are enforced automatically. Roadmap items are directional and do not affect builds.
+        </div>
+      </div>
+
+      <!-- Device Access -->
+      <div class="panel">
+        <div class="panel-heading">Device Access (Optional)</div>
+        <div class="companion-row">
+          <div style="flex: 1">
+            <div class="companion-title">USB Serial Tools (Maintained Upstream)</div>
+            <div class="companion-desc">
+              Safer path: use the official community web tools for flashing and debug over USB serial.
+            </div>
+            <div class="actions">
+              <a class="btn btn-solid" href="https://xteink.dve.al/" target="_blank" rel="noopener">Open Xteink Flash</a>
+              <a class="btn btn-outline" href="https://xteink.dve.al/debug" target="_blank" rel="noopener">Open Xteink Debug</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="companion-row" style="margin-top: 14px;">
+          <div style="flex: 1">
+            <div class="companion-title">Detect File Manager on Local Network</div>
+            <div class="companion-desc">
+              Best-effort probe for a running CrossPoint web server, then jump straight to <code>/files</code>.
+            </div>
+            <div class="device-inline">
+              <input
+                id="file-manager-host"
+                class="device-input"
+                type="text"
+                placeholder="crosspoint.local or 192.168.1.123"
+                aria-label="CrossPoint host"
+              />
+              <button class="btn btn-outline" id="detect-file-manager">Detect</button>
+              <a class="btn btn-outline" id="open-detected-file-manager" href="http://crosspoint.local/files" target="_blank" rel="noopener">
+                Open /files
+              </a>
+            </div>
+            <div id="file-manager-status" class="info-bar">Not checked yet.</div>
+          </div>
         </div>
       </div>
 
@@ -2190,8 +2253,133 @@
         });
       }
 
+      function normalizeFileManagerOrigin(rawValue) {
+        const raw = (rawValue || "").trim();
+        if (!raw) return null;
+        const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(raw) ? raw : `http://${raw}`;
+        try {
+          const parsed = new URL(withScheme);
+          if (!/^https?:$/.test(parsed.protocol)) return null;
+          return parsed.origin;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function shouldSkipProbe(origin) {
+        if (!origin) return true;
+        try {
+          const target = new URL(origin);
+          return location.protocol === "https:" && target.protocol === "http:";
+        } catch (_) {
+          return true;
+        }
+      }
+
+      async function probeOrigin(origin, timeoutMs = 1200) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          await fetch(`${origin}/api/status`, {
+            method: "GET",
+            cache: "no-store",
+            mode: "no-cors",
+            signal: controller.signal,
+          });
+          return true;
+        } catch (_) {
+          return false;
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
+      function setFileManagerStatus(message, isError = false) {
+        const status = document.getElementById("file-manager-status");
+        status.textContent = message;
+        status.style.borderLeftColor = isError ? "var(--md)" : "var(--blk)";
+      }
+
+      function setDetectedFileManagerUrl(origin) {
+        const link = document.getElementById("open-detected-file-manager");
+        link.href = `${origin}/files`;
+      }
+
+      function buildProbeOrigins(hostValue) {
+        const origins = [];
+        const addOrigin = (origin) => {
+          if (!origin) return;
+          if (!origins.includes(origin)) origins.push(origin);
+        };
+
+        addOrigin(normalizeFileManagerOrigin(hostValue));
+
+        const queryHost = normalizeFileManagerOrigin(new URLSearchParams(location.search).get("host"));
+        addOrigin(queryHost);
+
+        addOrigin("http://crosspoint.local");
+        addOrigin("https://crosspoint.local");
+
+        const localHostPattern = /(^localhost$)|(^127\.)|(^10\.)|(^192\.168\.)|(^172\.(1[6-9]|2[0-9]|3[0-1])\.)|(\.local$)/;
+        if (localHostPattern.test(location.hostname)) {
+          addOrigin(location.origin);
+        }
+
+        return origins;
+      }
+
+      async function detectFileManager() {
+        const hostInput = document.getElementById("file-manager-host");
+        const inputOrigin = normalizeFileManagerOrigin(hostInput.value);
+        if (hostInput.value.trim() && !inputOrigin) {
+          setFileManagerStatus("Invalid host. Use crosspoint.local, 192.168.x.x, or a full http(s) URL.", true);
+          return;
+        }
+
+        const candidates = buildProbeOrigins(hostInput.value);
+        setFileManagerStatus(`Probing ${candidates.length} candidate endpoint(s)...`);
+
+        let skippedMixedContent = false;
+        for (const origin of candidates) {
+          if (shouldSkipProbe(origin)) {
+            skippedMixedContent = true;
+            continue;
+          }
+          if (await probeOrigin(origin)) {
+            setDetectedFileManagerUrl(origin);
+            setFileManagerStatus(`Detected endpoint at ${origin}.`);
+            return;
+          }
+        }
+
+        setDetectedFileManagerUrl("http://crosspoint.local");
+        if (skippedMixedContent) {
+          setFileManagerStatus(
+            "Probe blocked by HTTPS mixed-content policy for http:// hosts. Use Open /files or run this page from http:// for active probing.",
+            true
+          );
+        } else {
+          setFileManagerStatus("No running file manager detected. Try entering the device IP manually.", true);
+        }
+      }
+
+      function setupDeviceTools() {
+        const detectBtn = document.getElementById("detect-file-manager");
+        const hostInput = document.getElementById("file-manager-host");
+        if (!detectBtn || !hostInput) return;
+
+        detectBtn.addEventListener("click", detectFileManager);
+        hostInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            detectFileManager();
+          }
+        });
+      }
+
       setupEvents();
       setupFontConverter();
+      setupDeviceTools();
       const initialState = parseInitialStateFromUrl();
       baseProfile = initialState.initialProfile;
       setSelections(initialState.selections);
