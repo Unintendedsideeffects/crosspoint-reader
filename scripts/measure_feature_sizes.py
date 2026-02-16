@@ -49,6 +49,7 @@ FEATURES = [
     'dark_mode',
     'visual_cover_picker',
     'ble_wifi_provisioning',
+    'user_fonts',
 ]
 
 HAS_UV = shutil.which("uv") is not None

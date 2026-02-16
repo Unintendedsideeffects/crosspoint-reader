@@ -79,6 +79,10 @@
 #define ENABLE_BLE_WIFI_PROVISIONING 0
 #endif
 
+#ifndef ENABLE_USER_FONTS
+#define ENABLE_USER_FONTS 1
+#endif
+
 // Enforce downstream dependencies at compile time.
 #if !ENABLE_INTEGRATIONS
 #undef ENABLE_KOREADER_SYNC

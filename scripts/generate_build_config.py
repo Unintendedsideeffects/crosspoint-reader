@@ -136,6 +136,12 @@ FEATURES = {
         size_kb=150,
         description='Initial WiFi setup via Bluetooth LE'
     ),
+    'user_fonts': Feature(
+        name='User Fonts',
+        flag='ENABLE_USER_FONTS',
+        size_kb=10,
+        description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
+    ),
 }
 
 
@@ -286,6 +292,13 @@ FEATURE_METADATA = {
         conflicts=[],
         recommends=[]
     ),
+    'user_fonts': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
 }
 
 
@@ -414,6 +427,7 @@ PROFILES = {
             'dark_mode': True,
             'visual_cover_picker': True,
             'ble_wifi_provisioning': True,
+            'user_fonts': True,
         },
     },
 }

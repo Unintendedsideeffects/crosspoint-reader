@@ -1,8 +1,10 @@
 #include <Arduino.h>
+#include <EpdFont.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
-#include <SDCardManager.h>
+#include <HalStorage.h>
+#include <Logging.h>
 #include <SPI.h>
 #include <builtinFonts/all.h>
 
@@ -14,6 +16,7 @@
 #include "FeatureManifest.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "UserFontManager.h"
 #include "WifiCredentialStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
@@ -27,8 +30,10 @@
 #include "activities/todo/TodoFallbackActivity.h"
 #endif
 #include "activities/util/FullScreenMessageActivity.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 #include "network/BackgroundWebServer.h"
+#include "util/ButtonNavigator.h"
 #include "util/DateUtils.h"
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
@@ -137,6 +142,15 @@ EpdFont ui12RegularFont(&ubuntu_12_regular);
 EpdFont ui12BoldFont(&ubuntu_12_bold);
 EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
 
+#if ENABLE_USER_FONTS
+#include <SdFont.h>
+SdFont regularSdFont;
+SdFont boldSdFont;
+SdFont italicSdFont;
+SdFont boldItalicSdFont;
+EpdFontFamily userSdFontFamily(&regularSdFont, &boldSdFont, &italicSdFont, &boldItalicSdFont);
+#endif
+
 // measurement of power button press duration calibration value
 unsigned long t1 = 0;
 unsigned long t2 = 0;
@@ -240,13 +254,15 @@ void waitForPowerRelease() {
 
 // Enter deep sleep mode
 void enterDeepSleep() {
+  APP_STATE.lastSleepFromReader = currentActivity && currentActivity->isReaderActivity();
+  APP_STATE.saveToFile();
   exitActivity();
   renderer.setDarkMode(false);
   enterNewActivity(new SleepActivity(renderer, mappedInputManager));
 
   display.deepSleep();
-  Serial.printf("[%lu] [   ] Power button press calibration value: %lu ms\n", millis(), t2 - t1);
-  Serial.printf("[%lu] [   ] Entering deep sleep.\n", millis());
+  LOG_DBG("MAIN", "Power button press calibration value: %lu ms", t2 - t1);
+  LOG_DBG("MAIN", "Entering deep sleep");
 
   gpio.startDeepSleep();
 }
@@ -308,7 +324,7 @@ void onGoToTodo() {
 #if ENABLE_MARKDOWN
   // 1. Try markdown (.md)
   const std::string todoMdPath = "/daily/" + today + ".md";
-  if (SdMan.exists(todoMdPath.c_str())) {
+  if (Storage.exists(todoMdPath.c_str())) {
     enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
     return;
   }
@@ -316,14 +332,14 @@ void onGoToTodo() {
 
   // 2. Try text (.txt)
   const std::string todoTxtPath = "/daily/" + today + ".txt";
-  if (SdMan.exists(todoTxtPath.c_str())) {
+  if (Storage.exists(todoTxtPath.c_str())) {
     enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoTxtPath, today, onGoHome));
     return;
   }
 
   // 3. Try EPUB (ReadOnly/ReaderActivity)
   const std::string todoEpubPath = "/daily/" + today + ".epub";
-  if (SdMan.exists(todoEpubPath.c_str())) {
+  if (Storage.exists(todoEpubPath.c_str())) {
     enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, onGoHome, onGoToMyLibraryWithPath));
     return;
   }
@@ -351,28 +367,34 @@ void onGoHome() {
 
 void setupDisplayAndFonts() {
   display.begin();
-  Serial.printf("[%lu] [   ] Display initialized\n", millis());
-  renderer.insertFont(BOOKERLY_14_FONT_ID, bookerly14FontFamily);
+  renderer.begin();
+  LOG_DBG("MAIN", "Display initialized");
+  renderer.insertFontFamily(BOOKERLY_14_FONT_ID, &bookerly14FontFamily);
 #if ENABLE_EXTENDED_FONTS
-  renderer.insertFont(BOOKERLY_12_FONT_ID, bookerly12FontFamily);
-  renderer.insertFont(BOOKERLY_16_FONT_ID, bookerly16FontFamily);
-  renderer.insertFont(BOOKERLY_18_FONT_ID, bookerly18FontFamily);
+  renderer.insertFontFamily(BOOKERLY_12_FONT_ID, &bookerly12FontFamily);
+  renderer.insertFontFamily(BOOKERLY_16_FONT_ID, &bookerly16FontFamily);
+  renderer.insertFontFamily(BOOKERLY_18_FONT_ID, &bookerly18FontFamily);
 
-  renderer.insertFont(NOTOSANS_12_FONT_ID, notosans12FontFamily);
-  renderer.insertFont(NOTOSANS_14_FONT_ID, notosans14FontFamily);
-  renderer.insertFont(NOTOSANS_16_FONT_ID, notosans16FontFamily);
-  renderer.insertFont(NOTOSANS_18_FONT_ID, notosans18FontFamily);
+  renderer.insertFontFamily(NOTOSANS_12_FONT_ID, &notosans12FontFamily);
+  renderer.insertFontFamily(NOTOSANS_14_FONT_ID, &notosans14FontFamily);
+  renderer.insertFontFamily(NOTOSANS_16_FONT_ID, &notosans16FontFamily);
+  renderer.insertFontFamily(NOTOSANS_18_FONT_ID, &notosans18FontFamily);
 #if ENABLE_OPENDYSLEXIC_FONTS
-  renderer.insertFont(OPENDYSLEXIC_8_FONT_ID, opendyslexic8FontFamily);
-  renderer.insertFont(OPENDYSLEXIC_10_FONT_ID, opendyslexic10FontFamily);
-  renderer.insertFont(OPENDYSLEXIC_12_FONT_ID, opendyslexic12FontFamily);
-  renderer.insertFont(OPENDYSLEXIC_14_FONT_ID, opendyslexic14FontFamily);
+  renderer.insertFontFamily(OPENDYSLEXIC_8_FONT_ID, &opendyslexic8FontFamily);
+  renderer.insertFontFamily(OPENDYSLEXIC_10_FONT_ID, &opendyslexic10FontFamily);
+  renderer.insertFontFamily(OPENDYSLEXIC_12_FONT_ID, &opendyslexic12FontFamily);
+  renderer.insertFontFamily(OPENDYSLEXIC_14_FONT_ID, &opendyslexic14FontFamily);
 #endif  // ENABLE_OPENDYSLEXIC_FONTS
 #endif  // ENABLE_EXTENDED_FONTS
-  renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
-  renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
-  renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
-  Serial.printf("[%lu] [   ] Fonts setup\n", millis());
+  renderer.insertFontFamily(UI_10_FONT_ID, &ui10FontFamily);
+  renderer.insertFontFamily(UI_12_FONT_ID, &ui12FontFamily);
+  renderer.insertFontFamily(SMALL_FONT_ID, &smallFontFamily);
+
+#if ENABLE_USER_FONTS
+  renderer.insertFontFamily(USER_SD_FONT_ID, &userSdFontFamily);
+#endif
+
+  LOG_DBG("MAIN", "Fonts setup");
 }
 
 void setup() {
@@ -395,32 +417,45 @@ void setup() {
 
   // SD Card Initialization
   // We need 6 open files concurrently when parsing a new chapter
-  if (!SdMan.begin()) {
-    Serial.printf("[%lu] [   ] SD card initialization failed\n", millis());
+  if (!Storage.begin()) {
+    LOG_ERR("MAIN", "SD card initialization failed");
     setupDisplayAndFonts();
     exitActivity();
     enterNewActivity(new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
     return;
   }
 
+#if ENABLE_USER_FONTS
+  UserFontManager::setGlobalFonts(&regularSdFont, &boldSdFont, &italicSdFont, &boldItalicSdFont);
+  UserFontManager::getInstance().scanFonts();
+#endif
+
   applyPendingFactoryReset();
 
   SETTINGS.loadFromFile();
+
+#if ENABLE_USER_FONTS
+  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
+    UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath);
+  }
+#endif
   renderer.setDarkMode(SETTINGS.darkMode);
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.loadFromFile();
 #endif
   WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
+  UITheme::getInstance().reload();
+  ButtonNavigator::setMappedInputManager(mappedInputManager);
 
   switch (gpio.getWakeupReason()) {
     case HalGPIO::WakeupReason::PowerButton:
       // For normal wakeups, verify power button press duration
-      Serial.printf("[%lu] [   ] Verifying power button press duration\n", millis());
+      LOG_DBG("MAIN", "Verifying power button press duration");
       verifyPowerButtonDuration();
       break;
     case HalGPIO::WakeupReason::AfterUSBPower:
       // If USB power caused a cold boot, go back to sleep
-      Serial.printf("[%lu] [   ] Wakeup reason: After USB Power\n", millis());
+      LOG_DBG("MAIN", "Wakeup reason: After USB Power");
       gpio.startDeepSleep();
       break;
     case HalGPIO::WakeupReason::AfterFlash:
@@ -431,7 +466,7 @@ void setup() {
   }
 
   // First serial output only here to avoid timing inconsistencies for power button press duration verification
-  Serial.printf("[%lu] [   ] Starting CrossPoint version " CROSSPOINT_VERSION "\n", millis());
+  LOG_DBG("MAIN", "Starting CrossPoint version " CROSSPOINT_VERSION);
 
   setupDisplayAndFonts();
 
@@ -441,7 +476,10 @@ void setup() {
   APP_STATE.loadFromFile();
   RECENT_BOOKS.loadFromFile();
 
-  if (APP_STATE.openEpubPath.empty()) {
+  // Boot to home screen if no book is open, last sleep was not from reader, back button is held, or reader activity
+  // crashed (indicated by readerActivityLoadCount > 0)
+  if (APP_STATE.openEpubPath.empty() || !APP_STATE.lastSleepFromReader ||
+      mappedInputManager.isPressed(MappedInputManager::Button::Back) || APP_STATE.readerActivityLoadCount > 0) {
     onGoHome();
   } else {
     // Clear app state to avoid getting into a boot loop if the epub doesn't load
@@ -463,27 +501,26 @@ void loop() {
   gpio.update();
 
   if (Serial && millis() - lastMemPrint >= 10000) {
-    Serial.printf("[%lu] [MEM] Free: %d bytes, Total: %d bytes, Min Free: %d bytes\n", millis(), ESP.getFreeHeap(),
-                  ESP.getHeapSize(), ESP.getMinFreeHeap());
+    LOG_INF("MEM", "Free: %d bytes, Total: %d bytes, Min Free: %d bytes", ESP.getFreeHeap(), ESP.getHeapSize(),
+            ESP.getMinFreeHeap());
     lastMemPrint = millis();
   }
 
-  const bool usbConnected = gpio.isUsbConnected();
-  const bool allowBackgroundServer =
-      SETTINGS.backgroundServerOnCharge && (!currentActivity || !currentActivity->blocksBackgroundServer());
-  BackgroundWebServer& backgroundServer = BackgroundWebServer::getInstance();
-
-  static bool lastUsbConnected = false;
-  static bool lastAllowBackgroundServer = false;
-  if (usbConnected != lastUsbConnected || allowBackgroundServer != lastAllowBackgroundServer) {
-    Serial.printf("[%lu] [BWS] usbConnected=%d, allowBackgroundServer=%d (setting=%d, hasActivity=%d, blocks=%d)\n",
-                  millis(), usbConnected, allowBackgroundServer, SETTINGS.backgroundServerOnCharge,
-                  currentActivity != nullptr, currentActivity ? currentActivity->blocksBackgroundServer() : 0);
-    lastUsbConnected = usbConnected;
-    lastAllowBackgroundServer = allowBackgroundServer;
+  // Handle incoming serial commands,
+  // nb: we use logSerial from logging to avoid deprecation warnings
+  if (logSerial.available() > 0) {
+    String line = logSerial.readStringUntil('\n');
+    if (line.startsWith("CMD:")) {
+      String cmd = line.substring(4);
+      cmd.trim();
+      if (cmd == "SCREENSHOT") {
+        logSerial.printf("SCREENSHOT_START:%d\n", HalDisplay::BUFFER_SIZE);
+        uint8_t* buf = display.getFrameBuffer();
+        logSerial.write(buf, HalDisplay::BUFFER_SIZE);
+        logSerial.printf("SCREENSHOT_END\n");
+      }
+    }
   }
-
-  backgroundServer.loop(usbConnected, allowBackgroundServer);
 
   // Check for any user activity (button press or release) or active background work
   static unsigned long lastActivityTime = millis();
@@ -494,7 +531,7 @@ void loop() {
 
   const unsigned long sleepTimeoutMs = SETTINGS.getSleepTimeoutMs();
   if (millis() - lastActivityTime >= sleepTimeoutMs) {
-    Serial.printf("[%lu] [SLP] Auto-sleep triggered after %lu ms of inactivity\n", millis(), sleepTimeoutMs);
+    LOG_DBG("SLP", "Auto-sleep triggered after %lu ms of inactivity", sleepTimeoutMs);
     enterDeepSleep();
     // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start
     return;
@@ -516,8 +553,7 @@ void loop() {
   if (loopDuration > maxLoopDuration) {
     maxLoopDuration = loopDuration;
     if (maxLoopDuration > 50) {
-      Serial.printf("[%lu] [LOOP] New max loop duration: %lu ms (activity: %lu ms)\n", millis(), maxLoopDuration,
-                    activityDuration);
+      LOG_DBG("LOOP", "New max loop duration: %lu ms (activity: %lu ms)", maxLoopDuration, activityDuration);
     }
   }
 
@@ -527,6 +563,13 @@ void loop() {
   if ((currentActivity && currentActivity->skipLoopDelay()) || backgroundServer.wantsFastLoop()) {
     yield();  // Give FreeRTOS a chance to run tasks, but return immediately
   } else {
-    delay(10);  // Normal delay when no activity requires fast response
+    static constexpr unsigned long IDLE_POWER_SAVING_MS = 3000;  // 3 seconds
+    if (millis() - lastActivityTime >= IDLE_POWER_SAVING_MS) {
+      // If we've been inactive for a while, increase the delay to save power
+      delay(50);
+    } else {
+      // Short delay to prevent tight loop while still being responsive
+      delay(10);
+    }
   }
 }
