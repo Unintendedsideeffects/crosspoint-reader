@@ -31,7 +31,7 @@ FEATURES = {
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
-        size_kb=3630,
+        size_kb=0,
         description='Optional OpenDyslexic 8/10/12/14pt family'
     ),
     'image_sleep': Feature(
@@ -127,19 +127,19 @@ FEATURES = {
     'visual_cover_picker': Feature(
         name='Visual Covers',
         flag='ENABLE_VISUAL_COVER_PICKER',
-        size_kb=12,
+        size_kb=118,
         description='Grid-based book explorer with thumbnails'
     ),
     'ble_wifi_provisioning': Feature(
         name='BLE WiFi Provisioning',
         flag='ENABLE_BLE_WIFI_PROVISIONING',
-        size_kb=150,
+        size_kb=619,
         description='Initial WiFi setup via Bluetooth LE'
     ),
     'user_fonts': Feature(
         name='User Fonts',
         flag='ENABLE_USER_FONTS',
-        size_kb=10,
+        size_kb=4,
         description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
     ),
 }
