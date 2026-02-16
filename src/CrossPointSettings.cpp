@@ -22,9 +22,9 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 }
 
 namespace {
-constexpr uint8_t SETTINGS_FILE_VERSION = 1;
+constexpr uint8_t SETTINGS_FILE_VERSION = 2;
 // Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 30;
+constexpr uint8_t SETTINGS_COUNT = 31;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 
 // Validate front button mapping to ensure each hardware button is unique.
@@ -96,6 +96,7 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writePod(outputFile, lastTimeSyncEpoch);
   serialization::writePod(outputFile, releaseChannel);
   serialization::writePod(outputFile, sleepScreenSource);
+  serialization::writeString(outputFile, std::string(userFontPath));
   // New fields added at end for backward compatibility
   outputFile.close();
 
@@ -112,7 +113,7 @@ bool CrossPointSettings::loadFromFile() {
 
   uint8_t version;
   serialization::readPod(inputFile, version);
-  if (version != SETTINGS_FILE_VERSION) {
+  if (version < 1 || version > SETTINGS_FILE_VERSION) {
     LOG_ERR("CPS", "Deserialization failed: Unknown version %u", version);
     inputFile.close();
     return false;
@@ -201,6 +202,14 @@ bool CrossPointSettings::loadFromFile() {
     if (++settingsRead >= fileSettingsCount) break;
     readAndValidate(inputFile, sleepScreenSource, SLEEP_SCREEN_SOURCE_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
+
+    if (version >= 2) {
+      std::string pathStr;
+      serialization::readString(inputFile, pathStr);
+      strncpy(userFontPath, pathStr.c_str(), sizeof(userFontPath) - 1);
+      userFontPath[sizeof(userFontPath) - 1] = '\0';
+      if (++settingsRead >= fileSettingsCount) break;
+    }
     // New fields added at end for backward compatibility
   } while (false);
 
@@ -267,13 +276,16 @@ void CrossPointSettings::validateAndClamp() {
   if (orientation > LANDSCAPE_CCW) orientation = PORTRAIT;
   if (frontButtonLayout > LEFT_LEFT_RIGHT_RIGHT) frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
   if (sideButtonLayout > NEXT_PREV) sideButtonLayout = PREV_NEXT;
-  if (fontFamily > OPENDYSLEXIC) fontFamily = BOOKERLY;
+  if (fontFamily >= FONT_FAMILY_COUNT) fontFamily = BOOKERLY;
   if (fontSize > EXTRA_LARGE) fontSize = MEDIUM;
 #if !ENABLE_EXTENDED_FONTS
-  fontFamily = BOOKERLY;
+  if (fontFamily != USER_SD) fontFamily = BOOKERLY;
   fontSize = MEDIUM;
 #elif !ENABLE_OPENDYSLEXIC_FONTS
   if (fontFamily == OPENDYSLEXIC) fontFamily = NOTOSANS;
+#endif
+#if !ENABLE_USER_FONTS
+  if (fontFamily == USER_SD) fontFamily = BOOKERLY;
 #endif
   if (lineSpacing > WIDE) lineSpacing = NORMAL;
   if (paragraphAlignment > RIGHT_ALIGN) paragraphAlignment = JUSTIFIED;
@@ -334,6 +346,16 @@ float CrossPointSettings::getReaderLineCompression() const {
         case WIDE:
           return 1.0f;
       }
+    case USER_SD:
+      switch (lineSpacing) {
+        case TIGHT:
+          return 0.90f;
+        case NORMAL:
+        default:
+          return 1.0f;
+        case WIDE:
+          return 1.1f;
+      }
   }
 }
 
@@ -384,6 +406,8 @@ int CrossPointSettings::getReaderFontId() const {
 #endif
 
   switch (effectiveFamily) {
+    case USER_SD:
+      return USER_SD_FONT_ID;
     case BOOKERLY:
     default:
       switch (fontSize) {

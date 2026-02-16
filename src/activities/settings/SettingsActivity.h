@@ -50,6 +50,7 @@ struct SettingInfo {
   // Dynamic accessors (for settings stored outside CrossPointSettings, e.g. KOReaderCredentialStore)
   std::function<uint8_t()> valueGetter;
   std::function<void(uint8_t)> valueSetter;
+  std::function<std::vector<std::string>()> dynamicValuesGetter;
   std::function<std::string()> stringGetter;
   std::function<void(const std::string&)> stringSetter;
 
@@ -115,6 +116,20 @@ struct SettingInfo {
     s.name = name;
     s.type = SettingType::ENUM;
     s.enumValues = std::move(values);
+    s.valueGetter = std::move(getter);
+    s.valueSetter = std::move(setter);
+    s.key = key;
+    s.category = category;
+    return s;
+  }
+
+  static SettingInfo DynamicEnum(const char* name, std::function<std::vector<std::string>()> valuesGetter,
+                                 std::function<uint8_t()> getter, std::function<void(uint8_t)> setter,
+                                 const char* key = nullptr, const char* category = nullptr) {
+    SettingInfo s;
+    s.name = name;
+    s.type = SettingType::ENUM;
+    s.dynamicValuesGetter = std::move(valuesGetter);
     s.valueGetter = std::move(getter);
     s.valueSetter = std::move(setter);
     s.key = key;

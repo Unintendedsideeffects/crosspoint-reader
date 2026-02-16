@@ -19,6 +19,7 @@
 #include "OtaUpdateActivity.h"
 #endif
 #include "SettingsList.h"
+#include "UserFontManager.h"
 #include "activities/TaskShutdown.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "components/UITheme.h"
@@ -212,19 +213,35 @@ void SettingsActivity::toggleCurrentSetting() {
     // Toggle the boolean value using the member pointer
     const bool currentValue = SETTINGS.*(setting.valuePtr);
     SETTINGS.*(setting.valuePtr) = !currentValue;
-  } else if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
-    if (setting.enumValues.empty()) {
+  } else if (setting.type == SettingType::ENUM) {
+    std::vector<std::string> values = setting.enumValues;
+    if (setting.dynamicValuesGetter) {
+      values = setting.dynamicValuesGetter();
+    }
+    if (values.empty()) {
       return;
     }
-    const uint8_t currentValue = SETTINGS.*(setting.valuePtr);
-    const uint8_t maxIndex = static_cast<uint8_t>(setting.enumValues.size() - 1);
+    const uint8_t currentValue = (setting.valueGetter) ? setting.valueGetter() : SETTINGS.*(setting.valuePtr);
+    const uint8_t maxIndex = static_cast<uint8_t>(values.size() - 1);
     const uint8_t normalizedValue = (currentValue > maxIndex) ? 0 : currentValue;
-    SETTINGS.*(setting.valuePtr) = (normalizedValue + 1) % static_cast<uint8_t>(setting.enumValues.size());
+    const uint8_t newValue = (normalizedValue + 1) % static_cast<uint8_t>(values.size());
+
+    if (setting.valueSetter) {
+      setting.valueSetter(newValue);
+    } else if (setting.valuePtr) {
+      SETTINGS.*(setting.valuePtr) = newValue;
+    }
 
     if (setting.valuePtr == &CrossPointSettings::frontButtonLayout) {
       SETTINGS.applyFrontButtonLayoutPreset(
           static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout));
     }
+
+#if ENABLE_USER_FONTS
+    if (setting.valuePtr == &CrossPointSettings::fontFamily && newValue == CrossPointSettings::USER_SD) {
+      UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath);
+    }
+#endif
   } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
     const int8_t currentValue = SETTINGS.*(setting.valuePtr);
     if (currentValue + setting.valueRange.step > setting.valueRange.max) {
@@ -339,10 +356,15 @@ void SettingsActivity::render() const {
         if (settings[i].type == SettingType::TOGGLE && settings[i].valuePtr != nullptr) {
           const bool value = SETTINGS.*(settings[i].valuePtr);
           valueText = value ? "ON" : "OFF";
-        } else if (settings[i].type == SettingType::ENUM && settings[i].valuePtr != nullptr) {
-          const uint8_t value = SETTINGS.*(settings[i].valuePtr);
-          if (value < settings[i].enumValues.size()) {
-            valueText = settings[i].enumValues[value];
+        } else if (settings[i].type == SettingType::ENUM) {
+          std::vector<std::string> values = settings[i].enumValues;
+          if (settings[i].dynamicValuesGetter) {
+            values = settings[i].dynamicValuesGetter();
+          }
+          const uint8_t value =
+              (settings[i].valueGetter) ? settings[i].valueGetter() : SETTINGS.*(settings[i].valuePtr);
+          if (value < values.size()) {
+            valueText = values[value];
           } else {
             valueText = std::to_string(value);
           }

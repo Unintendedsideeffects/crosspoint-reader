@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <EpdFont.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
@@ -15,6 +16,7 @@
 #include "FeatureManifest.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "UserFontManager.h"
 #include "WifiCredentialStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
@@ -139,6 +141,15 @@ EpdFontFamily ui10FontFamily(&ui10RegularFont, &ui10BoldFont);
 EpdFont ui12RegularFont(&ubuntu_12_regular);
 EpdFont ui12BoldFont(&ubuntu_12_bold);
 EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
+
+#if ENABLE_USER_FONTS
+#include <SdFont.h>
+SdFont regularSdFont;
+SdFont boldSdFont;
+SdFont italicSdFont;
+SdFont boldItalicSdFont;
+EpdFontFamily userSdFontFamily(&regularSdFont, &boldSdFont, &italicSdFont, &boldItalicSdFont);
+#endif
 
 // measurement of power button press duration calibration value
 unsigned long t1 = 0;
@@ -358,26 +369,31 @@ void setupDisplayAndFonts() {
   display.begin();
   renderer.begin();
   LOG_DBG("MAIN", "Display initialized");
-  renderer.insertFont(BOOKERLY_14_FONT_ID, bookerly14FontFamily);
+  renderer.insertFontFamily(BOOKERLY_14_FONT_ID, &bookerly14FontFamily);
 #if ENABLE_EXTENDED_FONTS
-  renderer.insertFont(BOOKERLY_12_FONT_ID, bookerly12FontFamily);
-  renderer.insertFont(BOOKERLY_16_FONT_ID, bookerly16FontFamily);
-  renderer.insertFont(BOOKERLY_18_FONT_ID, bookerly18FontFamily);
+  renderer.insertFontFamily(BOOKERLY_12_FONT_ID, &bookerly12FontFamily);
+  renderer.insertFontFamily(BOOKERLY_16_FONT_ID, &bookerly16FontFamily);
+  renderer.insertFontFamily(BOOKERLY_18_FONT_ID, &bookerly18FontFamily);
 
-  renderer.insertFont(NOTOSANS_12_FONT_ID, notosans12FontFamily);
-  renderer.insertFont(NOTOSANS_14_FONT_ID, notosans14FontFamily);
-  renderer.insertFont(NOTOSANS_16_FONT_ID, notosans16FontFamily);
-  renderer.insertFont(NOTOSANS_18_FONT_ID, notosans18FontFamily);
+  renderer.insertFontFamily(NOTOSANS_12_FONT_ID, &notosans12FontFamily);
+  renderer.insertFontFamily(NOTOSANS_14_FONT_ID, &notosans14FontFamily);
+  renderer.insertFontFamily(NOTOSANS_16_FONT_ID, &notosans16FontFamily);
+  renderer.insertFontFamily(NOTOSANS_18_FONT_ID, &notosans18FontFamily);
 #if ENABLE_OPENDYSLEXIC_FONTS
-  renderer.insertFont(OPENDYSLEXIC_8_FONT_ID, opendyslexic8FontFamily);
-  renderer.insertFont(OPENDYSLEXIC_10_FONT_ID, opendyslexic10FontFamily);
-  renderer.insertFont(OPENDYSLEXIC_12_FONT_ID, opendyslexic12FontFamily);
-  renderer.insertFont(OPENDYSLEXIC_14_FONT_ID, opendyslexic14FontFamily);
+  renderer.insertFontFamily(OPENDYSLEXIC_8_FONT_ID, &opendyslexic8FontFamily);
+  renderer.insertFontFamily(OPENDYSLEXIC_10_FONT_ID, &opendyslexic10FontFamily);
+  renderer.insertFontFamily(OPENDYSLEXIC_12_FONT_ID, &opendyslexic12FontFamily);
+  renderer.insertFontFamily(OPENDYSLEXIC_14_FONT_ID, &opendyslexic14FontFamily);
 #endif  // ENABLE_OPENDYSLEXIC_FONTS
 #endif  // ENABLE_EXTENDED_FONTS
-  renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
-  renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
-  renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
+  renderer.insertFontFamily(UI_10_FONT_ID, &ui10FontFamily);
+  renderer.insertFontFamily(UI_12_FONT_ID, &ui12FontFamily);
+  renderer.insertFontFamily(SMALL_FONT_ID, &smallFontFamily);
+
+#if ENABLE_USER_FONTS
+  renderer.insertFontFamily(USER_SD_FONT_ID, &userSdFontFamily);
+#endif
+
   LOG_DBG("MAIN", "Fonts setup");
 }
 
@@ -409,9 +425,20 @@ void setup() {
     return;
   }
 
+#if ENABLE_USER_FONTS
+  UserFontManager::setGlobalFonts(&regularSdFont, &boldSdFont, &italicSdFont, &boldItalicSdFont);
+  UserFontManager::getInstance().scanFonts();
+#endif
+
   applyPendingFactoryReset();
 
   SETTINGS.loadFromFile();
+
+#if ENABLE_USER_FONTS
+  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
+    UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath);
+  }
+#endif
   renderer.setDarkMode(SETTINGS.darkMode);
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.loadFromFile();

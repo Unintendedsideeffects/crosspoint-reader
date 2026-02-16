@@ -1,9 +1,11 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 
 #include "CrossPointSettings.h"
 #include "FeatureFlags.h"
+#include "UserFontManager.h"
 #include "activities/settings/SettingsActivity.h"
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 #include "KOReaderCredentialStore.h"
@@ -47,8 +49,37 @@ inline std::vector<SettingInfo> getSettingsList() {
                             "Open Dyslexic",
 #endif
 #endif
+#if ENABLE_USER_FONTS
+                            "User (SD)",
+#endif
                         },
                         "fontFamily", "Reader"),
+#if ENABLE_USER_FONTS
+      SettingInfo::DynamicEnum("Custom Font", std::function<std::vector<std::string>()>([]() {
+                                 auto fonts = UserFontManager::getInstance().getAvailableFonts();
+                                 if (fonts.empty()) return std::vector<std::string>{"(No fonts found)"};
+                                 return fonts;
+                               }),
+                               std::function<uint8_t()>([]() {
+                                 auto fonts = UserFontManager::getInstance().getAvailableFonts();
+                                 std::string current = SETTINGS.userFontPath;
+                                 for (size_t i = 0; i < fonts.size(); ++i) {
+                                   if (fonts[i] == current) return (uint8_t)i;
+                                 }
+                                 return (uint8_t)0;
+                               }),
+                               std::function<void(uint8_t)>([](uint8_t v) {
+                                 auto fonts = UserFontManager::getInstance().getAvailableFonts();
+                                 if (v < fonts.size()) {
+                                   strncpy(SETTINGS.userFontPath, fonts[v].c_str(), sizeof(SETTINGS.userFontPath) - 1);
+                                   SETTINGS.userFontPath[sizeof(SETTINGS.userFontPath) - 1] = '\0';
+                                   if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
+                                     UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath);
+                                   }
+                                 }
+                               }),
+                               "userFontPath", "Reader"),
+#endif
       SettingInfo::Enum("Font Size", &CrossPointSettings::fontSize, {"Small", "Medium", "Large", "X Large"}, "fontSize",
                         "Reader"),
       SettingInfo::Enum("Line Spacing", &CrossPointSettings::lineSpacing, {"Tight", "Normal", "Wide"}, "lineSpacing",

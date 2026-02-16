@@ -227,8 +227,8 @@
       .categories {
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        margin-bottom: 24px;
+        gap: 32px;
+        margin-bottom: 32px;
       }
 
       .category {
@@ -642,8 +642,8 @@
       .panel {
         background: var(--white);
         border: var(--px) solid var(--blk);
-        padding: 14px 16px;
-        margin-bottom: 12px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
         box-shadow:
           inset var(--px) var(--px) 0 var(--bevel-hi),
           inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo);
@@ -760,7 +760,7 @@
       /* ── Companion ── */
       .companion-row {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
         gap: 12px;
         flex-wrap: wrap;
@@ -1094,6 +1094,17 @@
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
 
+              <label class="skill-card" data-feature="user_fonts" data-node-id="user_fonts">
+                <input type="checkbox" id="user_fonts" data-feature="user_fonts" />
+                <div class="card-icon"><span>&#x270E;</span></div>
+                <div class="card-body">
+                  <div class="card-name">User Fonts</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Load custom fonts from SD card (requires pre-conversion)</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
+
             </div>
 
             <!-- Interface notes -->
@@ -1275,6 +1286,34 @@
 
       <!-- Companion -->
       <div class="panel">
+        <div class="panel-heading">Font Converter</div>
+        <div class="companion-row">
+          <div style="flex: 1">
+            <div class="companion-title">Pre-convert TTF/OTF for User Fonts</div>
+            <div class="companion-desc">
+              Select a font file to convert it to the <code>.cpf</code> format. 
+              Save to <code>/fonts</code> on SD card.
+            </div>
+            <div class="actions" style="margin-top: 15px; align-items: center; gap: 12px;">
+              <input type="file" id="font-upload" accept=".ttf,.otf" style="display:none" />
+              <button class="btn btn-outline" onclick="document.getElementById('font-upload').click()">Select Font</button>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="output-label" style="margin:0">Size:</span>
+                <input type="number" id="font-size" value="14" min="6" max="48" style="width: 50px; background: var(--fog); border: 1px solid var(--bone); padding: 2px 4px; font-family: inherit; font-size: 10px;" />
+              </div>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="font-2bit" checked style="cursor: pointer" />
+                <span class="output-label" style="margin:0">2-bit grayscale</span>
+              </label>
+              <button class="btn btn-solid" id="convert-font-btn" disabled>Convert & Download</button>
+            </div>
+            <div id="font-status" class="info-bar" style="display:none; margin-top: 12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Companion -->
+      <div class="panel">
         <div class="panel-heading">Companion Plugins</div>
         <div class="companion-row">
           <div>
@@ -1304,6 +1343,7 @@
       <div class="footer">Future: this picker will live inside the OTA update menu.</div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
     <script>
       const FEATURES = {
         extended_fonts: {
@@ -1401,6 +1441,11 @@
           flag: "ENABLE_BLE_WIFI_PROVISIONING",
           default: false,
         },
+        user_fonts: {
+          sizeKb: 10,
+          flag: "ENABLE_USER_FONTS",
+          default: true,
+        },
       };
 
       const BASE_SIZE_MB = 1.66;
@@ -1415,7 +1460,7 @@
 
       const HUB_FEATURES = {
         reading_hub: ["markdown", "xtc_support", "epub_support", "hyphenation", "todo_planner"],
-        interface_hub: ["extended_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin", "dark_mode", "visual_cover_picker"],
+        interface_hub: ["extended_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin", "dark_mode", "visual_cover_picker", "user_fonts"],
         network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync", "ble_wifi_provisioning"],
         extras_hub: ["ota_updates", "integrations", "home_media_picker"],
       };
@@ -1465,6 +1510,7 @@
           dark_mode: true,
           visual_cover_picker: true,
           ble_wifi_provisioning: true,
+          user_fonts: true,
         },
       };
 
@@ -1861,7 +1907,237 @@
         }
       }
 
+      function setupFontConverter() {
+        const upload = document.getElementById('font-upload');
+        const btn = document.getElementById('convert-font-btn');
+        const status = document.getElementById('font-status');
+        let selectedFile = null;
+
+        upload.addEventListener('change', (e) => {
+          selectedFile = e.target.files[0];
+          btn.disabled = !selectedFile;
+          if (selectedFile) {
+            status.style.display = 'block';
+            status.textContent = `Selected: ${selectedFile.name}`;
+          }
+        });
+
+        btn.addEventListener('click', async () => {
+          if (!selectedFile) return;
+          
+          btn.disabled = true;
+          status.textContent = "Loading font...";
+          
+          try {
+            const buffer = await selectedFile.arrayBuffer();
+            const font = opentype.parse(buffer);
+            const size = parseInt(document.getElementById('font-size').value);
+            const is2Bit = document.getElementById('font-2bit').checked;
+            
+            status.textContent = "Converting glyphs...";
+            
+            // Define intervals (matching fontconvert.py)
+            const intervals = [
+              [0x0000, 0x007F], [0x0080, 0x00FF], [0x0100, 0x017F], 
+              [0x2000, 0x206F], [0x2010, 0x203A], [0x2040, 0x205F],
+              [0x20A0, 0x20CF], [0x0300, 0x036F], [0x0400, 0x04FF],
+              [0x2070, 0x209F], [0x2200, 0x22FF], [0x2190, 0x21FF],
+              [0xFFFD, 0xFFFD]
+            ];
+
+            const allGlyphs = [];
+            let totalBitmapSize = 0;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { alpha: true });
+
+            for (const [start, end] of intervals) {
+              for (let cp = start; cp <= end; cp++) {
+                const glyph = font.charToGlyph(String.fromCodePoint(cp));
+                // We need to render the glyph to get the bitmap
+                // opentype.js doesn't give us raw bitmaps easily, we'll use a canvas
+                
+                const scale = 1 / font.unitsPerEm * size;
+                const metrics = glyph.getMetrics();
+                const width = Math.ceil((metrics.xMax - metrics.xMin) * scale) || 0;
+                const height = Math.ceil((metrics.yMax - metrics.yMin) * scale) || 0;
+                const left = Math.round(metrics.xMin * scale);
+                const top = Math.round(metrics.yMax * scale);
+                const advanceX = Math.round(glyph.advanceWidth * scale);
+
+                let packedData;
+                if (width > 0 && height > 0) {
+                  canvas.width = width;
+                  canvas.height = height;
+                  ctx.clearRect(0, 0, width, height);
+                  
+                  const path = glyph.getPath(-metrics.xMin * scale, metrics.yMax * scale, size);
+                  ctx.fillStyle = 'black';
+                  path.draw(ctx);
+                  
+                  const imgData = ctx.getImageData(0, 0, width, height).data;
+                  const pixels = [];
+                  for (let i = 3; i < imgData.length; i += 4) {
+                    pixels.push(imgData[i]); // Use alpha channel
+                  }
+
+                  if (is2Bit) {
+                    const packed = [];
+                    let byte = 0;
+                    for (let i = 0; i < pixels.length; i++) {
+                      let val = 0;
+                      if (pixels[i] >= 192) val = 3;
+                      else if (pixels[i] >= 128) val = 2;
+                      else if (pixels[i] >= 64) val = 1;
+                      
+                      byte = (byte << 2) | val;
+                      if (i % 4 === 3) {
+                        packed.push(byte);
+                        byte = 0;
+                      }
+                    }
+                    if (pixels.length % 4 !== 0) {
+                      byte <<= (4 - (pixels.length % 4)) * 2;
+                      packed.push(byte);
+                    }
+                    packedData = new Uint8Array(packed);
+                  } else {
+                    const packed = [];
+                    let byte = 0;
+                    for (let i = 0; i < pixels.length; i++) {
+                      byte = (byte << 1) | (pixels[i] > 127 ? 1 : 0);
+                      if (i % 8 === 7) {
+                        packed.push(byte);
+                        byte = 0;
+                      }
+                    }
+                    if (pixels.length % 8 !== 0) {
+                      byte <<= (8 - (pixels.length % 8));
+                      packed.push(byte);
+                    }
+                    packedData = new Uint8Array(packed);
+                  }
+                } else {
+                  packedData = new Uint8Array(0);
+                }
+
+                allGlyphs.push({
+                  width, height, advanceX, left, top,
+                  dataLength: packedData.length,
+                  dataOffset: totalBitmapSize,
+                  data: packedData
+                });
+                totalBitmapSize += packedData.length;
+              }
+            }
+
+            // Metrics for header
+            const pipeGlyph = font.charToGlyph('|');
+            const scale = 1 / font.unitsPerEm * size;
+            const advanceY = Math.round((font.ascender - font.descender) * scale);
+            const ascender = Math.round(font.ascender * scale);
+            const descender = Math.round(font.descender * scale);
+
+            // Build binary file
+            const headerSize = 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4;
+            const intervalSize = intervals.length * 12;
+            const glyphsSize = allGlyphs.length * 15; // 1+1+1+2+2+2+4 = 13... wait.
+            // EpdGlyph struct: uint8 width, uint8 height, uint8 advanceX, int16 left, int16 top, uint16 dataLength, uint32 dataOffset = 1+1+1+2+2+2+4 = 13 bytes.
+            // Packed with potential padding in C++, but we'll use 13 bytes.
+            // Let's re-verify the struct in EpdFontData.h
+            /*
+            typedef struct {
+              uint8_t width;        
+              uint8_t height;       
+              uint8_t advanceX;     
+              int16_t left;         
+              int16_t top;          
+              uint16_t dataLength;  
+              uint32_t dataOffset;  
+            } EpdGlyph;
+            Total: 1+1+1 + (padding?) + 2+2+2 + (padding?) + 4.
+            On ESP32 (32-bit), it's likely padded to 16 bytes.
+            Let's use 16 bytes to be safe and match compiler alignment (4-byte alignment).
+            Actually, let's look at the struct carefully. 
+            3x uint8 = 3 bytes. 
+            Next is int16_t, which must be 2-byte aligned. So 1 byte padding. (4 total)
+            2 bytes int16_t (left) (6 total)
+            2 bytes int16_t (top) (8 total)
+            2 bytes uint16_t (dataLength) (10 total)
+            Next is uint32_t (dataOffset), which must be 4-byte aligned. So 2 bytes padding. (12 total)
+            4 bytes uint32_t (dataOffset) (16 total)
+            So yes, 16 bytes.
+            */
+
+            const totalSize = headerSize + intervalSize + (allGlyphs.length * 16) + totalBitmapSize;
+            const out = new ArrayBuffer(totalSize);
+            const view = new DataView(out);
+            let offset = 0;
+
+            // Magic "CPF\x01"
+            view.setUint8(offset++, 0x43); // C
+            view.setUint8(offset++, 0x50); // P
+            view.setUint8(offset++, 0x46); // F
+            view.setUint8(offset++, 0x01); // \x01
+
+            view.setUint8(offset++, advanceY);
+            view.setInt32(offset, ascender, true); offset += 4;
+            view.setInt32(offset, descender, true); offset += 4;
+            view.setUint8(offset++, is2Bit ? 1 : 0);
+            view.setUint32(offset, intervals.length, true); offset += 4;
+            view.setUint32(offset, allGlyphs.length, true); offset += 4;
+            view.setUint32(offset, totalBitmapSize, true); offset += 4;
+
+            // Intervals
+            let cpOffset = 0;
+            for (const [start, end] of intervals) {
+              view.setUint32(offset, start, true); offset += 4;
+              view.setUint32(offset, end, true); offset += 4;
+              view.setUint32(offset, cpOffset, true); offset += 4;
+              cpOffset += (end - start + 1);
+            }
+
+            // Glyphs
+            for (const g of allGlyphs) {
+              const glyphStart = offset;
+              view.setUint8(offset++, g.width);
+              view.setUint8(offset++, g.height);
+              view.setUint8(offset++, g.advanceX);
+              offset++; // padding for int16 alignment
+              view.setInt16(offset, g.left, true); offset += 2;
+              view.setInt16(offset, g.top, true); offset += 2;
+              view.setUint16(offset, g.dataLength, true); offset += 2;
+              offset += 2; // padding for uint32 alignment
+              view.setUint32(offset, g.dataOffset, true); offset += 4;
+            }
+
+            // Bitmap data
+            const uint8Out = new Uint8Array(out);
+            for (const g of allGlyphs) {
+              uint8Out.set(g.data, offset);
+              offset += g.data.length;
+            }
+
+            const blob = new Blob([out], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const fontName = selectedFile.name.split('.')[0];
+            a.href = url;
+            a.download = `${fontName}-${is2Bit ? '2bit' : '1bit'}-${size}pt.cpf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            status.textContent = `Success! Converted ${allGlyphs.length} glyphs.`;
+          } catch (err) {
+            console.error(err);
+            status.textContent = `Error: ${err.message}`;
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      }
+
       setupEvents();
+      setupFontConverter();
       const initialState = parseInitialStateFromUrl();
       baseProfile = initialState.initialProfile;
       setSelections(initialState.selections);
