@@ -173,6 +173,25 @@ def parse_shell_features(path: Path) -> list[str]:
     return values
 
 
+def parse_workflow_inputs(path: Path) -> list[str]:
+    text = path.read_text()
+    # Find inputs under workflow_dispatch
+    match = re.search(r"inputs:\s*\n((?:\s{6}\w+:\s*\n(?:\s{8}.*\n?)*)+)", text)
+    if not match:
+        raise ValueError(f"{path}: workflow inputs not found")
+
+    inputs = re.findall(r"^\s{6}(\w+):", match.group(1), re.M)
+    if "profile" in inputs:
+        inputs.remove("profile")
+    return sorted(inputs)
+
+
+def parse_workflow_cmd_enables(path: Path) -> list[str]:
+    text = path.read_text()
+    enables = re.findall(r"CMD\+=\(--enable\s+(\w+)\)", text)
+    return sorted(enables)
+
+
 def extract_js_object_block(text: str, marker: str, path: Path) -> str:
     start = text.find(marker)
     if start == -1:
@@ -414,10 +433,16 @@ def main() -> int:
     configurator_profiles = parse_configurator_profiles(configurator_file)
     configurator_dependencies = parse_configurator_dependencies(configurator_file)
 
+    workflow_file = ROOT / ".github" / "workflows" / "build-custom.yml"
+    workflow_inputs = parse_workflow_inputs(workflow_file)
+    workflow_enables = parse_workflow_cmd_enables(workflow_file)
+
     sources = {
         "measure_feature_sizes.py": parse_python_list(ROOT / "scripts" / "measure_feature_sizes.py", "FEATURES"),
         "test_all_combinations.sh": parse_shell_features(ROOT / "scripts" / "test_all_combinations.sh"),
         "docs/configurator/index.html": list(configurator_specs.keys()),
+        ".github/workflows/build-custom.yml inputs": workflow_inputs,
+        ".github/workflows/build-custom.yml enables": workflow_enables,
     }
 
     errors: list[str] = []
