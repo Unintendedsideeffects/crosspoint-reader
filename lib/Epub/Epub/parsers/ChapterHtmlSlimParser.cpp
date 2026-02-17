@@ -6,6 +6,8 @@
 #include <Logging.h>
 #include <expat.h>
 
+#include <cctype>
+
 #include "../../Epub.h"
 #include "../Page.h"
 #include "../converters/ImageDecoderFactory.h"
@@ -50,6 +52,68 @@ bool matches(const char* tag_name, const char* possible_tags[], const int possib
 
 bool isHeaderOrBlock(const char* name) {
   return matches(name, HEADER_TAGS, NUM_HEADER_TAGS) || matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS);
+}
+
+int hexToInt(const char c) {
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  }
+  if (c >= 'a' && c <= 'f') {
+    return 10 + (c - 'a');
+  }
+  if (c >= 'A' && c <= 'F') {
+    return 10 + (c - 'A');
+  }
+  return -1;
+}
+
+std::string decodePercentEncoding(const std::string& value) {
+  std::string out;
+  out.reserve(value.size());
+  for (size_t i = 0; i < value.size(); i++) {
+    if (value[i] == '%' && i + 2 < value.size()) {
+      const int hi = hexToInt(value[i + 1]);
+      const int lo = hexToInt(value[i + 2]);
+      if (hi >= 0 && lo >= 0) {
+        out.push_back(static_cast<char>((hi << 4) | lo));
+        i += 2;
+        continue;
+      }
+    }
+    out.push_back(value[i]);
+  }
+  return out;
+}
+
+std::string sanitizeImageSrc(const std::string& rawSrc) {
+  std::string src = rawSrc;
+
+  // Trim leading/trailing whitespace.
+  size_t start = 0;
+  while (start < src.size() && std::isspace(static_cast<unsigned char>(src[start])) != 0) {
+    start++;
+  }
+  size_t end = src.size();
+  while (end > start && std::isspace(static_cast<unsigned char>(src[end - 1])) != 0) {
+    end--;
+  }
+  src = src.substr(start, end - start);
+
+  // Strip optional markdown-style angle wrappers.
+  if (src.size() >= 2 && src.front() == '<' && src.back() == '>') {
+    src = src.substr(1, src.size() - 2);
+  }
+
+  // Drop query/hash suffixes, then decode %xx sequences.
+  const size_t queryPos = src.find('?');
+  if (queryPos != std::string::npos) {
+    src = src.substr(0, queryPos);
+  }
+  const size_t fragmentPos = src.find('#');
+  if (fragmentPos != std::string::npos) {
+    src = src.substr(0, fragmentPos);
+  }
+  return decodePercentEncoding(src);
 }
 
 // Update effective bold/italic/underline based on block style and inline style stack
@@ -172,11 +236,19 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       }
 
       if (!src.empty()) {
+        src = sanitizeImageSrc(src);
         LOG_DBG("EHP", "Found image: src=%s", src.c_str());
+        if (src.empty()) {
+          LOG_ERR("EHP", "Image src empty after sanitization");
+          self->skipUntilDepth = self->depth;
+          self->depth += 1;
+          return;
+        }
 
         {
           // Resolve the image path relative to the content base.
-          std::string resolvedPath = FsHelpers::normalisePath(self->contentBase + src);
+          std::string resolvedPath =
+              (src[0] == '/') ? FsHelpers::normalisePath(src) : FsHelpers::normalisePath(self->contentBase + src);
           std::string cachedImagePath = resolvedPath;
           bool cleanupCachedCopy = false;
           bool extractSuccess = false;
