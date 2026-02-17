@@ -59,8 +59,10 @@ bool SdFont::load(const std::string& path) {
   // 4 bytes (uint32): totalGlyphs
   // 4 bytes (uint32): bitmapSize
 
+  auto readExact = [&file](void* dst, const size_t len) -> bool { return file.read(dst, len) == len; };
+
   char magic[4];
-  if (file.read(magic, 4) != 4 || memcmp(magic, "CPF\x01", 4) != 0) {
+  if (!readExact(magic, sizeof(magic)) || memcmp(magic, "CPF\x01", 4) != 0) {
     LOG_ERR("SDFONT", "Invalid font magic in %s", path.c_str());
     return false;
   }
@@ -70,13 +72,22 @@ bool SdFont::load(const std::string& path) {
   uint8_t is2Bit;
   uint32_t intervalCount, totalGlyphs, bitmapSize;
 
-  file.read(&advanceY, 1);
-  file.read(&ascender, 4);
-  file.read(&descender, 4);
-  file.read(&is2Bit, 1);
-  file.read(&intervalCount, 4);
-  file.read(&totalGlyphs, 4);
-  file.read(&bitmapSize, 4);
+  if (!readExact(&advanceY, sizeof(advanceY)) || !readExact(&ascender, sizeof(ascender)) ||
+      !readExact(&descender, sizeof(descender)) || !readExact(&is2Bit, sizeof(is2Bit)) ||
+      !readExact(&intervalCount, sizeof(intervalCount)) || !readExact(&totalGlyphs, sizeof(totalGlyphs)) ||
+      !readExact(&bitmapSize, sizeof(bitmapSize))) {
+    LOG_ERR("SDFONT", "Truncated header in %s", path.c_str());
+    return false;
+  }
+
+  const uint64_t expectedPayloadSize = static_cast<uint64_t>(intervalCount) * sizeof(EpdUnicodeInterval) +
+                                       static_cast<uint64_t>(totalGlyphs) * sizeof(EpdGlyph) + bitmapSize;
+  const uint64_t expectedFileSize = 22ULL + expectedPayloadSize;
+  if (expectedFileSize != file.size()) {
+    LOG_ERR("SDFONT", "Invalid CPF layout in %s (expected %llu bytes, got %u)", path.c_str(),
+            static_cast<unsigned long long>(expectedFileSize), file.size());
+    return false;
+  }
 
   fontData.advanceY = advanceY;
   fontData.ascender = ascender;
@@ -87,19 +98,34 @@ bool SdFont::load(const std::string& path) {
   // Allocate and read intervals
   ownedIntervals = (EpdUnicodeInterval*)malloc(intervalCount * sizeof(EpdUnicodeInterval));
   if (!ownedIntervals) goto oom;
-  file.read(ownedIntervals, intervalCount * sizeof(EpdUnicodeInterval));
+  if (!readExact(ownedIntervals, intervalCount * sizeof(EpdUnicodeInterval))) {
+    LOG_ERR("SDFONT", "Failed to read intervals in %s", path.c_str());
+    unload();
+    file.close();
+    return false;
+  }
   fontData.intervals = ownedIntervals;
 
   // Allocate and read glyphs
   ownedGlyphs = (EpdGlyph*)malloc(totalGlyphs * sizeof(EpdGlyph));
   if (!ownedGlyphs) goto oom;
-  file.read(ownedGlyphs, totalGlyphs * sizeof(EpdGlyph));
+  if (!readExact(ownedGlyphs, totalGlyphs * sizeof(EpdGlyph))) {
+    LOG_ERR("SDFONT", "Failed to read glyph data in %s", path.c_str());
+    unload();
+    file.close();
+    return false;
+  }
   fontData.glyph = ownedGlyphs;
 
   // Allocate and read bitmaps
   ownedBitmap = (uint8_t*)malloc(bitmapSize);
   if (!ownedBitmap) goto oom;
-  file.read(ownedBitmap, bitmapSize);
+  if (!readExact(ownedBitmap, bitmapSize)) {
+    LOG_ERR("SDFONT", "Failed to read bitmap data in %s", path.c_str());
+    unload();
+    file.close();
+    return false;
+  }
   fontData.bitmap = ownedBitmap;
 
   file.close();

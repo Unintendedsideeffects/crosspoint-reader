@@ -11,6 +11,7 @@ This document describes all HTTP and WebSocket endpoints available on the CrossP
     - [GET `/api/files` - List Files](#get-apifiles---list-files)
     - [GET `/download` - Download File](#get-download---download-file)
     - [POST `/upload` - Upload File](#post-upload---upload-file)
+    - [POST `/api/user-fonts/rescan` - Rescan SD User Fonts](#post-apiuser-fontsrescan---rescan-sd-user-fonts)
     - [POST `/mkdir` - Create Folder](#post-mkdir---create-folder)
     - [POST `/delete` - Delete File or Folder](#post-delete---delete-file-or-folder)
   - [WebSocket Endpoint](#websocket-endpoint)
@@ -211,6 +212,30 @@ File uploaded successfully: mybook.epub
 **Notes:**
 - Existing files with the same name will be overwritten
 - Uses a 4KB buffer for efficient SD card writes
+
+---
+
+### POST `/api/user-fonts/rescan` - Rescan SD User Fonts
+
+Rescans the `/fonts` directory for `.cpf` fonts and reloads the currently selected external font if enabled.
+
+**Request:**
+```bash
+curl -X POST http://crosspoint.local/api/user-fonts/rescan
+```
+
+**Response (200 OK):**
+```json
+{
+  "families": 3,
+  "activeLoaded": true
+}
+```
+
+| Field          | Type    | Description |
+| -------------- | ------- | ----------- |
+| `families`     | number  | Number of discovered font families |
+| `activeLoaded` | boolean | `true` when the active external font could be loaded after rescan |
 
 ---
 
