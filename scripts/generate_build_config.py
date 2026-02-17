@@ -49,7 +49,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=287,
+        size_kb=282,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -91,13 +91,13 @@ FEATURES = {
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=202,
+        size_kb=-2,
         description='EPUB e-book reader with CSS and chapter navigation'
     ),
     'hyphenation': Feature(
         name='Hyphenation',
         flag='ENABLE_HYPHENATION',
-        size_kb=493,
+        size_kb=491,
         description='Language-aware hyphenation for justified EPUB text'
     ),
     'xtc_support': Feature(
@@ -115,13 +115,13 @@ FEATURES = {
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=232,
+        size_kb=239,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
         name='Todo Planner',
         flag='ENABLE_TODO_PLANNER',
-        size_kb=296,
+        size_kb=11,
         description='Standalone daily TODO/agenda planner with .md/.txt fallback and web quick-entry'
     ),
     'dark_mode': Feature(
@@ -145,7 +145,7 @@ FEATURES = {
     'user_fonts': Feature(
         name='User Fonts',
         flag='ENABLE_USER_FONTS',
-        size_kb=3,
+        size_kb=8,
         description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
     ),
     'web_wifi_setup': Feature(
@@ -157,7 +157,7 @@ FEATURES = {
     'usb_mass_storage': Feature(
         name='USB Mass Storage',
         flag='ENABLE_USB_MASS_STORAGE',
-        size_kb=8,
+        size_kb=1,
         description='On-device prompt for USB SD card access as mass storage'
     ),
 }
@@ -495,7 +495,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 1.86  # Lean profile size baseline (measured)
+    base_size_mb = 1.87  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
