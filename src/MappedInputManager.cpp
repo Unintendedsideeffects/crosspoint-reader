@@ -5,7 +5,9 @@
 #include "CrossPointSettings.h"
 
 namespace {
-constexpr unsigned long POWER_DOUBLE_TAP_MS = 350;
+// Double-tap window for power button (Back action).
+// Lowering this reduces latency for single-tap Confirm action.
+constexpr unsigned long POWER_DOUBLE_TAP_MS = 250;
 
 using ButtonIndex = uint8_t;
 
