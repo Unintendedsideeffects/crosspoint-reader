@@ -23,6 +23,15 @@ CrossPoint Reader aims to:
 
 This project is **not affiliated with Xteink**; it's built as a community project.
 
+## Fork Branch Strategy
+
+This fork tracks upstream while keeping a dedicated branch for fork-specific iteration.
+
+- `master`: sync point with upstream `crosspoint-reader/master`.
+- `fork-drift`: active fork branch for experimental and fork-specific capabilities (for example, configurator and release-channel work).
+
+For the full rationale and contribution target branch guidance, see [`docs/fork-strategy.md`](./docs/fork-strategy.md).
+
 ## Features & Usage
 
 - [x] EPUB parsing and rendering (EPUB 2 and EPUB 3)
