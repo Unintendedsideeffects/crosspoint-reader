@@ -2,6 +2,7 @@
 
 #include <GfxRenderer.h>
 #include <HalStorage.h>
+#include <I18n.h>
 #include <Serialization.h>
 #include <Utf8.h>
 
@@ -25,11 +26,6 @@ constexpr size_t CHUNK_SIZE = 8 * 1024;  // 8KB chunk for reading
 constexpr uint32_t CACHE_MAGIC = 0x54585449;  // "TXTI"
 constexpr uint8_t CACHE_VERSION = 2;          // Increment when cache format changes
 }  // namespace
-
-void TxtReaderActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<TxtReaderActivity*>(param);
-  self->displayTaskLoop();
-}
 
 void TxtReaderActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
@@ -56,10 +52,6 @@ void TxtReaderActivity::onEnter() {
       break;
   }
 
-  renderingMutex = xSemaphoreCreateMutex();
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
-
   txt->setupCacheDir();
 
   // Save current txt as last opened file and add to recent books
@@ -70,14 +62,7 @@ void TxtReaderActivity::onEnter() {
   RECENT_BOOKS.addBook(filePath, fileName, "", "");
 
   // Trigger first update
-  updateRequired = true;
-
-  xTaskCreate(&TxtReaderActivity::taskTrampoline, "TxtReaderActivityTask",
-              6144,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
 void TxtReaderActivity::onExit() {
@@ -86,9 +71,6 @@ void TxtReaderActivity::onExit() {
   // Reset orientation back to portrait for the rest of the UI
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);
 
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
   pageOffsets.clear();
   currentPageLines.clear();
   APP_STATE.readerActivityLoadCount = 0;
@@ -134,26 +116,10 @@ void TxtReaderActivity::loop() {
 
   if (prevTriggered && currentPage > 0) {
     currentPage--;
-    updateRequired = true;
+    requestUpdate();
   } else if (nextTriggered && currentPage < totalPages - 1) {
     currentPage++;
-    updateRequired = true;
-  }
-}
-
-void TxtReaderActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      if (!waitForRenderingMutex()) {
-        break;
-      }
-      if (!exitTaskRequested.load()) {
-        renderScreen();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    requestUpdate();
   }
 
   taskHasExited.store(true);
@@ -236,7 +202,7 @@ void TxtReaderActivity::buildPageIndex() {
 
   LOG_DBG("TRS", "Building page index for %zu bytes...", fileSize);
 
-  GUI.drawPopup(renderer, "Indexing...");
+  GUI.drawPopup(renderer, tr(STR_INDEXING));
 
   while (offset < fileSize) {
     if (exitTaskRequested.load()) {
@@ -411,8 +377,8 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>
   return !outLines.empty();
 }
 
-void TxtReaderActivity::renderScreen() {
-  if (!txt || exitTaskRequested.load()) {
+void TxtReaderActivity::render(Activity::RenderLock&&) {
+  if (!txt) {
     return;
   }
 
@@ -426,7 +392,7 @@ void TxtReaderActivity::renderScreen() {
 
   if (pageOffsets.empty()) {
     renderer.clearScreen();
-    renderer.drawCenteredText(UI_12_FONT_ID, 300, "Empty file", true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_EMPTY_FILE), true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }
@@ -586,8 +552,8 @@ void TxtReaderActivity::renderStatusBar(const int orientedMarginRight, const int
   }
 
   if (showBattery) {
-    GUI.drawBattery(renderer, Rect{orientedMarginLeft, textY, metrics.batteryWidth, metrics.batteryHeight},
-                    showBatteryPercentage);
+    GUI.drawBatteryLeft(renderer, Rect{orientedMarginLeft, textY, metrics.batteryWidth, metrics.batteryHeight},
+                        showBatteryPercentage);
   }
 
   if (showTitle) {

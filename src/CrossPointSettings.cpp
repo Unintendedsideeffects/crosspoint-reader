@@ -5,6 +5,7 @@
 #include <Serialization.h>
 
 #include <cstring>
+#include <string>
 
 #include "FeatureFlags.h"
 #include "SpiBusMutex.h"
@@ -22,9 +23,8 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 }
 
 namespace {
-constexpr uint8_t SETTINGS_FILE_VERSION = 2;
-// Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 31;
+constexpr uint8_t SETTINGS_FILE_VERSION = 1;
+// SETTINGS_COUNT is now calculated automatically in saveToFile
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 
 // Validate front button mapping to ensure each hardware button is unique.
@@ -54,6 +54,68 @@ void applyLegacyFrontButtonLayout(CrossPointSettings& settings) {
 }
 }  // namespace
 
+class SettingsWriter {
+ public:
+  bool is_counting = false;
+  uint8_t item_count = 0;
+  template <typename T>
+
+  void writeItem(FsFile& file, const T& value) {
+    if (is_counting) {
+      item_count++;
+    } else {
+      serialization::writePod(file, value);
+    }
+  }
+
+  void writeItemString(FsFile& file, const char* value) {
+    if (is_counting) {
+      item_count++;
+    } else {
+      serialization::writeString(file, std::string(value));
+    }
+  }
+};
+
+uint8_t CrossPointSettings::writeSettings(FsFile& file, bool count_only) const {
+  SettingsWriter writer;
+  writer.is_counting = count_only;
+
+  writer.writeItem(file, sleepScreen);
+  writer.writeItem(file, extraParagraphSpacing);
+  writer.writeItem(file, shortPwrBtn);
+  writer.writeItem(file, statusBar);
+  writer.writeItem(file, orientation);
+  writer.writeItem(file, frontButtonLayout);  // legacy
+  writer.writeItem(file, sideButtonLayout);
+  writer.writeItem(file, fontFamily);
+  writer.writeItem(file, fontSize);
+  writer.writeItem(file, lineSpacing);
+  writer.writeItem(file, paragraphAlignment);
+  writer.writeItem(file, sleepTimeout);
+  writer.writeItem(file, refreshFrequency);
+  writer.writeItem(file, screenMargin);
+  writer.writeItem(file, sleepScreenCoverMode);
+  writer.writeItemString(file, opdsServerUrl);
+  writer.writeItem(file, textAntiAliasing);
+  writer.writeItem(file, hideBatteryPercentage);
+  writer.writeItem(file, longPressChapterSkip);
+  writer.writeItem(file, hyphenationEnabled);
+  writer.writeItemString(file, opdsUsername);
+  writer.writeItemString(file, opdsPassword);
+  writer.writeItem(file, sleepScreenCoverFilter);
+  writer.writeItem(file, uiTheme);
+  writer.writeItem(file, frontButtonBack);
+  writer.writeItem(file, frontButtonConfirm);
+  writer.writeItem(file, frontButtonLeft);
+  writer.writeItem(file, frontButtonRight);
+  writer.writeItem(file, fadingFix);
+  writer.writeItem(file, embeddedStyle);
+  // New fields need to be added at end for backward compatibility
+
+  return writer.item_count;
+}
+
 bool CrossPointSettings::saveToFile() const {
   SpiBusMutex::Guard guard;
   // Make sure the directory exists
@@ -64,40 +126,15 @@ bool CrossPointSettings::saveToFile() const {
     return false;
   }
 
+  // First pass: count the items
+  uint8_t item_count = writeSettings(outputFile, true);  // This will just count, not write
+
+  // Write header
   serialization::writePod(outputFile, SETTINGS_FILE_VERSION);
-  serialization::writePod(outputFile, SETTINGS_COUNT);
-  serialization::writePod(outputFile, sleepScreen);
-  serialization::writePod(outputFile, extraParagraphSpacing);
-  serialization::writePod(outputFile, shortPwrBtn);
-  serialization::writePod(outputFile, statusBar);
-  serialization::writePod(outputFile, orientation);
-  serialization::writePod(outputFile, frontButtonLayout);  // legacy
-  serialization::writePod(outputFile, sideButtonLayout);
-  serialization::writePod(outputFile, fontFamily);
-  serialization::writePod(outputFile, fontSize);
-  serialization::writePod(outputFile, lineSpacing);
-  serialization::writePod(outputFile, paragraphAlignment);
-  serialization::writePod(outputFile, sleepTimeout);
-  serialization::writePod(outputFile, refreshFrequency);
-  serialization::writePod(outputFile, screenMargin);
-  serialization::writePod(outputFile, sleepScreenCoverMode);
-  serialization::writeString(outputFile, std::string(opdsServerUrl));
-  serialization::writePod(outputFile, textAntiAliasing);
-  serialization::writePod(outputFile, hideBatteryPercentage);
-  serialization::writePod(outputFile, longPressChapterSkip);
-  serialization::writePod(outputFile, hyphenationEnabled);
-  serialization::writeString(outputFile, std::string(opdsUsername));
-  serialization::writeString(outputFile, std::string(opdsPassword));
-  serialization::writePod(outputFile, sleepScreenCoverFilter);
-  serialization::writePod(outputFile, backgroundServerOnCharge);
-  serialization::writePod(outputFile, todoFallbackCover);
-  serialization::writePod(outputFile, timeMode);
-  serialization::writePod(outputFile, timeZoneOffset);
-  serialization::writePod(outputFile, lastTimeSyncEpoch);
-  serialization::writePod(outputFile, releaseChannel);
-  serialization::writePod(outputFile, sleepScreenSource);
-  serialization::writeString(outputFile, std::string(userFontPath));
-  // New fields added at end for backward compatibility
+  serialization::writePod(outputFile, static_cast<uint8_t>(item_count));
+  // Second pass: actually write the settings
+  writeSettings(outputFile);  // This will write the actual data
+
   outputFile.close();
 
   LOG_DBG("CPS", "Settings saved to file");

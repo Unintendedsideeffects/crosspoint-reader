@@ -3,6 +3,7 @@
 #include <Epub.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
+#include <I18n.h>
 
 #include <algorithm>
 #include <cctype>
@@ -80,46 +81,6 @@ void sortFileList(std::vector<std::string>& strs) {
 }
 }  // namespace
 
-int MyLibraryActivity::getPageItems() const {
-  const int screenHeight = renderer.getScreenHeight();
-  const int bottomBarHeight = 60;  // Space for button hints
-  const int availableHeight = screenHeight - CONTENT_START_Y - bottomBarHeight;
-
-#if ENABLE_VISUAL_COVER_PICKER
-  if (viewMode == ViewMode::Grid) {
-    const auto m = getGridMetrics();
-    return m.cols * m.rows;
-  }
-#endif
-
-  int items = availableHeight / LINE_HEIGHT;
-  if (items < 1) {
-    items = 1;
-  }
-  return items;
-}
-
-int MyLibraryActivity::getCurrentItemCount() const {
-  if (currentTab == Tab::Recent) {
-    return static_cast<int>(recentBooks.size());
-  }
-  return static_cast<int>(files.size());
-}
-
-void MyLibraryActivity::loadRecentBooks() {
-  recentBooks.clear();
-  const auto& books = RECENT_BOOKS.getBooks();
-  recentBooks.reserve(books.size());
-
-  for (const auto& book : books) {
-    // Skip if file no longer exists
-    if (!Storage.exists(book.path.c_str())) {
-      continue;
-    }
-    recentBooks.push_back(book);
-  }
-}
-
 void MyLibraryActivity::loadFiles() {
   files.clear();
 
@@ -171,32 +132,14 @@ void MyLibraryActivity::taskTrampoline(void* param) {
 void MyLibraryActivity::onEnter() {
   Activity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
-
-  // Load data for both tabs
-  loadRecentBooks();
   loadFiles();
-
   selectorIndex = 0;
-  updateRequired = true;
 
-  xTaskCreate(&MyLibraryActivity::taskTrampoline, "MyLibraryActivityTask",
-              4096,               // Stack size (increased for epub metadata loading)
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
 void MyLibraryActivity::onExit() {
   Activity::onExit();
-
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
-
   files.clear();
 }
 
@@ -284,7 +227,6 @@ void MyLibraryActivity::loop() {
   if (rightReleased && currentTab == Tab::Recent) {
     currentTab = Tab::Files;
     selectorIndex = 0;
-    updateRequired = true;
     return;
   }
 
@@ -300,48 +242,63 @@ void MyLibraryActivity::loop() {
   }
 #endif
 
-  if (prevReleased && itemCount > 0) {
-    if (skipPage) {
-      selectorIndex = ((selectorIndex / pageItems - 1) * pageItems + itemCount) % itemCount;
+    if (basepath.back() != '/') basepath += "/";
+    if (files[selectorIndex].back() == '/') {
+      basepath += files[selectorIndex].substr(0, files[selectorIndex].length() - 1);
+      loadFiles();
+      selectorIndex = 0;
+      requestUpdate();
     } else {
       selectorIndex = (selectorIndex + itemCount - 1) % itemCount;
     }
-    updateRequired = true;
-  } else if (nextReleased && itemCount > 0) {
-    if (skipPage) {
-      selectorIndex = ((selectorIndex / pageItems + 1) * pageItems) % itemCount;
-    } else {
-      selectorIndex = (selectorIndex + 1) % itemCount;
-    }
-    updateRequired = true;
   }
-}
 
-void MyLibraryActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
+    // Short press: go up one directory, or go home if at root
+    if (mappedInput.getHeldTime() < GO_HOME_MS) {
+      if (basepath != "/") {
+        const std::string oldPath = basepath;
+
+        basepath.replace(basepath.find_last_of('/'), std::string::npos, "");
+        if (basepath.empty()) basepath = "/";
+        loadFiles();
+
+        const auto pos = oldPath.find_last_of('/');
+        const std::string dirName = oldPath.substr(pos + 1) + "/";
+        selectorIndex = findEntry(dirName);
+
+        requestUpdate();
+      } else {
+        onGoHome();
       }
-      xSemaphoreGive(renderingMutex);
     }
-
-#if ENABLE_VISUAL_COVER_PICKER
-    if (viewMode == ViewMode::Grid) {
-      extractCovers();
-    }
-#endif
-
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    updateRequired = true;
   }
 
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
+  int listSize = static_cast<int>(files.size());
+
+  buttonNavigator.onNextRelease([this, listSize] {
+    selectorIndex = ButtonNavigator::nextIndex(static_cast<int>(selectorIndex), listSize);
+    requestUpdate();
+  });
+
+  buttonNavigator.onPreviousRelease([this, listSize] {
+    selectorIndex = ButtonNavigator::previousIndex(static_cast<int>(selectorIndex), listSize);
+    requestUpdate();
+  });
+
+  buttonNavigator.onNextContinuous([this, listSize, pageItems] {
+    selectorIndex = ButtonNavigator::nextPageIndex(static_cast<int>(selectorIndex), listSize, pageItems);
+    requestUpdate();
+  });
+
+  buttonNavigator.onPreviousContinuous([this, listSize, pageItems] {
+    selectorIndex = ButtonNavigator::previousPageIndex(static_cast<int>(selectorIndex), listSize, pageItems);
+    requestUpdate();
+  });
 }
 
-void MyLibraryActivity::render() const {
+void MyLibraryActivity::render(Activity::RenderLock&&) {
   renderer.clearScreen();
 
   // Draw tab bar
@@ -351,9 +308,13 @@ void MyLibraryActivity::render() const {
   };
   ScreenComponents::drawTabBar(renderer, TAB_BAR_Y, tabs);
 
-  // Draw content based on current tab
-  if (currentTab == Tab::Recent) {
-    renderRecentTab();
+  auto folderName = basepath == "/" ? tr(STR_SD_CARD) : basepath.substr(basepath.rfind('/') + 1).c_str();
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, folderName);
+
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+  if (files.empty()) {
+    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, tr(STR_NO_BOOKS_FOUND));
   } else {
 #if ENABLE_VISUAL_COVER_PICKER
     if (viewMode == ViewMode::Grid) {
@@ -367,7 +328,8 @@ void MyLibraryActivity::render() const {
   }
 
   // Help text
-  const auto labels = mappedInput.mapLabels(basepath == "/" ? "« Home" : "« Back", "Open", "Up", "Down");
+  const auto labels = mappedInput.mapLabels(basepath == "/" ? tr(STR_HOME) : tr(STR_BACK), tr(STR_OPEN), tr(STR_DIR_UP),
+                                            tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

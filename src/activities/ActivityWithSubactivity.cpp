@@ -1,25 +1,23 @@
 #include "ActivityWithSubactivity.h"
 
-void ActivityWithSubactivity::exitActivity() {
-  if (!subActivity) {
-    return;
+void ActivityWithSubactivity::renderTaskLoop() {
+  while (true) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    {
+      RenderLock lock(*this);
+      if (!subActivity) {
+        render(std::move(lock));
+      }
+      // If subActivity is set, consume the notification but skip parent render
+      // Note: the sub-activity will call its render() from its own display task
+    }
   }
-
-  if (isLoopingSubActivity) {
-    pendingExit = true;
-    return;
-  }
-
-  subActivity->onExit();
-  subActivity.reset();
 }
 
-void ActivityWithSubactivity::applyPendingSubActivityTransition() {
-  if (!pendingExit && !pendingSubActivity) {
-    return;
-  }
-
+void ActivityWithSubactivity::exitActivity() {
+  // No need to lock, since onExit() already acquires its own lock
   if (subActivity) {
+    LOG_DBG("ACT", "Exiting subactivity...");
     subActivity->onExit();
     subActivity.reset();
   }
@@ -32,17 +30,8 @@ void ActivityWithSubactivity::applyPendingSubActivityTransition() {
 }
 
 void ActivityWithSubactivity::enterNewActivity(Activity* activity) {
-  if (!activity) {
-    return;
-  }
-
-  if (isLoopingSubActivity) {
-    pendingExit = true;
-    pendingSubActivity.reset(activity);
-    return;
-  }
-
-  exitActivity();
+  // Acquire lock to avoid 2 activities rendering at the same time during transition
+  RenderLock lock(*this);
   subActivity.reset(activity);
   subActivity->onEnter();
 }
@@ -56,13 +45,15 @@ void ActivityWithSubactivity::loop() {
   }
 }
 
-void ActivityWithSubactivity::onExit() {
-  Activity::onExit();
-  isLoopingSubActivity = false;
-  pendingExit = false;
-  pendingSubActivity.reset();
-  if (subActivity) {
-    subActivity->onExit();
-    subActivity.reset();
+void ActivityWithSubactivity::requestUpdate() {
+  if (!subActivity) {
+    Activity::requestUpdate();
   }
+  // Sub-activity should call their own requestUpdate() from their loop() function
+}
+
+void ActivityWithSubactivity::onExit() {
+  // No need to lock, onExit() already acquires its own lock
+  exitActivity();
+  Activity::onExit();
 }
