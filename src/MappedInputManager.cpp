@@ -73,16 +73,16 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
   return false;
 }
 
-void MappedInputManager::updatePowerTapState() const {
+void MappedInputManager::updatePowerTapState() {
   if (!isDualSideLayout() && !isPowerTapSelectEnabled()) {
-    pendingPowerReleaseMs = 0;
-    doubleTapReadyMs = 0;
+    pendingPowerRelease = false;
+    doubleTapReady = false;
     return;
   }
 
   const unsigned long now = millis();
-  if (doubleTapReadyMs && now - doubleTapReadyMs > POWER_DOUBLE_TAP_MS) {
-    doubleTapReadyMs = 0;
+  if (doubleTapReady && now - doubleTapReadyMs > POWER_DOUBLE_TAP_MS) {
+    doubleTapReady = false;
   }
 
   if (!gpio.wasReleased(HalGPIO::BTN_POWER)) {
@@ -97,43 +97,45 @@ void MappedInputManager::updatePowerTapState() const {
 
   if (gpio.getHeldTime() >= SETTINGS.getPowerButtonDuration()) {
     // Long press detected - clear any pending short-tap state
-    pendingPowerReleaseMs = 0;
-    doubleTapReadyMs = 0;
+    pendingPowerRelease = false;
+    doubleTapReady = false;
     return;
   }
 
-  if (pendingPowerReleaseMs && now - pendingPowerReleaseMs <= POWER_DOUBLE_TAP_MS) {
-    pendingPowerReleaseMs = 0;
+  if (pendingPowerRelease && now - pendingPowerReleaseMs <= POWER_DOUBLE_TAP_MS) {
+    pendingPowerRelease = false;
+    doubleTapReady = true;
     doubleTapReadyMs = now;
     return;
   }
 
+  pendingPowerRelease = true;
   pendingPowerReleaseMs = now;
 }
 
-bool MappedInputManager::consumePowerConfirm() const {
+bool MappedInputManager::consumePowerConfirm() {
   updatePowerTapState();
-  if (!pendingPowerReleaseMs || doubleTapReadyMs) {
+  if (!pendingPowerRelease || doubleTapReady) {
     return false;
   }
   const unsigned long now = millis();
   if (now - pendingPowerReleaseMs > POWER_DOUBLE_TAP_MS) {
-    pendingPowerReleaseMs = 0;
+    pendingPowerRelease = false;
     return true;
   }
   return false;
 }
 
-bool MappedInputManager::consumePowerBack() const {
+bool MappedInputManager::consumePowerBack() {
   updatePowerTapState();
-  if (!doubleTapReadyMs) {
+  if (!doubleTapReady) {
     return false;
   }
-  doubleTapReadyMs = 0;
+  doubleTapReady = false;
   return true;
 }
 
-bool MappedInputManager::wasPressed(const Button button) const {
+bool MappedInputManager::wasPressed(const Button button) {
   if (button == Button::Confirm && consumePowerConfirm()) {
     return true;
   }
@@ -154,7 +156,7 @@ bool MappedInputManager::wasPressed(const Button button) const {
   return mapButton(button, &HalGPIO::wasPressed);
 }
 
-bool MappedInputManager::wasReleased(const Button button) const {
+bool MappedInputManager::wasReleased(const Button button) {
   if (button == Button::Confirm && consumePowerConfirm()) {
     return true;
   }

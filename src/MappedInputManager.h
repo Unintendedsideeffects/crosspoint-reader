@@ -15,9 +15,9 @@ class MappedInputManager {
 
   explicit MappedInputManager(HalGPIO& gpio) : gpio(gpio) {}
 
-  void update() const { gpio.update(); }
-  bool wasPressed(Button button) const;
-  bool wasReleased(Button button) const;
+  void update() { gpio.update(); }
+  bool wasPressed(Button button);
+  bool wasReleased(Button button);
   bool isPressed(Button button) const;
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;
@@ -28,12 +28,14 @@ class MappedInputManager {
 
  private:
   HalGPIO& gpio;
-  mutable unsigned long pendingPowerReleaseMs = 0;
-  mutable unsigned long doubleTapReadyMs = 0;
-  mutable bool powerReleaseConsumed = false;
+  unsigned long pendingPowerReleaseMs = 0;
+  unsigned long doubleTapReadyMs = 0;
+  bool pendingPowerRelease = false;
+  bool doubleTapReady = false;
+  bool powerReleaseConsumed = false;
 
   bool mapButton(Button button, bool (HalGPIO::*fn)(uint8_t) const) const;
-  void updatePowerTapState() const;
-  bool consumePowerConfirm() const;
-  bool consumePowerBack() const;
+  void updatePowerTapState();
+  bool consumePowerConfirm();
+  bool consumePowerBack();
 };

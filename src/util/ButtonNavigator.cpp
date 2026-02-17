@@ -1,6 +1,6 @@
 #include "ButtonNavigator.h"
 
-const MappedInputManager* ButtonNavigator::mappedInput = nullptr;
+MappedInputManager* ButtonNavigator::mappedInput = nullptr;
 
 void ButtonNavigator::onNext(const Callback& callback) {
   onNextPress(callback);

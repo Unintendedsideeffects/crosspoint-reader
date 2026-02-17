@@ -19,6 +19,8 @@ constexpr int HEADER_HEIGHT = 50;
 constexpr int ITEM_HEIGHT = 35;
 constexpr int MARGIN_X = 10;
 constexpr int CHECKBOX_SIZE = 20;
+
+bool isValidItemIndex(const int index, const size_t count) { return index >= 0 && static_cast<size_t>(index) < count; }
 }  // namespace
 
 TodoActivity::TodoActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string filePath,
@@ -67,8 +69,9 @@ void TodoActivity::loop() {
   const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
   const bool confirmReleased = mappedInput.wasReleased(MappedInputManager::Button::Confirm);
 
+  const int taskCount = static_cast<int>(items.size());
   // +1 for the "Add New Task" button at the end
-  const int totalItems = static_cast<int>(items.size()) + 1;
+  const int totalItems = taskCount + 1;
   const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
 
   // Navigation (Up/Down only)
@@ -93,15 +96,15 @@ void TodoActivity::loop() {
   }
 
   // Reordering (Left/Right) - only for task items, not headers or "Add New"
-  if (selectedIndex < static_cast<int>(items.size()) && !items[selectedIndex].isHeader) {
+  if (isValidItemIndex(selectedIndex, items.size()) && !items[static_cast<size_t>(selectedIndex)].isHeader) {
     if (leftPressed) {
       // Move task UP in list (swap with previous item, skipping headers)
       int targetIndex = selectedIndex - 1;
-      while (targetIndex >= 0 && items[targetIndex].isHeader) {
+      while (targetIndex >= 0 && items[static_cast<size_t>(targetIndex)].isHeader) {
         targetIndex--;
       }
       if (targetIndex >= 0) {
-        std::swap(items[selectedIndex], items[targetIndex]);
+        std::swap(items[static_cast<size_t>(selectedIndex)], items[static_cast<size_t>(targetIndex)]);
         selectedIndex = targetIndex;
         if (selectedIndex < scrollOffset) {
           scrollOffset = selectedIndex;
@@ -112,11 +115,11 @@ void TodoActivity::loop() {
     } else if (rightPressed) {
       // Move task DOWN in list (swap with next item, skipping headers)
       int targetIndex = selectedIndex + 1;
-      while (targetIndex < static_cast<int>(items.size()) && items[targetIndex].isHeader) {
+      while (targetIndex < taskCount && items[static_cast<size_t>(targetIndex)].isHeader) {
         targetIndex++;
       }
-      if (targetIndex < static_cast<int>(items.size())) {
-        std::swap(items[selectedIndex], items[targetIndex]);
+      if (targetIndex < taskCount) {
+        std::swap(items[static_cast<size_t>(selectedIndex)], items[static_cast<size_t>(targetIndex)]);
         selectedIndex = targetIndex;
         if (selectedIndex >= scrollOffset + visibleItems) {
           scrollOffset = selectedIndex - visibleItems + 1;
@@ -129,7 +132,7 @@ void TodoActivity::loop() {
 
   // Toggle / Select
   if (confirmReleased) {
-    if (selectedIndex < static_cast<int>(items.size())) {
+    if (isValidItemIndex(selectedIndex, items.size())) {
       toggleCurrentTask();
     } else {
       addNewTask();
@@ -194,28 +197,67 @@ void TodoActivity::saveTasks() {
     SdMan.mkdir(dirPath.c_str());
   }
 
-  FsFile file = SdMan.open(filePath.c_str(), FILE_WRITE | O_TRUNC);
-  if (!file) {
+  const std::string tempPath = filePath + ".tmp";
+  const std::string backupPath = filePath + ".bak";
+
+  if (SdMan.exists(tempPath.c_str())) {
+    SdMan.remove(tempPath.c_str());
+  }
+
+  FsFile file;
+  if (!SdMan.openFileForWrite("TDO", tempPath.c_str(), file)) {
     return;
   }
 
+  bool writeFailed = false;
   for (const auto& item : items) {
     if (item.isHeader) {
-      file.println(item.text.c_str());
+      if (file.println(item.text.c_str()) == 0) {
+        writeFailed = true;
+        break;
+      }
     } else {
-      file.print("- [");
-      file.print(item.checked ? "x" : " ");
-      file.print("] ");
-      file.println(item.text.c_str());
+      if (file.print("- [") == 0 || file.print(item.checked ? "x" : " ") == 0 || file.print("] ") == 0 ||
+          file.println(item.text.c_str()) == 0) {
+        writeFailed = true;
+        break;
+      }
     }
   }
   file.close();
+  if (writeFailed) {
+    SdMan.remove(tempPath.c_str());
+    return;
+  }
+
+  const bool hasExisting = SdMan.exists(filePath.c_str());
+  if (SdMan.exists(backupPath.c_str())) {
+    SdMan.remove(backupPath.c_str());
+  }
+
+  if (hasExisting && !SdMan.rename(filePath.c_str(), backupPath.c_str())) {
+    SdMan.remove(tempPath.c_str());
+    return;
+  }
+
+  if (!SdMan.rename(tempPath.c_str(), filePath.c_str())) {
+    if (hasExisting) {
+      SdMan.rename(backupPath.c_str(), filePath.c_str());
+    }
+    SdMan.remove(tempPath.c_str());
+    return;
+  }
+
+  if (hasExisting) {
+    SdMan.remove(backupPath.c_str());
+  }
 }
 
 void TodoActivity::toggleCurrentTask() {
-  if (selectedIndex >= 0 && selectedIndex < static_cast<int>(items.size())) {
-    if (!items[selectedIndex].isHeader) {
-      items[selectedIndex].checked = !items[selectedIndex].checked;
+  if (isValidItemIndex(selectedIndex, items.size())) {
+    auto& item = items[static_cast<size_t>(selectedIndex)];
+    if (!item.isHeader) {
+      item.checked = !item.checked;
       saveTasks();
       requestUpdate();
     }
@@ -235,7 +277,7 @@ void TodoActivity::addNewTask() {
           items.push_back(newItem);
           saveTasks();
           // Let's position on the new task so user can see it
-          selectedIndex = items.size() - 1;
+          selectedIndex = static_cast<int>(items.size()) - 1;
           const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
           if (selectedIndex >= scrollOffset + visibleItems) {
             scrollOffset = selectedIndex - visibleItems + 1;
@@ -273,8 +315,8 @@ void TodoActivity::renderScreen() {
       renderer.fillRect(0, y, renderer.getScreenWidth(), ITEM_HEIGHT);
     }
 
-    if (itemIndex < static_cast<int>(items.size())) {
-      renderItem(y, items[itemIndex], isSelected);
+    if (isValidItemIndex(itemIndex, items.size())) {
+      renderItem(y, items[static_cast<size_t>(itemIndex)], isSelected);
     } else {
       // "Add New" button
       renderer.drawCenteredText(UI_10_FONT_ID, y + 5, "+ Add New Task", !isSelected);
@@ -282,7 +324,8 @@ void TodoActivity::renderScreen() {
   }
 
   // Hints - show reorder hints for task items
-  bool canReorder = selectedIndex < static_cast<int>(items.size()) && !items[selectedIndex].isHeader;
+  const bool canReorder =
+      isValidItemIndex(selectedIndex, items.size()) && !items[static_cast<size_t>(selectedIndex)].isHeader;
   const auto labels = mappedInput.mapLabels("Back", "Toggle", canReorder ? "Move Up" : "", canReorder ? "Move Dn" : "");
   renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
