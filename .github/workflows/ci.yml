@@ -42,8 +42,11 @@ jobs:
         with:
           python-version: '3.14'
 
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
       - name: Validate feature key synchronization
-        run: python scripts/check_feature_key_sync.py
+        run: uv run python scripts/check_feature_key_sync.py
 
   cppcheck:
     runs-on: ubuntu-latest
