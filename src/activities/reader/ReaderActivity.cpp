@@ -2,7 +2,9 @@
 
 #include <HalStorage.h>
 
-#include "FeatureFlags.h"
+#include "CrossPointSettings.h"
+#include "Epub.h"
+#include "EpubReaderActivity.h"
 #include "Txt.h"
 #include "TxtReaderActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
@@ -49,7 +51,7 @@ std::unique_ptr<Epub> ReaderActivity::loadEpub(const std::string& path) {
   }
 
   auto epub = std::unique_ptr<Epub>(new Epub(path, "/.crosspoint"));
-  if (epub->load()) {
+  if (epub->load(true, SETTINGS.embeddedStyle == 0)) {
     return epub;
   }
 

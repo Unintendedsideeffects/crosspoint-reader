@@ -1,8 +1,5 @@
 #pragma once
 #include <Epub.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 #include <functional>
@@ -46,6 +43,7 @@ class KOReaderSyncActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&&) override;
   bool preventAutoSleep() override { return state == CONNECTING || state == SYNCING; }
   bool blocksBackgroundServer() override { return true; }
 
@@ -68,12 +66,6 @@ class KOReaderSyncActivity final : public ActivityWithSubactivity {
   int currentPage;
   int totalPagesInSpine;
 
-  TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
-  std::atomic<bool> exitTaskRequested{false};
-  std::atomic<bool> taskHasExited{false};
-  bool updateRequired = false;
-
   State state = WIFI_SELECTION;
   std::string statusMessage;
   std::string documentHash;
@@ -95,8 +87,4 @@ class KOReaderSyncActivity final : public ActivityWithSubactivity {
   void onWifiSelectionComplete(bool success);
   void performSync();
   void performUpload();
-
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();
-  void render();
 };

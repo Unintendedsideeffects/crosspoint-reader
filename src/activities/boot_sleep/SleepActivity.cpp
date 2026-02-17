@@ -4,10 +4,9 @@
 #include <Epub/converters/ImageToFramebufferDecoder.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-
-#include <algorithm>
-#include <cctype>
-#include <cstring>
+#include <I18n.h>
+#include <Txt.h>
+#include <Xtc.h>
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
@@ -229,13 +228,7 @@ void invalidateSleepImageCache() {
 
 void SleepActivity::onEnter() {
   Activity::onEnter();
-  // Skip the "Entering Sleep..." popup to avoid unnecessary screen refresh
-  // The sleep screen will be displayed immediately anyway
-
-  // Optional extension point for third-party sleep apps.
-  if (tryRenderExternalSleepApp(renderer, mappedInput)) {
-    return;
-  }
+  GUI.drawPopup(renderer, tr(STR_ENTERING_SLEEP));
 
   switch (SETTINGS.sleepScreen) {
     case (CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM):
@@ -321,8 +314,8 @@ void SleepActivity::renderDefaultSleepScreen() const {
 
   renderer.clearScreen();
   renderer.drawImage(Logo120, (pageWidth - 120) / 2, (pageHeight - 120) / 2, 120, 120);
-  renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 70, "CrossPoint", true, EpdFontFamily::BOLD);
-  renderer.drawCenteredText(SMALL_FONT_ID, pageHeight / 2 + 95, "SLEEPING");
+  renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 70, tr(STR_CROSSPOINT), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(SMALL_FONT_ID, pageHeight / 2 + 95, tr(STR_SLEEPING));
 
   // Make sleep screen dark unless light is selected in settings
   if (SETTINGS.sleepScreen != CrossPointSettings::SLEEP_SCREEN_MODE::LIGHT) {

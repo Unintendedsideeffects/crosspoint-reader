@@ -6,8 +6,6 @@
 #include <Logging.h>
 #include <expat.h>
 
-#include <cctype>
-
 #include "../../Epub.h"
 #include "../Page.h"
 #include "../converters/ImageDecoderFactory.h"
@@ -236,43 +234,28 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       }
 
       if (!src.empty()) {
-        src = sanitizeImageSrc(src);
         LOG_DBG("EHP", "Found image: src=%s", src.c_str());
-        if (src.empty()) {
-          LOG_ERR("EHP", "Image src empty after sanitization");
-          self->skipUntilDepth = self->depth;
-          self->depth += 1;
-          return;
-        }
 
         {
-          // Resolve the image path relative to the content base.
-          std::string resolvedPath =
-              (src[0] == '/') ? FsHelpers::normalisePath(src) : FsHelpers::normalisePath(self->contentBase + src);
-          std::string cachedImagePath = resolvedPath;
-          bool cleanupCachedCopy = false;
+          // Resolve the image path relative to the HTML file
+          std::string resolvedPath = FsHelpers::normalisePath(self->contentBase + src);
+
+          // Create a unique filename for the cached image
+          std::string ext;
+          size_t extPos = resolvedPath.rfind('.');
+          if (extPos != std::string::npos) {
+            ext = resolvedPath.substr(extPos);
+          }
+          std::string cachedImagePath = self->imageBasePath + std::to_string(self->imageCounter++) + ext;
+
+          // Extract image to cache file
+          FsFile cachedImageFile;
           bool extractSuccess = false;
-
-          if (self->epub) {
-            // EPUB mode: extract image into a cache file before decoding.
-            std::string ext;
-            size_t extPos = resolvedPath.rfind('.');
-            if (extPos != std::string::npos) {
-              ext = resolvedPath.substr(extPos);
-            }
-            cachedImagePath = self->imageBasePath + std::to_string(self->imageCounter++) + ext;
-            cleanupCachedCopy = true;
-
-            FsFile cachedImageFile;
-            if (Storage.openFileForWrite("EHP", cachedImagePath, cachedImageFile)) {
-              extractSuccess = self->epub->readItemContentsToStream(resolvedPath, cachedImageFile, 4096);
-              cachedImageFile.flush();
-              cachedImageFile.close();
-              delay(50);  // Give SD card time to sync
-            }
-          } else {
-            // Standalone HTML mode: image path already points to local storage.
-            extractSuccess = Storage.exists(cachedImagePath.c_str());
+          if (Storage.openFileForWrite("EHP", cachedImagePath, cachedImageFile)) {
+            extractSuccess = self->epub->readItemContentsToStream(resolvedPath, cachedImageFile, 4096);
+            cachedImageFile.flush();
+            cachedImageFile.close();
+            delay(50);  // Give SD card time to sync
           }
 
           if (extractSuccess) {
@@ -333,12 +316,10 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
               return;
             } else {
               LOG_ERR("EHP", "Failed to get image dimensions");
-              if (cleanupCachedCopy) {
-                Storage.remove(cachedImagePath.c_str());
-              }
+              Storage.remove(cachedImagePath.c_str());
             }
           } else {
-            LOG_ERR("EHP", "Failed to resolve image data");
+            LOG_ERR("EHP", "Failed to extract image");
           }
         }
       }

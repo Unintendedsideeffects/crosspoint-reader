@@ -4,6 +4,7 @@
 #include <HalDisplay.h>
 #include <HalGPIO.h>
 #include <HalStorage.h>
+#include <I18n.h>
 #include <Logging.h>
 #include <SPI.h>
 #include <builtinFonts/all.h>
@@ -433,14 +434,7 @@ void setup() {
   applyPendingFactoryReset();
 
   SETTINGS.loadFromFile();
-
-#if ENABLE_USER_FONTS
-  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
-    UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath);
-  }
-#endif
-  renderer.setDarkMode(SETTINGS.darkMode);
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  I18N.loadSettings();
   KOREADER_STORE.loadFromFile();
 #endif
   WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks

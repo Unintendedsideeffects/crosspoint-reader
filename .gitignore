@@ -3,6 +3,8 @@
 .DS_Store
 .idea
 lib/EpdFont/fontsrc
+lib/I18n/I18nStrings.cpp
+*.generated.h
 .vs
 build
 **/__pycache__/

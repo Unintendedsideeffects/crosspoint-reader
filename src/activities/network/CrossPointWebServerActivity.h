@@ -1,7 +1,4 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 #include <functional>
@@ -32,11 +29,6 @@ enum class WebServerActivityState {
  * with mode-specific UI rendering.
  */
 class CrossPointWebServerActivity final : public ActivityWithSubactivity {
-  TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
-  std::atomic<bool> exitTaskRequested{false};  // Signal for graceful task shutdown
-  std::atomic<bool> taskHasExited{false};      // Confirmation that task exited
-  bool updateRequired = false;
   WebServerActivityState state = WebServerActivityState::MODE_SELECTION;
   const std::function<void()> onGoBack;
 
@@ -54,16 +46,6 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   // Performance monitoring
   unsigned long lastHandleClientTime = 0;
 
-  // Upload progress tracking (for Calibre mode UI)
-  size_t lastProgressReceived = 0;
-  size_t lastProgressTotal = 0;
-  std::string currentUploadName;
-  std::string lastCompleteName;
-  unsigned long lastCompleteAt = 0;
-
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();  // No longer [[noreturn]] - exits gracefully
-  void render() const;
   void renderServerRunning() const;
   void renderCalibreUI() const;
   void renderFileTransferUI() const;
@@ -82,6 +64,7 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&&) override;
   bool skipLoopDelay() override { return webServer && webServer->isRunning(); }
   bool preventAutoSleep() override { return webServer && webServer->isRunning(); }
   bool blocksBackgroundServer() override { return true; }

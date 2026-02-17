@@ -45,8 +45,6 @@ class PageImage final : public PageElement {
  public:
   PageImage(std::shared_ptr<ImageBlock> block, const int16_t xPos, const int16_t yPos)
       : PageElement(xPos, yPos), imageBlock(std::move(block)) {}
-  int16_t getWidth() const { return imageBlock ? imageBlock->getWidth() : 0; }
-  int16_t getHeight() const { return imageBlock ? imageBlock->getHeight() : 0; }
   void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) override;
   bool serialize(FsFile& file) override;
   PageElementTag getTag() const override { return TAG_PageImage; }
