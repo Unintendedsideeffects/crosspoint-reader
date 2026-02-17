@@ -87,6 +87,10 @@
 #define ENABLE_WEB_WIFI_SETUP 1
 #endif
 
+#ifndef ENABLE_USB_MASS_STORAGE
+#define ENABLE_USB_MASS_STORAGE 1
+#endif
+
 // Enforce downstream dependencies at compile time.
 #if !ENABLE_INTEGRATIONS
 #undef ENABLE_KOREADER_SYNC

@@ -84,6 +84,10 @@ inline std::vector<SettingInfo> getSettingsList() {
       SettingInfo::Enum(StrId::STR_TIME_TO_SLEEP, &CrossPointSettings::sleepTimeout,
                         {StrId::STR_MIN_1, StrId::STR_MIN_5, StrId::STR_MIN_10, StrId::STR_MIN_15, StrId::STR_MIN_30},
                         "sleepTimeout", StrId::STR_CAT_SYSTEM),
+#if ENABLE_USB_MASS_STORAGE
+      SettingInfo::Toggle(StrId::STR_FILE_TRANSFER, &CrossPointSettings::usbMscPromptOnConnect, "usbMscPromptOnConnect",
+                          StrId::STR_CAT_SYSTEM),
+#endif
   };
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC

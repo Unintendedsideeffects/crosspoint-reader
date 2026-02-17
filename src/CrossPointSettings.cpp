@@ -22,9 +22,9 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 }
 
 namespace {
-constexpr uint8_t SETTINGS_FILE_VERSION = 2;
+constexpr uint8_t SETTINGS_FILE_VERSION = 3;
 // Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 31;
+constexpr uint8_t SETTINGS_COUNT = 32;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 
 // Validate front button mapping to ensure each hardware button is unique.
@@ -97,6 +97,7 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writePod(outputFile, releaseChannel);
   serialization::writePod(outputFile, sleepScreenSource);
   serialization::writeString(outputFile, std::string(userFontPath));
+  serialization::writePod(outputFile, usbMscPromptOnConnect);
   // New fields added at end for backward compatibility
   outputFile.close();
 
@@ -210,6 +211,10 @@ bool CrossPointSettings::loadFromFile() {
       userFontPath[sizeof(userFontPath) - 1] = '\0';
       if (++settingsRead >= fileSettingsCount) break;
     }
+    if (version >= 3) {
+      serialization::readPod(inputFile, usbMscPromptOnConnect);
+      if (++settingsRead >= fileSettingsCount) break;
+    }
     // New fields added at end for backward compatibility
   } while (false);
 
@@ -309,6 +314,7 @@ void CrossPointSettings::validateAndClamp() {
   hyphenationEnabled = hyphenationEnabled ? 1 : 0;
   longPressChapterSkip = longPressChapterSkip ? 1 : 0;
   backgroundServerOnCharge = backgroundServerOnCharge ? 1 : 0;
+  usbMscPromptOnConnect = usbMscPromptOnConnect ? 1 : 0;
 
   enforceButtonLayoutConstraints();
 }

@@ -38,6 +38,7 @@ class FeatureManifest {
   static constexpr bool hasBleWifiProvisioning() { return ENABLE_BLE_WIFI_PROVISIONING != 0; }
   static constexpr bool hasUserFonts() { return ENABLE_USER_FONTS != 0; }
   static constexpr bool hasWebWifiSetup() { return ENABLE_WEB_WIFI_SETUP != 0; }
+  static constexpr bool hasUsbMassStorage() { return ENABLE_USB_MASS_STORAGE != 0; }
 
   /**
    * Count how many compile-time features are enabled.
@@ -47,7 +48,8 @@ class FeatureManifest {
     return hasExtendedFonts() + hasOpenDyslexicFonts() + hasImageSleep() + hasMarkdown() + hasIntegrations() +
            hasKOReaderSync() + hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin() +
            hasEpubSupport() + hasHyphenation() + hasXtcSupport() + hasLyraTheme() + hasOtaUpdates() + hasTodoPlanner() +
-           hasDarkMode() + hasVisualCoverPicker() + hasBleWifiProvisioning() + hasUserFonts() + hasWebWifiSetup();
+           hasDarkMode() + hasVisualCoverPicker() + hasBleWifiProvisioning() + hasUserFonts() + hasWebWifiSetup() +
+           hasUsbMassStorage();
   }
 
   /**
@@ -87,6 +89,7 @@ class FeatureManifest {
     addFeature(hasBleWifiProvisioning(), "ble_wifi_provisioning");
     addFeature(hasUserFonts(), "user_fonts");
     addFeature(hasWebWifiSetup(), "web_wifi_setup");
+    addFeature(hasUsbMassStorage(), "usb_mass_storage");
 
     return build.isEmpty() ? "lean" : build;
   }
@@ -118,6 +121,7 @@ class FeatureManifest {
     json += ",\"ble_wifi_provisioning\":" + String(hasBleWifiProvisioning() ? "true" : "false");
     json += ",\"user_fonts\":" + String(hasUserFonts() ? "true" : "false");
     json += ",\"web_wifi_setup\":" + String(hasWebWifiSetup() ? "true" : "false");
+    json += ",\"usb_mass_storage\":" + String(hasUsbMassStorage() ? "true" : "false");
     json += "}";
     return json;
   }
@@ -149,7 +153,8 @@ class FeatureManifest {
     LOG_INF("FEATURES", "  BLE WiFi Provision: %s", hasBleWifiProvisioning() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  User Fonts:        %s", hasUserFonts() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  Web WiFi Setup:    %s", hasWebWifiSetup() ? "ENABLED " : "DISABLED");
-    LOG_INF("FEATURES", "%d/21 compile-time features enabled", enabledFeatureCount());
+    LOG_INF("FEATURES", "  USB Mass Storage:  %s", hasUsbMassStorage() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "%d/22 compile-time features enabled", enabledFeatureCount());
     LOG_INF("FEATURES", "Build: %s", getBuildString().c_str());
   }
 };

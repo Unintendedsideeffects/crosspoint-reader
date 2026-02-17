@@ -118,6 +118,11 @@ on:
         required: false
         type: boolean
         default: true
+      usb_mass_storage:
+        description: 'USB Mass Storage prompt mode (~8KB)'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build-custom:
@@ -180,6 +185,7 @@ jobs:
           [ "${{ inputs.ble_wifi_provisioning }}" == "true" ] && CMD+=(--enable ble_wifi_provisioning) || CMD+=(--disable ble_wifi_provisioning)
           [ "${{ inputs.user_fonts }}" == "true" ] && CMD+=(--enable user_fonts) || CMD+=(--disable user_fonts)
           [ "${{ inputs.web_wifi_setup }}" == "true" ] && CMD+=(--enable web_wifi_setup) || CMD+=(--disable web_wifi_setup)
+          [ "${{ inputs.usb_mass_storage }}" == "true" ] && CMD+=(--enable usb_mass_storage) || CMD+=(--disable usb_mass_storage)
 
           echo "Executing: ${CMD[@]}"
           "${CMD[@]}"
@@ -436,6 +442,7 @@ jobs:
           echo "- BLE WiFi: ${{ inputs.ble_wifi_provisioning }}" >> $GITHUB_STEP_SUMMARY
           echo "- User Fonts: ${{ inputs.user_fonts }}" >> $GITHUB_STEP_SUMMARY
           echo "- Web WiFi Setup: ${{ inputs.web_wifi_setup }}" >> $GITHUB_STEP_SUMMARY
+          echo "- USB Mass Storage: ${{ inputs.usb_mass_storage }}" >> $GITHUB_STEP_SUMMARY
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Firmware Size" >> $GITHUB_STEP_SUMMARY

@@ -1191,6 +1191,17 @@
                 </div>
               </div>
 
+              <label class="skill-card" data-feature="usb_mass_storage" data-node-id="usb_mass_storage">
+                <input type="checkbox" id="usb_mass_storage" data-feature="usb_mass_storage" />
+                <div class="card-icon"><span>&#x2398;</span></div>
+                <div class="card-body">
+                  <div class="card-name">USB Mass Storage</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">On-device prompt to expose SD card over USB with lock mode safety</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
+
               <label class="skill-card" data-feature="ota_updates" data-node-id="ota_updates">
                 <input type="checkbox" id="ota_updates" data-feature="ota_updates" />
                 <div class="card-icon"><span>&#x25B2;</span></div>
@@ -1531,6 +1542,11 @@
           flag: "ENABLE_WEB_WIFI_SETUP",
           default: true,
         },
+        usb_mass_storage: {
+          sizeKb: 8,
+          flag: "ENABLE_USB_MASS_STORAGE",
+          default: true,
+        },
       };
 
       const BASE_SIZE_MB = 1.66;
@@ -1555,7 +1571,7 @@
       const HUB_FEATURES = {
         reading_hub: ["markdown", "xtc_support", "epub_support", "hyphenation", "todo_planner"],
         interface_hub: ["extended_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin", "dark_mode", "visual_cover_picker", "user_fonts"],
-        network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync", "ble_wifi_provisioning", "web_wifi_setup"],
+        network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync", "ble_wifi_provisioning", "web_wifi_setup", "usb_mass_storage"],
         extras_hub: ["ota_updates", "integrations", "home_media_picker"],
       };
 
@@ -1586,6 +1602,7 @@
           home_media_picker: true,
           dark_mode: true,
           user_fonts: true,
+          usb_mass_storage: true,
         },
         full: {
           extended_fonts: true,
@@ -1609,6 +1626,7 @@
           ble_wifi_provisioning: true,
           user_fonts: true,
           web_wifi_setup: true,
+          usb_mass_storage: true,
         },
       };
 

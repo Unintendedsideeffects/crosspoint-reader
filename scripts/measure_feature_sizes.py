@@ -51,6 +51,7 @@ FEATURES = [
     'ble_wifi_provisioning',
     'user_fonts',
     'web_wifi_setup',
+    'usb_mass_storage',
 ]
 
 HAS_UV = shutil.which("uv") is not None
