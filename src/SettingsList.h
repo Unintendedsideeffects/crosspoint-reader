@@ -47,17 +47,16 @@ inline std::vector<SettingInfo> getSettingsList() {
                           StrId::STR_CAT_DISPLAY),
 
       // --- Reader ---
-      SettingInfo::Enum(
-          StrId::STR_FONT_FAMILY, &CrossPointSettings::fontFamily,
-          {
-              StrId::STR_BOOKERLY,
-              StrId::STR_NOTO_SANS,
-              StrId::STR_OPEN_DYSLEXIC,
+      SettingInfo::Enum(StrId::STR_FONT_FAMILY, &CrossPointSettings::fontFamily,
+                        {
+                            StrId::STR_BOOKERLY,
+                            StrId::STR_NOTO_SANS,
+                            StrId::STR_OPEN_DYSLEXIC,
 #if ENABLE_USER_FONTS
-              StrId::STR_EXTERNAL_FONT,
+                            StrId::STR_EXTERNAL_FONT,
 #endif
-          },
-          "fontFamily", StrId::STR_CAT_READER),
+                        },
+                        "fontFamily", StrId::STR_CAT_READER),
       SettingInfo::Enum(StrId::STR_FONT_SIZE, &CrossPointSettings::fontSize,
                         {StrId::STR_SMALL, StrId::STR_MEDIUM, StrId::STR_LARGE, StrId::STR_X_LARGE}, "fontSize",
                         StrId::STR_CAT_READER),
@@ -135,7 +134,8 @@ inline std::vector<SettingInfo> getSettingsList() {
 
 #if ENABLE_USER_FONTS
   SettingInfo userFontPathSetting = SettingInfo::DynamicEnum(
-      StrId::STR_EXTERNAL_FONT, {}, [] {
+      StrId::STR_EXTERNAL_FONT, {},
+      [] {
         auto& manager = UserFontManager::getInstance();
         manager.scanFonts();
         const auto& fonts = manager.getAvailableFonts();

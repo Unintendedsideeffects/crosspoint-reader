@@ -40,6 +40,12 @@ FEATURES = {
         size_kb=0,
         description='PNG and JPEG sleep screen support (BMP always included)'
     ),
+    'book_images': Feature(
+        name='Book Images',
+        flag='ENABLE_BOOK_IMAGES',
+        size_kb=0,
+        description='Inline image rendering in EPUB and Markdown readers'
+    ),
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
@@ -85,8 +91,8 @@ FEATURES = {
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=-2,
-        description='EPUB e-book reader with CSS, images, and chapter navigation'
+        size_kb=202,
+        description='EPUB e-book reader with CSS and chapter navigation'
     ),
     'hyphenation': Feature(
         name='Hyphenation',
@@ -186,6 +192,13 @@ FEATURE_METADATA = {
         recommends=[]
     ),
     'image_sleep': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'book_images': FeatureMetadata(
         implemented=True,
         stable=True,
         requires=[],
@@ -422,6 +435,7 @@ PROFILES = {
             'extended_fonts': True,
             'image_sleep': True,
             'epub_support': True,
+            'book_images': True,
             'hyphenation': True,
             'xtc_support': True,
             'lyra_theme': True,
@@ -439,6 +453,7 @@ PROFILES = {
             'extended_fonts': True,
             'opendyslexic_fonts': False,  # Too large to include with other fonts
             'image_sleep': True,
+            'book_images': True,
             'markdown': True,
             'integrations': True,
             'koreader_sync': True,

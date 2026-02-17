@@ -374,9 +374,9 @@ void onGoToTodo() {
   const bool todoMdExists = Storage.exists(todoMdPath.c_str());
   const bool todoTxtExists = Storage.exists(todoTxtPath.c_str());
   if (todoMdExists || todoTxtExists) {
-    enterNewActivity(new TodoActivity(renderer, mappedInputManager,
-                                      TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists),
-                                      today, onGoHome));
+    enterNewActivity(new TodoActivity(
+        renderer, mappedInputManager,
+        TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists), today, onGoHome));
     return;
   }
 
@@ -388,9 +388,9 @@ void onGoToTodo() {
   }
 
   // 3. Default: Create/Open new list
-  enterNewActivity(new TodoActivity(renderer, mappedInputManager,
-                                    TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists),
-                                    today, onGoHome));
+  enterNewActivity(new TodoActivity(
+      renderer, mappedInputManager,
+      TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists), today, onGoHome));
 }
 #endif  // ENABLE_TODO_PLANNER
 
@@ -579,7 +579,8 @@ void loop() {
     if (!Storage.begin()) {
       LOG_ERR("USBMSC", "SD remount failed after USB MSC exit");
       exitActivity();
-      enterNewActivity(new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
+      enterNewActivity(
+          new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
       return;
     }
     onGoHome();

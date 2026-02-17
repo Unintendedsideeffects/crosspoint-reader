@@ -101,6 +101,26 @@ Enables PNG and JPEG format support for custom sleep screen images.
 
 ---
 
+### Book Images
+
+**Flag:** `ENABLE_BOOK_IMAGES`
+**Size Impact:** ~0KB
+**Default:** Enabled
+
+Controls inline image rendering inside EPUB and Markdown books.
+
+**When enabled:**
+- `<img>` content in EPUB chapters is rendered inline
+- Markdown image syntax (`![alt](path)`) renders inline images when supported
+
+**When disabled:**
+- Inline images are replaced with fallback text labels
+- Text layout, navigation, and chapter rendering remain available
+
+**Use case:** Disable for text-only reading behavior or to troubleshoot problematic inline image content.
+
+---
+
 ### Markdown/Obsidian
 
 **Flag:** `ENABLE_MARKDOWN`
@@ -549,6 +569,7 @@ build_flags =
   -DCROSSPOINT_VERSION="${crosspoint.version}-custom"
   -DENABLE_EXTENDED_FONTS=1
   -DENABLE_IMAGE_SLEEP=1
+  -DENABLE_BOOK_IMAGES=1
   -DENABLE_MARKDOWN=0
   -DENABLE_INTEGRATIONS=0
   -DENABLE_KOREADER_SYNC=0

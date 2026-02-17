@@ -103,6 +103,7 @@ Behavior:
 |---------|------|------|--------|--------------|
 | Extended Fonts | `ENABLE_EXTENDED_FONTS` | ~3.5MB | ✅ Stable | None |
 | PNG/JPEG Sleep | `ENABLE_IMAGE_SLEEP` | ~33KB | ✅ Stable | None |
+| Book Images | `ENABLE_BOOK_IMAGES` | ~0KB | ✅ Stable | None |
 | Markdown/Obsidian | `ENABLE_MARKDOWN` | ~158KB | ✅ Stable | None |
 | Integrations Base | `ENABLE_INTEGRATIONS` | ~0KB | ✅ Stable | None |
 | KOReader Sync | `ENABLE_KOREADER_SYNC` | ~2KB | ✅ Stable | `ENABLE_INTEGRATIONS` |

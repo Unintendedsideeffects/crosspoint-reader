@@ -20,6 +20,7 @@ class FeatureManifest {
   static constexpr bool hasExtendedFonts() { return ENABLE_EXTENDED_FONTS != 0; }
   static constexpr bool hasOpenDyslexicFonts() { return ENABLE_OPENDYSLEXIC_FONTS != 0; }
   static constexpr bool hasImageSleep() { return ENABLE_IMAGE_SLEEP != 0; }
+  static constexpr bool hasBookImages() { return ENABLE_BOOK_IMAGES != 0; }
   static constexpr bool hasMarkdown() { return ENABLE_MARKDOWN != 0; }
   static constexpr bool hasIntegrations() { return ENABLE_INTEGRATIONS != 0; }
   static constexpr bool hasKOReaderSync() { return ENABLE_KOREADER_SYNC != 0; }
@@ -45,11 +46,11 @@ class FeatureManifest {
    * Useful for debugging and capacity planning.
    */
   static constexpr int enabledFeatureCount() {
-    return hasExtendedFonts() + hasOpenDyslexicFonts() + hasImageSleep() + hasMarkdown() + hasIntegrations() +
-           hasKOReaderSync() + hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin() +
-           hasEpubSupport() + hasHyphenation() + hasXtcSupport() + hasLyraTheme() + hasOtaUpdates() + hasTodoPlanner() +
-           hasDarkMode() + hasVisualCoverPicker() + hasBleWifiProvisioning() + hasUserFonts() + hasWebWifiSetup() +
-           hasUsbMassStorage();
+    return hasExtendedFonts() + hasOpenDyslexicFonts() + hasImageSleep() + hasBookImages() + hasMarkdown() +
+           hasIntegrations() + hasKOReaderSync() + hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() +
+           hasWebPokedexPlugin() + hasEpubSupport() + hasHyphenation() + hasXtcSupport() + hasLyraTheme() +
+           hasOtaUpdates() + hasTodoPlanner() + hasDarkMode() + hasVisualCoverPicker() + hasBleWifiProvisioning() +
+           hasUserFonts() + hasWebWifiSetup() + hasUsbMassStorage();
   }
 
   /**
@@ -71,6 +72,7 @@ class FeatureManifest {
     addFeature(hasExtendedFonts(), "extended_fonts");
     addFeature(hasOpenDyslexicFonts(), "opendyslexic_fonts");
     addFeature(hasImageSleep(), "image_sleep");
+    addFeature(hasBookImages(), "book_images");
     addFeature(hasMarkdown(), "markdown");
     addFeature(hasIntegrations(), "integrations");
     addFeature(hasKOReaderSync(), "koreader_sync");
@@ -103,6 +105,7 @@ class FeatureManifest {
     json += "\"extended_fonts\":" + String(hasExtendedFonts() ? "true" : "false");
     json += ",\"opendyslexic_fonts\":" + String(hasOpenDyslexicFonts() ? "true" : "false");
     json += ",\"image_sleep\":" + String(hasImageSleep() ? "true" : "false");
+    json += ",\"book_images\":" + String(hasBookImages() ? "true" : "false");
     json += ",\"markdown\":" + String(hasMarkdown() ? "true" : "false");
     json += ",\"integrations\":" + String(hasIntegrations() ? "true" : "false");
     json += ",\"koreader_sync\":" + String(hasKOReaderSync() ? "true" : "false");
@@ -135,6 +138,7 @@ class FeatureManifest {
     LOG_INF("FEATURES", "  Extended Fonts:    %s", hasExtendedFonts() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  OpenDyslexic:      %s", hasOpenDyslexicFonts() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  Image Sleep:       %s", hasImageSleep() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Book Images:       %s", hasBookImages() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  Markdown:          %s", hasMarkdown() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  Integrations:      %s", hasIntegrations() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  KOReader Sync:     %s", hasKOReaderSync() ? "ENABLED " : "DISABLED");
@@ -154,7 +158,7 @@ class FeatureManifest {
     LOG_INF("FEATURES", "  User Fonts:        %s", hasUserFonts() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  Web WiFi Setup:    %s", hasWebWifiSetup() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  USB Mass Storage:  %s", hasUsbMassStorage() ? "ENABLED " : "DISABLED");
-    LOG_INF("FEATURES", "%d/22 compile-time features enabled", enabledFeatureCount());
+    LOG_INF("FEATURES", "%d/23 compile-time features enabled", enabledFeatureCount());
     LOG_INF("FEATURES", "Build: %s", getBuildString().c_str());
   }
 };

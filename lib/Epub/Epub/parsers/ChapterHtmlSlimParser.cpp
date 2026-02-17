@@ -1,5 +1,6 @@
 #include "ChapterHtmlSlimParser.h"
 
+#include <FeatureFlags.h>
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
@@ -10,8 +11,10 @@
 
 #include "../../Epub.h"
 #include "../Page.h"
+#if ENABLE_BOOK_IMAGES
 #include "../converters/ImageDecoderFactory.h"
 #include "../converters/ImageToFramebufferDecoder.h"
+#endif
 #include "../htmlEntities.h"
 
 const char* HEADER_TAGS[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
@@ -54,6 +57,7 @@ bool isHeaderOrBlock(const char* name) {
   return matches(name, HEADER_TAGS, NUM_HEADER_TAGS) || matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS);
 }
 
+#if ENABLE_BOOK_IMAGES
 int hexToInt(const char c) {
   if (c >= '0' && c <= '9') {
     return c - '0';
@@ -115,6 +119,7 @@ std::string sanitizeImageSrc(const std::string& rawSrc) {
   }
   return decodePercentEncoding(src);
 }
+#endif
 
 // Update effective bold/italic/underline based on block style and inline style stack
 void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
@@ -234,132 +239,132 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
           alt = atts[i + 1];
         }
       }
+    }
 
-      if (!src.empty()) {
-        src = sanitizeImageSrc(src);
-        LOG_DBG("EHP", "Found image: src=%s", src.c_str());
-        if (src.empty()) {
-          LOG_ERR("EHP", "Image src empty after sanitization");
-          self->skipUntilDepth = self->depth;
+#if ENABLE_BOOK_IMAGES
+    if (!src.empty()) {
+      src = sanitizeImageSrc(src);
+      LOG_DBG("EHP", "Found image: src=%s", src.c_str());
+      if (src.empty()) {
+        LOG_ERR("EHP", "Image src empty after sanitization");
+        self->skipUntilDepth = self->depth;
+        self->depth += 1;
+        return;
+      }
+
+      // Resolve the image path relative to the content base.
+      std::string resolvedPath =
+          (src[0] == '/') ? FsHelpers::normalisePath(src) : FsHelpers::normalisePath(self->contentBase + src);
+      std::string cachedImagePath = resolvedPath;
+      bool cleanupCachedCopy = false;
+      bool extractSuccess = false;
+
+      if (self->epub) {
+        // EPUB mode: extract image into a cache file before decoding.
+        std::string ext;
+        size_t extPos = resolvedPath.rfind('.');
+        if (extPos != std::string::npos) {
+          ext = resolvedPath.substr(extPos);
+        }
+        cachedImagePath = self->imageBasePath + std::to_string(self->imageCounter++) + ext;
+        cleanupCachedCopy = true;
+
+        FsFile cachedImageFile;
+        if (Storage.openFileForWrite("EHP", cachedImagePath, cachedImageFile)) {
+          extractSuccess = self->epub->readItemContentsToStream(resolvedPath, cachedImageFile, 4096);
+          cachedImageFile.flush();
+          cachedImageFile.close();
+          delay(50);  // Give SD card time to sync
+        }
+      } else {
+        // Standalone HTML mode: image path already points to local storage.
+        extractSuccess = Storage.exists(cachedImagePath.c_str());
+      }
+
+      if (extractSuccess) {
+        // Get image dimensions
+        ImageDimensions dims = {0, 0};
+        ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(cachedImagePath);
+        if (decoder && decoder->getDimensions(cachedImagePath, dims)) {
+          LOG_DBG("EHP", "Image dimensions: %dx%d", dims.width, dims.height);
+
+          // Scale to fit viewport while maintaining aspect ratio
+          int maxWidth = self->viewportWidth;
+          int maxHeight = self->viewportHeight;
+          float scaleX = (dims.width > maxWidth) ? (float)maxWidth / dims.width : 1.0f;
+          float scaleY = (dims.height > maxHeight) ? (float)maxHeight / dims.height : 1.0f;
+          float scale = (scaleX < scaleY) ? scaleX : scaleY;
+          if (scale > 1.0f) scale = 1.0f;
+
+          int displayWidth = (int)(dims.width * scale);
+          int displayHeight = (int)(dims.height * scale);
+
+          LOG_DBG("EHP", "Display size: %dx%d (scale %.2f)", displayWidth, displayHeight, scale);
+
+          // Create page for image - only break if image won't fit remaining space
+          if (self->currentPage && !self->currentPage->elements.empty() &&
+              (self->currentPageNextY + displayHeight > self->viewportHeight)) {
+            self->completePageFn(std::move(self->currentPage));
+            self->currentPage.reset(new Page());
+            if (!self->currentPage) {
+              LOG_ERR("EHP", "Failed to create new page");
+              return;
+            }
+            self->currentPageNextY = 0;
+          } else if (!self->currentPage) {
+            self->currentPage.reset(new Page());
+            if (!self->currentPage) {
+              LOG_ERR("EHP", "Failed to create initial page");
+              return;
+            }
+            self->currentPageNextY = 0;
+          }
+
+          // Create ImageBlock and add to page
+          auto imageBlock = std::make_shared<ImageBlock>(cachedImagePath, displayWidth, displayHeight);
+          if (!imageBlock) {
+            LOG_ERR("EHP", "Failed to create ImageBlock");
+            return;
+          }
+          int xPos = (self->viewportWidth - displayWidth) / 2;
+          auto pageImage = std::make_shared<PageImage>(imageBlock, xPos, self->currentPageNextY);
+          if (!pageImage) {
+            LOG_ERR("EHP", "Failed to create PageImage");
+            return;
+          }
+          self->currentPage->elements.push_back(pageImage);
+          self->currentPageNextY += displayHeight;
+
           self->depth += 1;
           return;
         }
 
-        {
-          // Resolve the image path relative to the content base.
-          std::string resolvedPath =
-              (src[0] == '/') ? FsHelpers::normalisePath(src) : FsHelpers::normalisePath(self->contentBase + src);
-          std::string cachedImagePath = resolvedPath;
-          bool cleanupCachedCopy = false;
-          bool extractSuccess = false;
-
-          if (self->epub) {
-            // EPUB mode: extract image into a cache file before decoding.
-            std::string ext;
-            size_t extPos = resolvedPath.rfind('.');
-            if (extPos != std::string::npos) {
-              ext = resolvedPath.substr(extPos);
-            }
-            cachedImagePath = self->imageBasePath + std::to_string(self->imageCounter++) + ext;
-            cleanupCachedCopy = true;
-
-            FsFile cachedImageFile;
-            if (Storage.openFileForWrite("EHP", cachedImagePath, cachedImageFile)) {
-              extractSuccess = self->epub->readItemContentsToStream(resolvedPath, cachedImageFile, 4096);
-              cachedImageFile.flush();
-              cachedImageFile.close();
-              delay(50);  // Give SD card time to sync
-            }
-          } else {
-            // Standalone HTML mode: image path already points to local storage.
-            extractSuccess = Storage.exists(cachedImagePath.c_str());
-          }
-
-          if (extractSuccess) {
-            // Get image dimensions
-            ImageDimensions dims = {0, 0};
-            ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(cachedImagePath);
-            if (decoder && decoder->getDimensions(cachedImagePath, dims)) {
-              LOG_DBG("EHP", "Image dimensions: %dx%d", dims.width, dims.height);
-
-              // Scale to fit viewport while maintaining aspect ratio
-              int maxWidth = self->viewportWidth;
-              int maxHeight = self->viewportHeight;
-              float scaleX = (dims.width > maxWidth) ? (float)maxWidth / dims.width : 1.0f;
-              float scaleY = (dims.height > maxHeight) ? (float)maxHeight / dims.height : 1.0f;
-              float scale = (scaleX < scaleY) ? scaleX : scaleY;
-              if (scale > 1.0f) scale = 1.0f;
-
-              int displayWidth = (int)(dims.width * scale);
-              int displayHeight = (int)(dims.height * scale);
-
-              LOG_DBG("EHP", "Display size: %dx%d (scale %.2f)", displayWidth, displayHeight, scale);
-
-              // Create page for image - only break if image won't fit remaining space
-              if (self->currentPage && !self->currentPage->elements.empty() &&
-                  (self->currentPageNextY + displayHeight > self->viewportHeight)) {
-                self->completePageFn(std::move(self->currentPage));
-                self->currentPage.reset(new Page());
-                if (!self->currentPage) {
-                  LOG_ERR("EHP", "Failed to create new page");
-                  return;
-                }
-                self->currentPageNextY = 0;
-              } else if (!self->currentPage) {
-                self->currentPage.reset(new Page());
-                if (!self->currentPage) {
-                  LOG_ERR("EHP", "Failed to create initial page");
-                  return;
-                }
-                self->currentPageNextY = 0;
-              }
-
-              // Create ImageBlock and add to page
-              auto imageBlock = std::make_shared<ImageBlock>(cachedImagePath, displayWidth, displayHeight);
-              if (!imageBlock) {
-                LOG_ERR("EHP", "Failed to create ImageBlock");
-                return;
-              }
-              int xPos = (self->viewportWidth - displayWidth) / 2;
-              auto pageImage = std::make_shared<PageImage>(imageBlock, xPos, self->currentPageNextY);
-              if (!pageImage) {
-                LOG_ERR("EHP", "Failed to create PageImage");
-                return;
-              }
-              self->currentPage->elements.push_back(pageImage);
-              self->currentPageNextY += displayHeight;
-
-              self->depth += 1;
-              return;
-            } else {
-              LOG_ERR("EHP", "Failed to get image dimensions");
-              if (cleanupCachedCopy) {
-                Storage.remove(cachedImagePath.c_str());
-              }
-            }
-          } else {
-            LOG_ERR("EHP", "Failed to resolve image data");
-          }
+        LOG_ERR("EHP", "Failed to get image dimensions");
+        if (cleanupCachedCopy) {
+          Storage.remove(cachedImagePath.c_str());
         }
+      } else {
+        LOG_ERR("EHP", "Failed to resolve image data");
       }
+    }
+#endif
 
-      // Fallback to alt text if image processing fails
-      if (!alt.empty()) {
-        alt = "[Image: " + alt + "]";
-        self->startNewTextBlock(centeredBlockStyle);
-        self->italicUntilDepth = std::min(self->italicUntilDepth, self->depth);
-        self->depth += 1;
-        self->characterData(userData, alt.c_str(), alt.length());
-        // Skip any child content (skip until parent as we pre-advanced depth above)
-        self->skipUntilDepth = self->depth - 1;
-        return;
-      }
-
-      // No alt text, skip
-      self->skipUntilDepth = self->depth;
+    // Fallback to alt text if image processing is unavailable or fails.
+    if (!alt.empty()) {
+      alt = "[Image: " + alt + "]";
+      self->startNewTextBlock(centeredBlockStyle);
+      self->italicUntilDepth = std::min(self->italicUntilDepth, self->depth);
       self->depth += 1;
+      self->characterData(userData, alt.c_str(), alt.length());
+      // Skip any child content (skip until parent as we pre-advanced depth above)
+      self->skipUntilDepth = self->depth - 1;
       return;
     }
+
+    // No alt text, skip
+    self->skipUntilDepth = self->depth;
+    self->depth += 1;
+    return;
   }
 
   if (matches(name, SKIP_TAGS, NUM_SKIP_TAGS)) {

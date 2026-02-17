@@ -33,6 +33,7 @@ FEATURES = [
     'extended_fonts',
     'opendyslexic_fonts',
     'image_sleep',
+    'book_images',
     'markdown',
     'integrations',
     'koreader_sync',

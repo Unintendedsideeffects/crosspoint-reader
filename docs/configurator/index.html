@@ -958,7 +958,7 @@
                   <div class="card-body">
                     <div class="card-name">EPUB</div>
                     <div class="card-size"></div>
-                    <div class="card-desc">EPUB e-book reader with CSS, images, and chapter navigation</div>
+                    <div class="card-desc">EPUB e-book reader with CSS and chapter navigation</div>
                   </div>
                   <div class="card-toggle"><span class="toggle-box"></span></div>
                 </label>
@@ -975,6 +975,17 @@
                   </label>
                 </div>
               </div>
+
+              <label class="skill-card" data-feature="book_images" data-node-id="book_images">
+                <input type="checkbox" id="book_images" data-feature="book_images" />
+                <div class="card-icon"><span>&#x25A4;</span></div>
+                <div class="card-body">
+                  <div class="card-name">Book Images</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Inline image rendering in EPUB and Markdown readers</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
 
               <div class="dep-group" data-dep-parent="markdown">
                 <label class="skill-card dep-parent" data-feature="markdown" data-node-id="markdown">
@@ -1296,6 +1307,10 @@
                 <span class="note-icon">&#x25AB;</span>
                 <span class="note-label">Feature store: select then pull OTA</span>
               </div>
+              <div class="note-item" data-node-id="usb_mass_storage_note">
+                <span class="note-icon">&#x25AB;</span>
+                <span class="note-label">USB mass storage mode with safe lock</span>
+              </div>
             </div>
           </div>
         </section>
@@ -1468,6 +1483,11 @@
           flag: "ENABLE_IMAGE_SLEEP",
           default: true,
         },
+        book_images: {
+          sizeKb: 0,
+          flag: "ENABLE_BOOK_IMAGES",
+          default: true,
+        },
         markdown: {
           sizeKb: 287,
           flag: "ENABLE_MARKDOWN",
@@ -1585,7 +1605,7 @@
       };
 
       const HUB_FEATURES = {
-        reading_hub: ["markdown", "xtc_support", "epub_support", "hyphenation", "todo_planner"],
+        reading_hub: ["markdown", "xtc_support", "epub_support", "book_images", "hyphenation", "todo_planner"],
         interface_hub: ["extended_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin", "dark_mode", "visual_cover_picker", "user_fonts"],
         network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync", "ble_wifi_provisioning", "web_wifi_setup", "usb_mass_storage"],
         extras_hub: ["ota_updates", "integrations", "home_media_picker"],
@@ -1600,6 +1620,7 @@
         webserver_on_charge_note: ["background_server"],
         obsidian_xte_sync_note: ["integrations"],
         feature_store_note: ["ota_updates"],
+        usb_mass_storage_note: [],
         ble_setup_note: ["ble_wifi_provisioning"],
         font_converter_note: ["user_fonts"],
       };
@@ -1610,6 +1631,7 @@
           extended_fonts: true,
           image_sleep: true,
           epub_support: true,
+          book_images: true,
           hyphenation: true,
           xtc_support: true,
           lyra_theme: true,
@@ -1624,6 +1646,7 @@
           extended_fonts: true,
           opendyslexic_fonts: false,
           image_sleep: true,
+          book_images: true,
           markdown: true,
           integrations: true,
           koreader_sync: true,

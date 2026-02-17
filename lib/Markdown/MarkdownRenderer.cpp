@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <EpdFontFamily.h>
+#include <FeatureFlags.h>
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
@@ -17,7 +18,9 @@
 #include "Epub/ParsedText.h"
 #include "Epub/blocks/BlockStyle.h"
 #include "Epub/blocks/TextBlock.h"
+#if ENABLE_BOOK_IMAGES
 #include "Epub/converters/ImageDecoderFactory.h"
+#endif
 
 namespace {
 class MemoryPrint : public Print {
@@ -810,6 +813,7 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
     return;
   }
 
+#if ENABLE_BOOK_IMAGES
   // Resolve relative path against content base path
   std::string imagePath;
   if (!src.empty() && src[0] == '/') {
@@ -869,6 +873,14 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
   auto imageBlock = std::make_shared<ImageBlock>(imagePath, displayWidth, displayHeight);
   auto pageImage = std::make_shared<PageImage>(imageBlock, 0, 0);
   addImageToPage(pageImage);
+#else
+  (void)requestedWidth;
+  (void)requestedHeight;
+  if (!currentTextBlock) {
+    startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Center));
+  }
+  currentTextBlock->addWord("[Image: " + alt + "]", EpdFontFamily::ITALIC);
+#endif
 }
 
 void MarkdownRenderer::renderCode(const MdNode& node) {

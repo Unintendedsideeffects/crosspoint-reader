@@ -28,6 +28,11 @@ on:
         required: false
         type: boolean
         default: true
+      book_images:
+        description: 'Inline EPUB/Markdown Images (~0KB base)'
+        required: false
+        type: boolean
+        default: true
       markdown:
         description: 'Markdown Support (~231KB)'
         required: false
@@ -167,6 +172,7 @@ jobs:
           [ "${{ inputs.extended_fonts }}" == "true" ] && CMD+=(--enable extended_fonts) || CMD+=(--disable extended_fonts)
           [ "${{ inputs.opendyslexic_fonts }}" == "true" ] && CMD+=(--enable opendyslexic_fonts) || CMD+=(--disable opendyslexic_fonts)
           [ "${{ inputs.image_sleep }}" == "true" ] && CMD+=(--enable image_sleep) || CMD+=(--disable image_sleep)
+          [ "${{ inputs.book_images }}" == "true" ] && CMD+=(--enable book_images) || CMD+=(--disable book_images)
           [ "${{ inputs.markdown }}" == "true" ] && CMD+=(--enable markdown) || CMD+=(--disable markdown)
           [ "${{ inputs.integrations }}" == "true" ] && CMD+=(--enable integrations) || CMD+=(--disable integrations)
           [ "${{ inputs.koreader_sync }}" == "true" ] && CMD+=(--enable koreader_sync) || CMD+=(--disable koreader_sync)
@@ -435,6 +441,7 @@ jobs:
           echo "- Extended Fonts: ${{ inputs.extended_fonts }}" >> $GITHUB_STEP_SUMMARY
           echo "- OpenDyslexic: ${{ inputs.opendyslexic_fonts }}" >> $GITHUB_STEP_SUMMARY
           echo "- PNG/JPEG/BMP Sleep: ${{ inputs.image_sleep }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Book Images: ${{ inputs.book_images }}" >> $GITHUB_STEP_SUMMARY
           echo "- Markdown: ${{ inputs.markdown }}" >> $GITHUB_STEP_SUMMARY
           # ... simplified for summary ...
           echo "- EPUB Support: ${{ inputs.epub_support }}" >> $GITHUB_STEP_SUMMARY
