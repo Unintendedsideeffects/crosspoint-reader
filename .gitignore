@@ -16,3 +16,5 @@ partitions.bin
 .worktrees/
 platformio-custom.ini
 .pio-ci-sim/
+
+.pio-size-*/
