@@ -20,6 +20,9 @@ class Markdown;
 class ReaderActivity final : public ActivityWithSubactivity {
   std::string initialBookPath;
   std::string currentBookPath;  // Track current book path for navigation
+  bool pendingGoHome = false;
+  bool pendingGoToLibrary = false;
+  std::string pendingLibraryPath;
   const std::function<void()> onGoBack;
   const std::function<void(const std::string&)> onGoToLibrary;
 #if ENABLE_EPUB_SUPPORT
@@ -40,6 +43,8 @@ class ReaderActivity final : public ActivityWithSubactivity {
 
   static std::string extractFolderPath(const std::string& filePath);
   void goToLibrary(const std::string& fromBookPath = "");
+  void requestGoHome();
+  void requestGoToLibrary(const std::string& fromBookPath = "");
 #if ENABLE_EPUB_SUPPORT
   void onGoToEpubReader(std::unique_ptr<Epub> epub);
 #endif
@@ -60,5 +65,6 @@ class ReaderActivity final : public ActivityWithSubactivity {
         onGoBack(onGoBack),
         onGoToLibrary(onGoToLibrary) {}
   void onEnter() override;
+  void loop() override;
   bool isReaderActivity() const override { return true; }
 };

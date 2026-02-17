@@ -234,8 +234,8 @@ std::unique_ptr<Page> MarkdownSection::loadPageFromSectionFile() {
   serialization::readPod(file, pageOffset);
   file.seek(pageOffset);
 
-  auto page = std::unique_ptr<Page>(new Page());
-  if (!page->deserialize(file)) {
+  auto page = Page::deserialize(file);
+  if (!page) {
     Serial.printf("[%lu] [MSC] Failed to deserialize page %d\n", millis(), currentPage);
     closeSectionFile();
     return nullptr;

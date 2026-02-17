@@ -1,5 +1,7 @@
 #include "MappedInputManager.h"
 
+#include <cstring>
+
 #include "CrossPointSettings.h"
 
 namespace {
@@ -25,6 +27,10 @@ bool isDualSideLayout() {
 
 bool isPowerTapSelectEnabled() {
   return static_cast<CrossPointSettings::SHORT_PWRBTN>(SETTINGS.shortPwrBtn) == CrossPointSettings::SELECT;
+}
+
+bool equalsLabel(const char* value, const char* expected) {
+  return value != nullptr && expected != nullptr && strcmp(value, expected) == 0;
 }
 }  // namespace
 
@@ -191,7 +197,12 @@ unsigned long MappedInputManager::getHeldTime() const { return gpio.getHeldTime(
 MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const char* confirm, const char* previous,
                                                          const char* next) const {
   if (isDualSideLayout()) {
-    return {previous, previous, next, next};
+    // In dual-side mode, front buttons map to logical Left/Right.
+    // Reword generic vertical hints to match physical behavior.
+    const bool verticalHints = equalsLabel(previous, "Up") && equalsLabel(next, "Down");
+    const char* dualPrev = verticalHints ? "Left" : previous;
+    const char* dualNext = verticalHints ? "Right" : next;
+    return {dualPrev, dualPrev, dualNext, dualNext};
   }
 
   // Build the label order based on the configured hardware mapping.

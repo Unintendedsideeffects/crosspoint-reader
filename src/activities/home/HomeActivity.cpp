@@ -647,14 +647,19 @@ void HomeActivity::render() {
     const int statusWidth = renderer.getTextWidth(UI_10_FONT_ID, statusLabel);
     const int statusX = infoX + 12;
     const int statusY = infoY + 9;
+    const int statusChipWidth = statusWidth + 16;
+    constexpr int statusChipHeight = 24;
     renderer.fillRoundedRect(statusX, statusY, statusWidth + 16, 24, 6, Color::Black);
-    renderer.drawText(UI_10_FONT_ID, statusX + 8, statusY + 5, statusLabel, false);
+    renderer.drawText(UI_10_FONT_ID, statusX + (statusChipWidth - statusWidth) / 2,
+                      statusY + (statusChipHeight - renderer.getLineHeight(UI_10_FONT_ID)) / 2, statusLabel, false);
 
     const char* formatLabel = formatLabelFromPath(selectedBook.path);
     const int formatWidth = renderer.getTextWidth(UI_10_FONT_ID, formatLabel);
     const int formatX = infoX + infoWidth - formatWidth - 24;
-    renderer.drawRoundedRect(formatX, statusY, formatWidth + 12, 24, 1, 6, true);
-    renderer.drawText(UI_10_FONT_ID, formatX + 6, statusY + 5, formatLabel);
+    const int formatChipWidth = formatWidth + 12;
+    renderer.drawRoundedRect(formatX, statusY, formatChipWidth, statusChipHeight, 1, 6, true);
+    renderer.drawText(UI_10_FONT_ID, formatX + (formatChipWidth - formatWidth) / 2,
+                      statusY + (statusChipHeight - renderer.getLineHeight(UI_10_FONT_ID)) / 2, formatLabel);
 
     const int titleTextY = statusY + 32;
     renderer.drawText(UI_12_FONT_ID, infoX + 12, titleTextY, title.c_str(), true, EpdFontFamily::BOLD);
