@@ -10,6 +10,7 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
+#include <I18n.h>
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
@@ -24,11 +25,6 @@ namespace {
 constexpr unsigned long skipPageMs = 700;
 constexpr unsigned long goHomeMs = 1000;
 }  // namespace
-
-void XtcReaderActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<XtcReaderActivity*>(param);
-  self->displayTaskLoop();
-}
 
 void XtcReaderActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
@@ -52,14 +48,7 @@ void XtcReaderActivity::onEnter() {
   RECENT_BOOKS.addBook(xtc->getPath(), xtc->getTitle(), xtc->getAuthor(), xtc->getThumbBmpPath());
 
   // Trigger first update
-  updateRequired = true;
-
-  xTaskCreate(&XtcReaderActivity::taskTrampoline, "XtcReaderActivityTask",
-              4096,               // Stack size (smaller than EPUB since no parsing needed)
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
 void XtcReaderActivity::onExit() {
@@ -82,20 +71,18 @@ void XtcReaderActivity::loop() {
   // Enter chapter selection activity
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     if (xtc && xtc->hasChapters() && !xtc->getChapters().empty()) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
       exitActivity();
       enterNewActivity(new XtcReaderChapterSelectionActivity(
           this->renderer, this->mappedInput, xtc, currentPage,
           [this] {
             exitActivity();
-            updateRequired = true;
+            requestUpdate();
           },
           [this](const uint32_t newPage) {
             currentPage = newPage;
             exitActivity();
-            updateRequired = true;
+            requestUpdate();
           }));
-      xSemaphoreGive(renderingMutex);
     }
   }
 
@@ -132,7 +119,7 @@ void XtcReaderActivity::loop() {
   // Handle end of book
   if (currentPage >= xtc->getPageCount()) {
     currentPage = xtc->getPageCount() - 1;
-    updateRequired = true;
+    requestUpdate();
     return;
   }
 
@@ -145,13 +132,13 @@ void XtcReaderActivity::loop() {
     } else {
       currentPage = 0;
     }
-    updateRequired = true;
+    requestUpdate();
   } else if (nextTriggered) {
     currentPage += skipAmount;
     if (currentPage >= xtc->getPageCount()) {
       currentPage = xtc->getPageCount();  // Allow showing "End of book"
     }
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
@@ -181,7 +168,7 @@ void XtcReaderActivity::renderScreen() {
   if (currentPage >= xtc->getPageCount()) {
     // Show end of book screen
     renderer.clearScreen();
-    renderer.drawCenteredText(UI_12_FONT_ID, 300, "End of book", true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_END_OF_BOOK), true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }
@@ -210,7 +197,7 @@ void XtcReaderActivity::renderPage() {
   if (!pageBuffer) {
     LOG_ERR("XTR", "Failed to allocate page buffer (%lu bytes)", pageBufferSize);
     renderer.clearScreen();
-    renderer.drawCenteredText(UI_12_FONT_ID, 300, "Memory error", true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_MEMORY_ERROR), true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }
@@ -221,7 +208,7 @@ void XtcReaderActivity::renderPage() {
     LOG_ERR("XTR", "Failed to load page %lu", currentPage);
     free(pageBuffer);
     renderer.clearScreen();
-    renderer.drawCenteredText(UI_12_FONT_ID, 300, "Page load error", true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_PAGE_LOAD_ERROR), true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }

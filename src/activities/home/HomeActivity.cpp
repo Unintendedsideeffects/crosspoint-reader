@@ -3,6 +3,7 @@
 #include <Bitmap.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
+#include <I18n.h>
 #include <Utf8.h>
 #if ENABLE_EPUB_SUPPORT
 #include <Epub.h>
@@ -473,12 +474,12 @@ void HomeActivity::loop() {
 
   buttonNavigator.onNext([this, menuCount] {
     selectorIndex = ButtonNavigator::nextIndex(selectorIndex, menuCount);
-    updateRequired = true;
+    requestUpdate();
   });
 
   buttonNavigator.onPrevious([this, menuCount] {
     selectorIndex = ButtonNavigator::previousIndex(selectorIndex, menuCount);
-    updateRequired = true;
+    requestUpdate();
   });
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {

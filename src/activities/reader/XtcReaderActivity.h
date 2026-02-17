@@ -8,9 +8,6 @@
 #pragma once
 
 #include <Xtc.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 
@@ -24,7 +21,7 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   std::atomic<bool> taskHasExited{false};
   uint32_t currentPage = 0;
   int pagesUntilFullRefresh = 0;
-  bool updateRequired = false;
+
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;
 
@@ -45,4 +42,5 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&&) override;
 };

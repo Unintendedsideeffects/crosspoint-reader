@@ -1,7 +1,4 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 #include <functional>
@@ -29,7 +26,7 @@ class NetworkModeSelectionActivity final : public Activity {
   ButtonNavigator buttonNavigator;
 
   int selectedIndex = 0;
-  bool updateRequired = false;
+
   const std::function<void(NetworkMode)> onModeSelected;
   const std::function<void()> onCancel;
 
@@ -45,4 +42,5 @@ class NetworkModeSelectionActivity final : public Activity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&&) override;
 };

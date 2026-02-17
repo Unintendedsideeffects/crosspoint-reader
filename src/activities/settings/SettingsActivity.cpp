@@ -25,12 +25,8 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 
-const char* SettingsActivity::categoryNames[categoryCount] = {"Display", "Reader", "Controls", "System"};
-
-void SettingsActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<SettingsActivity*>(param);
-  self->displayTaskLoop();
-}
+const StrId SettingsActivity::categoryNames[categoryCount] = {StrId::STR_CAT_DISPLAY, StrId::STR_CAT_READER,
+                                                              StrId::STR_CAT_CONTROLS, StrId::STR_CAT_SYSTEM};
 
 void SettingsActivity::onEnter() {
   Activity::onEnter();
@@ -45,14 +41,14 @@ void SettingsActivity::onEnter() {
   systemSettings.clear();
 
   for (auto& setting : getSettingsList()) {
-    if (!setting.category) continue;
-    if (strcmp(setting.category, "Display") == 0) {
+    if (setting.category == StrId::STR_NONE_OPT) continue;
+    if (setting.category == StrId::STR_CAT_DISPLAY) {
       displaySettings.push_back(std::move(setting));
-    } else if (strcmp(setting.category, "Reader") == 0) {
+    } else if (setting.category == StrId::STR_CAT_READER) {
       readerSettings.push_back(std::move(setting));
-    } else if (strcmp(setting.category, "Controls") == 0) {
+    } else if (setting.category == StrId::STR_CAT_CONTROLS) {
       controlsSettings.push_back(std::move(setting));
-    } else if (strcmp(setting.category, "System") == 0) {
+    } else if (setting.category == StrId::STR_CAT_SYSTEM) {
       systemSettings.push_back(std::move(setting));
     }
     // Web-only categories (KOReader Sync, OPDS Browser) are skipped for device UI
@@ -83,14 +79,7 @@ void SettingsActivity::onEnter() {
   settingsCount = static_cast<int>(displaySettings.size());
 
   // Trigger first update
-  updateRequired = true;
-
-  xTaskCreate(&SettingsActivity::taskTrampoline, "SettingsActivityTask",
-              4096,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
 void SettingsActivity::onExit() {
@@ -126,24 +115,24 @@ void SettingsActivity::loop() {
   // Handle navigation
   buttonNavigator.onNextRelease([this] {
     selectedSettingIndex = ButtonNavigator::nextIndex(selectedSettingIndex, settingsCount + 1);
-    updateRequired = true;
+    requestUpdate();
   });
 
   buttonNavigator.onPreviousRelease([this] {
     selectedSettingIndex = ButtonNavigator::previousIndex(selectedSettingIndex, settingsCount + 1);
-    updateRequired = true;
+    requestUpdate();
   });
 
   buttonNavigator.onNextContinuous([this, &hasChangedCategory] {
     hasChangedCategory = true;
     selectedCategoryIndex = ButtonNavigator::nextIndex(selectedCategoryIndex, categoryCount);
-    updateRequired = true;
+    requestUpdate();
   });
 
   buttonNavigator.onPreviousContinuous([this, &hasChangedCategory] {
     hasChangedCategory = true;
     selectedCategoryIndex = ButtonNavigator::previousIndex(selectedCategoryIndex, categoryCount);
-    updateRequired = true;
+    requestUpdate();
   });
 
   if (hasChangedCategory) {
@@ -257,20 +246,18 @@ void SettingsActivity::toggleCurrentSetting() {
     }
   } else if (setting.type == SettingType::ACTION) {
     auto enterSubActivity = [this](Activity* activity) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
       exitActivity();
       enterNewActivity(activity);
-      xSemaphoreGive(renderingMutex);
     };
 
     auto onComplete = [this] {
       exitActivity();
-      updateRequired = true;
+      requestUpdate();
     };
 
     auto onCompleteBool = [this](bool) {
       exitActivity();
-      updateRequired = true;
+      requestUpdate();
     };
 
     switch (setting.action) {
@@ -339,12 +326,12 @@ void SettingsActivity::render() const {
 
   auto metrics = UITheme::getInstance().getMetrics();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, "Settings");
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_SETTINGS_TITLE));
 
   std::vector<TabInfo> tabs;
   tabs.reserve(categoryCount);
   for (int i = 0; i < categoryCount; i++) {
-    tabs.push_back({categoryNames[i], selectedCategoryIndex == i});
+    tabs.push_back({I18N.get(categoryNames[i]), selectedCategoryIndex == i});
   }
   GUI.drawTabBar(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight}, tabs,
                  selectedSettingIndex == 0);
@@ -355,9 +342,10 @@ void SettingsActivity::render() const {
       Rect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing, pageWidth,
            pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.buttonHintsHeight +
                          metrics.verticalSpacing * 2)},
-      settingsCount, selectedSettingIndex - 1, [&settings](int index) { return std::string(settings[index].name); },
-      nullptr, nullptr,
+      settingsCount, selectedSettingIndex - 1,
+      [&settings](int index) { return std::string(I18N.get(settings[index].nameId)); }, nullptr, nullptr,
       [&settings](int i) {
+        const auto& setting = settings[i];
         std::string valueText = "";
         if (settings[i].type == SettingType::TOGGLE && settings[i].valuePtr != nullptr) {
           const bool value = SETTINGS.*(settings[i].valuePtr);
@@ -390,7 +378,7 @@ void SettingsActivity::render() const {
                     metrics.versionTextY, CROSSPOINT_VERSION);
 
   // Draw help text
-  const auto labels = mappedInput.mapLabels("« Back", "Toggle", "Up", "Down");
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_TOGGLE), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   // Always use standard refresh for settings screen

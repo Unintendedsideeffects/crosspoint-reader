@@ -96,7 +96,7 @@ RecentBook RecentBooksStore::getDataFromBook(std::string path) const {
 #if ENABLE_EPUB_SUPPORT
   if (StringUtils::checkFileExtension(lastBookFileName, ".epub")) {
     Epub epub(path, "/.crosspoint");
-    epub.load(false);
+    epub.load(false, true);
     return RecentBook{path, epub.getTitle(), epub.getAuthor(), epub.getThumbBmpPath()};
   } else
 #endif

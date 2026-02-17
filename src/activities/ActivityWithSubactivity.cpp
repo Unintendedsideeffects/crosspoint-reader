@@ -1,5 +1,19 @@
 #include "ActivityWithSubactivity.h"
 
+void ActivityWithSubactivity::renderTaskLoop() {
+  while (true) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    {
+      RenderLock lock(*this);
+      if (!subActivity) {
+        render(std::move(lock));
+      }
+      // If subActivity is set, consume the notification but skip parent render
+      // Note: the sub-activity will call its render() from its own display task
+    }
+  }
+}
+
 void ActivityWithSubactivity::exitActivity() {
   if (!subActivity) {
     return;
@@ -20,6 +34,7 @@ void ActivityWithSubactivity::applyPendingSubActivityTransition() {
   }
 
   if (subActivity) {
+    LOG_DBG("ACT", "Exiting subactivity...");
     subActivity->onExit();
     subActivity.reset();
   }

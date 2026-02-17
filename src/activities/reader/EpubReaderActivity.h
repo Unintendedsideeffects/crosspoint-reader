@@ -1,9 +1,6 @@
 #pragma once
 #include <Epub.h>
 #include <Epub/Section.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 
@@ -27,7 +24,6 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   bool pendingPercentJump = false;
   // Normalized 0.0-1.0 progress within the target spine item, computed from book percentage.
   float pendingSpineProgress = 0.0f;
-  bool updateRequired = false;
   bool pendingSubactivityExit = false;  // Defer subactivity exit to avoid use-after-free
   bool pendingGoHome = false;           // Defer go home to avoid race condition with display task
   bool skipNextButtonCheck = false;     // Skip button processing for one frame after subactivity exit
@@ -58,4 +54,5 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&& lock) override;
 };

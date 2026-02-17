@@ -1,8 +1,5 @@
 #pragma once
 #include <Epub.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 #include <memory>
@@ -23,7 +20,7 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   int currentPage = 0;
   int totalPagesInSpine = 0;
   int selectorIndex = 0;
-  bool updateRequired = false;
+
   const std::function<void()> onGoBack;
   const std::function<void(int newSpineIndex)> onSelectSpineIndex;
   const std::function<void(int newSpineIndex, int newPage)> onSyncPosition;
@@ -72,4 +69,5 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&&) override;
 };

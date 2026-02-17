@@ -1,5 +1,7 @@
 #include "KeyboardEntryActivity.h"
 
+#include <I18n.h>
+
 #include "MappedInputManager.h"
 #include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
@@ -48,14 +50,7 @@ void KeyboardEntryActivity::onEnter() {
   taskHasExited.store(false);
 
   // Trigger first update
-  updateRequired = true;
-
-  xTaskCreate(&KeyboardEntryActivity::taskTrampoline, "KeyboardEntryActivity",
-              2048,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
 void KeyboardEntryActivity::onExit() {
@@ -151,7 +146,7 @@ void KeyboardEntryActivity::loop() {
 
     const int maxCol = getRowLength(selectedRow) - 1;
     if (selectedCol > maxCol) selectedCol = maxCol;
-    updateRequired = true;
+    requestUpdate();
   });
 
   buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Down}, [this] {
@@ -159,7 +154,7 @@ void KeyboardEntryActivity::loop() {
 
     const int maxCol = getRowLength(selectedRow) - 1;
     if (selectedCol > maxCol) selectedCol = maxCol;
-    updateRequired = true;
+    requestUpdate();
   });
 
   buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Left}, [this] {
@@ -185,7 +180,7 @@ void KeyboardEntryActivity::loop() {
       selectedCol = ButtonNavigator::previousIndex(selectedCol, maxCol + 1);
     }
 
-    updateRequired = true;
+    requestUpdate();
   });
 
   buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Right}, [this] {
@@ -210,13 +205,13 @@ void KeyboardEntryActivity::loop() {
     } else {
       selectedCol = ButtonNavigator::nextIndex(selectedCol, maxCol + 1);
     }
-    updateRequired = true;
+    requestUpdate();
   });
 
   // Selection
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     handleKeyPress();
-    updateRequired = true;
+    requestUpdate();
   }
 
   // Cancel
@@ -224,11 +219,11 @@ void KeyboardEntryActivity::loop() {
     if (onCancel) {
       onCancel();
     }
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
-void KeyboardEntryActivity::render() const {
+void KeyboardEntryActivity::render(Activity::RenderLock&&) {
   const auto pageWidth = renderer.getScreenWidth();
 
   renderer.clearScreen();
@@ -299,7 +294,8 @@ void KeyboardEntryActivity::render() const {
 
       // SHIFT key (logical col 0, spans 2 key widths)
       const bool shiftSelected = (selectedRow == 4 && selectedCol >= SHIFT_COL && selectedCol < SPACE_COL);
-      renderItemWithSelector(currentX + 2, rowY, shiftString[shiftState], shiftSelected);
+      static constexpr StrId shiftIds[3] = {StrId::STR_KBD_SHIFT, StrId::STR_KBD_SHIFT_CAPS, StrId::STR_KBD_LOCK};
+      renderItemWithSelector(currentX + 2, rowY, I18N.get(shiftIds[shiftState]), shiftSelected);
       currentX += 2 * (keyWidth + keySpacing);
 
       // Space bar (logical cols 2-6, spans 5 key widths)
@@ -317,7 +313,7 @@ void KeyboardEntryActivity::render() const {
 
       // OK button (logical col 9, spans 2 key widths)
       const bool okSelected = (selectedRow == 4 && selectedCol >= DONE_COL);
-      renderItemWithSelector(currentX + 2, rowY, "OK", okSelected);
+      renderItemWithSelector(currentX + 2, rowY, tr(STR_OK_BUTTON), okSelected);
     } else {
       // Regular rows: render each key individually
       for (int col = 0; col < getRowLength(row); col++) {
@@ -334,11 +330,11 @@ void KeyboardEntryActivity::render() const {
   }
 
   // Draw help text
-  const auto labels = mappedInput.mapLabels("« Back", "Select", "Left", "Right");
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_LEFT), tr(STR_DIR_RIGHT));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   // Draw side button hints for Up/Down navigation
-  GUI.drawSideButtonHints(renderer, "Up", "Down");
+  GUI.drawSideButtonHints(renderer, tr(STR_DIR_UP), tr(STR_DIR_DOWN));
 
   renderer.displayBuffer();
 }

@@ -1,8 +1,5 @@
 #pragma once
 #include <GfxRenderer.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 #include <functional>
@@ -58,6 +55,7 @@ class KeyboardEntryActivity : public Activity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&&) override;
 
  private:
   std::string title;
@@ -70,7 +68,6 @@ class KeyboardEntryActivity : public Activity {
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   ButtonNavigator buttonNavigator;
-  bool updateRequired = false;
 
   // Keyboard state
   int selectedRow = 0;
@@ -100,6 +97,5 @@ class KeyboardEntryActivity : public Activity {
   char getSelectedChar() const;
   void handleKeyPress();
   int getRowLength(int row) const;
-  void render() const;
   void renderItemWithSelector(int x, int y, const char* item, bool isSelected) const;
 };

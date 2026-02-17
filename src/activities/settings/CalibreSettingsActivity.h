@@ -1,7 +1,4 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 #include <functional>
@@ -22,6 +19,7 @@ class CalibreSettingsActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&&) override;
 
  private:
   TaskHandle_t displayTaskHandle = nullptr;
@@ -29,7 +27,6 @@ class CalibreSettingsActivity final : public ActivityWithSubactivity {
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   ButtonNavigator buttonNavigator;
-  bool updateRequired = false;
 
   int selectedIndex = 0;
   const std::function<void()> onBack;

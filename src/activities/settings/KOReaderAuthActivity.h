@@ -1,7 +1,4 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 #include <functional>
@@ -21,6 +18,7 @@ class KOReaderAuthActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&&) override;
   bool preventAutoSleep() override { return state == CONNECTING || state == AUTHENTICATING; }
 
  private:

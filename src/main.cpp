@@ -4,6 +4,7 @@
 #include <HalDisplay.h>
 #include <HalGPIO.h>
 #include <HalStorage.h>
+#include <I18n.h>
 #include <Logging.h>
 #include <SPI.h>
 #include <builtinFonts/all.h>
