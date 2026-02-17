@@ -137,6 +137,53 @@ bool parseDimensionToken(const std::string& token, int& outWidth, int& outHeight
   return true;
 }
 
+int hexToInt(const char c) {
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  }
+  if (c >= 'a' && c <= 'f') {
+    return 10 + (c - 'a');
+  }
+  if (c >= 'A' && c <= 'F') {
+    return 10 + (c - 'A');
+  }
+  return -1;
+}
+
+std::string decodePercentEncoding(const std::string& value) {
+  std::string out;
+  out.reserve(value.size());
+  for (size_t i = 0; i < value.size(); i++) {
+    if (value[i] == '%' && i + 2 < value.size()) {
+      const int hi = hexToInt(value[i + 1]);
+      const int lo = hexToInt(value[i + 2]);
+      if (hi >= 0 && lo >= 0) {
+        out.push_back(static_cast<char>((hi << 4) | lo));
+        i += 2;
+        continue;
+      }
+    }
+    out.push_back(value[i]);
+  }
+  return out;
+}
+
+std::string sanitizeImageSource(const std::string& raw) {
+  std::string src = trimWhitespace(raw);
+  if (src.size() >= 2 && src.front() == '<' && src.back() == '>') {
+    src = src.substr(1, src.size() - 2);
+  }
+  const size_t queryPos = src.find('?');
+  if (queryPos != std::string::npos) {
+    src = src.substr(0, queryPos);
+  }
+  const size_t fragmentPos = src.find('#');
+  if (fragmentPos != std::string::npos) {
+    src = src.substr(0, fragmentPos);
+  }
+  return decodePercentEncoding(src);
+}
+
 bool extractAltDimensions(const std::string& altText, std::string& outAlt, int& outWidth, int& outHeight) {
   const size_t pipePos = altText.rfind('|');
   if (pipePos == std::string::npos) {
@@ -725,6 +772,7 @@ void MarkdownRenderer::renderImage(const MdNode& node) {
   if (node.image) {
     src = node.image->src;
   }
+  src = sanitizeImageSource(src);
 
   if (src.empty()) {
     if (!currentTextBlock) {

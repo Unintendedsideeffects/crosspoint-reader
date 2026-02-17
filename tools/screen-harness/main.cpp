@@ -1,3 +1,4 @@
+#include <EpdFont.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <SPI.h>
@@ -37,10 +38,10 @@ void installFonts(GfxRenderer& renderer) {
   static EpdFontFamily bookerly14FontFamily(&bookerly14RegularFont, &bookerly14BoldFont, &bookerly14ItalicFont,
                                             &bookerly14BoldItalicFont);
 
-  renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
-  renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
-  renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
-  renderer.insertFont(BOOKERLY_14_FONT_ID, bookerly14FontFamily);
+  renderer.insertFontFamily(SMALL_FONT_ID, &smallFontFamily);
+  renderer.insertFontFamily(UI_10_FONT_ID, &ui10FontFamily);
+  renderer.insertFontFamily(UI_12_FONT_ID, &ui12FontFamily);
+  renderer.insertFontFamily(BOOKERLY_14_FONT_ID, &bookerly14FontFamily);
 }
 
 void saveSnapshot(HalDisplay& display, const std::filesystem::path& outDir, const std::string& name) {

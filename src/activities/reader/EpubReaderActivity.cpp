@@ -683,7 +683,10 @@ void EpubReaderActivity::renderScreen() {
       LOG_ERR("ERS", "Failed to load page from SD - clearing section cache");
       section->clearCache();
       section.reset();
-      return renderScreen();
+      // Avoid recursive re-entry here; recursion can overflow stack and reboot on persistent failures.
+      // Trigger a fresh render attempt on the next display-task tick instead.
+      updateRequired = true;
+      return;
     }
     const auto start = millis();
     renderContents(std::move(p), orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
