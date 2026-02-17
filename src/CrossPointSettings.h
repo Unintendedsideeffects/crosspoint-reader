@@ -209,6 +209,9 @@ class CrossPointSettings {
   uint32_t lastTimeSyncEpoch = 0;
   // OTA release channel selection
   uint8_t releaseChannel = RELEASE_STABLE;
+  char selectedOtaBundle[32] = "";
+  char installedOtaBundle[32] = "";
+  char installedOtaFeatureFlags[192] = "";
   uint8_t darkMode = 0;
   char userFontPath[128] = "";
 

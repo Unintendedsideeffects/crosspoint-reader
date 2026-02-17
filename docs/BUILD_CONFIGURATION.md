@@ -456,6 +456,35 @@ The ESP32-C3 in the Xteink X4 has:
 4. **Skip Extended Fonts** - largest single feature at ~2.5MB
 5. **Monitor OTA updates** - custom builds may be larger than default
 
+### Feature Store OTA Catalog (fork-drift)
+
+When OTA is enabled, device-side update checks first try the fork-controlled feature store catalog at:
+
+- `docs/ota/feature-store-catalog.json`
+- Published as release asset tag `feature-store-catalog` (`feature-store-catalog.json`)
+
+Catalog entry contract (`bundles[]`):
+
+- `id` (string): stable bundle/profile identifier persisted in device settings
+- `name` (string): display label shown in the device Feature Store picker
+- `version` (string): bundle firmware version used for update comparisons
+- `feature_flags` (string, optional): human-readable feature summary
+- `board` (string, optional): must match `xteink-x4-esp32c3` when present
+- `size` (number): binary size estimate in bytes, checked against OTA partition capacity
+- `download_url` (string): deterministic firmware artifact URL from this fork's release pipeline
+- `checksum` (string, optional): reserved for pipeline integrity metadata
+
+Failure/recovery behavior:
+
+- If catalog fetch/parse fails, firmware falls back to the existing release-channel OTA path.
+- If a selected bundle is incompatible or missing, the Feature Store picker lets users choose another bundle or cancel.
+- Incompatible entries are blocked before install and surface a device-side error message.
+
+Overhead note:
+
+- Added persistence fields are fixed-size strings (`selectedOtaBundle`, `installedOtaBundle`, `installedOtaFeatureFlags`).
+- Runtime catalog storage is only active during OTA flow and is gated under OTA-enabled builds.
+
 ---
 
 ## Troubleshooting

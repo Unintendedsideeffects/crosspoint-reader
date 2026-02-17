@@ -1,0 +1,25 @@
+{
+  "catalog_version": 1,
+  "source": "fork-release-pipeline",
+  "note": "Example catalog values for local/dev testing. Release pipeline should publish real version+size fields.",
+  "bundles": [
+    {
+      "id": "stable-default",
+      "name": "Stable Default",
+      "version": "v0.0.0",
+      "feature_flags": "channel:stable",
+      "board": "xteink-x4-esp32c3",
+      "size": 0,
+      "download_url": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/download/release/firmware.bin"
+    },
+    {
+      "id": "nightly-default",
+      "name": "Nightly Default",
+      "version": "v0.0.0",
+      "feature_flags": "channel:nightly",
+      "board": "xteink-x4-esp32c3",
+      "size": 0,
+      "download_url": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/download/nightly/firmware.bin"
+    }
+  ]
+}

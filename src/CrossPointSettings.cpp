@@ -22,9 +22,9 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 }
 
 namespace {
-constexpr uint8_t SETTINGS_FILE_VERSION = 2;
+constexpr uint8_t SETTINGS_FILE_VERSION = 3;
 // Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 31;
+constexpr uint8_t SETTINGS_COUNT = 34;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 
 // Validate front button mapping to ensure each hardware button is unique.
@@ -97,6 +97,9 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writePod(outputFile, releaseChannel);
   serialization::writePod(outputFile, sleepScreenSource);
   serialization::writeString(outputFile, std::string(userFontPath));
+  serialization::writeString(outputFile, std::string(selectedOtaBundle));
+  serialization::writeString(outputFile, std::string(installedOtaBundle));
+  serialization::writeString(outputFile, std::string(installedOtaFeatureFlags));
   // New fields added at end for backward compatibility
   outputFile.close();
 
@@ -208,6 +211,25 @@ bool CrossPointSettings::loadFromFile() {
       serialization::readString(inputFile, pathStr);
       strncpy(userFontPath, pathStr.c_str(), sizeof(userFontPath) - 1);
       userFontPath[sizeof(userFontPath) - 1] = '\0';
+      if (++settingsRead >= fileSettingsCount) break;
+    }
+    if (version >= 3) {
+      std::string bundleId;
+      serialization::readString(inputFile, bundleId);
+      strncpy(selectedOtaBundle, bundleId.c_str(), sizeof(selectedOtaBundle) - 1);
+      selectedOtaBundle[sizeof(selectedOtaBundle) - 1] = '\0';
+      if (++settingsRead >= fileSettingsCount) break;
+
+      std::string installedBundleId;
+      serialization::readString(inputFile, installedBundleId);
+      strncpy(installedOtaBundle, installedBundleId.c_str(), sizeof(installedOtaBundle) - 1);
+      installedOtaBundle[sizeof(installedOtaBundle) - 1] = '\0';
+      if (++settingsRead >= fileSettingsCount) break;
+
+      std::string installedFeatureSet;
+      serialization::readString(inputFile, installedFeatureSet);
+      strncpy(installedOtaFeatureFlags, installedFeatureSet.c_str(), sizeof(installedOtaFeatureFlags) - 1);
+      installedOtaFeatureFlags[sizeof(installedOtaFeatureFlags) - 1] = '\0';
       if (++settingsRead >= fileSettingsCount) break;
     }
     // New fields added at end for backward compatibility

@@ -4,6 +4,7 @@
 #include <freertos/task.h>
 
 #include <atomic>
+#include <cstddef>
 
 #include "activities/ActivityWithSubactivity.h"
 #include "network/OtaUpdater.h"
@@ -11,6 +12,8 @@
 class OtaUpdateActivity : public ActivityWithSubactivity {
   enum State {
     WIFI_SELECTION,
+    LOADING_FEATURE_STORE,
+    SELECTING_FEATURE_STORE_BUNDLE,
     CHECKING_FOR_UPDATE,
     WAITING_CONFIRMATION,
     UPDATE_IN_PROGRESS,
@@ -31,6 +34,8 @@ class OtaUpdateActivity : public ActivityWithSubactivity {
   const std::function<void()> goBack;
   State state = WIFI_SELECTION;
   unsigned int lastUpdaterPercentage = UNINITIALIZED_PERCENTAGE;
+  size_t selectedBundleIndex = 0;
+  bool usingFeatureStore = false;
   OtaUpdater updater;
 
   void onWifiSelectionComplete(bool success);

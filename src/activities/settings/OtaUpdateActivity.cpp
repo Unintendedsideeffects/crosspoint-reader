@@ -26,24 +26,49 @@ void OtaUpdateActivity::onWifiSelectionComplete(const bool success) {
   Serial.printf("[%lu] [OTA] WiFi connected, checking for update\n", millis());
 
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  state = CHECKING_FOR_UPDATE;
+  state = LOADING_FEATURE_STORE;
   xSemaphoreGive(renderingMutex);
   updateRequired = true;
   vTaskDelay(10 / portTICK_PERIOD_MS);
-  const auto res = updater.checkForUpdate();
-  if (res != OtaUpdater::OK) {
-    Serial.printf("[%lu] [OTA] Update check failed: %d\n", millis(), res);
+
+  usingFeatureStore = updater.loadFeatureStoreCatalog();
+  if (usingFeatureStore && updater.hasFeatureStoreCatalog()) {
+    selectedBundleIndex = 0;
+    const auto& bundles = updater.getFeatureStoreEntries();
+    if (!updater.getSelectedBundleId().empty()) {
+      for (size_t i = 0; i < bundles.size(); ++i) {
+        if (bundles[i].id == updater.getSelectedBundleId()) {
+          selectedBundleIndex = i;
+          break;
+        }
+      }
+    }
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = FAILED;
+    state = SELECTING_FEATURE_STORE_BUNDLE;
     xSemaphoreGive(renderingMutex);
     updateRequired = true;
     return;
   }
 
-  if (!updater.isUpdateNewer()) {
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  state = CHECKING_FOR_UPDATE;
+  xSemaphoreGive(renderingMutex);
+  updateRequired = true;
+  vTaskDelay(10 / portTICK_PERIOD_MS);
+  const auto res = updater.checkForUpdate();
+  if (res == OtaUpdater::OK && !updater.isUpdateNewer()) {
     Serial.printf("[%lu] [OTA] No new update available\n", millis());
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     state = NO_UPDATE;
+    xSemaphoreGive(renderingMutex);
+    updateRequired = true;
+    return;
+  }
+
+  if (res != OtaUpdater::OK) {
+    Serial.printf("[%lu] [OTA] Update check failed: %d\n", millis(), res);
+    xSemaphoreTake(renderingMutex, portMAX_DELAY);
+    state = FAILED;
     xSemaphoreGive(renderingMutex);
     updateRequired = true;
     return;
@@ -139,10 +164,44 @@ void OtaUpdateActivity::render() {
     return;
   }
 
+  if (state == LOADING_FEATURE_STORE) {
+    renderer.drawCenteredText(UI_10_FONT_ID, 280, "Loading feature catalog...", true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, 320, "If unavailable, channel OTA is used.");
+    renderer.displayBuffer();
+    return;
+  }
+
+  if (state == SELECTING_FEATURE_STORE_BUNDLE) {
+    const auto& bundles = updater.getFeatureStoreEntries();
+    renderer.drawCenteredText(UI_10_FONT_ID, 160, "Feature Store", true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, 185, "Select bundle, then check OTA");
+    if (!bundles.empty() && selectedBundleIndex < bundles.size()) {
+      const auto& selected = bundles[selectedBundleIndex];
+      renderer.drawText(UI_10_FONT_ID, 20, 240, ("Bundle: " + selected.displayName).c_str());
+      renderer.drawText(UI_10_FONT_ID, 20, 265, ("ID: " + selected.id).c_str());
+      renderer.drawText(UI_10_FONT_ID, 20, 290, ("Version: " + selected.version).c_str());
+      renderer.drawText(UI_10_FONT_ID, 20, 315, ("Size: " + std::to_string(selected.binarySize) + " bytes").c_str());
+      if (!selected.featureFlags.empty()) {
+        renderer.drawText(UI_10_FONT_ID, 20, 340, ("Features: " + selected.featureFlags).c_str());
+      }
+      if (!selected.compatible) {
+        renderer.drawCenteredText(UI_10_FONT_ID, 375, selected.compatibilityError.c_str(), true, EpdFontFamily::BOLD);
+      }
+    }
+    const auto labels = mappedInput.mapLabels("Cancel", "Select", "Prev", "Next");
+    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    renderer.displayBuffer();
+    return;
+  }
+
   if (state == WAITING_CONFIRMATION) {
     renderer.drawCenteredText(UI_10_FONT_ID, 200, "New update available!", true, EpdFontFamily::BOLD);
     renderer.drawText(UI_10_FONT_ID, 20, 250, "Current Version: " CROSSPOINT_VERSION);
     renderer.drawText(UI_10_FONT_ID, 20, 270, ("New Version: " + updater.getLatestVersion()).c_str());
+    if (!updater.getSelectedBundleId().empty()) {
+      renderer.drawText(UI_10_FONT_ID, 20, 290, ("Bundle: " + updater.getSelectedBundleId()).c_str());
+      renderer.drawText(UI_10_FONT_ID, 20, 310, ("Bundle Size: " + std::to_string(updater.getOtaSize()) + " bytes").c_str());
+    }
     if (updater.willFactoryResetOnInstall()) {
       renderer.drawCenteredText(UI_10_FONT_ID, 315, "Factory reset update selected.", true, EpdFontFamily::BOLD);
       renderer.drawCenteredText(UI_10_FONT_ID, 340, "CrossPoint data will be erased after install.");
@@ -175,6 +234,9 @@ void OtaUpdateActivity::render() {
 
   if (state == FAILED) {
     renderer.drawCenteredText(UI_10_FONT_ID, 300, "Update failed", true, EpdFontFamily::BOLD);
+    if (!updater.getLastError().empty()) {
+      renderer.drawCenteredText(UI_10_FONT_ID, 335, updater.getLastError().c_str());
+    }
     renderer.displayBuffer();
     return;
   }
@@ -191,6 +253,63 @@ void OtaUpdateActivity::render() {
 void OtaUpdateActivity::loop() {
   if (subActivity) {
     subActivity->loop();
+    return;
+  }
+
+  if (state == SELECTING_FEATURE_STORE_BUNDLE) {
+    const auto& bundles = updater.getFeatureStoreEntries();
+    if (mappedInput.wasPressed(MappedInputManager::Button::Up) ||
+        mappedInput.wasPressed(MappedInputManager::Button::Left)) {
+      if (!bundles.empty()) {
+        selectedBundleIndex = (selectedBundleIndex == 0) ? bundles.size() - 1 : selectedBundleIndex - 1;
+        updateRequired = true;
+      }
+    } else if (mappedInput.wasPressed(MappedInputManager::Button::Down) ||
+               mappedInput.wasPressed(MappedInputManager::Button::Right)) {
+      if (!bundles.empty()) {
+        selectedBundleIndex = (selectedBundleIndex + 1) % bundles.size();
+        updateRequired = true;
+      }
+    }
+
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+      if (bundles.empty()) {
+        state = FAILED;
+        updateRequired = true;
+        return;
+      }
+
+      updater.selectFeatureStoreBundleByIndex(selectedBundleIndex);
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      state = CHECKING_FOR_UPDATE;
+      xSemaphoreGive(renderingMutex);
+      updateRequired = true;
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+      const auto res = updater.checkForUpdate();
+      if (res == OtaUpdater::OK && !updater.isUpdateNewer()) {
+        xSemaphoreTake(renderingMutex, portMAX_DELAY);
+        state = NO_UPDATE;
+        xSemaphoreGive(renderingMutex);
+        updateRequired = true;
+        return;
+      }
+      if (res != OtaUpdater::OK) {
+        xSemaphoreTake(renderingMutex, portMAX_DELAY);
+        state = FAILED;
+        xSemaphoreGive(renderingMutex);
+        updateRequired = true;
+        return;
+      }
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      state = WAITING_CONFIRMATION;
+      xSemaphoreGive(renderingMutex);
+      updateRequired = true;
+      return;
+    }
+
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
+      goBack();
+    }
     return;
   }
 

@@ -1,6 +1,7 @@
 #include "OtaUpdater.h"
 
 #include <ArduinoJson.h>
+#include <FeatureManifest.h>
 #include <HalStorage.h>
 #include <Logging.h>
 
@@ -8,7 +9,10 @@
 #include "SpiBusMutex.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
+#include "esp_ota_ops.h"
 #include "esp_wifi.h"
+
+#include <cstring>
 
 namespace {
 constexpr char releaseChannelUrl[] =
@@ -19,6 +23,9 @@ constexpr char latestChannelUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/latest";
 constexpr char resetChannelUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/reset";
+constexpr char featureStoreCatalogUrl[] =
+    "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/download/feature-store-catalog/feature-store-catalog.json";
+constexpr char expectedBoard[] = "xteink-x4-esp32c3";
 constexpr char crosspointDataDir[] = "/.crosspoint";
 constexpr char factoryResetMarkerFile[] = "/.factory-reset-pending";
 
@@ -128,6 +135,70 @@ esp_err_t event_handler(esp_http_client_event_t* event) {
   local_buf[output_len] = '\0';
   return ESP_OK;
 } /* event_handler */
+
+bool fetchReleaseJson(const char* url, JsonDocument& doc, JsonDocument* filter = nullptr) {
+  local_buf = nullptr;
+  output_len = 0;
+
+  esp_http_client_config_t client_config = {
+      .url = url,
+      .event_handler = event_handler,
+      .buffer_size = 8192,
+      .buffer_size_tx = 8192,
+      .skip_cert_common_name_check = true,
+      .crt_bundle_attach = esp_crt_bundle_attach,
+      .keep_alive_enable = true,
+  };
+
+  struct localBufCleaner {
+    char** bufPtr;
+    ~localBufCleaner() {
+      if (*bufPtr) {
+        free(*bufPtr);
+        *bufPtr = NULL;
+      }
+    }
+  } cleanup = {&local_buf};
+
+  esp_http_client_handle_t client_handle = esp_http_client_init(&client_config);
+  if (!client_handle) {
+    LOG_ERR("OTA", "HTTP Client Handle Failed");
+    return false;
+  }
+
+  esp_err_t esp_err = esp_http_client_set_header(client_handle, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
+  if (esp_err != ESP_OK) {
+    LOG_ERR("OTA", "esp_http_client_set_header Failed : %s", esp_err_to_name(esp_err));
+    esp_http_client_cleanup(client_handle);
+    return false;
+  }
+
+  esp_err = esp_http_client_perform(client_handle);
+  if (esp_err != ESP_OK) {
+    LOG_ERR("OTA", "esp_http_client_perform Failed : %s", esp_err_to_name(esp_err));
+    esp_http_client_cleanup(client_handle);
+    return false;
+  }
+
+  esp_err = esp_http_client_cleanup(client_handle);
+  if (esp_err != ESP_OK) {
+    LOG_ERR("OTA", "esp_http_client_cleanup Failed : %s", esp_err_to_name(esp_err));
+    return false;
+  }
+
+  const auto parseError =
+      filter ? deserializeJson(doc, local_buf, DeserializationOption::Filter(*filter)) : deserializeJson(doc, local_buf);
+  if (parseError) {
+    LOG_ERR("OTA", "JSON parse failed: %s", parseError.c_str());
+    return false;
+  }
+  return true;
+}
+
+size_t getMaxOtaPartitionSize() {
+  const esp_partition_t* partition = esp_ota_get_next_update_partition(nullptr);
+  return partition ? partition->size : 0;
+}
 } /* namespace */
 
 OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
@@ -137,12 +208,38 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   otaUrl.clear();
   otaSize = 0;
   totalSize = 0;
-  local_buf = nullptr;
-  output_len = 0;
+  selectedFeatureFlags.clear();
+  selectedChecksum.clear();
+  lastError.clear();
 
-  JsonDocument filter;
-  esp_err_t esp_err;
-  JsonDocument doc;
+  if (!selectedBundleId.empty()) {
+    for (const auto& entry : featureStoreEntries) {
+      if (entry.id != selectedBundleId) {
+        continue;
+      }
+      if (!entry.compatible) {
+        lastError = entry.compatibilityError.empty() ? "Selected bundle is not compatible with this device."
+                                                     : entry.compatibilityError;
+        return INCOMPATIBLE_BUNDLE_ERROR;
+      }
+      if (entry.downloadUrl.empty() || entry.version.empty()) {
+        lastError = "Selected bundle is missing OTA metadata.";
+        return JSON_PARSE_ERROR;
+      }
+      latestVersion = entry.version;
+      otaUrl = entry.downloadUrl;
+      otaSize = entry.binarySize;
+      totalSize = otaSize;
+      updateAvailable = true;
+      selectedFeatureFlags = entry.featureFlags;
+      selectedChecksum = entry.checksum;
+      LOG_DBG("OTA", "Using feature-store bundle: %s", selectedBundleId.c_str());
+      return OK;
+    }
+
+    lastError = "Selected bundle not found in feature catalog.";
+    return BUNDLE_UNAVAILABLE_ERROR;
+  }
 
   const char* releaseUrl = releaseChannelUrl;
   if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY) {
@@ -154,72 +251,26 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     factoryResetOnInstall = true;
   }
 
-  esp_http_client_config_t client_config = {
-      .url = releaseUrl,
-      .event_handler = event_handler,
-      /* Default HTTP client buffer size 512 byte only */
-      .buffer_size = 8192,
-      .buffer_size_tx = 8192,
-      .skip_cert_common_name_check = true,
-      .crt_bundle_attach = esp_crt_bundle_attach,
-      .keep_alive_enable = true,
-  };
-
-  /* To track life time of local_buf, dtor will be called on exit from that function */
-  struct localBufCleaner {
-    char** bufPtr;
-    ~localBufCleaner() {
-      if (*bufPtr) {
-        free(*bufPtr);
-        *bufPtr = NULL;
-      }
-    }
-  } localBufCleaner = {&local_buf};
-
-  esp_http_client_handle_t client_handle = esp_http_client_init(&client_config);
-  if (!client_handle) {
-    LOG_ERR("OTA", "HTTP Client Handle Failed");
-    return INTERNAL_UPDATE_ERROR;
-  }
-
-  esp_err = esp_http_client_set_header(client_handle, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
-  if (esp_err != ESP_OK) {
-    LOG_ERR("OTA", "esp_http_client_set_header Failed : %s", esp_err_to_name(esp_err));
-    esp_http_client_cleanup(client_handle);
-    return INTERNAL_UPDATE_ERROR;
-  }
-
-  esp_err = esp_http_client_perform(client_handle);
-  if (esp_err != ESP_OK) {
-    LOG_ERR("OTA", "esp_http_client_perform Failed : %s", esp_err_to_name(esp_err));
-    esp_http_client_cleanup(client_handle);
-    return HTTP_ERROR;
-  }
-
-  /* esp_http_client_close will be called inside cleanup as well*/
-  esp_err = esp_http_client_cleanup(client_handle);
-  if (esp_err != ESP_OK) {
-    LOG_ERR("OTA", "esp_http_client_cleanup Failed : %s", esp_err_to_name(esp_err));
-    return INTERNAL_UPDATE_ERROR;
-  }
-
+  JsonDocument filter;
+  JsonDocument doc;
   filter["tag_name"] = true;
   filter["assets"][0]["name"] = true;
   filter["assets"][0]["browser_download_url"] = true;
   filter["assets"][0]["size"] = true;
-  const DeserializationError error = deserializeJson(doc, local_buf, DeserializationOption::Filter(filter));
-  if (error) {
-    LOG_ERR("OTA", "JSON parse failed: %s", error.c_str());
-    return JSON_PARSE_ERROR;
+  if (!fetchReleaseJson(releaseUrl, doc, &filter)) {
+    lastError = "Failed to fetch release metadata for current channel.";
+    return HTTP_ERROR;
   }
 
   if (!doc["tag_name"].is<std::string>()) {
     LOG_ERR("OTA", "No tag_name found");
+    lastError = "Release metadata is missing tag_name.";
     return JSON_PARSE_ERROR;
   }
 
   if (!doc["assets"].is<JsonArray>()) {
     LOG_ERR("OTA", "No assets found");
+    lastError = "Release metadata is missing assets.";
     return JSON_PARSE_ERROR;
   }
 
@@ -237,6 +288,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
 
   if (!updateAvailable) {
     LOG_ERR("OTA", "No firmware.bin asset found");
+    lastError = "No firmware.bin found in release assets.";
     return NO_UPDATE;
   }
 
@@ -298,6 +350,88 @@ bool OtaUpdater::isUpdateNewer() const {
 }
 
 const std::string& OtaUpdater::getLatestVersion() const { return latestVersion; }
+
+void OtaUpdater::selectFeatureStoreBundleByIndex(const size_t index) {
+  if (index >= featureStoreEntries.size()) {
+    return;
+  }
+
+  selectedBundleId = featureStoreEntries[index].id;
+  strncpy(SETTINGS.selectedOtaBundle, selectedBundleId.c_str(), sizeof(SETTINGS.selectedOtaBundle) - 1);
+  SETTINGS.selectedOtaBundle[sizeof(SETTINGS.selectedOtaBundle) - 1] = '\0';
+  SETTINGS.saveToFile();
+}
+
+bool OtaUpdater::loadFeatureStoreCatalog() {
+  featureStoreEntries.clear();
+  selectedBundleId.clear();
+  lastError.clear();
+
+  JsonDocument doc;
+  if (!fetchReleaseJson(featureStoreCatalogUrl, doc)) {
+    lastError = "Feature store catalog unavailable.";
+    return false;
+  }
+
+  if (!doc["bundles"].is<JsonArray>()) {
+    lastError = "Feature store catalog is missing bundles.";
+    return false;
+  }
+
+  const size_t maxOtaSize = getMaxOtaPartitionSize();
+  for (JsonObject bundle : doc["bundles"].as<JsonArray>()) {
+    if (!bundle["id"].is<const char*>() || !bundle["version"].is<const char*>() || !bundle["download_url"].is<const char*>() ||
+        !bundle["size"].is<size_t>()) {
+      continue;
+    }
+
+    FeatureStoreEntry entry;
+    entry.id = bundle["id"].as<std::string>();
+    entry.displayName = bundle["name"].is<const char*>() ? bundle["name"].as<std::string>() : entry.id;
+    entry.version = bundle["version"].as<std::string>();
+    entry.downloadUrl = bundle["download_url"].as<std::string>();
+    entry.binarySize = bundle["size"].as<size_t>();
+    entry.featureFlags = bundle["feature_flags"].is<const char*>() ? bundle["feature_flags"].as<std::string>() : "";
+    entry.checksum = bundle["checksum"].is<const char*>() ? bundle["checksum"].as<std::string>() : "";
+
+    if (bundle["board"].is<const char*>()) {
+      if (strcmp(bundle["board"].as<const char*>(), expectedBoard) != 0) {
+        entry.compatible = false;
+        entry.compatibilityError = "Bundle board does not match this device.";
+      }
+    }
+
+    if (entry.compatible && maxOtaSize > 0 && entry.binarySize > maxOtaSize) {
+      entry.compatible = false;
+      entry.compatibilityError = "Bundle exceeds OTA partition size.";
+    }
+
+    featureStoreEntries.push_back(std::move(entry));
+  }
+
+  if (featureStoreEntries.empty()) {
+    lastError = "Feature store catalog has no usable bundles.";
+    return false;
+  }
+
+  if (SETTINGS.selectedOtaBundle[0] != '\0') {
+    selectedBundleId = SETTINGS.selectedOtaBundle;
+  } else {
+    for (const auto& entry : featureStoreEntries) {
+      if (entry.compatible) {
+        selectedBundleId = entry.id;
+        break;
+      }
+    }
+    if (!selectedBundleId.empty()) {
+      strncpy(SETTINGS.selectedOtaBundle, selectedBundleId.c_str(), sizeof(SETTINGS.selectedOtaBundle) - 1);
+      SETTINGS.selectedOtaBundle[sizeof(SETTINGS.selectedOtaBundle) - 1] = '\0';
+      SETTINGS.saveToFile();
+    }
+  }
+
+  return true;
+}
 
 OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
   if (!isUpdateNewer()) {
@@ -365,6 +499,15 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     LOG_ERR("OTA", "esp_https_ota_finish Failed: %s", esp_err_to_name(esp_err));
     return INTERNAL_UPDATE_ERROR;
   }
+
+  if (!selectedBundleId.empty()) {
+    strncpy(SETTINGS.installedOtaBundle, selectedBundleId.c_str(), sizeof(SETTINGS.installedOtaBundle) - 1);
+    SETTINGS.installedOtaBundle[sizeof(SETTINGS.installedOtaBundle) - 1] = '\0';
+  }
+  const auto buildString = FeatureManifest::getBuildString();
+  strncpy(SETTINGS.installedOtaFeatureFlags, buildString.c_str(), sizeof(SETTINGS.installedOtaFeatureFlags) - 1);
+  SETTINGS.installedOtaFeatureFlags[sizeof(SETTINGS.installedOtaFeatureFlags) - 1] = '\0';
+  SETTINGS.saveToFile();
 
   LOG_INF("OTA", "Update completed");
   return OK;
