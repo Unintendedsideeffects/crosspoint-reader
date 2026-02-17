@@ -43,7 +43,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=231,
+        size_kb=287,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -55,13 +55,13 @@ FEATURES = {
     'koreader_sync': Feature(
         name='KOReader Sync',
         flag='ENABLE_KOREADER_SYNC',
-        size_kb=142,
+        size_kb=156,
         description='Sync reading progress with KOReader'
     ),
     'calibre_sync': Feature(
         name='Calibre Sync',
         flag='ENABLE_CALIBRE_SYNC',
-        size_kb=223,
+        size_kb=240,
         description='Calibre OPDS browser and metadata sync settings'
     ),
     'background_server': Feature(
@@ -85,37 +85,37 @@ FEATURES = {
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=164,
+        size_kb=-2,
         description='EPUB e-book reader with CSS, images, and chapter navigation'
     ),
     'hyphenation': Feature(
         name='Hyphenation',
         flag='ENABLE_HYPHENATION',
-        size_kb=454,
+        size_kb=493,
         description='Language-aware hyphenation for justified EPUB text'
     ),
     'xtc_support': Feature(
         name='XTC Support',
         flag='ENABLE_XTC_SUPPORT',
-        size_kb=13,
+        size_kb=21,
         description='XTC format reader with chapter navigation'
     ),
     'lyra_theme': Feature(
         name='Lyra Theme',
         flag='ENABLE_LYRA_THEME',
-        size_kb=5,
+        size_kb=0,
         description='Alternative UI theme with refined spacing and layout'
     ),
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=230,
+        size_kb=232,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
         name='Todo Planner',
         flag='ENABLE_TODO_PLANNER',
-        size_kb=238,
+        size_kb=296,
         description='Daily markdown notes and task tracking'
     ),
     'dark_mode': Feature(
@@ -127,25 +127,25 @@ FEATURES = {
     'visual_cover_picker': Feature(
         name='Visual Covers',
         flag='ENABLE_VISUAL_COVER_PICKER',
-        size_kb=125,
+        size_kb=146,
         description='Grid-based book explorer with thumbnails'
     ),
     'ble_wifi_provisioning': Feature(
         name='BLE WiFi Provisioning',
         flag='ENABLE_BLE_WIFI_PROVISIONING',
-        size_kb=619,
+        size_kb=665,
         description='Initial WiFi setup via Bluetooth LE'
     ),
     'user_fonts': Feature(
         name='User Fonts',
         flag='ENABLE_USER_FONTS',
-        size_kb=4,
+        size_kb=3,
         description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
     ),
     'web_wifi_setup': Feature(
         name='Web WiFi Setup',
         flag='ENABLE_WEB_WIFI_SETUP',
-        size_kb=4,
+        size_kb=5,
         description='Manage WiFi networks directly from the web interface'
     ),
 }
@@ -465,7 +465,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 1.66  # Lean profile size baseline (measured)
+    base_size_mb = 1.86  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
