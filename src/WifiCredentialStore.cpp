@@ -1,7 +1,7 @@
 #include "WifiCredentialStore.h"
 
+#include <HalStorage.h>
 #include <HardwareSerial.h>
-#include <SDCardManager.h>
 #include <Serialization.h>
 
 #include "SpiBusMutex.h"
@@ -33,10 +33,10 @@ void WifiCredentialStore::obfuscate(std::string& data) const {
 bool WifiCredentialStore::saveToFile() const {
   SpiBusMutex::Guard guard;
   // Make sure the directory exists
-  SdMan.mkdir("/.crosspoint");
+  Storage.mkdir("/.crosspoint");
 
   FsFile file;
-  if (!SdMan.openFileForWrite("WCS", WIFI_FILE, file)) {
+  if (!Storage.openFileForWrite("WCS", WIFI_FILE, file)) {
     return false;
   }
 
@@ -65,7 +65,7 @@ bool WifiCredentialStore::saveToFile() const {
 bool WifiCredentialStore::loadFromFile() {
   SpiBusMutex::Guard guard;
   FsFile file;
-  if (!SdMan.openFileForRead("WCS", WIFI_FILE, file)) {
+  if (!Storage.openFileForRead("WCS", WIFI_FILE, file)) {
     return false;
   }
 
@@ -163,8 +163,15 @@ const WifiCredential* WifiCredentialStore::findCredential(const std::string& ssi
 
 bool WifiCredentialStore::hasSavedCredential(const std::string& ssid) const { return findCredential(ssid) != nullptr; }
 
+void WifiCredentialStore::setLastConnectedSsid(const std::string& ssid) { lastConnectedSsid = ssid; }
+
+const std::string& WifiCredentialStore::getLastConnectedSsid() const { return lastConnectedSsid; }
+
+void WifiCredentialStore::clearLastConnectedSsid() { lastConnectedSsid.clear(); }
+
 void WifiCredentialStore::clearAll() {
   credentials.clear();
+  lastConnectedSsid.clear();
   if (saveToFile()) {
     BackgroundWebServer::getInstance().invalidateCredentialsCache();
   }

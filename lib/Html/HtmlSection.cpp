@@ -180,10 +180,11 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
   }
 
   ChapterHtmlSlimParser visitor(
-      htmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
+      nullptr, htmlPath, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
       viewportHeight, hyphenationEnabled,
       [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
-      nullptr,   // popupFn - not used for standalone HTML
+      false,  // embeddedStyle - standalone HTML sections don't apply EPUB CSS rules
+      contentBasePath, cachePath + "/img_", nullptr,
       nullptr);  // cssParser - not used for standalone HTML
 
   bool success = visitor.parseAndBuildPages();

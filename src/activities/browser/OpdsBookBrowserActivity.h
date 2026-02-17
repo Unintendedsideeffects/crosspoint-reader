@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "../ActivityWithSubactivity.h"
+#include "util/ButtonNavigator.h"
 
 /**
  * Activity for browsing and downloading books from an OPDS server.
@@ -52,6 +53,7 @@ class OpdsBookBrowserActivity final : public ActivityWithSubactivity {
   std::string statusMessage;
   size_t downloadProgress = 0;
   size_t downloadTotal = 0;
+  ButtonNavigator buttonNavigator;
 
   const std::function<void()> onGoHome;
 

@@ -519,8 +519,8 @@ void TxtReaderActivity::renderStatusBar(const int orientedMarginRight, const int
   }
 
   if (showBattery) {
-    GUI.drawBattery(renderer, Rect{orientedMarginLeft, textY, metrics.batteryWidth, metrics.batteryHeight},
-                    showBatteryPercentage);
+    GUI.drawBatteryLeft(renderer, Rect{orientedMarginLeft, textY, metrics.batteryWidth, metrics.batteryHeight},
+                        showBatteryPercentage);
   }
 
   if (showTitle) {

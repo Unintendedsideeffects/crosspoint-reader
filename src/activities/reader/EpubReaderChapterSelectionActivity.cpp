@@ -177,6 +177,8 @@ void EpubReaderChapterSelectionActivity::loop() {
   }
 }
 
+void EpubReaderChapterSelectionActivity::render(Activity::RenderLock&& lock) { renderScreen(); }
+
 void EpubReaderChapterSelectionActivity::displayTaskLoop() {
   while (!exitTaskRequested.load()) {
     if (updateRequired && !subActivity) {

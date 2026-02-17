@@ -1,6 +1,9 @@
 #pragma once
 #include <Epub.h>
 #include <Epub/Section.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
 #include <atomic>
 
@@ -15,6 +18,10 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   int pagesUntilFullRefresh = 0;
   int cachedSpineIndex = 0;
   int cachedChapterTotalPageCount = 0;
+  TaskHandle_t displayTaskHandle = nullptr;
+  SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  bool updateRequired = false;
   // Signals that the next render should reposition within the newly loaded section
   // based on a cross-book percentage jump.
   bool pendingPercentJump = false;
@@ -36,6 +43,10 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   void onReaderMenuBack(uint8_t orientation);
   void onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action);
   void applyOrientation(uint8_t orientation);
+  bool waitForRenderingMutex();
+  static void taskTrampoline(void* param);
+  void displayTaskLoop();
+  void renderScreen();
 
  public:
   explicit EpubReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::unique_ptr<Epub> epub,

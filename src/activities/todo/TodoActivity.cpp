@@ -1,7 +1,7 @@
 #include "TodoActivity.h"
 
 #include <Arduino.h>
-#include <SDCardManager.h>
+#include <HalStorage.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -144,12 +144,12 @@ void TodoActivity::loadTasks() {
   SpiBusMutex::Guard guard;
   items.clear();
 
-  if (!SdMan.exists(filePath.c_str())) {
+  if (!Storage.exists(filePath.c_str())) {
     // If file doesn't exist, we start empty
     return;
   }
 
-  FsFile file = SdMan.open(filePath.c_str(), FILE_READ);
+  FsFile file = Storage.open(filePath.c_str(), FILE_READ);
   if (!file) {
     return;
   }
@@ -194,18 +194,18 @@ void TodoActivity::saveTasks() {
   const auto slashPos = filePath.find_last_of('/');
   if (slashPos != std::string::npos && slashPos > 0) {
     std::string dirPath = filePath.substr(0, slashPos);
-    SdMan.mkdir(dirPath.c_str());
+    Storage.mkdir(dirPath.c_str());
   }
 
   const std::string tempPath = filePath + ".tmp";
   const std::string backupPath = filePath + ".bak";
 
-  if (SdMan.exists(tempPath.c_str())) {
-    SdMan.remove(tempPath.c_str());
+  if (Storage.exists(tempPath.c_str())) {
+    Storage.remove(tempPath.c_str());
   }
 
   FsFile file;
-  if (!SdMan.openFileForWrite("TDO", tempPath.c_str(), file)) {
+  if (!Storage.openFileForWrite("TDO", tempPath.c_str(), file)) {
     return;
   }
 
@@ -226,30 +226,30 @@ void TodoActivity::saveTasks() {
   }
   file.close();
   if (writeFailed) {
-    SdMan.remove(tempPath.c_str());
+    Storage.remove(tempPath.c_str());
     return;
   }
 
-  const bool hasExisting = SdMan.exists(filePath.c_str());
-  if (SdMan.exists(backupPath.c_str())) {
-    SdMan.remove(backupPath.c_str());
+  const bool hasExisting = Storage.exists(filePath.c_str());
+  if (Storage.exists(backupPath.c_str())) {
+    Storage.remove(backupPath.c_str());
   }
 
-  if (hasExisting && !SdMan.rename(filePath.c_str(), backupPath.c_str())) {
-    SdMan.remove(tempPath.c_str());
+  if (hasExisting && !Storage.rename(filePath.c_str(), backupPath.c_str())) {
+    Storage.remove(tempPath.c_str());
     return;
   }
 
-  if (!SdMan.rename(tempPath.c_str(), filePath.c_str())) {
+  if (!Storage.rename(tempPath.c_str(), filePath.c_str())) {
     if (hasExisting) {
-      SdMan.rename(backupPath.c_str(), filePath.c_str());
+      Storage.rename(backupPath.c_str(), filePath.c_str());
     }
-    SdMan.remove(tempPath.c_str());
+    Storage.remove(tempPath.c_str());
     return;
   }
 
   if (hasExisting) {
-    SdMan.remove(backupPath.c_str());
+    Storage.remove(backupPath.c_str());
   }
 }
 

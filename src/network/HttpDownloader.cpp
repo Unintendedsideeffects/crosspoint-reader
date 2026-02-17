@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "CrossPointSettings.h"
+#include "Logging.h"
 #include "SpiBusMutex.h"
 #include "util/UrlUtils.h"
 
@@ -108,8 +109,8 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
   // Remove existing file if present
   {
     SpiBusMutex::Guard guard;
-    if (SdMan.exists(destPath.c_str())) {
-      SdMan.remove(destPath.c_str());
+    if (Storage.exists(destPath.c_str())) {
+      Storage.remove(destPath.c_str());
     }
   }
 
@@ -118,7 +119,7 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
   bool openSuccess = false;
   {
     SpiBusMutex::Guard guard;
-    openSuccess = SdMan.openFileForWrite("HTTP", destPath.c_str(), file);
+    openSuccess = Storage.openFileForWrite("HTTP", destPath.c_str(), file);
   }
   if (!openSuccess) {
     Serial.printf("[%lu] [HTTP] Failed to open file for writing\n", millis());
@@ -133,7 +134,7 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
     {
       SpiBusMutex::Guard guard;
       file.close();
-      SdMan.remove(destPath.c_str());
+      Storage.remove(destPath.c_str());
     }
     http.end();
     return HTTP_ERROR;
@@ -154,7 +155,7 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
         {
           SpiBusMutex::Guard guard;
           file.close();
-          SdMan.remove(destPath.c_str());
+          Storage.remove(destPath.c_str());
         }
         http.end();
         return TIMEOUT;
@@ -183,7 +184,7 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
       {
         SpiBusMutex::Guard guard;
         file.close();
-        SdMan.remove(destPath.c_str());
+        Storage.remove(destPath.c_str());
       }
       http.end();
       return FILE_ERROR;
@@ -209,7 +210,7 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
     Serial.printf("[%lu] [HTTP] Size mismatch: got %zu, expected %zu\n", millis(), downloaded, contentLength);
     {
       SpiBusMutex::Guard guard;
-      SdMan.remove(destPath.c_str());
+      Storage.remove(destPath.c_str());
     }
     return HTTP_ERROR;
   }

@@ -1,5 +1,8 @@
 #pragma once
 #include <Epub.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
 #include <atomic>
 #include <memory>
@@ -16,6 +19,11 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   int currentPage = 0;
   int totalPagesInSpine = 0;
   int selectorIndex = 0;
+  TaskHandle_t displayTaskHandle = nullptr;
+  SemaphoreHandle_t renderingMutex = nullptr;
+  std::atomic<bool> exitTaskRequested{false};
+  std::atomic<bool> taskHasExited{false};
+  bool updateRequired = false;
 
   const std::function<void()> onGoBack;
   const std::function<void(int newSpineIndex)> onSelectSpineIndex;
@@ -30,6 +38,9 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
 
   bool hasSyncOption() const;
   int tocIndexFromItemIndex(int itemIndex) const;
+  static void taskTrampoline(void* param);
+  void displayTaskLoop();
+  void renderScreen();
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   bool isSyncItem(int index) const;
   void launchSyncActivity();

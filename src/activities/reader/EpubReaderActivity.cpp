@@ -308,6 +308,8 @@ void EpubReaderActivity::loop() {
   }
 }
 
+void EpubReaderActivity::render(Activity::RenderLock&& lock) { renderScreen(); }
+
 void EpubReaderActivity::onReaderMenuBack(const uint8_t orientation) {
   exitActivity();
   // Apply the user-selected orientation when the menu is dismissed.
@@ -816,8 +818,8 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
   }
 
   if (showBattery) {
-    GUI.drawBattery(renderer, Rect{orientedMarginLeft + 1, textY, metrics.batteryWidth, metrics.batteryHeight},
-                    showBatteryPercentage);
+    GUI.drawBatteryLeft(renderer, Rect{orientedMarginLeft + 1, textY, metrics.batteryWidth, metrics.batteryHeight},
+                        showBatteryPercentage);
   }
 
   if (showChapterTitle) {

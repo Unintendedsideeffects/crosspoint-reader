@@ -29,6 +29,7 @@ class HalStorage {
   bool exists(const char* path);
   bool remove(const char* path);
   bool rmdir(const char* path);
+  bool rename(const char* path, const char* newPath);
 
   bool openFileForRead(const char* moduleName, const char* path, FsFile& file);
   bool openFileForRead(const char* moduleName, const std::string& path, FsFile& file);
@@ -48,7 +49,7 @@ class HalStorage {
 
 #define Storage HalStorage::getInstance()
 
-// Downstream code must use Storage instead of SdMan
-#ifdef SdMan
-#undef SdMan
+// Compatibility alias for legacy call sites that still use SdMan.
+#ifndef SdMan
+#define SdMan SDCardManager::getInstance()
 #endif
