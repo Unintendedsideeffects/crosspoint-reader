@@ -387,7 +387,6 @@ void BaseTheme::drawBookCard(GfxRenderer& renderer, Rect rect, const std::vector
 void BaseTheme::drawBookMetadata(const GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
                                  bool bookSelected, bool hasContinueReading, bool coverRendered) const {
   if (!hasContinueReading) {
-    const int bookWidth = rect.width / 2;
     const int bookHeight = rect.height;
     const int bookY = rect.y;
     const int y =
