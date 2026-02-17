@@ -80,12 +80,21 @@ bool SdFont::load(const std::string& path) {
     return false;
   }
 
+  constexpr uint32_t MAX_INTERVAL_COUNT = 4096;
+  constexpr uint32_t MAX_GLYPH_COUNT = 65535;
+  constexpr uint32_t MAX_BITMAP_SIZE = 8 * 1024 * 1024;
+  if (intervalCount > MAX_INTERVAL_COUNT || totalGlyphs > MAX_GLYPH_COUNT || bitmapSize > MAX_BITMAP_SIZE) {
+    LOG_ERR("SDFONT", "CPF header out of bounds in %s (intervals=%u glyphs=%u bitmap=%u)", path.c_str(), intervalCount,
+            totalGlyphs, bitmapSize);
+    return false;
+  }
+
   const uint64_t expectedPayloadSize = static_cast<uint64_t>(intervalCount) * sizeof(EpdUnicodeInterval) +
                                        static_cast<uint64_t>(totalGlyphs) * sizeof(EpdGlyph) + bitmapSize;
   const uint64_t expectedFileSize = 22ULL + expectedPayloadSize;
   if (expectedFileSize != file.size()) {
     LOG_ERR("SDFONT", "Invalid CPF layout in %s (expected %llu bytes, got %u)", path.c_str(),
-            static_cast<unsigned long long>(expectedFileSize), file.size());
+            static_cast<unsigned long long>(expectedFileSize), static_cast<unsigned>(file.size()));
     return false;
   }
 

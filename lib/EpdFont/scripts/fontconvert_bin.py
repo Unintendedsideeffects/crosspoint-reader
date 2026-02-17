@@ -17,7 +17,9 @@ parser.add_argument("--additional-intervals", dest="additional_intervals", actio
 args = parser.parse_args()
 
 GlyphProps = namedtuple("GlyphProps", ["width", "height", "advance_x", "left", "top", "data_length", "data_offset", "code_point"])
-GLYPH_STRUCT = "<BBBxhhHxxI"  # Matches C++ EpdGlyph layout (16 bytes, little-endian)
+# Matches C++ EpdGlyph layout (16 bytes, little-endian):
+# B=width, B=height, B=advanceX, x=pad, h=left, h=top, H=dataLength, xx=pad, I=dataOffset
+GLYPH_STRUCT = "<BBBxhhHxxI"
 assert struct.calcsize(GLYPH_STRUCT) == 16
 
 font_stack = [freetype.Face(f) for f in args.fontstack]

@@ -61,9 +61,6 @@ void UserFontManager::scanFonts() {
         families.insert(baseName.substr(0, baseName.size() - 11));
       } else {
         families.insert(baseName);
-        if (baseName.find('-') != std::string::npos) {
-          LOG_WRN("FONTS", "Non-canonical user font filename detected: %s", fileName.c_str());
-        }
       }
     }
   }

@@ -158,8 +158,7 @@ inline std::vector<SettingInfo> getSettingsList() {
         const size_t index = std::min(static_cast<size_t>(value), fonts.size() - 1);
         strncpy(SETTINGS.userFontPath, fonts[index].c_str(), sizeof(SETTINGS.userFontPath) - 1);
         SETTINGS.userFontPath[sizeof(SETTINGS.userFontPath) - 1] = '\0';
-        if (SETTINGS.fontFamily == CrossPointSettings::USER_SD &&
-            !manager.loadFontFamily(static_cast<std::string>(SETTINGS.userFontPath))) {
+        if (SETTINGS.fontFamily == CrossPointSettings::USER_SD && !manager.loadFontFamily(SETTINGS.userFontPath)) {
           SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
         }
       },

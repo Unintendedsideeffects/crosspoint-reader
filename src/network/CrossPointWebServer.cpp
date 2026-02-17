@@ -813,9 +813,9 @@ void CrossPointWebServer::handleUpload() const {
         clearEpubCacheIfNeeded(filePath);
         invalidateSleepCacheIfNeeded(filePath);
 #if ENABLE_USER_FONTS
-        String lowerFileName = uploadFileName;
-        lowerFileName.toLowerCase();
-        if (uploadPath == "/fonts" && lowerFileName.endsWith(".cpf")) {
+        String normalizedUploadFileName = uploadFileName;
+        normalizedUploadFileName.toLowerCase();
+        if (uploadPath == "/fonts" && normalizedUploadFileName.endsWith(".cpf")) {
           UserFontManager::getInstance().scanFonts();
         }
 #endif
