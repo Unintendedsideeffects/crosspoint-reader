@@ -406,6 +406,8 @@ GitHub Actions provides cloud-based builds without requiring local build tools.
 6. Wait for the build (typically 5-10 minutes)
 7. Download the artifact from the Actions page
 
+> **Note on the Fork:** The web configurator and automated builds are primarily supported on the `fork-drift` branch of this fork. For more details on our branch management and relationship with upstream, see [docs/fork-strategy.md](fork-strategy.md).
+
 ### Manual Workflow Trigger
 
 1. Go to your fork's Actions tab

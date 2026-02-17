@@ -101,7 +101,7 @@ uv run pio run -e custom
 
 ## GitHub Actions Build Test
 
-1. [  ] Push changes to fork
+1. [  ] Push changes to fork (ensure you are on the `fork-drift` branch)
 2. [  ] Navigate to Actions tab
 3. [  ] Run "Build Custom Firmware" workflow
 4. [  ] Select "standard" profile
@@ -113,6 +113,8 @@ uv run pio run -e custom
    - platformio-custom.ini
 8. [  ] Flash firmware.bin to device
 9. [  ] Verify features match standard profile
+
+> **Note:** Most active development and build testing should be performed on the `fork-drift` branch. See [docs/fork-strategy.md](fork-strategy.md) for more details.
 
 ## Plugin Picker Web UI Test
 
