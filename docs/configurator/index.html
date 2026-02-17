@@ -2257,10 +2257,10 @@
         });
       }
 
-      function normalizeFileManagerOrigin(rawValue) {
+      function normalizeFileManagerOrigin(rawValue, defaultScheme = "http") {
         const raw = (rawValue || "").trim();
         if (!raw) return null;
-        const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(raw) ? raw : `http://${raw}`;
+        const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(raw) ? raw : `${defaultScheme}://${raw}`;
         try {
           const parsed = new URL(withScheme);
           if (!/^https?:$/.test(parsed.protocol)) return null;
@@ -2316,10 +2316,22 @@
           if (!origins.includes(origin)) origins.push(origin);
         };
 
-        addOrigin(normalizeFileManagerOrigin(hostValue));
+        const preferredScheme = location.protocol === "https:" ? "https" : "http";
+        const alternateScheme = preferredScheme === "https" ? "http" : "https";
+        const appendInputOrigins = (value) => {
+          const raw = (value || "").trim();
+          if (!raw) return;
+          const hasScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(raw);
+          if (hasScheme) {
+            addOrigin(normalizeFileManagerOrigin(raw));
+            return;
+          }
+          addOrigin(normalizeFileManagerOrigin(raw, preferredScheme));
+          addOrigin(normalizeFileManagerOrigin(raw, alternateScheme));
+        };
 
-        const queryHost = normalizeFileManagerOrigin(new URLSearchParams(location.search).get("host"));
-        addOrigin(queryHost);
+        appendInputOrigins(hostValue);
+        appendInputOrigins(new URLSearchParams(location.search).get("host"));
 
         addOrigin("http://crosspoint.local");
         addOrigin("https://crosspoint.local");
@@ -2341,12 +2353,15 @@
         }
 
         const candidates = buildProbeOrigins(hostInput.value);
+        if (inputOrigin) setDetectedFileManagerUrl(inputOrigin);
         setFileManagerStatus(`Probing ${candidates.length} candidate endpoint(s)...`);
 
         let skippedMixedContent = false;
+        let firstSkippedOrigin = null;
         for (const origin of candidates) {
           if (shouldSkipProbe(origin)) {
             skippedMixedContent = true;
+            if (!firstSkippedOrigin) firstSkippedOrigin = origin;
             continue;
           }
           if (await probeOrigin(origin)) {
@@ -2356,10 +2371,10 @@
           }
         }
 
-        setDetectedFileManagerUrl("http://crosspoint.local");
+        setDetectedFileManagerUrl(firstSkippedOrigin || inputOrigin || "http://crosspoint.local");
         if (skippedMixedContent) {
           setFileManagerStatus(
-            "Probe blocked by HTTPS mixed-content policy for http:// hosts. Use Open /files or run this page from http:// for active probing.",
+            `Active probing is blocked by browser mixed-content policy on HTTPS pages for ${firstSkippedOrigin || "http:// hosts"}. Use Open /files to navigate directly, or run this page from http:// for active probing.`,
             true
           );
         } else {
