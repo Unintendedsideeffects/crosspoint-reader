@@ -7,6 +7,7 @@
 
 #include "lib/FsHelpers/FsHelpers.h"
 #include "lib/Markdown/MarkdownParser.h"
+#include "src/activities/todo/TodoPlannerStorage.h"
 #include "test/mock/Arduino.h"
 
 // Mock ESP implementation
@@ -57,9 +58,22 @@ void testMarkdownLimits() {
   std::cout << "Markdown Parser Limits tests passed!" << std::endl;
 }
 
+void testTodoPlannerStorageSelection() {
+  std::cout << "Testing TODO Planner storage selection..." << std::endl;
+  assert(TodoPlannerStorage::dailyPath("2026-02-17", true, true, false) == "/daily/2026-02-17.md");
+  assert(TodoPlannerStorage::dailyPath("2026-02-17", false, false, true) == "/daily/2026-02-17.txt");
+  assert(TodoPlannerStorage::dailyPath("2026-02-17", false, true, false) == "/daily/2026-02-17.md");
+  assert(TodoPlannerStorage::dailyPath("2026-02-17", true, false, false) == "/daily/2026-02-17.md");
+  assert(TodoPlannerStorage::dailyPath("2026-02-17", false, false, false) == "/daily/2026-02-17.txt");
+  assert(TodoPlannerStorage::formatEntry("Task", false) == "- [ ] Task");
+  assert(TodoPlannerStorage::formatEntry("Agenda item", true) == "Agenda item");
+  std::cout << "TODO Planner storage selection tests passed!" << std::endl;
+}
+
 int main() {
   testPathNormalisation();
   testMarkdownLimits();
+  testTodoPlannerStorageSelection();
   std::cout << "All Host Tests Passed!" << std::endl;
   return 0;
 }

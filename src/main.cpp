@@ -29,6 +29,7 @@
 #if ENABLE_TODO_PLANNER
 #include "activities/todo/TodoActivity.h"
 #include "activities/todo/TodoFallbackActivity.h"
+#include "activities/todo/TodoPlannerStorage.h"
 #endif
 #include "activities/util/FullScreenMessageActivity.h"
 #include "components/UITheme.h"
@@ -322,36 +323,28 @@ void onGoToTodo() {
     return;
   }
 
-#if ENABLE_MARKDOWN
-  // 1. Try markdown (.md)
   const std::string todoMdPath = "/daily/" + today + ".md";
-  if (Storage.exists(todoMdPath.c_str())) {
-    enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
-    return;
-  }
-#endif
-
-  // 2. Try text (.txt)
   const std::string todoTxtPath = "/daily/" + today + ".txt";
-  if (Storage.exists(todoTxtPath.c_str())) {
-    enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoTxtPath, today, onGoHome));
+  const bool todoMdExists = Storage.exists(todoMdPath.c_str());
+  const bool todoTxtExists = Storage.exists(todoTxtPath.c_str());
+  if (todoMdExists || todoTxtExists) {
+    enterNewActivity(new TodoActivity(renderer, mappedInputManager,
+                                      TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists),
+                                      today, onGoHome));
     return;
   }
 
-  // 3. Try EPUB (ReadOnly/ReaderActivity)
+  // 2. Try EPUB (ReadOnly/ReaderActivity)
   const std::string todoEpubPath = "/daily/" + today + ".epub";
   if (Storage.exists(todoEpubPath.c_str())) {
     enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, onGoHome, onGoToMyLibraryWithPath));
     return;
   }
 
-  // 4. Default: Create/Open new list
-#if ENABLE_MARKDOWN
-  enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoMdPath, today, onGoHome));
-#else
-  // When markdown disabled, default to TXT format
-  enterNewActivity(new TodoActivity(renderer, mappedInputManager, todoTxtPath, today, onGoHome));
-#endif
+  // 3. Default: Create/Open new list
+  enterNewActivity(new TodoActivity(renderer, mappedInputManager,
+                                    TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists),
+                                    today, onGoHome));
 }
 #endif  // ENABLE_TODO_PLANNER
 

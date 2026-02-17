@@ -28,6 +28,10 @@
 #include "html/SettingsPageHtml.generated.h"
 #include "util/PathUtils.h"
 #include "util/StringUtils.h"
+#include "util/DateUtils.h"
+#if ENABLE_TODO_PLANNER
+#include "activities/todo/TodoPlannerStorage.h"
+#endif
 
 namespace {
 // Folders/files to hide from the web interface file browser
@@ -133,6 +137,7 @@ void CrossPointWebServer::begin() {
   server->on("/api/plugins", HTTP_GET, [this] { handlePlugins(); });
   // Backward-compatible alias while tooling migrates terminology.
   server->on("/api/features", HTTP_GET, [this] { handlePlugins(); });
+  server->on("/api/todo/entry", HTTP_POST, [this] { handleTodoEntry(); });
   server->on("/api/files", HTTP_GET, [this] { handleFileListData(); });
   server->on("/download", HTTP_GET, [this] { handleDownload(); });
 
@@ -361,6 +366,61 @@ void CrossPointWebServer::handleStatus() const {
 }
 
 void CrossPointWebServer::handlePlugins() const { server->send(200, "application/json", FeatureManifest::toJson()); }
+
+void CrossPointWebServer::handleTodoEntry() {
+#if !ENABLE_TODO_PLANNER
+  server->send(404, "text/plain", "TODO planner disabled");
+  return;
+#else
+  if (!server->hasArg("text")) {
+    server->send(400, "text/plain", "Missing text");
+    return;
+  }
+
+  String text = server->arg("text");
+  text.replace("\r", " ");
+  text.replace("\n", " ");
+  text.trim();
+  if (text.isEmpty() || text.length() > 300) {
+    server->send(400, "text/plain", "Invalid text");
+    return;
+  }
+
+  const bool agendaEntry = server->arg("type").equalsIgnoreCase("agenda");
+  const std::string today = DateUtils::currentDate();
+  if (today.empty()) {
+    server->send(503, "text/plain", "Date unavailable");
+    return;
+  }
+
+  const std::string markdownPath = "/daily/" + today + ".md";
+  const std::string textPath = "/daily/" + today + ".txt";
+  const bool markdownExists = Storage.exists(markdownPath.c_str());
+  const bool textExists = Storage.exists(textPath.c_str());
+  const std::string targetPath = TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, markdownExists, textExists);
+  const std::string dirPath = "/daily";
+  if (!Storage.exists(dirPath.c_str())) {
+    Storage.mkdir(dirPath.c_str());
+  }
+
+  std::string content;
+  if (Storage.exists(targetPath.c_str())) {
+    content = Storage.readFile(targetPath.c_str()).c_str();
+    if (!content.empty() && content.back() != '\n') {
+      content.push_back('\n');
+    }
+  }
+  content += TodoPlannerStorage::formatEntry(text.c_str(), agendaEntry);
+  content.push_back('\n');
+
+  if (!Storage.writeFile(targetPath.c_str(), content.c_str())) {
+    server->send(500, "text/plain", "Failed to write TODO entry");
+    return;
+  }
+
+  server->send(200, "application/json", "{\"ok\":true}");
+#endif
+}
 
 void CrossPointWebServer::scanFiles(const char* path, const std::function<void(FileInfo)>& callback) const {
   FsFile root;
