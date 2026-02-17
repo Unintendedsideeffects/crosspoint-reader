@@ -31,7 +31,7 @@ FEATURES = {
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
-        size_kb=0,
+        size_kb=3630,
         description='Optional OpenDyslexic 8/10/12/14pt family'
     ),
     'image_sleep': Feature(
@@ -85,13 +85,13 @@ FEATURES = {
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=157,
+        size_kb=164,
         description='EPUB e-book reader with CSS, images, and chapter navigation'
     ),
     'hyphenation': Feature(
         name='Hyphenation',
         flag='ENABLE_HYPHENATION',
-        size_kb=447,
+        size_kb=454,
         description='Language-aware hyphenation for justified EPUB text'
     ),
     'xtc_support': Feature(
@@ -115,7 +115,7 @@ FEATURES = {
     'todo_planner': Feature(
         name='Todo Planner',
         flag='ENABLE_TODO_PLANNER',
-        size_kb=237,
+        size_kb=238,
         description='Daily markdown notes and task tracking'
     ),
     'dark_mode': Feature(
@@ -127,7 +127,7 @@ FEATURES = {
     'visual_cover_picker': Feature(
         name='Visual Covers',
         flag='ENABLE_VISUAL_COVER_PICKER',
-        size_kb=118,
+        size_kb=125,
         description='Grid-based book explorer with thumbnails'
     ),
     'ble_wifi_provisioning': Feature(
