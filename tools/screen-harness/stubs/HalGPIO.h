@@ -21,4 +21,14 @@ class HalGPIO {
   static constexpr uint8_t BTN_UP = 4;
   static constexpr uint8_t BTN_DOWN = 5;
   static constexpr uint8_t BTN_POWER = 6;
+
+  void begin() {}
+  void update() {}
+
+  bool wasPressed(uint8_t /*button*/) const { return false; }
+  bool wasReleased(uint8_t /*button*/) const { return false; }
+  bool isPressed(uint8_t /*button*/) const { return false; }
+  bool wasAnyPressed() const { return false; }
+  bool wasAnyReleased() const { return false; }
+  unsigned long getHeldTime() const { return 0; }
 };

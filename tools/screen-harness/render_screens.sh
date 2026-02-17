@@ -34,6 +34,7 @@ pushd "$ROOT_DIR" >/dev/null
   -Isrc \
   tools/screen-harness/main.cpp \
   tools/screen-harness/stubs/stubs.cpp \
+  src/activities/Activity.cpp \
   src/activities/boot_sleep/BootActivity.cpp \
   lib/GfxRenderer/GfxRenderer.cpp \
   lib/EpdFont/EpdFont.cpp \

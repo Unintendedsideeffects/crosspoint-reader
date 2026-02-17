@@ -13,10 +13,6 @@
 #include "activities/boot_sleep/BootActivity.h"
 #include "fontIds.h"
 
-// Activity constructors use this type by reference. For the host harness we only
-// render static snapshots and don't consume input.
-class MappedInputManager {};
-
 namespace {
 
 void installFonts(GfxRenderer& renderer) {
@@ -161,7 +157,8 @@ int main(int argc, char* argv[]) {
   renderer.begin();
   installFonts(renderer);
 
-  MappedInputManager mappedInput;
+  HalGPIO gpio;
+  MappedInputManager mappedInput(gpio);
 
   const std::vector<std::pair<std::string, std::function<void()>>> scenarios = {
       {"01_boot", [&] { drawBoot(renderer, mappedInput); }},
