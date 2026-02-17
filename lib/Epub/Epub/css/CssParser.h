@@ -30,6 +30,7 @@
 class CssParser {
  public:
   CssParser() = default;
+  explicit CssParser(const std::string& cacheDir);
   ~CssParser() = default;
 
   // Non-copyable
@@ -91,9 +92,15 @@ class CssParser {
    */
   bool loadFromCache(FsFile& file);
 
+  // Compatibility helpers for callers that want parser-owned cache IO.
+  [[nodiscard]] bool hasCache() const;
+  bool saveToCache() const;
+  bool loadFromCache();
+
  private:
   // Storage: maps normalized selector -> style properties
   std::unordered_map<std::string, CssStyle> rulesBySelector_;
+  std::string cacheFilePath_;
 
   // Internal parsing helpers
   void processRuleBlock(const std::string& selectorGroup, const std::string& declarations);

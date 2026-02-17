@@ -141,6 +141,8 @@ bool extractNextRule(const std::string& css, size_t& pos, std::string& selector,
 
 }  // anonymous namespace
 
+CssParser::CssParser(const std::string& cacheDir) : cacheFilePath_(cacheDir + "/css_rules.bin") {}
+
 // String utilities implementation
 
 std::string CssParser::normalized(const std::string& s) {
@@ -521,6 +523,37 @@ CssStyle CssParser::parseInlineStyle(const std::string& styleValue) { return par
 
 // Cache format version - increment when format changes
 constexpr uint8_t CSS_CACHE_VERSION = 2;
+
+bool CssParser::hasCache() const { return !cacheFilePath_.empty() && Storage.exists(cacheFilePath_.c_str()); }
+
+bool CssParser::saveToCache() const {
+  if (cacheFilePath_.empty()) {
+    return false;
+  }
+  FsFile file;
+  if (!Storage.openFileForWrite("CSS", cacheFilePath_, file)) {
+    return false;
+  }
+  const bool ok = saveToCache(file);
+  file.close();
+  if (!ok) {
+    Storage.remove(cacheFilePath_.c_str());
+  }
+  return ok;
+}
+
+bool CssParser::loadFromCache() {
+  if (cacheFilePath_.empty()) {
+    return false;
+  }
+  FsFile file;
+  if (!Storage.openFileForRead("CSS", cacheFilePath_, file)) {
+    return false;
+  }
+  const bool ok = loadFromCache(file);
+  file.close();
+  return ok;
+}
 
 bool CssParser::saveToCache(FsFile& file) const {
   if (!file) {
