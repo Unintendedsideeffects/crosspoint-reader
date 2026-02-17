@@ -1,5 +1,8 @@
 #pragma once
 #include <Epub.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
 #include <atomic>
 #include <functional>
@@ -43,7 +46,6 @@ class KOReaderSyncActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
   bool preventAutoSleep() override { return state == CONNECTING || state == SYNCING; }
   bool blocksBackgroundServer() override { return true; }
 

@@ -1,5 +1,8 @@
 #pragma once
 #include <OpdsParser.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
 #include <atomic>
 #include <functional>
@@ -40,6 +43,8 @@ class OpdsBookBrowserActivity final : public ActivityWithSubactivity {
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   ButtonNavigator buttonNavigator;
+  bool updateRequired = false;
+
   BrowserState state = BrowserState::LOADING;
   std::vector<OpdsEntry> entries;
   std::vector<std::string> navigationHistory;  // Stack of previous feed paths for back navigation

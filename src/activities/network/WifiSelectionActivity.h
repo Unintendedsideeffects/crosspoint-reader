@@ -1,4 +1,7 @@
 #pragma once
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
 #include <atomic>
 #include <cstdint>
@@ -50,7 +53,7 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   ButtonNavigator buttonNavigator;
-
+  bool updateRequired = false;
   WifiSelectionState state = WifiSelectionState::SCANNING;
   int selectedNetworkIndex = 0;
   std::vector<WifiNetworkInfo> networks;
@@ -118,7 +121,6 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
 
   // Get the IP address after successful connection
   const std::string& getConnectedIP() const { return connectedIP; }

@@ -2,7 +2,6 @@
 
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-#include <I18n.h>
 #include <Logging.h>
 
 #include "MappedInputManager.h"
@@ -11,6 +10,11 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 
+void ClearCacheActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<ClearCacheActivity*>(param);
+  self->displayTaskLoop();
+}
+
 void ClearCacheActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
@@ -18,10 +22,18 @@ void ClearCacheActivity::onEnter() {
   exitTaskRequested.store(false);
   taskHasExited.store(false);
   state = WARNING;
-  requestUpdate();
+  updateRequired = true;
+
+  xTaskCreate(&ClearCacheActivity::taskTrampoline, "ClearCacheActivityTask",
+              4096,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
 }
 
-void ClearCacheActivity::onExit() { ActivityWithSubactivity::onExit(); }
+void ClearCacheActivity::onExit() {
+  ActivityWithSubactivity::onExit();
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   vSemaphoreDelete(renderingMutex);
@@ -49,47 +61,46 @@ void ClearCacheActivity::render() {
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, tr(STR_CLEAR_READING_CACHE), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, "Clear Cache", true, EpdFontFamily::BOLD);
 
   if (state == WARNING) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 60, tr(STR_CLEAR_CACHE_WARNING_1), true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 30, tr(STR_CLEAR_CACHE_WARNING_2), true,
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 60, "This will clear all cached book data.", true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 30, "All reading progress will be lost!", true,
                               EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, tr(STR_CLEAR_CACHE_WARNING_3), true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 30, tr(STR_CLEAR_CACHE_WARNING_4), true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, "Books will need to be re-indexed", true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 30, "when opened again.", true);
 
-    const auto labels = mappedInput.mapLabels(tr(STR_CANCEL), tr(STR_CLEAR_BUTTON), "", "");
+    const auto labels = mappedInput.mapLabels("« Cancel", "Clear", "", "");
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
 
   if (state == CLEARING) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, tr(STR_CLEARING_CACHE), true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, "Clearing cache...", true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }
 
   if (state == SUCCESS) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, tr(STR_CACHE_CLEARED), true, EpdFontFamily::BOLD);
-    std::string resultText = std::to_string(clearedCount) + " " + std::string(tr(STR_ITEMS_REMOVED));
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, "Cache Cleared", true, EpdFontFamily::BOLD);
+    String resultText = String(clearedCount) + " items removed";
     if (failedCount > 0) {
-      resultText += ", " + std::to_string(failedCount) + " " + std::string(tr(STR_FAILED_LOWER));
+      resultText += ", " + String(failedCount) + " failed";
     }
     renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, resultText.c_str());
 
-    const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+    const auto labels = mappedInput.mapLabels("« Back", "", "", "");
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
 
   if (state == FAILED) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, tr(STR_CLEAR_CACHE_FAILED), true,
-                              EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, tr(STR_CHECK_SERIAL_OUTPUT));
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, "Failed to clear cache", true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, "Check serial output for details");
 
-    const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+    const auto labels = mappedInput.mapLabels("« Back", "", "", "");
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
@@ -106,7 +117,7 @@ void ClearCacheActivity::clearCache() {
     LOG_DBG("CLEAR_CACHE", "Failed to open cache directory");
     if (root) root.close();
     state = FAILED;
-    requestUpdate();
+    updateRequired = true;
     return;
   }
 
@@ -141,18 +152,18 @@ void ClearCacheActivity::clearCache() {
   LOG_DBG("CLEAR_CACHE", "Cache cleared: %d removed, %d failed", clearedCount, failedCount);
 
   state = SUCCESS;
-  requestUpdate();
+  updateRequired = true;
 }
 
 void ClearCacheActivity::loop() {
   if (state == WARNING) {
     if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
       LOG_DBG("CLEAR_CACHE", "User confirmed, starting cache clear");
-      {
-        RenderLock lock(*this);
-        state = CLEARING;
-      }
-      requestUpdateAndWait();
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      state = CLEARING;
+      xSemaphoreGive(renderingMutex);
+      updateRequired = true;
+      vTaskDelay(10 / portTICK_PERIOD_MS);
 
       clearCache();
     }

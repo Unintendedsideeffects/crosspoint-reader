@@ -12,7 +12,7 @@
 #include "parsers/ChapterHtmlSlimParser.h"
 
 namespace {
-constexpr uint8_t SECTION_FILE_VERSION = 13;
+constexpr uint8_t SECTION_FILE_VERSION = 12;
 constexpr uint32_t HEADER_SIZE = sizeof(uint8_t) + sizeof(int) + sizeof(float) + sizeof(bool) + sizeof(uint8_t) +
                                  sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(bool) + sizeof(bool) +
                                  sizeof(uint32_t);
@@ -204,9 +204,6 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
     LOG_ERR("SCT", "Failed to parse XML and build pages");
     file.close();
     Storage.remove(filePath.c_str());
-    if (cssParser) {
-      cssParser->clear();
-    }
     return false;
   }
 
@@ -233,9 +230,6 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
   serialization::writePod(file, pageCount);
   serialization::writePod(file, lutOffset);
   file.close();
-  if (cssParser) {
-    cssParser->clear();
-  }
   return true;
 }
 

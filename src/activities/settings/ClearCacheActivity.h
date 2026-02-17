@@ -18,7 +18,6 @@ class ClearCacheActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
 
  private:
   enum State { WARNING, CLEARING, SUCCESS, FAILED };

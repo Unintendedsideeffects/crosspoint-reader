@@ -2,7 +2,6 @@
 
 #include <ESPmDNS.h>
 #include <GfxRenderer.h>
-#include <I18n.h>
 #include <WiFi.h>
 #include <esp_task_wdt.h>
 
@@ -15,10 +14,16 @@ namespace {
 constexpr const char* HOSTNAME = "crosspoint";
 }  // namespace
 
+void CalibreConnectActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<CalibreConnectActivity*>(param);
+  self->displayTaskLoop();
+}
+
 void CalibreConnectActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
-  requestUpdate();
+  renderingMutex = xSemaphoreCreateMutex();
+  updateRequired = true;
   state = CalibreConnectState::WIFI_SELECTION;
   connectedIP.clear();
   connectedSSID.clear();
@@ -29,6 +34,13 @@ void CalibreConnectActivity::onEnter() {
   lastCompleteName.clear();
   lastCompleteAt = 0;
   exitRequested = false;
+
+  xTaskCreate(&CalibreConnectActivity::taskTrampoline, "CalibreConnectTask",
+              2048,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
 
   if (WiFi.status() != WL_CONNECTED) {
     enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
@@ -51,6 +63,14 @@ void CalibreConnectActivity::onExit() {
   delay(30);
   WiFi.mode(WIFI_OFF);
   delay(30);
+
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  if (displayTaskHandle) {
+    vTaskDelete(displayTaskHandle);
+    displayTaskHandle = nullptr;
+  }
+  vSemaphoreDelete(renderingMutex);
+  renderingMutex = nullptr;
 }
 
 void CalibreConnectActivity::onWifiSelectionComplete(const bool connected) {
@@ -72,7 +92,7 @@ void CalibreConnectActivity::onWifiSelectionComplete(const bool connected) {
 
 void CalibreConnectActivity::startWebServer() {
   state = CalibreConnectState::SERVER_STARTING;
-  requestUpdate();
+  updateRequired = true;
 
   if (MDNS.begin(HOSTNAME)) {
     // mDNS is optional for the Calibre plugin but still helpful for users.
@@ -84,10 +104,10 @@ void CalibreConnectActivity::startWebServer() {
 
   if (webServer->isRunning()) {
     state = CalibreConnectState::SERVER_RUNNING;
-    requestUpdate();
+    updateRequired = true;
   } else {
     state = CalibreConnectState::ERROR;
-    requestUpdate();
+    updateRequired = true;
   }
 }
 
@@ -158,7 +178,7 @@ void CalibreConnectActivity::loop() {
       changed = true;
     }
     if (changed) {
-      requestUpdate();
+      updateRequired = true;
     }
   }
 
@@ -168,7 +188,19 @@ void CalibreConnectActivity::loop() {
   }
 }
 
-void CalibreConnectActivity::render(Activity::RenderLock&&) {
+void CalibreConnectActivity::displayTaskLoop() {
+  while (true) {
+    if (updateRequired) {
+      updateRequired = false;
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      render();
+      xSemaphoreGive(renderingMutex);
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
+
+void CalibreConnectActivity::render() const {
   if (state == CalibreConnectState::SERVER_RUNNING) {
     renderer.clearScreen();
     renderServerRunning();
@@ -179,9 +211,9 @@ void CalibreConnectActivity::render(Activity::RenderLock&&) {
   renderer.clearScreen();
   const auto pageHeight = renderer.getScreenHeight();
   if (state == CalibreConnectState::SERVER_STARTING) {
-    renderer.drawCenteredText(UI_12_FONT_ID, pageHeight / 2 - 20, tr(STR_CALIBRE_STARTING), true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_12_FONT_ID, pageHeight / 2 - 20, "Starting Calibre...", true, EpdFontFamily::BOLD);
   } else if (state == CalibreConnectState::ERROR) {
-    renderer.drawCenteredText(UI_12_FONT_ID, pageHeight / 2 - 20, tr(STR_CONNECTION_FAILED), true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_12_FONT_ID, pageHeight / 2 - 20, "Calibre setup failed", true, EpdFontFamily::BOLD);
   }
   renderer.displayBuffer();
 }
@@ -191,32 +223,31 @@ void CalibreConnectActivity::renderServerRunning() const {
   constexpr int SMALL_SPACING = 20;
   constexpr int SECTION_SPACING = 40;
   constexpr int TOP_PADDING = 14;
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, tr(STR_CALIBRE_WIRELESS), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, "Connect to Calibre", true, EpdFontFamily::BOLD);
 
   int y = 55 + TOP_PADDING;
-  renderer.drawCenteredText(UI_10_FONT_ID, y, tr(STR_WIFI_NETWORKS), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, y, "Network", true, EpdFontFamily::BOLD);
   y += LINE_SPACING;
-  std::string ssidInfo = std::string(tr(STR_NETWORK_PREFIX)) + connectedSSID;
+  std::string ssidInfo = "Network: " + connectedSSID;
   if (ssidInfo.length() > 28) {
     ssidInfo.replace(25, ssidInfo.length() - 25, "...");
   }
   renderer.drawCenteredText(UI_10_FONT_ID, y, ssidInfo.c_str());
-  renderer.drawCenteredText(UI_10_FONT_ID, y + LINE_SPACING,
-                            (std::string(tr(STR_IP_ADDRESS_PREFIX)) + connectedIP).c_str());
+  renderer.drawCenteredText(UI_10_FONT_ID, y + LINE_SPACING, ("IP: " + connectedIP).c_str());
 
   y += LINE_SPACING * 2 + SECTION_SPACING;
-  renderer.drawCenteredText(UI_10_FONT_ID, y, tr(STR_CALIBRE_SETUP), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, y, "Setup", true, EpdFontFamily::BOLD);
   y += LINE_SPACING;
-  renderer.drawCenteredText(SMALL_FONT_ID, y, tr(STR_CALIBRE_INSTRUCTION_1));
-  renderer.drawCenteredText(SMALL_FONT_ID, y + SMALL_SPACING, tr(STR_CALIBRE_INSTRUCTION_2));
-  renderer.drawCenteredText(SMALL_FONT_ID, y + SMALL_SPACING * 2, tr(STR_CALIBRE_INSTRUCTION_3));
-  renderer.drawCenteredText(SMALL_FONT_ID, y + SMALL_SPACING * 3, tr(STR_CALIBRE_INSTRUCTION_4));
+  renderer.drawCenteredText(SMALL_FONT_ID, y, "1) Install CrossPoint Reader plugin");
+  renderer.drawCenteredText(SMALL_FONT_ID, y + SMALL_SPACING, "2) Be on the same WiFi network");
+  renderer.drawCenteredText(SMALL_FONT_ID, y + SMALL_SPACING * 2, "3) In Calibre: \"Send to device\"");
+  renderer.drawCenteredText(SMALL_FONT_ID, y + SMALL_SPACING * 3, "Keep this screen open while sending");
 
   y += SMALL_SPACING * 3 + SECTION_SPACING;
-  renderer.drawCenteredText(UI_10_FONT_ID, y, tr(STR_CALIBRE_STATUS), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, y, "Status", true, EpdFontFamily::BOLD);
   y += LINE_SPACING;
   if (lastProgressTotal > 0 && lastProgressReceived <= lastProgressTotal) {
-    std::string label = tr(STR_CALIBRE_RECEIVING);
+    std::string label = "Receiving";
     if (!currentUploadName.empty()) {
       label += ": " + currentUploadName;
       if (label.length() > 34) {
@@ -232,13 +263,13 @@ void CalibreConnectActivity::renderServerRunning() const {
   }
 
   if (lastCompleteAt > 0 && (millis() - lastCompleteAt) < 6000) {
-    std::string msg = std::string(tr(STR_CALIBRE_RECEIVED)) + lastCompleteName;
+    std::string msg = "Received: " + lastCompleteName;
     if (msg.length() > 36) {
       msg.replace(33, msg.length() - 33, "...");
     }
     renderer.drawCenteredText(SMALL_FONT_ID, y, msg.c_str());
   }
 
-  const auto labels = mappedInput.mapLabels(tr(STR_EXIT), "", "", "");
+  const auto labels = mappedInput.mapLabels("« Exit", "", "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }

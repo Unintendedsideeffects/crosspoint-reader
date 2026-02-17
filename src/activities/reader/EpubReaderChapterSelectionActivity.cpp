@@ -1,7 +1,6 @@
 #include "EpubReaderChapterSelectionActivity.h"
 
 #include <GfxRenderer.h>
-#include <I18n.h>
 
 #include "FeatureFlags.h"
 #include "MappedInputManager.h"
@@ -64,6 +63,11 @@ int EpubReaderChapterSelectionActivity::getPageItems() const {
   return std::max(1, availableHeight / lineHeight);
 }
 
+void EpubReaderChapterSelectionActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<EpubReaderChapterSelectionActivity*>(param);
+  self->displayTaskLoop();
+}
+
 void EpubReaderChapterSelectionActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
@@ -81,7 +85,13 @@ void EpubReaderChapterSelectionActivity::onEnter() {
   }
 
   // Trigger first update
-  requestUpdate();
+  updateRequired = true;
+  xTaskCreate(&EpubReaderChapterSelectionActivity::taskTrampoline, "EpubReaderChapterSelectionActivityTask",
+              4096,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
 }
 
 void EpubReaderChapterSelectionActivity::onExit() {
@@ -145,22 +155,22 @@ void EpubReaderChapterSelectionActivity::loop() {
 
   buttonNavigator.onNextRelease([this, totalItems] {
     selectorIndex = ButtonNavigator::nextIndex(selectorIndex, totalItems);
-    requestUpdate();
+    updateRequired = true;
   });
 
   buttonNavigator.onPreviousRelease([this, totalItems] {
     selectorIndex = ButtonNavigator::previousIndex(selectorIndex, totalItems);
-    requestUpdate();
+    updateRequired = true;
   });
 
   buttonNavigator.onNextContinuous([this, totalItems, pageItems] {
     selectorIndex = ButtonNavigator::nextPageIndex(selectorIndex, totalItems, pageItems);
-    requestUpdate();
+    updateRequired = true;
   });
 
   buttonNavigator.onPreviousContinuous([this, totalItems, pageItems] {
     selectorIndex = ButtonNavigator::previousPageIndex(selectorIndex, totalItems, pageItems);
-    requestUpdate();
+    updateRequired = true;
   });
 }
 
@@ -202,8 +212,8 @@ void EpubReaderChapterSelectionActivity::renderScreen() {
 
   // Manual centering to honor content gutters.
   const int titleX =
-      contentX + (contentWidth - renderer.getTextWidth(UI_12_FONT_ID, tr(STR_SELECT_CHAPTER), EpdFontFamily::BOLD)) / 2;
-  renderer.drawText(UI_12_FONT_ID, titleX, 15 + contentY, tr(STR_SELECT_CHAPTER), true, EpdFontFamily::BOLD);
+      contentX + (contentWidth - renderer.getTextWidth(UI_12_FONT_ID, "Go to Chapter", EpdFontFamily::BOLD)) / 2;
+  renderer.drawText(UI_12_FONT_ID, titleX, 15 + contentY, "Go to Chapter", true, EpdFontFamily::BOLD);
 
   const auto pageStartIndex = selectorIndex / pageItems * pageItems;
   // Highlight only the content area, not the hint gutters.
@@ -234,7 +244,7 @@ void EpubReaderChapterSelectionActivity::renderScreen() {
 #endif
   }
 
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  const auto labels = mappedInput.mapLabels("« Back", "Select", "Up", "Down");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

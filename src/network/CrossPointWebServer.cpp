@@ -1247,8 +1247,8 @@ void CrossPointWebServer::handleGetSettings() const {
 
     doc.clear();
     doc["key"] = s.key;
-    doc["name"] = I18N.get(s.nameId);
-    doc["category"] = I18N.get(s.category);
+    doc["name"] = s.name;
+    doc["category"] = s.category;
 
     switch (s.type) {
       case SettingType::TOGGLE: {
@@ -1267,7 +1267,7 @@ void CrossPointWebServer::handleGetSettings() const {
         }
         JsonArray options = doc["options"].to<JsonArray>();
         for (const auto& opt : s.enumValues) {
-          options.add(I18N.get(opt));
+          options.add(opt);
         }
         break;
       }

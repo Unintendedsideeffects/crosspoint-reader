@@ -3,7 +3,6 @@
 #include <Epub.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-#include <I18n.h>
 
 #include <algorithm>
 #include <cctype>
@@ -179,7 +178,9 @@ void MyLibraryActivity::onEnter() {
   // Load data for both tabs
   loadRecentBooks();
   loadFiles();
+
   selectorIndex = 0;
+  updateRequired = true;
 
   xTaskCreate(&MyLibraryActivity::taskTrampoline, "MyLibraryActivityTask",
               4096,               // Stack size (increased for epub metadata loading)
@@ -283,6 +284,7 @@ void MyLibraryActivity::loop() {
   if (rightReleased && currentTab == Tab::Recent) {
     currentTab = Tab::Files;
     selectorIndex = 0;
+    updateRequired = true;
     return;
   }
 
@@ -365,8 +367,7 @@ void MyLibraryActivity::render() const {
   }
 
   // Help text
-  const auto labels = mappedInput.mapLabels(basepath == "/" ? tr(STR_HOME) : tr(STR_BACK), tr(STR_OPEN), tr(STR_DIR_UP),
-                                            tr(STR_DIR_DOWN));
+  const auto labels = mappedInput.mapLabels(basepath == "/" ? "« Home" : "« Back", "Open", "Up", "Down");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

@@ -296,22 +296,23 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
   // parse the guide
   if (self->state == IN_GUIDE && (strcmp(name, "reference") == 0 || strcmp(name, "opf:reference") == 0)) {
     std::string type;
-    std::string guideHref;
+    std::string textHref;
     for (int i = 0; atts[i]; i += 2) {
       if (strcmp(atts[i], "type") == 0) {
         type = atts[i + 1];
+        if (type == "text" || type == "start") {
+          continue;
+        } else {
+          LOG_DBG("COF", "Skipping non-text reference in guide: %s", type.c_str());
+          break;
+        }
       } else if (strcmp(atts[i], "href") == 0) {
-        guideHref = FsHelpers::normalisePath(self->baseContentPath + atts[i + 1]);
+        textHref = FsHelpers::normalisePath(self->baseContentPath + atts[i + 1]);
       }
     }
-    if (!guideHref.empty()) {
-      if (type == "text" || (type == "start" && !self->textReferenceHref.empty())) {
-        LOG_DBG("COF", "Found %s reference in guide: %s", type.c_str(), guideHref.c_str());
-        self->textReferenceHref = guideHref;
-      } else if ((type == "cover" || type == "cover-page") && self->guideCoverPageHref.empty()) {
-        LOG_DBG("COF", "Found cover reference in guide: %s", guideHref.c_str());
-        self->guideCoverPageHref = guideHref;
-      }
+    if ((type == "text" || (type == "start" && !self->textReferenceHref.empty())) && (textHref.length() > 0)) {
+      LOG_DBG("COF", "Found %s reference in guide: %s.", type.c_str(), textHref.c_str());
+      self->textReferenceHref = textHref;
     }
     return;
   }
@@ -326,9 +327,6 @@ void XMLCALL ContentOpfParser::characterData(void* userData, const XML_Char* s, 
   }
 
   if (self->state == IN_BOOK_AUTHOR) {
-    if (!self->author.empty()) {
-      self->author.append(", ");  // Add separator for multiple authors
-    }
     self->author.append(s, len);
     return;
   }

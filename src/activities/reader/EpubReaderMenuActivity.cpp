@@ -1,7 +1,6 @@
 #include "EpubReaderMenuActivity.h"
 
 #include <GfxRenderer.h>
-#include <I18n.h>
 
 #include "MappedInputManager.h"
 #include "components/UITheme.h"
@@ -9,10 +8,39 @@
 
 void EpubReaderMenuActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
-  requestUpdate();
+  renderingMutex = xSemaphoreCreateMutex();
+  updateRequired = true;
+
+  xTaskCreate(&EpubReaderMenuActivity::taskTrampoline, "EpubMenuTask", 4096, this, 1, &displayTaskHandle);
 }
 
-void EpubReaderMenuActivity::onExit() { ActivityWithSubactivity::onExit(); }
+void EpubReaderMenuActivity::onExit() {
+  ActivityWithSubactivity::onExit();
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  if (displayTaskHandle) {
+    vTaskDelete(displayTaskHandle);
+    displayTaskHandle = nullptr;
+  }
+  vSemaphoreDelete(renderingMutex);
+  renderingMutex = nullptr;
+}
+
+void EpubReaderMenuActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<EpubReaderMenuActivity*>(param);
+  self->displayTaskLoop();
+}
+
+void EpubReaderMenuActivity::displayTaskLoop() {
+  while (true) {
+    if (updateRequired && !subActivity) {
+      updateRequired = false;
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      renderScreen();
+      xSemaphoreGive(renderingMutex);
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
 
 void EpubReaderMenuActivity::loop() {
   if (subActivity) {
@@ -23,12 +51,12 @@ void EpubReaderMenuActivity::loop() {
   // Handle navigation
   buttonNavigator.onNext([this] {
     selectedIndex = ButtonNavigator::nextIndex(selectedIndex, static_cast<int>(menuItems.size()));
-    requestUpdate();
+    updateRequired = true;
   });
 
   buttonNavigator.onPrevious([this] {
     selectedIndex = ButtonNavigator::previousIndex(selectedIndex, static_cast<int>(menuItems.size()));
-    requestUpdate();
+    updateRequired = true;
   });
 
   // Use local variables for items we need to check after potential deletion
@@ -37,7 +65,7 @@ void EpubReaderMenuActivity::loop() {
     if (selectedAction == MenuAction::ROTATE_SCREEN) {
       // Cycle orientation preview locally; actual rotation happens on menu exit.
       pendingOrientation = (pendingOrientation + 1) % orientationLabels.size();
-      requestUpdate();
+      updateRequired = true;
       return;
     }
 
@@ -56,7 +84,7 @@ void EpubReaderMenuActivity::loop() {
   }
 }
 
-void EpubReaderMenuActivity::render(Activity::RenderLock&&) {
+void EpubReaderMenuActivity::renderScreen() {
   renderer.clearScreen();
   const auto pageWidth = renderer.getScreenWidth();
   const auto orientation = renderer.getOrientation();
@@ -85,10 +113,9 @@ void EpubReaderMenuActivity::render(Activity::RenderLock&&) {
   // Progress summary
   std::string progressLine;
   if (totalPages > 0) {
-    progressLine = std::string(tr(STR_CHAPTER_PREFIX)) + std::to_string(currentPage) + "/" +
-                   std::to_string(totalPages) + std::string(tr(STR_PAGES_SEPARATOR));
+    progressLine = "Chapter: " + std::to_string(currentPage) + "/" + std::to_string(totalPages) + " pages  |  ";
   }
-  progressLine += std::string(tr(STR_BOOK_PREFIX)) + std::to_string(bookProgressPercent) + "%";
+  progressLine += "Book: " + std::to_string(bookProgressPercent) + "%";
   renderer.drawCenteredText(UI_10_FONT_ID, 45, progressLine.c_str());
 
   // Menu Items
@@ -104,18 +131,18 @@ void EpubReaderMenuActivity::render(Activity::RenderLock&&) {
       renderer.fillRect(contentX, displayY, contentWidth - 1, lineHeight, true);
     }
 
-    renderer.drawText(UI_10_FONT_ID, contentX + 20, displayY, I18N.get(menuItems[i].labelId), !isSelected);
+    renderer.drawText(UI_10_FONT_ID, contentX + 20, displayY, menuItems[i].label.c_str(), !isSelected);
 
     if (menuItems[i].action == MenuAction::ROTATE_SCREEN) {
       // Render current orientation value on the right edge of the content area.
-      const char* value = I18N.get(orientationLabels[pendingOrientation]);
+      const auto value = orientationLabels[pendingOrientation];
       const auto width = renderer.getTextWidth(UI_10_FONT_ID, value);
       renderer.drawText(UI_10_FONT_ID, contentX + contentWidth - 20 - width, displayY, value, !isSelected);
     }
   }
 
   // Footer / Hints
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  const auto labels = mappedInput.mapLabels("« Back", "Select", "Up", "Down");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

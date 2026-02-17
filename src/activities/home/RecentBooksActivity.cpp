@@ -2,7 +2,6 @@
 
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-#include <I18n.h>
 
 #include <algorithm>
 
@@ -15,6 +14,11 @@
 namespace {
 constexpr unsigned long GO_HOME_MS = 1000;
 }  // namespace
+
+void RecentBooksActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<RecentBooksActivity*>(param);
+  self->displayTaskLoop();
+}
 
 void RecentBooksActivity::loadRecentBooks() {
   recentBooks.clear();
@@ -33,15 +37,34 @@ void RecentBooksActivity::loadRecentBooks() {
 void RecentBooksActivity::onEnter() {
   Activity::onEnter();
 
+  renderingMutex = xSemaphoreCreateMutex();
+
   // Load data
   loadRecentBooks();
 
   selectorIndex = 0;
-  requestUpdate();
+  updateRequired = true;
+
+  xTaskCreate(&RecentBooksActivity::taskTrampoline, "RecentBooksActivityTask",
+              4096,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
 }
 
 void RecentBooksActivity::onExit() {
   Activity::onExit();
+
+  // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  if (displayTaskHandle) {
+    vTaskDelete(displayTaskHandle);
+    displayTaskHandle = nullptr;
+  }
+  vSemaphoreDelete(renderingMutex);
+  renderingMutex = nullptr;
+
   recentBooks.clear();
 }
 
@@ -64,40 +87,52 @@ void RecentBooksActivity::loop() {
 
   buttonNavigator.onNextRelease([this, listSize] {
     selectorIndex = ButtonNavigator::nextIndex(static_cast<int>(selectorIndex), listSize);
-    requestUpdate();
+    updateRequired = true;
   });
 
   buttonNavigator.onPreviousRelease([this, listSize] {
     selectorIndex = ButtonNavigator::previousIndex(static_cast<int>(selectorIndex), listSize);
-    requestUpdate();
+    updateRequired = true;
   });
 
   buttonNavigator.onNextContinuous([this, listSize, pageItems] {
     selectorIndex = ButtonNavigator::nextPageIndex(static_cast<int>(selectorIndex), listSize, pageItems);
-    requestUpdate();
+    updateRequired = true;
   });
 
   buttonNavigator.onPreviousContinuous([this, listSize, pageItems] {
     selectorIndex = ButtonNavigator::previousPageIndex(static_cast<int>(selectorIndex), listSize, pageItems);
-    requestUpdate();
+    updateRequired = true;
   });
 }
 
-void RecentBooksActivity::render(Activity::RenderLock&&) {
+void RecentBooksActivity::displayTaskLoop() {
+  while (true) {
+    if (updateRequired) {
+      updateRequired = false;
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      render();
+      xSemaphoreGive(renderingMutex);
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
+
+void RecentBooksActivity::render() const {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
   auto metrics = UITheme::getInstance().getMetrics();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_MENU_RECENT_BOOKS));
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, "Recent Books");
 
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
 
   // Recent tab
   if (recentBooks.empty()) {
-    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, tr(STR_NO_RECENT_BOOKS));
+    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, "No recent books");
   } else {
     GUI.drawList(
         renderer, Rect{0, contentTop, pageWidth, contentHeight}, recentBooks.size(), selectorIndex,
@@ -106,7 +141,7 @@ void RecentBooksActivity::render(Activity::RenderLock&&) {
   }
 
   // Help text
-  const auto labels = mappedInput.mapLabels(tr(STR_HOME), tr(STR_OPEN), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  const auto labels = mappedInput.mapLabels("« Home", "Open", "Up", "Down");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

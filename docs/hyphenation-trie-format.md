@@ -45,9 +45,22 @@ byte arrays, and emits headers under
 `SerializedHyphenationPatterns` descriptor so the reader can keep the automaton
 in flash.
 
-A convenient script `update_hyphenation.sh` is used to update all languages.
-To use it, run:
+To refresh the firmware assets after updating the `.bin` files, run:
 
-```sh
-./scripts/update_hypenation.sh
+```
+./scripts/generate_hyphenation_trie.py \
+    --input lib/Epub/Epub/hyphenation/tries/en.bin \
+    --output lib/Epub/Epub/hyphenation/generated/hyph-en.trie.h
+
+./scripts/generate_hyphenation_trie.py \
+    --input lib/Epub/Epub/hyphenation/tries/fr.bin \
+    --output lib/Epub/Epub/hyphenation/generated/hyph-fr.trie.h
+
+./scripts/generate_hyphenation_trie.py \
+    --input lib/Epub/Epub/hyphenation/tries/de.bin \
+    --output lib/Epub/Epub/hyphenation/generated/hyph-de.trie.h
+
+./scripts/generate_hyphenation_trie.py \
+    --input lib/Epub/Epub/hyphenation/tries/ru.bin \
+    --output lib/Epub/Epub/hyphenation/generated/hyph-ru.trie.h
 ```

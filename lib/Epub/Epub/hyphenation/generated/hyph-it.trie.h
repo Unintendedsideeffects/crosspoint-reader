@@ -92,7 +92,6 @@ alignas(4) constexpr uint8_t it_trie_data[] = {
 };
 
 constexpr SerializedHyphenationPatterns it_patterns = {
-    0x5C0u,
     it_trie_data,
     sizeof(it_trie_data),
 };

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <Txt.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
 #include <atomic>
 #include <vector>
@@ -17,7 +20,7 @@ class TxtReaderActivity final : public ActivityWithSubactivity {
   int currentPage = 0;
   int totalPages = 1;
   int pagesUntilFullRefresh = 0;
-
+  bool updateRequired = false;
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;
 
@@ -58,5 +61,4 @@ class TxtReaderActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
 };

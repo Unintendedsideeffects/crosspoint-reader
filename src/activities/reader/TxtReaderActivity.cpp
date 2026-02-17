@@ -2,7 +2,6 @@
 
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-#include <I18n.h>
 #include <Serialization.h>
 #include <Utf8.h>
 
@@ -26,6 +25,11 @@ constexpr size_t CHUNK_SIZE = 8 * 1024;  // 8KB chunk for reading
 constexpr uint32_t CACHE_MAGIC = 0x54585449;  // "TXTI"
 constexpr uint8_t CACHE_VERSION = 2;          // Increment when cache format changes
 }  // namespace
+
+void TxtReaderActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<TxtReaderActivity*>(param);
+  self->displayTaskLoop();
+}
 
 void TxtReaderActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
@@ -66,7 +70,14 @@ void TxtReaderActivity::onEnter() {
   RECENT_BOOKS.addBook(filePath, fileName, "", "");
 
   // Trigger first update
-  requestUpdate();
+  updateRequired = true;
+
+  xTaskCreate(&TxtReaderActivity::taskTrampoline, "TxtReaderActivityTask",
+              6144,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
 }
 
 void TxtReaderActivity::onExit() {
@@ -123,7 +134,7 @@ void TxtReaderActivity::loop() {
 
   if (prevTriggered && currentPage > 0) {
     currentPage--;
-    requestUpdate();
+    updateRequired = true;
   } else if (nextTriggered && currentPage < totalPages - 1) {
     currentPage++;
     updateRequired = true;
@@ -225,7 +236,7 @@ void TxtReaderActivity::buildPageIndex() {
 
   LOG_DBG("TRS", "Building page index for %zu bytes...", fileSize);
 
-  GUI.drawPopup(renderer, tr(STR_INDEXING));
+  GUI.drawPopup(renderer, "Indexing...");
 
   while (offset < fileSize) {
     if (exitTaskRequested.load()) {
@@ -415,7 +426,7 @@ void TxtReaderActivity::renderScreen() {
 
   if (pageOffsets.empty()) {
     renderer.clearScreen();
-    renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_EMPTY_FILE), true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_12_FONT_ID, 300, "Empty file", true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }
@@ -575,8 +586,8 @@ void TxtReaderActivity::renderStatusBar(const int orientedMarginRight, const int
   }
 
   if (showBattery) {
-    GUI.drawBatteryLeft(renderer, Rect{orientedMarginLeft, textY, metrics.batteryWidth, metrics.batteryHeight},
-                        showBatteryPercentage);
+    GUI.drawBattery(renderer, Rect{orientedMarginLeft, textY, metrics.batteryWidth, metrics.batteryHeight},
+                    showBatteryPercentage);
   }
 
   if (showTitle) {

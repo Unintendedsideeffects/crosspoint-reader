@@ -1,7 +1,6 @@
 #include "CalibreSettingsActivity.h"
 
 #include <GfxRenderer.h>
-#include <I18n.h>
 
 #include <cstring>
 
@@ -14,8 +13,13 @@
 
 namespace {
 constexpr int MENU_ITEMS = 3;
-const StrId menuNames[MENU_ITEMS] = {StrId::STR_CALIBRE_WEB_URL, StrId::STR_USERNAME, StrId::STR_PASSWORD};
+const char* menuNames[MENU_ITEMS] = {"OPDS Server URL", "Username", "Password"};
 }  // namespace
+
+void CalibreSettingsActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<CalibreSettingsActivity*>(param);
+  self->displayTaskLoop();
+}
 
 void CalibreSettingsActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
@@ -24,7 +28,14 @@ void CalibreSettingsActivity::onEnter() {
   exitTaskRequested.store(false);
   taskHasExited.store(false);
   selectedIndex = 0;
-  requestUpdate();
+  updateRequired = true;
+
+  xTaskCreate(&CalibreSettingsActivity::taskTrampoline, "CalibreSettingsTask",
+              4096,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
 }
 
 void CalibreSettingsActivity::onExit() {
@@ -54,21 +65,23 @@ void CalibreSettingsActivity::loop() {
   // Handle navigation
   buttonNavigator.onNext([this] {
     selectedIndex = (selectedIndex + 1) % MENU_ITEMS;
-    requestUpdate();
+    updateRequired = true;
   });
 
   buttonNavigator.onPrevious([this] {
     selectedIndex = (selectedIndex + MENU_ITEMS - 1) % MENU_ITEMS;
-    requestUpdate();
+    updateRequired = true;
   });
 }
 
 void CalibreSettingsActivity::handleSelection() {
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+
   if (selectedIndex == 0) {
     // OPDS Server URL
     exitActivity();
     enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, tr(STR_CALIBRE_WEB_URL), SETTINGS.opdsServerUrl, 10,
+        renderer, mappedInput, "OPDS Server URL", SETTINGS.opdsServerUrl, 10,
         127,    // maxLength
         false,  // not password
         [this](const std::string& url) {
@@ -76,17 +89,17 @@ void CalibreSettingsActivity::handleSelection() {
           SETTINGS.opdsServerUrl[sizeof(SETTINGS.opdsServerUrl) - 1] = '\0';
           SETTINGS.saveToFile();
           exitActivity();
-          requestUpdate();
+          updateRequired = true;
         },
         [this]() {
           exitActivity();
-          requestUpdate();
+          updateRequired = true;
         }));
   } else if (selectedIndex == 1) {
     // Username
     exitActivity();
     enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, tr(STR_USERNAME), SETTINGS.opdsUsername, 10,
+        renderer, mappedInput, "Username", SETTINGS.opdsUsername, 10,
         63,     // maxLength
         false,  // not password
         [this](const std::string& username) {
@@ -94,17 +107,17 @@ void CalibreSettingsActivity::handleSelection() {
           SETTINGS.opdsUsername[sizeof(SETTINGS.opdsUsername) - 1] = '\0';
           SETTINGS.saveToFile();
           exitActivity();
-          requestUpdate();
+          updateRequired = true;
         },
         [this]() {
           exitActivity();
-          requestUpdate();
+          updateRequired = true;
         }));
   } else if (selectedIndex == 2) {
     // Password
     exitActivity();
     enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, tr(STR_PASSWORD), SETTINGS.opdsPassword, 10,
+        renderer, mappedInput, "Password", SETTINGS.opdsPassword, 10,
         63,     // maxLength
         false,  // not password mode
         [this](const std::string& password) {
@@ -112,13 +125,15 @@ void CalibreSettingsActivity::handleSelection() {
           SETTINGS.opdsPassword[sizeof(SETTINGS.opdsPassword) - 1] = '\0';
           SETTINGS.saveToFile();
           exitActivity();
-          requestUpdate();
+          updateRequired = true;
         },
         [this]() {
           exitActivity();
-          requestUpdate();
+          updateRequired = true;
         }));
   }
+
+  xSemaphoreGive(renderingMutex);
 }
 
 void CalibreSettingsActivity::displayTaskLoop() {
@@ -144,10 +159,10 @@ void CalibreSettingsActivity::render() {
   const auto pageWidth = renderer.getScreenWidth();
 
   // Draw header
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, tr(STR_OPDS_BROWSER), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, "OPDS Browser", true, EpdFontFamily::BOLD);
 
   // Draw info text about Calibre
-  renderer.drawCenteredText(UI_10_FONT_ID, 40, tr(STR_CALIBRE_URL_HINT));
+  renderer.drawCenteredText(UI_10_FONT_ID, 40, "For Calibre, add /opds to your URL");
 
   // Draw selection highlight
   renderer.fillRect(0, 70 + selectedIndex * 30 - 2, pageWidth - 1, 30);
@@ -157,26 +172,23 @@ void CalibreSettingsActivity::render() {
     const int settingY = 70 + i * 30;
     const bool isSelected = (i == selectedIndex);
 
-    renderer.drawText(UI_10_FONT_ID, 20, settingY, I18N.get(menuNames[i]), !isSelected);
+    renderer.drawText(UI_10_FONT_ID, 20, settingY, menuNames[i], !isSelected);
 
     // Draw status for each setting
-    std::string status = std::string("[") + tr(STR_NOT_SET) + "]";
+    const char* status = "[Not Set]";
     if (i == 0) {
-      status = (strlen(SETTINGS.opdsServerUrl) > 0) ? std::string("[") + tr(STR_SET) + "]"
-                                                    : std::string("[") + tr(STR_NOT_SET) + "]";
+      status = (strlen(SETTINGS.opdsServerUrl) > 0) ? "[Set]" : "[Not Set]";
     } else if (i == 1) {
-      status = (strlen(SETTINGS.opdsUsername) > 0) ? std::string("[") + tr(STR_SET) + "]"
-                                                   : std::string("[") + tr(STR_NOT_SET) + "]";
+      status = (strlen(SETTINGS.opdsUsername) > 0) ? "[Set]" : "[Not Set]";
     } else if (i == 2) {
-      status = (strlen(SETTINGS.opdsPassword) > 0) ? std::string("[") + tr(STR_SET) + "]"
-                                                   : std::string("[") + tr(STR_NOT_SET) + "]";
+      status = (strlen(SETTINGS.opdsPassword) > 0) ? "[Set]" : "[Not Set]";
     }
-    const auto width = renderer.getTextWidth(UI_10_FONT_ID, status.c_str());
-    renderer.drawText(UI_10_FONT_ID, pageWidth - 20 - width, settingY, status.c_str(), !isSelected);
+    const auto width = renderer.getTextWidth(UI_10_FONT_ID, status);
+    renderer.drawText(UI_10_FONT_ID, pageWidth - 20 - width, settingY, status, !isSelected);
   }
 
   // Draw button hints
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
+  const auto labels = mappedInput.mapLabels("« Back", "Select", "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
