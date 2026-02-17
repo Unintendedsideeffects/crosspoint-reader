@@ -13,6 +13,7 @@
 #include "FeatureFlags.h"
 #include "SleepExtensionHooks.h"
 #include "SpiBusMutex.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 #include "images/Logo120.h"
 
@@ -84,7 +85,7 @@ SleepImageCache sleepImageCache;
 bool tryRenderExternalSleepApp(GfxRenderer& renderer, MappedInputManager& mappedInput) {
   const bool rendered = SleepExtensionHooks::renderExternalSleepScreen(renderer, mappedInput);
   if (rendered) {
-    Serial.printf("[%lu] [SLP] External sleep app rendered screen\n", millis());
+    LOG_DBG("SLP", "External sleep app rendered screen");
   }
   return rendered;
 }
@@ -170,8 +171,8 @@ void scanSleepImagesInDirectory(const std::string& directoryPath, const bool rec
       if (err == BmpReaderError::Ok) {
         filesOut.emplace_back(fullPath);
       } else {
-        Serial.printf("[SLP] Invalid BMP in %s: %s (%s)\n", directoryPath.c_str(), leafName.c_str(),
-                      Bitmap::errorToString(err));
+        LOG_ERR("SLP", "Invalid BMP in %s: %s (%s)", directoryPath.c_str(), leafName.c_str(),
+                Bitmap::errorToString(err));
       }
       file.close();
       continue;
@@ -182,10 +183,9 @@ void scanSleepImagesInDirectory(const std::string& directoryPath, const bool rec
       ImageDimensions dims = {0, 0};
       if (decoder->getDimensions(fullPath, dims) && dims.width > 0 && dims.height > 0) {
         filesOut.emplace_back(fullPath);
-        Serial.printf("[SLP] Valid %s: %s (%dx%d)\n", decoder->getFormatName(), fullPath.c_str(), dims.width,
-                      dims.height);
+        LOG_DBG("SLP", "Valid %s: %s (%dx%d)", decoder->getFormatName(), fullPath.c_str(), dims.width, dims.height);
       } else {
-        Serial.printf("[SLP] Invalid image: %s (could not read dimensions)\n", fullPath.c_str());
+        LOG_ERR("SLP", "Invalid image: %s (could not read dimensions)", fullPath.c_str());
       }
     }
     file.close();
@@ -213,8 +213,8 @@ void validateSleepImagesOnce() {
   scanSleepImagesInDirectory(sourcePath, recursive, sleepImageCache.validFiles);
 
   sleepImageCache.scanned = true;
-  Serial.printf("[%lu] [SLP] Source '%s' found %d valid sleep images\n", millis(), getSleepSourceName(sourceMode),
-                sleepImageCache.validFiles.size());
+  LOG_INF("SLP", "Source '%s' found %d valid sleep images", getSleepSourceName(sourceMode),
+          (int)sleepImageCache.validFiles.size());
 }
 }  // namespace
 
@@ -223,7 +223,7 @@ void invalidateSleepImageCache() {
   sleepImageCache.scanned = false;
   sleepImageCache.sourceMode = 0xFF;
   sleepImageCache.validFiles.clear();
-  Serial.printf("[%lu] [SLP] Sleep image cache invalidated\n", millis());
+  LOG_INF("SLP", "Sleep image cache invalidated");
 }
 
 void SleepActivity::onEnter() {
@@ -257,7 +257,7 @@ void SleepActivity::renderCustomSleepScreen() const {
       APP_STATE.saveToFile();
     }
     const auto& filename = sleepImageCache.validFiles[randomFileIndex];
-    Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), filename.c_str());
+    LOG_INF("SLP", "Loading: %s", filename.c_str());
 
     if (isBmpFile(filename)) {
       // Use existing BMP rendering path
@@ -268,7 +268,7 @@ void SleepActivity::renderCustomSleepScreen() const {
           renderBitmapSleepScreen(bitmap);
           return;
         }
-        Serial.printf("[%lu] [SLP] Invalid BMP: %s\n", millis(), filename.c_str());
+        LOG_ERR("SLP", "Invalid BMP: %s", filename.c_str());
       }
     } else {
       // Use new PNG/JPEG rendering path
@@ -286,7 +286,7 @@ void SleepActivity::renderCustomSleepScreen() const {
         if (Storage.openFileForRead("SLP", sleepImagePath, file)) {
           Bitmap bitmap(file, true);
           if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-            Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), sleepImagePath);
+            LOG_INF("SLP", "Loading: %s", sleepImagePath);
             renderBitmapSleepScreen(bitmap);
             return;
           }
@@ -296,7 +296,7 @@ void SleepActivity::renderCustomSleepScreen() const {
         if (decoder) {
           ImageDimensions dims = {0, 0};
           if (decoder->getDimensions(sleepImagePath, dims) && dims.width > 0 && dims.height > 0) {
-            Serial.printf("[%lu] [SLP] Loading: %s\n", millis(), sleepImagePath);
+            LOG_INF("SLP", "Loading: %s", sleepImagePath);
             renderImageSleepScreen(sleepImagePath);
             return;
           }
@@ -403,17 +403,17 @@ void SleepActivity::renderImageSleepScreen(const std::string& imagePath) const {
 
   ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(imagePath);
   if (!decoder) {
-    Serial.printf("[%lu] [SLP] No decoder for: %s\n", millis(), imagePath.c_str());
+    LOG_ERR("SLP", "No decoder for: %s", imagePath.c_str());
     return renderDefaultSleepScreen();
   }
 
   ImageDimensions dims = {0, 0};
   if (!decoder->getDimensions(imagePath, dims) || dims.width <= 0 || dims.height <= 0) {
-    Serial.printf("[%lu] [SLP] Could not get dimensions for: %s\n", millis(), imagePath.c_str());
+    LOG_ERR("SLP", "Could not get dimensions for: %s", imagePath.c_str());
     return renderDefaultSleepScreen();
   }
 
-  Serial.printf("[%lu] [SLP] Image %dx%d, screen %dx%d\n", millis(), dims.width, dims.height, pageWidth, pageHeight);
+  LOG_INF("SLP", "Image %dx%d, screen %dx%d", dims.width, dims.height, pageWidth, pageHeight);
 
   // Calculate scale and position
   float scaleX = (dims.width > pageWidth) ? static_cast<float>(pageWidth) / dims.width : 1.0f;
@@ -428,8 +428,7 @@ void SleepActivity::renderImageSleepScreen(const std::string& imagePath) const {
   int x = (pageWidth - displayWidth) / 2;
   int y = (pageHeight - displayHeight) / 2;
 
-  Serial.printf("[%lu] [SLP] Rendering at %d,%d size %dx%d (scale %.2f)\n", millis(), x, y, displayWidth, displayHeight,
-                scale);
+  LOG_INF("SLP", "Rendering at %d,%d size %dx%d (scale %.2f)", x, y, displayWidth, displayHeight, scale);
 
   // Clear screen and prepare for rendering
   renderer.clearScreen();
@@ -449,7 +448,7 @@ void SleepActivity::renderImageSleepScreen(const std::string& imagePath) const {
   // Render the image to framebuffer (BW pass)
   renderer.setRenderMode(GfxRenderer::BW);
   if (!decoder->decodeToFramebuffer(imagePath, renderer, config)) {
-    Serial.printf("[%lu] [SLP] Failed to decode: %s\n", millis(), imagePath.c_str());
+    LOG_ERR("SLP", "Failed to decode: %s", imagePath.c_str());
     return renderDefaultSleepScreen();
   }
 

@@ -1,5 +1,7 @@
 #include "PathUtils.h"
 
+#include <Logging.h>
+
 namespace PathUtils {
 
 bool containsTraversal(const String& path) {
@@ -13,19 +15,19 @@ bool containsTraversal(const String& path) {
   // - "../" at start of path
   // - path equals ".."
   if (path.indexOf("/../") >= 0) {
-    Serial.printf("[PathUtils] traversal: /../\n");
+    LOG_WRN("PATH", "traversal: /../");
     return true;
   }
   if (path.endsWith("/..")) {
-    Serial.printf("[PathUtils] traversal: ends /.. \n");
+    LOG_WRN("PATH", "traversal: ends /..");
     return true;
   }
   if (path.startsWith("../")) {
-    Serial.printf("[PathUtils] traversal: starts ../\n");
+    LOG_WRN("PATH", "traversal: starts ../");
     return true;
   }
   if (path == "..") {
-    Serial.printf("[PathUtils] traversal: equals ..\n");
+    LOG_WRN("PATH", "traversal: equals ..");
     return true;
   }
 
@@ -34,19 +36,19 @@ bool containsTraversal(const String& path) {
   String lower = path;
   lower.toLowerCase();
   if (lower.indexOf("%2e%2e%2f") >= 0) {
-    Serial.printf("[PathUtils] traversal: %%2e%%2e%%2f\n");
+    LOG_WRN("PATH", "traversal: %%2e%%2e%%2f");
     return true;
   }
   if (lower.indexOf("%2f%2e%2e") >= 0) {
-    Serial.printf("[PathUtils] traversal: %%2f%%2e%%2e\n");
+    LOG_WRN("PATH", "traversal: %%2f%%2e%%2e");
     return true;
   }
   if (lower.indexOf("..%2f") >= 0) {
-    Serial.printf("[PathUtils] traversal: ..%%2f\n");
+    LOG_WRN("PATH", "traversal: ..%%2f");
     return true;
   }
   if (lower.indexOf("%2f..") >= 0) {
-    Serial.printf("[PathUtils] traversal: %%2f..\n");
+    LOG_WRN("PATH", "traversal: %%2f..");
     return true;
   }
 
@@ -56,30 +58,30 @@ bool containsTraversal(const String& path) {
 bool isValidSdPath(const String& path) {
   // Empty paths are invalid
   if (path.isEmpty()) {
-    Serial.printf("[PathUtils] REJECT: empty path\n");
+    LOG_WRN("PATH", "REJECT: empty path");
     return false;
   }
 
   // Check length (FAT32 path limit is 255 chars)
   if (path.length() > 255) {
-    Serial.printf("[PathUtils] REJECT: path too long (%d chars)\n", path.length());
+    LOG_WRN("PATH", "REJECT: path too long (%d chars)", path.length());
     return false;
   }
 
   // Must not contain traversal attempts
   if (containsTraversal(path)) {
-    Serial.printf("[PathUtils] REJECT: traversal in '%s'\n", path.c_str());
+    LOG_WRN("PATH", "REJECT: traversal in '%s'", path.c_str());
     return false;
   }
 
   // Check for null bytes
   for (size_t i = 0; i < path.length(); i++) {
     if (path[i] == '\0') {
-      Serial.printf("[PathUtils] REJECT: null at %d\n", i);
+      LOG_WRN("PATH", "REJECT: null at %d", i);
       return false;
     }
     if (path[i] == '\\') {
-      Serial.printf("[PathUtils] REJECT: backslash at %d\n", i);
+      LOG_WRN("PATH", "REJECT: backslash at %d", i);
       return false;
     }
   }

@@ -121,19 +121,6 @@ void TxtReaderActivity::loop() {
     currentPage++;
     requestUpdate();
   }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-bool TxtReaderActivity::waitForRenderingMutex() {
-  constexpr TickType_t kWaitTicks = pdMS_TO_TICKS(50);
-  while (!exitTaskRequested.load()) {
-    if (xSemaphoreTake(renderingMutex, kWaitTicks) == pdTRUE) {
-      return true;
-    }
-  }
-  return false;
 }
 
 void TxtReaderActivity::initializeReader() {
@@ -191,9 +178,6 @@ void TxtReaderActivity::initializeReader() {
 }
 
 void TxtReaderActivity::buildPageIndex() {
-  if (exitTaskRequested.load()) {
-    return;
-  }
   pageOffsets.clear();
   pageOffsets.push_back(0);  // First page starts at offset 0
 
@@ -205,9 +189,6 @@ void TxtReaderActivity::buildPageIndex() {
   GUI.drawPopup(renderer, tr(STR_INDEXING));
 
   while (offset < fileSize) {
-    if (exitTaskRequested.load()) {
-      return;
-    }
     std::vector<std::string> tempLines;
     size_t nextOffset = offset;
 
@@ -227,7 +208,7 @@ void TxtReaderActivity::buildPageIndex() {
 
     // Yield to other tasks periodically
     if (pageOffsets.size() % 20 == 0) {
-      vTaskDelay(1);
+      yield();
     }
   }
 
@@ -237,9 +218,6 @@ void TxtReaderActivity::buildPageIndex() {
 
 bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>& outLines, size_t& nextOffset) {
   outLines.clear();
-  if (exitTaskRequested.load()) {
-    return false;
-  }
   size_t fileSize = 0;
   size_t chunkSize = 0;
   auto* buffer = static_cast<uint8_t*>(malloc(CHUNK_SIZE + 1));
@@ -269,10 +247,6 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>
   size_t pos = 0;
 
   while (pos < chunkSize && static_cast<int>(outLines.size()) < linesPerPage) {
-    if (exitTaskRequested.load()) {
-      free(buffer);
-      return false;
-    }
     // Find end of line
     size_t lineEnd = pos;
     while (lineEnd < chunkSize && buffer[lineEnd] != '\n') {
@@ -302,10 +276,6 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>
 
     // Word wrap if needed
     while (!line.empty() && static_cast<int>(outLines.size()) < linesPerPage) {
-      if (exitTaskRequested.load()) {
-        free(buffer);
-        return false;
-      }
       int lineWidth = renderer.getTextWidth(cachedFontId, line.c_str());
 
       if (lineWidth <= viewportWidth) {
@@ -377,7 +347,7 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>
   return !outLines.empty();
 }
 
-void TxtReaderActivity::render(Activity::RenderLock&&) {
+void TxtReaderActivity::render(Activity::RenderLock&& lock) {
   if (!txt) {
     return;
   }
@@ -385,9 +355,6 @@ void TxtReaderActivity::render(Activity::RenderLock&&) {
   // Initialize reader if not done
   if (!initialized) {
     initializeReader();
-    if (exitTaskRequested.load()) {
-      return;
-    }
   }
 
   if (pageOffsets.empty()) {
@@ -552,8 +519,8 @@ void TxtReaderActivity::renderStatusBar(const int orientedMarginRight, const int
   }
 
   if (showBattery) {
-    GUI.drawBatteryLeft(renderer, Rect{orientedMarginLeft, textY, metrics.batteryWidth, metrics.batteryHeight},
-                        showBatteryPercentage);
+    GUI.drawBattery(renderer, Rect{orientedMarginLeft, textY, metrics.batteryWidth, metrics.batteryHeight},
+                    showBatteryPercentage);
   }
 
   if (showTitle) {

@@ -126,7 +126,7 @@ bool RecentBooksStore::loadFromFile() {
 
   uint8_t version;
   if (!serialization::readPod(inputFile, version)) {
-    Serial.printf("[%lu] [RBS] Failed to read version\n", millis());
+    LOG_ERR("RBS", "Failed to read version");
     inputFile.close();
     return false;
   }
@@ -136,7 +136,7 @@ bool RecentBooksStore::loadFromFile() {
       // Old version, just read paths
       uint8_t count;
       if (!serialization::readPod(inputFile, count)) {
-        Serial.printf("[%lu] [RBS] Failed to read count\n", millis());
+        LOG_ERR("RBS", "Failed to read count");
         inputFile.close();
         return false;
       }
@@ -145,7 +145,7 @@ bool RecentBooksStore::loadFromFile() {
       for (uint8_t i = 0; i < count; i++) {
         std::string path;
         if (!serialization::readString(inputFile, path)) {
-          Serial.printf("[%lu] [RBS] Failed to read path\n", millis());
+          LOG_ERR("RBS", "Failed to read path");
           inputFile.close();
           return false;
         }
@@ -161,7 +161,7 @@ bool RecentBooksStore::loadFromFile() {
   } else {
     uint8_t count;
     if (!serialization::readPod(inputFile, count)) {
-      Serial.printf("[%lu] [RBS] Failed to read count\n", millis());
+      LOG_ERR("RBS", "Failed to read count");
       inputFile.close();
       return false;
     }
@@ -173,7 +173,7 @@ bool RecentBooksStore::loadFromFile() {
       std::string path, title, author, coverBmpPath;
       if (!serialization::readString(inputFile, path) || !serialization::readString(inputFile, title) ||
           !serialization::readString(inputFile, author) || !serialization::readString(inputFile, coverBmpPath)) {
-        Serial.printf("[%lu] [RBS] Failed to read book entry %d\n", millis(), i);
+        LOG_ERR("RBS", "Failed to read book entry %d", i);
         inputFile.close();
         return false;
       }

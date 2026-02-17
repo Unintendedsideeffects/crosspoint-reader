@@ -165,7 +165,7 @@ void applyPendingFactoryReset() {
     return;
   }
 
-  Serial.printf("[%lu] [RESET] Pending factory reset marker detected\n", millis());
+  LOG_INF("RESET", "Pending factory reset marker detected");
 
   bool removed = true;
   if (Storage.exists(kCrossPointDataDir)) {
@@ -174,17 +174,17 @@ void applyPendingFactoryReset() {
   const bool ensuredDir = Storage.exists(kCrossPointDataDir) || Storage.mkdir(kCrossPointDataDir);
 
   if (!removed || !ensuredDir) {
-    Serial.printf("[%lu] [RESET] Failed to wipe CrossPoint data (removed=%d, ensuredDir=%d). Retrying on next boot.\n",
-                  millis(), removed, ensuredDir);
+    LOG_ERR("RESET", "Failed to wipe CrossPoint data (removed=%d, ensuredDir=%d). Retrying on next boot.", (int)removed,
+            (int)ensuredDir);
     return;
   }
 
   if (!Storage.remove(kFactoryResetMarkerFile)) {
-    Serial.printf("[%lu] [RESET] Wipe completed, but marker removal failed: %s\n", millis(), kFactoryResetMarkerFile);
+    LOG_ERR("RESET", "Wipe completed, but marker removal failed: %s", kFactoryResetMarkerFile);
     return;
   }
 
-  Serial.printf("[%lu] [RESET] Factory reset completed from pending marker\n", millis());
+  LOG_INF("RESET", "Factory reset completed from pending marker");
 }
 }  // namespace
 
@@ -435,6 +435,7 @@ void setup() {
 
   SETTINGS.loadFromFile();
   I18N.loadSettings();
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.loadFromFile();
 #endif
   WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks

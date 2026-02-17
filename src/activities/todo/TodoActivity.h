@@ -1,9 +1,6 @@
 #pragma once
 
 #include <GfxRenderer.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 #include <string>
@@ -25,6 +22,7 @@ class TodoActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&& lock) override;
 
  private:
   std::string filePath;
@@ -36,20 +34,12 @@ class TodoActivity final : public ActivityWithSubactivity {
   int scrollOffset = 0;  // Index of first visible item
   bool skipInitialInput = true;
 
-  TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
-  std::atomic<bool> exitTaskRequested{false};
-  std::atomic<bool> taskHasExited{false};
-  std::atomic<bool> updateRequired{false};
-
   void loadTasks();
   void saveTasks();
   void toggleCurrentTask();
   void addNewTask();
   void showDeleteConfirmation();
 
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();
-  void render();
+  void renderScreen();
   void renderItem(int y, const TodoItem& item, bool isSelected) const;
 };

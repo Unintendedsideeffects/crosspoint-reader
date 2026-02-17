@@ -16,6 +16,8 @@ class MyLibraryActivity final : public Activity {
   ButtonNavigator buttonNavigator;
 
   size_t selectorIndex = 0;
+  Tab currentTab = Tab::Recent;
+  ViewMode viewMode = ViewMode::List;
 
   // Recent tab state
   std::vector<RecentBook> recentBooks;
@@ -34,9 +36,6 @@ class MyLibraryActivity final : public Activity {
   size_t findEntry(const std::string& name) const;
 
   // Rendering
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();
-  void render() const;
   void renderRecentTab() const;
   void renderFilesTab() const;
 #if ENABLE_VISUAL_COVER_PICKER
@@ -57,6 +56,11 @@ class MyLibraryActivity final : public Activity {
   GridMetrics getGridMetrics() const;
 #endif
 
+  int getCurrentItemCount() const {
+    return currentTab == Tab::Recent ? static_cast<int>(recentBooks.size()) : static_cast<int>(files.size());
+  }
+  int getPageItems() const;
+
  public:
   explicit MyLibraryActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                              const std::function<void()>& onGoHome,
@@ -70,5 +74,5 @@ class MyLibraryActivity final : public Activity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
+  void render(Activity::RenderLock&& lock) override;
 };

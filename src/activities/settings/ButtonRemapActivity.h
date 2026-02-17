@@ -1,7 +1,4 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <functional>
 #include <string>
@@ -17,13 +14,9 @@ class ButtonRemapActivity final : public Activity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&& lock) override;
 
  private:
-  // Rendering task state.
-  TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
-  bool updateRequired = false;
-
   // Callback used to exit the remap flow back to the settings list.
   const std::function<void()> onBack;
   // Index of the logical role currently awaiting input.
@@ -34,10 +27,7 @@ class ButtonRemapActivity final : public Activity {
   unsigned long errorUntil = 0;
   std::string errorMessage;
 
-  // FreeRTOS task helpers.
-  static void taskTrampoline(void* param);
-  [[noreturn]] void displayTaskLoop();
-  void render();
+  void renderScreen();
 
   // Commit temporary mapping to settings.
   void applyTempMapping();

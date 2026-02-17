@@ -14,16 +14,9 @@ namespace {
 constexpr const char* HOSTNAME = "crosspoint";
 }  // namespace
 
-void CalibreConnectActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<CalibreConnectActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void CalibreConnectActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
-  updateRequired = true;
   state = CalibreConnectState::WIFI_SELECTION;
   connectedIP.clear();
   connectedSSID.clear();
@@ -34,13 +27,6 @@ void CalibreConnectActivity::onEnter() {
   lastCompleteName.clear();
   lastCompleteAt = 0;
   exitRequested = false;
-
-  xTaskCreate(&CalibreConnectActivity::taskTrampoline, "CalibreConnectTask",
-              2048,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
 
   if (WiFi.status() != WL_CONNECTED) {
     enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
@@ -63,14 +49,6 @@ void CalibreConnectActivity::onExit() {
   delay(30);
   WiFi.mode(WIFI_OFF);
   delay(30);
-
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
 }
 
 void CalibreConnectActivity::onWifiSelectionComplete(const bool connected) {
@@ -92,7 +70,7 @@ void CalibreConnectActivity::onWifiSelectionComplete(const bool connected) {
 
 void CalibreConnectActivity::startWebServer() {
   state = CalibreConnectState::SERVER_STARTING;
-  updateRequired = true;
+  requestUpdate();
 
   if (MDNS.begin(HOSTNAME)) {
     // mDNS is optional for the Calibre plugin but still helpful for users.
@@ -104,10 +82,10 @@ void CalibreConnectActivity::startWebServer() {
 
   if (webServer->isRunning()) {
     state = CalibreConnectState::SERVER_RUNNING;
-    updateRequired = true;
+    requestUpdate();
   } else {
     state = CalibreConnectState::ERROR;
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
@@ -120,7 +98,7 @@ void CalibreConnectActivity::stopWebServer() {
 
 void CalibreConnectActivity::loop() {
   if (subActivity) {
-    subActivity->loop();
+    ActivityWithSubactivity::loop();
     return;
   }
 
@@ -178,7 +156,7 @@ void CalibreConnectActivity::loop() {
       changed = true;
     }
     if (changed) {
-      updateRequired = true;
+      requestUpdate();
     }
   }
 
@@ -188,19 +166,7 @@ void CalibreConnectActivity::loop() {
   }
 }
 
-void CalibreConnectActivity::displayTaskLoop() {
-  while (true) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      render();
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-}
-
-void CalibreConnectActivity::render() const {
+void CalibreConnectActivity::render(Activity::RenderLock&& lock) {
   if (state == CalibreConnectState::SERVER_RUNNING) {
     renderer.clearScreen();
     renderServerRunning();

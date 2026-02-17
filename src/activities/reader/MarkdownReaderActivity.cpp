@@ -24,23 +24,6 @@ constexpr int statusBarMargin = 19;
 constexpr int progressBarMarginTop = 1;
 }  // namespace
 
-bool MarkdownReaderActivity::waitForRenderingMutex() {
-  int retries = 0;
-  while (xSemaphoreTake(renderingMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
-    if (++retries >= 50 || taskShouldExit.load()) {
-      Serial.printf("[%lu] [MDR] Mutex timeout after %d retries\n", millis(), retries);
-      return false;
-    }
-    esp_task_wdt_reset();
-  }
-  return true;
-}
-
-void MarkdownReaderActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<MarkdownReaderActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void MarkdownReaderActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
@@ -65,10 +48,6 @@ void MarkdownReaderActivity::onEnter() {
       break;
   }
 
-  renderingMutex = xSemaphoreCreateMutex();
-  taskShouldExit.store(false);
-  taskHasExited.store(false);
-
   markdown->setupCacheDir();
   // Parse AST for Obsidian rendering and navigation (best effort)
   astReady.store(markdown->parseToAst());
@@ -82,9 +61,7 @@ void MarkdownReaderActivity::onEnter() {
   RECENT_BOOKS.addBook(markdown->getPath(), markdown->getTitle(), "", "");
 
   loadProgress();
-  updateRequired = true;
-
-  xTaskCreate(&MarkdownReaderActivity::taskTrampoline, "MarkdownReaderActivityTask", 8192, this, 1, &displayTaskHandle);
+  requestUpdate();
 }
 
 void MarkdownReaderActivity::onExit() {
@@ -92,17 +69,6 @@ void MarkdownReaderActivity::onExit() {
 
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);
 
-  // Signal task to exit gracefully
-  if (displayTaskHandle != nullptr) {
-    TaskShutdown::requestExit(taskShouldExit, taskHasExited, displayTaskHandle);
-  } else {
-    taskShouldExit.store(true);
-  }
-
-  if (renderingMutex) {
-    vSemaphoreDelete(renderingMutex);
-    renderingMutex = nullptr;
-  }
   mdSection.reset();
   htmlSection.reset();
   markdown.reset();
@@ -172,7 +138,7 @@ void MarkdownReaderActivity::loop() {
   }
 
   if (!hasActiveSection() || getActivePageCount() == 0) {
-    updateRequired = true;
+    requestUpdate();
     return;
   }
 
@@ -181,31 +147,14 @@ void MarkdownReaderActivity::loop() {
 
   if (prevTriggered && currentPage > 0) {
     setActiveCurrentPage(currentPage - 1);
-    updateRequired = true;
+    requestUpdate();
   } else if (nextTriggered && currentPage < static_cast<int>(pageCount - 1)) {
     setActiveCurrentPage(currentPage + 1);
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
-void MarkdownReaderActivity::displayTaskLoop() {
-  while (!taskShouldExit.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      if (!waitForRenderingMutex()) {
-        if (taskShouldExit.load()) {
-          break;
-        }
-        continue;
-      }
-      renderScreen();
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);  // Self-delete when signaled to exit
-}
+void MarkdownReaderActivity::render(Activity::RenderLock&& lock) { renderScreen(); }
 
 void MarkdownReaderActivity::renderScreen() {
   if (!markdown) {
@@ -305,7 +254,7 @@ void MarkdownReaderActivity::renderScreen() {
                                           SETTINGS.paragraphAlignment, viewportWidth, viewportHeight,
                                           SETTINGS.hyphenationEnabled, static_cast<uint32_t>(markdown->getFileSize()),
                                           progressSetup, progressCallback)) {
-          Serial.printf("[%lu] [MDR] Failed to build markdown AST cache, falling back to HTML\n", millis());
+          LOG_ERR("MDR", "Failed to build markdown AST cache, falling back to HTML");
           mdSection.reset();
           useAstRenderer.store(false);
         }
@@ -377,7 +326,7 @@ void MarkdownReaderActivity::renderScreen() {
                 SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(), SETTINGS.extraParagraphSpacing,
                 SETTINGS.paragraphAlignment, viewportWidth, viewportHeight, SETTINGS.hyphenationEnabled,
                 static_cast<uint32_t>(markdown->getFileSize()), progressSetup, progressCallback)) {
-          Serial.printf("[%lu] [MDR] Failed to build markdown cache\n", millis());
+          LOG_ERR("MDR", "Failed to build markdown cache");
           htmlSection.reset();
           return;
         }
@@ -633,7 +582,7 @@ void MarkdownReaderActivity::jumpToNextHeading() {
   auto nextPage = nav->findNextHeading(static_cast<size_t>(getActiveCurrentPage()));
   if (nextPage.has_value() && nextPage.value() < static_cast<size_t>(getActivePageCount())) {
     setActiveCurrentPage(static_cast<int>(nextPage.value()));
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
@@ -650,7 +599,7 @@ void MarkdownReaderActivity::jumpToPrevHeading() {
   auto prevPage = nav->findPrevHeading(static_cast<size_t>(getActiveCurrentPage()));
   if (prevPage.has_value()) {
     setActiveCurrentPage(static_cast<int>(prevPage.value()));
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
@@ -664,15 +613,12 @@ void MarkdownReaderActivity::showTableOfContents() {
     return;
   }
 
-  if (!waitForRenderingMutex()) {
-    return;
-  }
   exitActivity();
   enterNewActivity(new TocActivity(
       renderer, mappedInput, nav->getToc(),
       [this] {
         exitActivity();
-        updateRequired = true;
+        requestUpdate();
       },
       [this, nav](size_t tocIndex) {
         auto page = nav->findHeadingPage(tocIndex);
@@ -682,7 +628,6 @@ void MarkdownReaderActivity::showTableOfContents() {
           setActiveCurrentPage(0);
         }
         exitActivity();
-        updateRequired = true;
+        requestUpdate();
       }));
-  xSemaphoreGive(renderingMutex);
 }

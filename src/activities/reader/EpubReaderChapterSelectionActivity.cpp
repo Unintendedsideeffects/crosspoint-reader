@@ -85,7 +85,6 @@ void EpubReaderChapterSelectionActivity::onExit() { ActivityWithSubactivity::onE
 // Only compiled when KOReader sync integration is available.
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 void EpubReaderChapterSelectionActivity::launchSyncActivity() {
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
   exitActivity();
   enterNewActivity(new KOReaderSyncActivity(
       renderer, mappedInput, epub, epubPath, currentSpineIndex, currentPage, totalPagesInSpine,
@@ -99,7 +98,6 @@ void EpubReaderChapterSelectionActivity::launchSyncActivity() {
         exitActivity();
         onSyncPosition(newSpineIndex, newPage);
       }));
-  xSemaphoreGive(renderingMutex);
 }
 #endif
 

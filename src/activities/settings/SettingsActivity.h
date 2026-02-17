@@ -22,6 +22,7 @@ enum class SettingAction {
   ClearCache,
   CheckForUpdates,
   Language,
+  FactoryReset,
 };
 
 struct SettingInfo {
@@ -141,6 +142,7 @@ class SettingsActivity final : public ActivityWithSubactivity {
   int selectedCategoryIndex = 0;  // Currently selected category
   int selectedSettingIndex = 0;
   int settingsCount = 0;
+  bool updateRequired = false;
 
   // Per-category settings derived from shared list + device-only actions
   std::vector<SettingInfo> displaySettings;
@@ -154,6 +156,7 @@ class SettingsActivity final : public ActivityWithSubactivity {
   static constexpr int categoryCount = 4;
   static const StrId categoryNames[categoryCount];
 
+ protected:
   void enterCategory(int categoryIndex);
   void toggleCurrentSetting();
 

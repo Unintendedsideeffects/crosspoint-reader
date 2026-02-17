@@ -457,17 +457,17 @@ void CrossPointWebServer::handleFileListData() const {
   if (server->hasArg("path")) {
     const String rawArg = server->arg("path");
     currentPath = PathUtils::urlDecode(rawArg);
-    Serial.printf("[%lu] [WEB] Files API - raw arg: '%s' (%d bytes), decoded: '%s' (%d bytes)\n", millis(),
-                  rawArg.c_str(), rawArg.length(), currentPath.c_str(), currentPath.length());
+    LOG_DBG("WEB", "Files API - raw arg: '%s' (%d bytes), decoded: '%s' (%d bytes)", rawArg.c_str(),
+            (int)rawArg.length(), currentPath.c_str(), (int)currentPath.length());
 
     // Validate path against traversal attacks
     if (!PathUtils::isValidSdPath(currentPath)) {
-      Serial.printf("[%lu] [WEB] Path validation FAILED. raw='%s' (%d bytes) decoded='%s' (%d bytes)\n", millis(),
-                    rawArg.c_str(), rawArg.length(), currentPath.c_str(), currentPath.length());
+      LOG_WRN("WEB", "Path validation FAILED. raw='%s' (%d bytes) decoded='%s' (%d bytes)", rawArg.c_str(),
+              (int)rawArg.length(), currentPath.c_str(), (int)currentPath.length());
       server->send(400, "text/plain", "Invalid path");
       return;
     }
-    Serial.printf("[%lu] [WEB] Path validation OK\n", millis());
+    LOG_DBG("WEB", "Path validation OK");
 
     currentPath = PathUtils::normalizePath(currentPath);
   }
@@ -516,8 +516,7 @@ void CrossPointWebServer::handleDownload() const {
   const String rawArg = server->arg("path");
   String itemPath = PathUtils::urlDecode(rawArg);
   if (!PathUtils::isValidSdPath(itemPath)) {
-    Serial.printf("[%lu] [WEB] Download rejected - invalid path. raw='%s' decoded='%s'\n", millis(), rawArg.c_str(),
-                  itemPath.c_str());
+    LOG_WRN("WEB", "Download rejected - invalid path. raw='%s' decoded='%s'", rawArg.c_str(), itemPath.c_str());
     server->send(400, "text/plain", "Invalid path");
     return;
   }
@@ -608,8 +607,8 @@ void CrossPointWebServer::handleDownload() const {
     }
     const size_t bytesWritten = client.write(buffer, bytesRead);
     if (bytesWritten != bytesRead) {
-      Serial.printf("[%lu] [WEB] Download truncated for %s (wanted %u, wrote %u)\n", millis(), itemPath.c_str(),
-                    static_cast<unsigned int>(bytesRead), static_cast<unsigned int>(bytesWritten));
+      LOG_WRN("WEB", "Download truncated for %s (wanted %u, wrote %u)", itemPath.c_str(),
+              static_cast<unsigned int>(bytesRead), static_cast<unsigned int>(bytesWritten));
       break;
     }
     yield();
@@ -692,7 +691,7 @@ void CrossPointWebServer::handleUpload() const {
     // Validate filename to prevent path traversal
     if (!PathUtils::isValidFilename(uploadFileName)) {
       uploadError = "Invalid filename";
-      Serial.printf("[%lu] [WEB] [UPLOAD] Invalid filename rejected: %s\n", millis(), uploadFileName.c_str());
+      LOG_WRN("WEB", "[UPLOAD] Invalid filename rejected: %s", uploadFileName.c_str());
       return;
     }
 
@@ -705,7 +704,7 @@ void CrossPointWebServer::handleUpload() const {
       // Validate path against traversal attacks
       if (!PathUtils::isValidSdPath(uploadPath)) {
         uploadError = "Invalid path";
-        Serial.printf("[%lu] [WEB] [UPLOAD] Path validation failed: %s\n", millis(), uploadPath.c_str());
+        LOG_WRN("WEB", "[UPLOAD] Path validation failed: %s", uploadPath.c_str());
         return;
       }
 
@@ -845,7 +844,7 @@ void CrossPointWebServer::handleCreateFolder() const {
 
   // Validate folder name (no path separators or traversal)
   if (!PathUtils::isValidFilename(folderName)) {
-    Serial.printf("[%lu] [WEB] Invalid folder name rejected: %s\n", millis(), folderName.c_str());
+    LOG_WRN("WEB", "Invalid folder name rejected: %s", folderName.c_str());
     server->send(400, "text/plain", "Invalid folder name");
     return;
   }
@@ -857,7 +856,7 @@ void CrossPointWebServer::handleCreateFolder() const {
 
     // Validate path against traversal attacks
     if (!PathUtils::isValidSdPath(parentPath)) {
-      Serial.printf("[%lu] [WEB] Path validation failed for mkdir: %s\n", millis(), parentPath.c_str());
+      LOG_WRN("WEB", "Path validation failed for mkdir: %s", parentPath.c_str());
       server->send(400, "text/plain", "Invalid path");
       return;
     }
@@ -1129,7 +1128,7 @@ void CrossPointWebServer::handleDelete() const {
 
   // Validate path against traversal attacks
   if (!PathUtils::isValidSdPath(itemPath)) {
-    Serial.printf("[%lu] [WEB] Path validation failed for delete: %s\n", millis(), itemPath.c_str());
+    LOG_WRN("WEB", "Path validation failed for delete: %s", itemPath.c_str());
     server->send(400, "text/plain", "Invalid path");
     return;
   }
@@ -1185,14 +1184,11 @@ void CrossPointWebServer::handleDelete() const {
           // Folder is not empty
           entry.close();
           dir.close();
-          Serial.printf("[%lu] [WEB] Delete failed - folder not empty: %s\n", millis(), itemPath.c_str());
+          LOG_WRN("WEB", "Delete failed - folder not empty: %s", itemPath.c_str());
           server->send(400, "text/plain", "Folder is not empty. Delete contents first.");
           return;
         }
         dir.close();
-        LOG_DBG("WEB", "Delete failed - folder not empty: %s", itemPath.c_str());
-        server->send(400, "text/plain", "Folder is not empty. Delete contents first.");
-        return;
       }
     }
     {
@@ -1599,14 +1595,14 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
 
           // Validate filename against traversal attacks
           if (!PathUtils::isValidFilename(wsUploadFileName)) {
-            Serial.printf("[%lu] [WS] Invalid filename rejected: %s\n", millis(), wsUploadFileName.c_str());
+            LOG_WRN("WS", "Invalid filename rejected: %s", wsUploadFileName.c_str());
             wsServer->sendTXT(num, "ERROR:Invalid filename");
             return;
           }
 
           // Validate path against traversal attacks
           if (!PathUtils::isValidSdPath(wsUploadPath)) {
-            Serial.printf("[%lu] [WS] Path validation failed: %s\n", millis(), wsUploadPath.c_str());
+            LOG_WRN("WS", "Path validation failed: %s", wsUploadPath.c_str());
             wsServer->sendTXT(num, "ERROR:Invalid path");
             return;
           }

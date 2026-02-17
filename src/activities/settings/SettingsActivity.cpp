@@ -13,6 +13,7 @@
 #endif
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 #include "KOReaderSettingsActivity.h"
+#endif
 #include "LanguageSelectActivity.h"
 #include "MappedInputManager.h"
 #if ENABLE_OTA_UPDATES
@@ -59,6 +60,7 @@ void SettingsActivity::onEnter() {
   systemSettings.push_back(SettingInfo::Action(StrId::STR_OPDS_BROWSER, SettingAction::OPDSBrowser));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_CLEAR_READING_CACHE, SettingAction::ClearCache));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_FACTORY_RESET, SettingAction::FactoryReset));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
 
   // Reset selection to first category
@@ -202,9 +204,13 @@ void SettingsActivity::toggleCurrentSetting() {
     const bool currentValue = SETTINGS.*(setting.valuePtr);
     SETTINGS.*(setting.valuePtr) = !currentValue;
   } else if (setting.type == SettingType::ENUM) {
-    std::vector<std::string> values = setting.enumValues;
+    std::vector<std::string> values;
     if (setting.dynamicValuesGetter) {
       values = setting.dynamicValuesGetter();
+    } else {
+      values.reserve(setting.enumValues.size());
+      std::transform(setting.enumValues.begin(), setting.enumValues.end(), std::back_inserter(values),
+                     [](StrId id) { return std::string(I18N.get(id)); });
     }
     if (values.empty()) {
       return;
@@ -283,6 +289,7 @@ void SettingsActivity::toggleCurrentSetting() {
       case SettingAction::Language:
         enterSubActivity(new LanguageSelectActivity(renderer, mappedInput, onComplete));
         break;
+#endif
       case SettingAction::None:
         // Do nothing
         break;

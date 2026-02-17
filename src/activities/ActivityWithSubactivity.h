@@ -10,8 +10,9 @@ class ActivityWithSubactivity : public Activity {
   bool pendingExit = false;
   std::unique_ptr<Activity> pendingSubActivity = nullptr;
   void exitActivity();
+  void applyPendingSubActivityTransition();
   void enterNewActivity(Activity* activity);
-  [[noreturn]] void renderTaskLoop() override;
+  void renderTaskLoop() override;
 
  public:
   explicit ActivityWithSubactivity(std::string name, GfxRenderer& renderer, MappedInputManager& mappedInput)

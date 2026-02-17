@@ -43,6 +43,14 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   std::string connectedIP;
   std::string connectedSSID;  // For STA mode: network name, For AP mode: AP name
 
+  // Upload progress tracking
+  size_t lastProgressReceived = 0;
+  size_t lastProgressTotal = 0;
+  std::string currentUploadName;
+  std::string lastCompleteName;
+  unsigned long lastCompleteAt = 0;
+  bool updateRequired = false;
+
   // Performance monitoring
   unsigned long lastHandleClientTime = 0;
 
@@ -64,7 +72,7 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
+  void render(Activity::RenderLock&& lock) override;
   bool skipLoopDelay() override { return webServer && webServer->isRunning(); }
   bool preventAutoSleep() override { return webServer && webServer->isRunning(); }
   bool blocksBackgroundServer() override { return true; }

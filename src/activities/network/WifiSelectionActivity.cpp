@@ -15,14 +15,10 @@
 #include "fontIds.h"
 
 void WifiSelectionActivity::onEnter() {
-  Activity::onEnter();
+  ActivityWithSubactivity::onEnter();
 
-  // Load saved WiFi credentials - SD card operations need lock as we use SPI
-  // for both
-  {
-    RenderLock lock(*this);
-    WIFI_STORE.loadFromFile();
-  }
+  // Load saved WiFi credentials
+  WIFI_STORE.loadFromFile();
 
   // Reset state
   selectedNetworkIndex = 0;
@@ -72,20 +68,10 @@ void WifiSelectionActivity::onEnter() {
 }
 
 void WifiSelectionActivity::onExit() {
-  Activity::onExit();
-
-  LOG_DBG("WIFI", "Free heap at onExit start: %d bytes", ESP.getFreeHeap());
+  ActivityWithSubactivity::onExit();
 
   // Stop any ongoing WiFi scan
-  LOG_DBG("WIFI", "Deleting WiFi scan...");
   WiFi.scanDelete();
-  LOG_DBG("WIFI", "Free heap after scanDelete: %d bytes", ESP.getFreeHeap());
-
-  // Note: We do NOT disconnect WiFi here - the parent activity
-  // (CrossPointWebServerActivity) manages WiFi connection state. We just clean
-  // up the scan and task.
-
-  LOG_DBG("WIFI", "Free heap at onExit end: %d bytes", ESP.getFreeHeap());
 }
 
 void WifiSelectionActivity::startWifiScan() {
@@ -146,10 +132,9 @@ void WifiSelectionActivity::processWifiScanResults() {
 
   // Convert map to vector
   networks.clear();
-  for (const auto& pair : uniqueNetworks) {
-    // cppcheck-suppress useStlAlgorithm
-    networks.push_back(pair.second);
-  }
+  networks.reserve(uniqueNetworks.size());
+  std::transform(uniqueNetworks.begin(), uniqueNetworks.end(), std::back_inserter(networks),
+                 [](const std::pair<std::string, WifiNetworkInfo>& pair) { return pair.second; });
 
   // Sort by signal strength (strongest first)
   std::sort(networks.begin(), networks.end(),
@@ -218,7 +203,7 @@ void WifiSelectionActivity::startBleProvisioning() {
 #if !ENABLE_BLE_WIFI_PROVISIONING
   connectionError = "BLE provisioning disabled";
   state = WifiSelectionState::CONNECTION_FAILED;
-  updateRequired = true;
+  requestUpdate();
   return;
 #else
   bleProvisioner.stop();
@@ -229,7 +214,7 @@ void WifiSelectionActivity::startBleProvisioning() {
   if (!bleProvisioner.start("CrossPoint-WiFi")) {
     connectionError = "Error: BLE start failed";
     state = WifiSelectionState::CONNECTION_FAILED;
-    updateRequired = true;
+    requestUpdate();
     return;
   }
 
@@ -238,7 +223,7 @@ void WifiSelectionActivity::startBleProvisioning() {
   enteredPassword.clear();
   selectedRequiresPassword = false;
   usedSavedPassword = false;
-  updateRequired = true;
+  requestUpdate();
 #endif
 }
 
@@ -260,12 +245,10 @@ void WifiSelectionActivity::checkBleProvisioning() {
   usedSavedPassword = true;
   autoConnecting = false;
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
   if (!enteredPassword.empty()) {
     WIFI_STORE.addCredential(selectedSSID, enteredPassword);
   }
   WIFI_STORE.setLastConnectedSsid(selectedSSID);
-  xSemaphoreGive(renderingMutex);
 
   LOG_DBG("WIFI", "Received BLE credentials for %s", selectedSSID.c_str());
   attemptConnection();
@@ -303,12 +286,8 @@ void WifiSelectionActivity::checkConnectionStatus() {
     connectedIP = ipStr;
     autoConnecting = false;
 
-    // Save this as the last connected network - SD card operations need lock as
-    // we use SPI for both
-    {
-      RenderLock lock(*this);
-      WIFI_STORE.setLastConnectedSsid(selectedSSID);
-    }
+    // Save this as the last connected network
+    WIFI_STORE.setLastConnectedSsid(selectedSSID);
 
     // If we entered a new password, ask if user wants to save it
     // Otherwise, immediately complete so parent can start web server
@@ -348,7 +327,7 @@ void WifiSelectionActivity::checkConnectionStatus() {
 
 void WifiSelectionActivity::loop() {
   if (subActivity) {
-    subActivity->loop();
+    ActivityWithSubactivity::loop();
     return;
   }
 
@@ -375,7 +354,7 @@ void WifiSelectionActivity::loop() {
     if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
       bleProvisioner.stop();
       state = WifiSelectionState::NETWORK_LIST;
-      updateRequired = true;
+      requestUpdate();
       return;
     }
 
@@ -403,7 +382,6 @@ void WifiSelectionActivity::loop() {
     } else if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
       if (savePromptSelection == 0) {
         // User chose "Yes" - save the password
-        RenderLock lock(*this);
         WIFI_STORE.addCredential(selectedSSID, enteredPassword);
       }
       // Complete - parent will start web server
@@ -431,12 +409,11 @@ void WifiSelectionActivity::loop() {
       }
     } else if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
       if (forgetPromptSelection == 1) {
-        RenderLock lock(*this);
         // User chose "Forget network" - forget the network
         WIFI_STORE.removeCredential(selectedSSID);
         // Update the network list to reflect the change
-        const auto network = find_if(networks.begin(), networks.end(),
-                                     [this](const WifiNetworkInfo& net) { return net.ssid == selectedSSID; });
+        const auto network = std::find_if(networks.begin(), networks.end(),
+                                          [this](const WifiNetworkInfo& net) { return net.ssid == selectedSSID; });
         if (network != networks.end()) {
           network->hasSavedPassword = false;
         }
@@ -546,11 +523,10 @@ std::string WifiSelectionActivity::getSignalStrengthIndicator(const int32_t rssi
   return "    ";  // Very weak
 }
 
-void WifiSelectionActivity::render(Activity::RenderLock&&) {
+void WifiSelectionActivity::render(Activity::RenderLock&& lock) {
   // Don't render if we're in PASSWORD_ENTRY state - we're just transitioning
   // from the keyboard subactivity back to the main activity
   if (state == WifiSelectionState::PASSWORD_ENTRY) {
-    requestUpdateAndWait();
     return;
   }
 
@@ -657,7 +633,7 @@ void WifiSelectionActivity::renderNetworkList() const {
 
     // Show network count
     char countStr[64];
-    snprintf(countStr, sizeof(countStr), tr(STR_NETWORKS_FOUND), networks.size());
+    snprintf(countStr, sizeof(countStr), tr(STR_NETWORKS_FOUND), (int)networks.size());
     renderer.drawText(SMALL_FONT_ID, 20, pageHeight - 90, countStr);
   }
 

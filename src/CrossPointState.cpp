@@ -38,7 +38,7 @@ bool CrossPointState::loadFromFile() {
 
   uint8_t version;
   if (!serialization::readPod(inputFile, version)) {
-    Serial.printf("[%lu] [CPS] Failed to read version\n", millis());
+    LOG_ERR("CPS", "Failed to read version");
     inputFile.close();
     return false;
   }
@@ -49,14 +49,14 @@ bool CrossPointState::loadFromFile() {
   }
 
   if (!serialization::readString(inputFile, openEpubPath)) {
-    Serial.printf("[%lu] [CPS] Failed to read epub path\n", millis());
+    LOG_ERR("CPS", "Failed to read epub path");
     inputFile.close();
     return false;
   }
 
   if (version >= 2) {
     if (!serialization::readPod(inputFile, lastSleepImage)) {
-      Serial.printf("[%lu] [CPS] Failed to read sleep image index\n", millis());
+      LOG_ERR("CPS", "Failed to read sleep image index");
       inputFile.close();
       return false;
     }

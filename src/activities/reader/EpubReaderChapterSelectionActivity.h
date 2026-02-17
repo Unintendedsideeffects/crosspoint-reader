@@ -28,6 +28,13 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   // Total TOC items count
   int getTotalItems() const;
 
+  bool hasSyncOption() const;
+  int tocIndexFromItemIndex(int itemIndex) const;
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  bool isSyncItem(int index) const;
+  void launchSyncActivity();
+#endif
+
  public:
   explicit EpubReaderChapterSelectionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                               const std::shared_ptr<Epub>& epub, const std::string& epubPath,
