@@ -404,6 +404,7 @@ python scripts/measure_feature_sizes.py
 
 ## References
 
+- **Fork & Branch Strategy:** `docs/fork-strategy.md`
 - **Build Configuration:** `docs/BUILD_CONFIGURATION.md`
 - **Test Plan:** `docs/FEATURE_PICKER_TEST_PLAN.md`
 - **SRE Analysis:** Result from sre-code-reviewer agent
