@@ -1065,7 +1065,7 @@ async function openTodoPrompt(agendaEntry) {
     }
     hydrate();
   } catch (error) {
-    alert('Failed to add entry');
+    alert(`Failed to add entry: ${error.message}`);
   }
 }
 

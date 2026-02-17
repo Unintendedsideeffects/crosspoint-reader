@@ -40,6 +40,7 @@ const char* HIDDEN_ITEMS[] = {"System Volume Information", "XTCache"};
 constexpr size_t HIDDEN_ITEMS_COUNT = sizeof(HIDDEN_ITEMS) / sizeof(HIDDEN_ITEMS[0]);
 constexpr uint16_t UDP_PORTS[] = {54982, 48123, 39001, 44044, 59678};
 constexpr uint16_t LOCAL_UDP_PORT = 8134;
+constexpr size_t TODO_ENTRY_MAX_TEXT_LENGTH = 300;
 
 // Static pointer for WebSocket callback (WebSocketsServer requires C-style callback)
 CrossPointWebServer* wsInstance = nullptr;
@@ -378,10 +379,11 @@ void CrossPointWebServer::handleTodoEntry() {
   }
 
   String text = server->arg("text");
+  text.replace("\r\n", " ");
   text.replace("\r", " ");
   text.replace("\n", " ");
   text.trim();
-  if (text.isEmpty() || text.length() > 300) {
+  if (text.isEmpty() || text.length() > TODO_ENTRY_MAX_TEXT_LENGTH) {
     server->send(400, "text/plain", "Invalid text");
     return;
   }
