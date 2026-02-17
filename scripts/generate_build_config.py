@@ -122,7 +122,7 @@ FEATURES = {
         name='Todo Planner',
         flag='ENABLE_TODO_PLANNER',
         size_kb=296,
-        description='Daily markdown notes and task tracking'
+        description='Standalone daily TODO/agenda planner with .md/.txt fallback and web quick-entry'
     ),
     'dark_mode': Feature(
         name='Dark Mode',
@@ -292,7 +292,7 @@ FEATURE_METADATA = {
     'todo_planner': FeatureMetadata(
         implemented=True,
         stable=True,
-        requires=['markdown'],
+        requires=[],
         conflicts=[],
         recommends=['markdown']
     ),

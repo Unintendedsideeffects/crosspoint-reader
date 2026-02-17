@@ -998,19 +998,18 @@
                   </div>
                   <div class="card-toggle"><span class="toggle-box"></span></div>
                 </label>
-                <div class="dep-children">
-                  <label class="skill-card dep-child" data-feature="todo_planner" data-node-id="todo_planner">
-                    <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
-                    <div class="card-icon"><span>&#x2713;</span></div>
-                    <div class="card-body">
-                      <div class="card-name">Agenda</div>
-                      <div class="card-size"></div>
-                      <div class="card-desc">Daily markdown notes and task tracking</div>
-                    </div>
-                    <div class="card-toggle"><span class="toggle-box"></span></div>
-                  </label>
-                </div>
               </div>
+
+              <label class="skill-card" data-feature="todo_planner" data-node-id="todo_planner">
+                <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
+                <div class="card-icon"><span>&#x2713;</span></div>
+                <div class="card-body">
+                  <div class="card-name">TODO Planner</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Standalone daily TODO/agenda planner with /files quick-entry and .md/.txt fallback</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
 
               <label class="skill-card" data-feature="xtc_support" data-node-id="xtc_support">
                 <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
@@ -1134,7 +1133,7 @@
                 <div class="card-body">
                   <div class="card-name">User Fonts</div>
                   <div class="card-size"></div>
-                  <div class="card-desc">Load custom fonts from SD card (requires pre-conversion)</div>
+                  <div class="card-desc">Load canonical CPF font families from SD with runtime rescan and safe fallback</div>
                 </div>
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
@@ -1208,7 +1207,7 @@
                 <div class="card-body">
                   <div class="card-name">USB Mass Storage</div>
                   <div class="card-size"></div>
-                  <div class="card-desc">On-device prompt to expose SD card over USB with lock mode safety</div>
+                  <div class="card-desc">Compile-time USB MSC with runtime System toggle, on-connect prompt, and locked safety mode</div>
                 </div>
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
@@ -1306,6 +1305,14 @@
               <div class="note-item" data-node-id="feature_store_note">
                 <span class="note-icon">&#x25AB;</span>
                 <span class="note-label">Feature store: select then pull OTA</span>
+              </div>
+              <div class="note-item" data-node-id="todo_web_entry_note">
+                <span class="note-icon">&#x25AB;</span>
+                <span class="note-label">TODO planner: standalone + web /files entry</span>
+              </div>
+              <div class="note-item" data-node-id="font_sd_flow_note">
+                <span class="note-icon">&#x25AB;</span>
+                <span class="note-label">User fonts: canonical names + hot rescan</span>
               </div>
               <div class="note-item" data-node-id="usb_mass_storage_note">
                 <span class="note-icon">&#x25AB;</span>
@@ -1600,7 +1607,6 @@
         calibre_sync: ["integrations"],
         opendyslexic_fonts: ["extended_fonts"],
         hyphenation: ["epub_support"],
-        todo_planner: ["markdown"],
         web_wifi_setup: ["background_server"],
       };
 
@@ -1620,6 +1626,8 @@
         webserver_on_charge_note: ["background_server"],
         obsidian_xte_sync_note: ["integrations"],
         feature_store_note: ["ota_updates"],
+        todo_web_entry_note: ["todo_planner"],
+        font_sd_flow_note: ["user_fonts"],
         usb_mass_storage_note: [],
         ble_setup_note: ["ble_wifi_provisioning"],
         font_converter_note: ["user_fonts"],
