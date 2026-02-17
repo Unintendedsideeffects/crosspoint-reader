@@ -34,6 +34,7 @@ class TodoActivity final : public ActivityWithSubactivity {
   std::vector<TodoItem> items;
   int selectedIndex = 0;
   int scrollOffset = 0;  // Index of first visible item
+  bool skipInitialInput = true;
 
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;

@@ -105,8 +105,8 @@ void SettingsActivity::onExit() {
 }
 
 void SettingsActivity::loop() {
+  ActivityWithSubactivity::loop();
   if (subActivity) {
-    subActivity->loop();
     return;
   }
   bool hasChangedCategory = false;
@@ -208,6 +208,12 @@ void SettingsActivity::toggleCurrentSetting() {
   }
 
   const auto& setting = (*currentSettings)[selectedSetting];
+
+  // Sleep source only applies when custom sleep screen mode is enabled.
+  if (setting.valuePtr == &CrossPointSettings::sleepScreenSource &&
+      SETTINGS.sleepScreen != CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM) {
+    return;
+  }
 
   if (setting.type == SettingType::TOGGLE && setting.valuePtr != nullptr) {
     // Toggle the boolean value using the member pointer
@@ -357,6 +363,10 @@ void SettingsActivity::render() const {
           const bool value = SETTINGS.*(settings[i].valuePtr);
           valueText = value ? "ON" : "OFF";
         } else if (settings[i].type == SettingType::ENUM) {
+          if (settings[i].valuePtr == &CrossPointSettings::sleepScreenSource &&
+              SETTINGS.sleepScreen != CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM) {
+            return std::string("(Custom only)");
+          }
           std::vector<std::string> values = settings[i].enumValues;
           if (settings[i].dynamicValuesGetter) {
             values = settings[i].dynamicValuesGetter();

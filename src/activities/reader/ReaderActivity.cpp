@@ -113,13 +113,21 @@ void ReaderActivity::goToLibrary(const std::string& fromBookPath) {
   onGoToLibrary(initialPath);
 }
 
+void ReaderActivity::requestGoHome() { pendingGoHome = true; }
+
+void ReaderActivity::requestGoToLibrary(const std::string& fromBookPath) {
+  pendingGoToLibrary = true;
+  pendingLibraryPath = fromBookPath;
+}
+
 #if ENABLE_EPUB_SUPPORT
 void ReaderActivity::onGoToEpubReader(std::unique_ptr<Epub> epub) {
   const auto epubPath = epub->getPath();
   currentBookPath = epubPath;
   exitActivity();
   enterNewActivity(new EpubReaderActivity(
-      renderer, mappedInput, std::move(epub), [this, epubPath] { goToLibrary(epubPath); }, [this] { onGoBack(); }));
+      renderer, mappedInput, std::move(epub), [this, epubPath] { requestGoToLibrary(epubPath); },
+      [this] { requestGoHome(); }));
 }
 #endif
 
@@ -129,7 +137,8 @@ void ReaderActivity::onGoToXtcReader(std::unique_ptr<Xtc> xtc) {
   currentBookPath = xtcPath;
   exitActivity();
   enterNewActivity(new XtcReaderActivity(
-      renderer, mappedInput, std::move(xtc), [this, xtcPath] { goToLibrary(xtcPath); }, [this] { onGoBack(); }));
+      renderer, mappedInput, std::move(xtc), [this, xtcPath] { requestGoToLibrary(xtcPath); },
+      [this] { requestGoHome(); }));
 }
 #endif
 
@@ -138,7 +147,8 @@ void ReaderActivity::onGoToTxtReader(std::unique_ptr<Txt> txt) {
   currentBookPath = txtPath;
   exitActivity();
   enterNewActivity(new TxtReaderActivity(
-      renderer, mappedInput, std::move(txt), [this, txtPath] { goToLibrary(txtPath); }, [this] { onGoBack(); }));
+      renderer, mappedInput, std::move(txt), [this, txtPath] { requestGoToLibrary(txtPath); },
+      [this] { requestGoHome(); }));
 }
 
 #if ENABLE_MARKDOWN
@@ -147,9 +157,27 @@ void ReaderActivity::onGoToMarkdownReader(std::unique_ptr<Markdown> markdown) {
   currentBookPath = mdPath;
   exitActivity();
   enterNewActivity(new MarkdownReaderActivity(
-      renderer, mappedInput, std::move(markdown), [this, mdPath] { goToLibrary(mdPath); }, [this] { onGoBack(); }));
+      renderer, mappedInput, std::move(markdown), [this, mdPath] { requestGoToLibrary(mdPath); },
+      [this] { requestGoHome(); }));
 }
 #endif  // ENABLE_MARKDOWN
+
+void ReaderActivity::loop() {
+  ActivityWithSubactivity::loop();
+
+  if (pendingGoHome) {
+    pendingGoHome = false;
+    onGoBack();
+    return;
+  }
+
+  if (pendingGoToLibrary) {
+    pendingGoToLibrary = false;
+    const std::string path = pendingLibraryPath;
+    pendingLibraryPath.clear();
+    goToLibrary(path);
+  }
+}
 
 void ReaderActivity::onEnter() {
   ActivityWithSubactivity::onEnter();

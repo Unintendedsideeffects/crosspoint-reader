@@ -109,8 +109,8 @@ void MarkdownReaderActivity::onExit() {
 }
 
 void MarkdownReaderActivity::loop() {
+  ActivityWithSubactivity::loop();
   if (subActivity) {
-    subActivity->loop();
     return;
   }
 

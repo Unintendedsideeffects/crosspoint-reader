@@ -38,6 +38,7 @@ void TodoActivity::onEnter() {
   }
   exitTaskRequested.store(false);
   taskHasExited.store(false);
+  skipInitialInput = true;
 
   loadTasks();
   updateRequired.store(true);
@@ -86,8 +87,19 @@ void TodoActivity::displayTaskLoop() {
 }
 
 void TodoActivity::loop() {
+  ActivityWithSubactivity::loop();
   if (subActivity) {
-    subActivity->loop();
+    return;
+  }
+
+  if (skipInitialInput) {
+    const bool clear = !mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
+                       !mappedInput.wasReleased(MappedInputManager::Button::Confirm) &&
+                       !mappedInput.isPressed(MappedInputManager::Button::Back) &&
+                       !mappedInput.wasReleased(MappedInputManager::Button::Back);
+    if (clear) {
+      skipInitialInput = false;
+    }
     return;
   }
 
