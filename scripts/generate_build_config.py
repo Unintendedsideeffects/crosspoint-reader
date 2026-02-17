@@ -148,6 +148,12 @@ FEATURES = {
         size_kb=5,
         description='Manage WiFi networks directly from the web interface'
     ),
+    'usb_mass_storage': Feature(
+        name='USB Mass Storage',
+        flag='ENABLE_USB_MASS_STORAGE',
+        size_kb=8,
+        description='On-device prompt for USB SD card access as mass storage'
+    ),
 }
 
 
@@ -312,6 +318,13 @@ FEATURE_METADATA = {
         conflicts=[],
         recommends=[]
     ),
+    'usb_mass_storage': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
 }
 
 
@@ -417,6 +430,7 @@ PROFILES = {
             'home_media_picker': True,
             'dark_mode': True,
             'user_fonts': True,
+            'usb_mass_storage': True,
         },
     },
     'full': {
@@ -443,6 +457,7 @@ PROFILES = {
             'ble_wifi_provisioning': True,
             'user_fonts': True,
             'web_wifi_setup': True,
+            'usb_mass_storage': True,
         },
     },
 }

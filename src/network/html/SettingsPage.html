@@ -290,6 +290,9 @@
   let allSettings = [];
   let originalValues = {};
   let touchedFields = {};
+  const SETTING_DISPLAY_NAMES = {
+    usbMscPromptOnConnect: 'USB Mass Storage Prompt'
+  };
 
   function escapeHtml(unsafe) {
     return unsafe
@@ -369,6 +372,11 @@
     document.getElementById('saveBtn').disabled = false;
   }
 
+  function displaySettingName(setting) {
+    if (!setting) return '';
+    return SETTING_DISPLAY_NAMES[setting.key] || setting.name || '';
+  }
+
   async function loadSettings() {
     try {
       // Check features first to see if we should show WiFi setup
@@ -407,7 +415,7 @@
         html += '<div class="card"><h2>' + escapeHtml(category) + '</h2>';
         groups[category].forEach(function(s) {
           html += '<div class="setting-row">' +
-            '<span class="setting-name">' + escapeHtml(s.name) + '</span>' +
+            '<span class="setting-name">' + escapeHtml(displaySettingName(s)) + '</span>' +
             '<span class="setting-control">' + renderControl(s) + '</span>' +
             '</div>';
         });

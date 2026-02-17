@@ -157,9 +157,55 @@ EpdFontFamily userSdFontFamily(&regularSdFont, &boldSdFont, &italicSdFont, &bold
 unsigned long t1 = 0;
 unsigned long t2 = 0;
 
+void exitActivity();
+
 namespace {
 constexpr char kCrossPointDataDir[] = "/.crosspoint";
 constexpr char kFactoryResetMarkerFile[] = "/.factory-reset-pending";
+#if ENABLE_USB_MASS_STORAGE
+constexpr char kUsbMscSessionMarkerFile[] = "/.crosspoint/usb-msc-active";
+
+enum class UsbMscSessionState { Idle, Prompt, Active };
+
+UsbMscSessionState usbMscSessionState = UsbMscSessionState::Idle;
+bool usbConnectedLast = false;
+bool usbMscScreenNeedsRedraw = false;
+bool usbMscRemountPending = false;
+
+void renderUsbMscPrompt() {
+  renderer.clearScreen();
+  renderer.drawCenteredText(UI_12_FONT_ID, 260, "Connect as Mass Storage?", true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, 300, "SD card will be unavailable on-device", true);
+  const auto labels = mappedInputManager.mapLabels(tr(STR_NO), tr(STR_YES), "", "");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  renderer.displayBuffer();
+}
+
+void renderUsbMscLockedScreen() {
+  renderer.clearScreen();
+  renderer.drawCenteredText(UI_12_FONT_ID, 260, "Mass Storage Active", true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, 300, "Disconnect USB cable to return", true);
+  renderer.displayBuffer();
+}
+
+void enterUsbMscSession() {
+  LOG_INF("USBMSC", "Entering USB mass storage lock mode");
+  APP_STATE.saveToFile();
+  SETTINGS.saveToFile();
+  exitActivity();
+  Storage.mkdir(kCrossPointDataDir);
+  Storage.writeFile(kUsbMscSessionMarkerFile, "1");
+  usbMscSessionState = UsbMscSessionState::Active;
+  usbMscScreenNeedsRedraw = true;
+}
+
+void exitUsbMscSession() {
+  LOG_INF("USBMSC", "Exiting USB mass storage lock mode");
+  usbMscSessionState = UsbMscSessionState::Idle;
+  usbMscScreenNeedsRedraw = false;
+  usbMscRemountPending = true;
+}
+#endif
 
 void applyPendingFactoryReset() {
   if (!Storage.exists(kFactoryResetMarkerFile)) {
@@ -425,6 +471,13 @@ void setup() {
 #endif
 
   applyPendingFactoryReset();
+#if ENABLE_USB_MASS_STORAGE
+  usbConnectedLast = gpio.isUsbConnected();
+  if (Storage.exists(kUsbMscSessionMarkerFile)) {
+    LOG_WRN("USBMSC", "Detected stale USB MSC marker; recovering SD ownership");
+    Storage.remove(kUsbMscSessionMarkerFile);
+  }
+#endif
 
   SETTINGS.loadFromFile();
   I18N.loadSettings();
@@ -509,6 +562,67 @@ void loop() {
       }
     }
   }
+
+#if ENABLE_USB_MASS_STORAGE
+  const bool usbConnected = gpio.isUsbConnected();
+
+  if (usbMscRemountPending) {
+    usbMscRemountPending = false;
+    Storage.remove(kUsbMscSessionMarkerFile);
+    if (!Storage.begin()) {
+      LOG_ERR("USBMSC", "SD remount failed after USB MSC exit");
+      exitActivity();
+      enterNewActivity(new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
+      return;
+    }
+    onGoHome();
+    usbConnectedLast = usbConnected;
+    return;
+  }
+
+  if (SETTINGS.usbMscPromptOnConnect && usbConnected && !usbConnectedLast &&
+      usbMscSessionState == UsbMscSessionState::Idle) {
+    usbMscSessionState = UsbMscSessionState::Prompt;
+    usbMscScreenNeedsRedraw = true;
+  }
+
+  if (usbMscSessionState == UsbMscSessionState::Prompt) {
+    backgroundServer.loop(usbConnected, false);
+    if (!usbConnected) {
+      usbMscSessionState = UsbMscSessionState::Idle;
+      if (currentActivity) currentActivity->requestUpdate();
+    } else {
+      if (usbMscScreenNeedsRedraw) {
+        renderUsbMscPrompt();
+        usbMscScreenNeedsRedraw = false;
+      }
+      if (mappedInputManager.wasReleased(MappedInputManager::Button::Confirm)) {
+        enterUsbMscSession();
+      } else if (mappedInputManager.wasReleased(MappedInputManager::Button::Back)) {
+        usbMscSessionState = UsbMscSessionState::Idle;
+        if (currentActivity) currentActivity->requestUpdate();
+      }
+    }
+    usbConnectedLast = usbConnected;
+    delay(20);
+    return;
+  }
+
+  if (usbMscSessionState == UsbMscSessionState::Active) {
+    backgroundServer.loop(usbConnected, false);
+    if (!usbConnected) {
+      exitUsbMscSession();
+    } else if (usbMscScreenNeedsRedraw) {
+      renderUsbMscLockedScreen();
+      usbMscScreenNeedsRedraw = false;
+    }
+    usbConnectedLast = usbConnected;
+    delay(20);
+    return;
+  }
+
+  usbConnectedLast = usbConnected;
+#endif
 
   // Check for any user activity (button press or release) or active background work
   static unsigned long lastActivityTime = millis();
