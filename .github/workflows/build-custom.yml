@@ -194,26 +194,26 @@ jobs:
           PROFILE_INPUT: ${{ inputs.profile }}
         run: |
           FEATURE_FLAGS=$(
-            python - <<'PY'
-            import re
-            from pathlib import Path
+          python - <<'PY'
+          import re
+          from pathlib import Path
 
-            lines = Path("platformio-custom.ini").read_text().splitlines()
-            flags = {}
-            for line in lines:
-                match = re.search(r"-D([A-Z0-9_]+)=(0|1)\b", line)
-                if not match:
-                    continue
-                macro = match.group(1)
-                value = match.group(2)
-                if macro.startswith("ENABLE_"):
-                    flags[macro] = value
+          lines = Path("platformio-custom.ini").read_text().splitlines()
+          flags = {}
+          for line in lines:
+              match = re.search(r"-D([A-Z0-9_]+)=(0|1)\b", line)
+              if not match:
+                  continue
+              macro = match.group(1)
+              value = match.group(2)
+              if macro.startswith("ENABLE_"):
+                  flags[macro] = value
 
-            if not flags:
-                raise SystemExit("No ENABLE_* flags found in platformio-custom.ini")
+          if not flags:
+              raise SystemExit("No ENABLE_* flags found in platformio-custom.ini")
 
-            print(";".join(f"{macro}={flags[macro]}" for macro in sorted(flags)))
-            PY
+          print(";".join(f"{macro}={flags[macro]}" for macro in sorted(flags)))
+          PY
           )
           FEATURESET_STRING="profile=${PROFILE_INPUT};${FEATURE_FLAGS}"
           FEATURESET_HASH=$(printf "%s|%s" "$GITHUB_SHA" "$FEATURESET_STRING" | sha256sum | cut -c1-16)
