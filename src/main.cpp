@@ -156,6 +156,8 @@ EpdFontFamily userSdFontFamily(&regularSdFont, &boldSdFont, &italicSdFont, &bold
 unsigned long t1 = 0;
 unsigned long t2 = 0;
 
+void exitActivity();
+
 namespace {
 constexpr char kCrossPointDataDir[] = "/.crosspoint";
 constexpr char kFactoryResetMarkerFile[] = "/.factory-reset-pending";
@@ -592,6 +594,7 @@ void loop() {
   }
 
   if (usbMscSessionState == UsbMscSessionState::Prompt) {
+    backgroundServer.loop(usbConnected, false);
     if (!usbConnected) {
       usbMscSessionState = UsbMscSessionState::Idle;
       if (currentActivity) currentActivity->requestUpdate();
@@ -613,6 +616,7 @@ void loop() {
   }
 
   if (usbMscSessionState == UsbMscSessionState::Active) {
+    backgroundServer.loop(usbConnected, false);
     if (!usbConnected) {
       exitUsbMscSession();
     } else if (usbMscScreenNeedsRedraw) {
