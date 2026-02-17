@@ -1,6 +1,7 @@
 #include "MarkdownParser.h"
 
 #include <Arduino.h>
+#include <Logging.h>
 
 #include <algorithm>
 #include <cctype>
@@ -46,16 +47,14 @@ static std::string formatLinkTarget(const std::string& target) {
 
 std::unique_ptr<MdNode> MarkdownParser::parse(const std::string& markdown) {
   if (markdown.size() > MAX_INPUT_SIZE) {
-    Serial.printf("[%lu] [MD ] Parse failed: input size %zu exceeds limit %zu\n", millis(), markdown.size(),
-                  MAX_INPUT_SIZE);
+    LOG_ERR("MD", "Parse failed: input size %zu exceeds limit %zu", markdown.size(), MAX_INPUT_SIZE);
     return nullptr;
   }
 
   const size_t freeHeap = ESP.getFreeHeap();
   constexpr size_t kHeapHeadroomBytes = 64 * 1024;
   if (freeHeap < markdown.size() + kHeapHeadroomBytes) {
-    Serial.printf("[%lu] [MD ] Parse failed: low heap (%zu free, need >= %zu)\n", millis(), freeHeap,
-                  markdown.size() + kHeapHeadroomBytes);
+    LOG_ERR("MD", "Parse failed: low heap (%zu free, need >= %zu)", freeHeap, markdown.size() + kHeapHeadroomBytes);
     return nullptr;
   }
 
@@ -90,8 +89,7 @@ std::unique_ptr<MdNode> MarkdownParser::parse(const std::string& markdown) {
 
 std::unique_ptr<MdNode> MarkdownParser::parseWithPreprocessing(const std::string& markdown) {
   if (markdown.size() > MAX_INPUT_SIZE) {
-    Serial.printf("[%lu] [MD ] Preprocess failed: input size %zu exceeds limit %zu\n", millis(), markdown.size(),
-                  MAX_INPUT_SIZE);
+    LOG_ERR("MD", "Preprocess failed: input size %zu exceeds limit %zu", markdown.size(), MAX_INPUT_SIZE);
     return nullptr;
   }
   std::string processed = preprocessMarkdown(markdown);
@@ -548,7 +546,7 @@ void MarkdownParser::setLimitExceeded(const char* reason) {
     return;
   }
   limitExceeded = true;
-  Serial.printf("[%lu] [MD ] Parse aborted: %s\n", millis(), reason);
+  LOG_ERR("MD", "Parse aborted: %s", reason);
 }
 
 bool MarkdownParser::checkNodeLimit() {

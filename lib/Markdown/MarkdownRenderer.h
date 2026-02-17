@@ -17,6 +17,7 @@ class TextBlock;
 class MarkdownRenderer {
  public:
   static constexpr size_t MAX_RENDER_DEPTH = 50;
+  static constexpr size_t MAX_NODE_MAPPING = 10000;
 
   // Callback for completed pages
   using PageCallback = std::function<void(std::unique_ptr<Page>)>;

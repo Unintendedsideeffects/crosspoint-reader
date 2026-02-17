@@ -151,16 +151,17 @@ void TodoActivity::loadTasks() {
     return;
   }
 
-  std::string line;
-  char buffer[256];
   while (file.available()) {
-    int len = file.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
-    buffer[len] = '\0';
-    // Remove CR if present
-    if (len > 0 && buffer[len - 1] == '\r') {
-      buffer[len - 1] = '\0';
+    std::string line;
+    while (file.available()) {
+      char c = static_cast<char>(file.read());
+      if (c == '\n') break;
+      line.push_back(c);
     }
-    line = buffer;
+    // Remove CR if present (handles CRLF)
+    if (!line.empty() && line.back() == '\r') {
+      line.pop_back();
+    }
 
     TodoItem item;
     // Check for Markdown task format: "- [ ] " or "- [x] "
