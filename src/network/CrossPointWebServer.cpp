@@ -19,6 +19,9 @@
 #include "RecentBooksStore.h"
 #include "SettingsList.h"
 #include "SpiBusMutex.h"
+#if ENABLE_USER_FONTS
+#include "UserFontManager.h"
+#endif
 #include "activities/boot_sleep/SleepActivity.h"
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
@@ -164,6 +167,9 @@ void CrossPointWebServer::begin() {
 #endif
   server->on("/api/settings", HTTP_GET, [this] { handleGetSettings(); });
   server->on("/api/settings", HTTP_POST, [this] { handlePostSettings(); });
+#if ENABLE_USER_FONTS
+  server->on("/api/user-fonts/rescan", HTTP_POST, [this] { handleRescanUserFonts(); });
+#endif
 
   // WiFi endpoints
 #if ENABLE_WEB_WIFI_SETUP
@@ -868,6 +874,13 @@ void CrossPointWebServer::handleUpload() const {
         filePath += uploadFileName;
         clearEpubCacheIfNeeded(filePath);
         invalidateSleepCacheIfNeeded(filePath);
+#if ENABLE_USER_FONTS
+        String normalizedUploadFileName = uploadFileName;
+        normalizedUploadFileName.toLowerCase();
+        if (uploadPath == "/fonts" && normalizedUploadFileName.endsWith(".cpf")) {
+          UserFontManager::getInstance().scanFonts();
+        }
+#endif
       }
     }
   } else if (upload.status == UPLOAD_FILE_ABORTED) {
@@ -1324,8 +1337,14 @@ void CrossPointWebServer::handleGetSettings() const {
           doc["value"] = static_cast<int>(s.valueGetter());
         }
         JsonArray options = doc["options"].to<JsonArray>();
-        for (const auto& opt : s.enumValues) {
-          options.add(I18N.get(opt));
+        if (s.dynamicValuesGetter) {
+          for (const auto& opt : s.dynamicValuesGetter()) {
+            options.add(opt.c_str());
+          }
+        } else {
+          for (const auto& opt : s.enumValues) {
+            options.add(I18N.get(opt));
+          }
         }
         break;
       }
@@ -1415,7 +1434,8 @@ void CrossPointWebServer::handlePostSettings() {
       }
       case SettingType::ENUM: {
         const int val = doc[s.key].as<int>();
-        if (val >= 0 && val < static_cast<int>(s.enumValues.size())) {
+        const size_t optionCount = s.dynamicValuesGetter ? s.dynamicValuesGetter().size() : s.enumValues.size();
+        if (val >= 0 && val < static_cast<int>(optionCount)) {
           if (s.valuePtr) {
             if (s.valuePtr == &CrossPointSettings::frontButtonLayout) {
               SETTINGS.applyFrontButtonLayoutPreset(static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(val));
@@ -1455,12 +1475,43 @@ void CrossPointWebServer::handlePostSettings() {
     }
   }
 
+#if ENABLE_USER_FONTS
+  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD &&
+      !UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath)) {
+    SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
+  }
+#endif
+
   SETTINGS.enforceButtonLayoutConstraints();
   SETTINGS.saveToFile();
 
   LOG_DBG("WEB", "Applied %d setting(s)", applied);
   server->send(200, "text/plain", String("Applied ") + String(applied) + " setting(s)");
 }
+
+#if ENABLE_USER_FONTS
+void CrossPointWebServer::handleRescanUserFonts() {
+  auto& manager = UserFontManager::getInstance();
+  manager.scanFonts();
+
+  bool activeFontLoaded = true;
+  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
+    activeFontLoaded = manager.loadFontFamily(SETTINGS.userFontPath);
+    if (!activeFontLoaded) {
+      SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
+      SETTINGS.saveToFile();
+    }
+  }
+
+  JsonDocument response;
+  response["families"] = manager.getAvailableFonts().size();
+  response["activeLoaded"] = activeFontLoaded;
+
+  String output;
+  serializeJson(response, output);
+  server->send(200, "application/json", output);
+}
+#endif
 
 void CrossPointWebServer::handleRecentBooks() const {
   const auto& books = RECENT_BOOKS.getBooks();

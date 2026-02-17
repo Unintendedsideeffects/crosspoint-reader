@@ -8,9 +8,17 @@
 #include <Logging.h>
 #include <util/StringUtils.h>
 
+#include <cstring>
 #include <set>
 
 #include "CrossPointSettings.h"
+
+namespace {
+bool hasSuffix(const std::string& value, const char* suffix) {
+  const size_t suffixLen = strlen(suffix);
+  return value.size() >= suffixLen && value.compare(value.size() - suffixLen, suffixLen, suffix) == 0;
+}
+}  // namespace
 
 SdFont* UserFontManager::gRegular = nullptr;
 SdFont* UserFontManager::gBold = nullptr;
@@ -36,15 +44,23 @@ void UserFontManager::scanFonts() {
 
   for (const auto& file : files) {
     std::string fileName = file.c_str();
+    const size_t slashPos = fileName.find_last_of('/');
+    if (slashPos != std::string::npos) {
+      fileName = fileName.substr(slashPos + 1);
+    }
+
     if (StringUtils::checkFileExtension(fileName, ".cpf")) {
-      // Expected format: FamilyName-Style.cpf
-      size_t dashPos = fileName.find_last_of('-');
-      if (dashPos != std::string::npos) {
-        families.insert(fileName.substr(0, dashPos));
+      const std::string baseName = fileName.substr(0, fileName.size() - 4);
+      if (hasSuffix(baseName, "-Regular")) {
+        families.insert(baseName.substr(0, baseName.size() - 8));
+      } else if (hasSuffix(baseName, "-Bold")) {
+        families.insert(baseName.substr(0, baseName.size() - 5));
+      } else if (hasSuffix(baseName, "-Italic")) {
+        families.insert(baseName.substr(0, baseName.size() - 7));
+      } else if (hasSuffix(baseName, "-BoldItalic")) {
+        families.insert(baseName.substr(0, baseName.size() - 11));
       } else {
-        // Fallback for files without a dash
-        size_t dotPos = fileName.find_last_of('.');
-        families.insert(fileName.substr(0, dotPos));
+        families.insert(baseName);
       }
     }
   }
@@ -66,24 +82,39 @@ bool UserFontManager::loadFontFamily(const std::string& fontName) {
   unloadCurrentFont();
   if (fontName.empty()) return false;
 
-  bool anyLoaded = false;
-  std::string basePath = "/fonts/" + fontName;
+  const std::string basePath = "/fonts/" + fontName;
+  std::string regularPath;
 
-  if (gRegular) anyLoaded |= gRegular->load(basePath + "-Regular.cpf");
-  // Try loading regular without suffix if -Regular fails
-  if (gRegular && !gRegular->isLoaded()) anyLoaded |= gRegular->load(basePath + ".cpf");
+  if (!gRegular) return false;
 
-  if (gBold) gBold->load(basePath + "-Bold.cpf");
-  if (gItalic) gItalic->load(basePath + "-Italic.cpf");
-  if (gBoldItalic) gBoldItalic->load(basePath + "-BoldItalic.cpf");
-
-  if (anyLoaded) {
-    currentFontName = fontName;
-    LOG_INF("FONTS", "Loaded font family: %s", fontName.c_str());
-  } else {
-    LOG_ERR("FONTS", "Failed to load any font for: %s", fontName.c_str());
+  const std::string canonicalRegular = basePath + "-Regular.cpf";
+  const std::string fallbackRegular = basePath + ".cpf";
+  if (Storage.exists(canonicalRegular.c_str()) && gRegular->load(canonicalRegular)) {
+    regularPath = canonicalRegular;
+  } else if (Storage.exists(fallbackRegular.c_str()) && gRegular->load(fallbackRegular)) {
+    regularPath = fallbackRegular;
   }
 
-  return anyLoaded;
+  if (regularPath.empty()) {
+    LOG_ERR("FONTS", "Missing or invalid regular font for family: %s", fontName.c_str());
+    return false;
+  }
+
+  auto loadStyleOrFallback = [&](SdFont* target, const std::string& stylePath) {
+    if (!target) return;
+    if (Storage.exists(stylePath.c_str())) {
+      if (target->load(stylePath)) return;
+      LOG_WRN("FONTS", "Failed loading style file, falling back to regular: %s", stylePath.c_str());
+    }
+    target->load(regularPath);
+  };
+
+  loadStyleOrFallback(gBold, basePath + "-Bold.cpf");
+  loadStyleOrFallback(gItalic, basePath + "-Italic.cpf");
+  loadStyleOrFallback(gBoldItalic, basePath + "-BoldItalic.cpf");
+
+  currentFontName = fontName;
+  LOG_INF("FONTS", "Loaded font family: %s", fontName.c_str());
+  return true;
 }
 #endif

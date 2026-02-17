@@ -232,8 +232,15 @@ void SettingsActivity::toggleCurrentSetting() {
     }
 
 #if ENABLE_USER_FONTS
-    if (setting.valuePtr == &CrossPointSettings::fontFamily && newValue == CrossPointSettings::USER_SD) {
-      UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath);
+    if (setting.valuePtr == &CrossPointSettings::fontFamily) {
+      auto& fontManager = UserFontManager::getInstance();
+      if (newValue == CrossPointSettings::USER_SD) {
+        if (!fontManager.loadFontFamily(SETTINGS.userFontPath)) {
+          SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
+        }
+      } else {
+        fontManager.unloadCurrentFont();
+      }
     }
 #endif
   } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {

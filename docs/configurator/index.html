@@ -1382,12 +1382,28 @@
           <div style="flex: 1">
             <div class="companion-title">Pre-convert TTF/OTF for User Fonts</div>
             <div class="companion-desc">
-              Select a font file to convert it to the <code>.cpf</code> format. 
-              Save to <code>/fonts</code> on SD card.
+              Select a font file to convert it to the <code>.cpf</code> format and save to <code>/fonts</code> on SD card.
+              Canonical names are <code>&lt;Family&gt;-Regular.cpf</code>, optional
+              <code>&lt;Family&gt;-Bold.cpf</code>/<code>-Italic.cpf</code>/<code>-BoldItalic.cpf</code>, with
+              legacy fallback <code>&lt;Family&gt;.cpf</code>.
             </div>
             <div class="actions" style="margin-top: 15px; align-items: center; gap: 12px;">
               <input type="file" id="font-upload" accept=".ttf,.otf" style="display:none" />
               <button class="btn btn-outline" onclick="document.getElementById('font-upload').click()">Select Font</button>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="output-label" style="margin:0">Family:</span>
+                <input type="text" id="font-family" value="" placeholder="Bookerly" style="width: 110px; background: var(--fog); border: 1px solid var(--bone); padding: 2px 4px; font-family: inherit; font-size: 10px;" />
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="output-label" style="margin:0">Style:</span>
+                <select id="font-style" style="width: 98px; background: var(--fog); border: 1px solid var(--bone); padding: 2px 4px; font-family: inherit; font-size: 10px;">
+                  <option value="Regular">Regular</option>
+                  <option value="Bold">Bold</option>
+                  <option value="Italic">Italic</option>
+                  <option value="BoldItalic">BoldItalic</option>
+                  <option value="Fallback">Fallback (&lt;Family&gt;.cpf)</option>
+                </select>
+              </div>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="output-label" style="margin:0">Size:</span>
                 <input type="number" id="font-size" value="14" min="6" max="48" style="width: 50px; background: var(--fog); border: 1px solid var(--bone); padding: 2px 4px; font-family: inherit; font-size: 10px;" />
@@ -2050,12 +2066,18 @@
         const upload = document.getElementById('font-upload');
         const btn = document.getElementById('convert-font-btn');
         const status = document.getElementById('font-status');
+        const familyInput = document.getElementById('font-family');
+        const styleInput = document.getElementById('font-style');
         let selectedFile = null;
 
         upload.addEventListener('change', (e) => {
           selectedFile = e.target.files[0];
           btn.disabled = !selectedFile;
           if (selectedFile) {
+            const inferredFamily = selectedFile.name.replace(/\.[^/.]+$/, "").replace(/-(Regular|Bold|Italic|BoldItalic)$/i, "");
+            if (!familyInput.value.trim()) {
+              familyInput.value = inferredFamily;
+            }
             status.style.display = 'block';
             status.textContent = `Selected: ${selectedFile.name}`;
           }
@@ -2072,6 +2094,12 @@
             const font = opentype.parse(buffer);
             const size = parseInt(document.getElementById('font-size').value);
             const is2Bit = document.getElementById('font-2bit').checked;
+            const familyRaw = familyInput.value.trim() || selectedFile.name.replace(/\.[^/.]+$/, "");
+            const familyName = familyRaw.replace(/[\\/:*?"<>|]/g, '').trim();
+            const style = styleInput.value;
+            if (!familyName) {
+              throw new Error("Please provide a valid font family name.");
+            }
             
             status.textContent = "Converting glyphs...";
             
@@ -2259,13 +2287,12 @@
             const blob = new Blob([out], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            const fontName = selectedFile.name.split('.')[0];
             a.href = url;
-            a.download = `${fontName}-${is2Bit ? '2bit' : '1bit'}-${size}pt.cpf`;
+            a.download = style === 'Fallback' ? `${familyName}.cpf` : `${familyName}-${style}.cpf`;
             a.click();
             URL.revokeObjectURL(url);
             
-            status.textContent = `Success! Converted ${allGlyphs.length} glyphs.`;
+            status.textContent = `Success! Converted ${allGlyphs.length} glyphs to ${a.download}.`;
           } catch (err) {
             console.error(err);
             status.textContent = `Error: ${err.message}`;

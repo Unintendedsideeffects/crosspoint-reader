@@ -3,6 +3,7 @@
 
 #pragma once
 #include <cstdint>
+#include <cstddef>
 
 /// Font data stored PER GLYPH
 typedef struct {
@@ -15,12 +16,17 @@ typedef struct {
   uint32_t dataOffset;  ///< Pointer into EpdFont->bitmap
 } EpdGlyph;
 
+static_assert(sizeof(EpdGlyph) == 16, "EpdGlyph must remain 16 bytes for CPF compatibility");
+static_assert(offsetof(EpdGlyph, dataOffset) == 12, "EpdGlyph::dataOffset layout changed");
+
 /// Glyph interval structure
 typedef struct {
   uint32_t first;   ///< The first unicode code point of the interval
   uint32_t last;    ///< The last unicode code point of the interval
   uint32_t offset;  ///< Index of the first code point into the glyph array
 } EpdUnicodeInterval;
+
+static_assert(sizeof(EpdUnicodeInterval) == 12, "EpdUnicodeInterval must remain 12 bytes for CPF compatibility");
 
 /// Data stored for FONT AS A WHOLE
 typedef struct {

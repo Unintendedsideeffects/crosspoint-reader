@@ -17,6 +17,10 @@ parser.add_argument("--additional-intervals", dest="additional_intervals", actio
 args = parser.parse_args()
 
 GlyphProps = namedtuple("GlyphProps", ["width", "height", "advance_x", "left", "top", "data_length", "data_offset", "code_point"])
+# Matches C++ EpdGlyph layout (16 bytes, little-endian):
+# B=width, B=height, B=advanceX, x=pad, h=left, h=top, H=dataLength, xx=pad, I=dataOffset
+GLYPH_STRUCT = "<BBBxhhHxxI"
+assert struct.calcsize(GLYPH_STRUCT) == 16
 
 font_stack = [freetype.Face(f) for f in args.fontstack]
 is2Bit = args.is2Bit
@@ -173,9 +177,10 @@ with open(args.output, "wb") as f:
         f.write(struct.pack("<III", i_start, i_end, offset))
         offset += i_end - i_start + 1
         
-    # Glyphs: uint8 width, uint8 height, uint8 advanceX, int16 left, int16 top, uint16 dataLength, uint32 dataOffset
+    # Glyphs: uint8 width, uint8 height, uint8 advanceX, 1-byte padding,
+    # int16 left, int16 top, uint16 dataLength, 2-byte padding, uint32 dataOffset
     for g in all_glyphs_props:
-        f.write(struct.pack("<BBBhhHI", g.width, g.height, g.advance_x, g.left, g.top, g.data_length, g.data_offset))
+        f.write(struct.pack(GLYPH_STRUCT, g.width, g.height, g.advance_x, g.left, g.top, g.data_length, g.data_offset))
         
     # Bitmap data
     for data in all_glyphs_data:

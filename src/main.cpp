@@ -480,6 +480,13 @@ void setup() {
 #endif
 
   SETTINGS.loadFromFile();
+#if ENABLE_USER_FONTS
+  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD &&
+      !UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath)) {
+    SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
+    SETTINGS.saveToFile();
+  }
+#endif
   I18N.loadSettings();
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.loadFromFile();

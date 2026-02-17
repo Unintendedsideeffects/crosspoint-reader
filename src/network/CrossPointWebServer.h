@@ -90,6 +90,9 @@ class CrossPointWebServer {
   void handlePokedexPluginPage() const;
   void handleGetSettings() const;
   void handlePostSettings();
+#if ENABLE_USER_FONTS
+  void handleRescanUserFonts();
+#endif
 
   // API handlers for web UI
   void handleRecentBooks() const;
