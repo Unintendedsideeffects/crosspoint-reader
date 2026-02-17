@@ -40,7 +40,6 @@ void KeyboardEntryActivity::displayTaskLoop() {
 void KeyboardEntryActivity::onEnter() {
   Activity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
 
@@ -59,8 +58,6 @@ void KeyboardEntryActivity::onExit() {
   Activity::onExit();
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
 }
 
 int KeyboardEntryActivity::getRowLength(const int row) const {

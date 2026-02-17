@@ -54,7 +54,6 @@ void KOReaderAuthActivity::performAuthentication() {
 void KOReaderAuthActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
 
@@ -100,8 +99,6 @@ void KOReaderAuthActivity::onExit() {
   delay(100);
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
 }
 
 void KOReaderAuthActivity::displayTaskLoop() {

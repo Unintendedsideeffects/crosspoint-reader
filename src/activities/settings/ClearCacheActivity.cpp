@@ -18,7 +18,6 @@ void ClearCacheActivity::taskTrampoline(void* param) {
 void ClearCacheActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
   state = WARNING;
@@ -36,8 +35,6 @@ void ClearCacheActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
 }
 
 void ClearCacheActivity::displayTaskLoop() {

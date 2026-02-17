@@ -24,7 +24,6 @@ void KOReaderSettingsActivity::taskTrampoline(void* param) {
 void KOReaderSettingsActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
   selectedIndex = 0;
@@ -42,8 +41,6 @@ void KOReaderSettingsActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
 }
 
 void KOReaderSettingsActivity::loop() {

@@ -14,7 +14,6 @@
 class TxtReaderActivity final : public ActivityWithSubactivity {
   std::unique_ptr<Txt> txt;
   TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   int currentPage = 0;

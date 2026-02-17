@@ -77,7 +77,6 @@ void EpubReaderChapterSelectionActivity::onEnter() {
     return;
   }
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
 
@@ -103,8 +102,6 @@ void EpubReaderChapterSelectionActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
 }
 
 // Only compiled when KOReader sync integration is available.

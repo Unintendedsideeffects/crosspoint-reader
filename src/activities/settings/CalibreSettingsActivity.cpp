@@ -23,7 +23,6 @@ void CalibreSettingsActivity::taskTrampoline(void* param) {
 void CalibreSettingsActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
   selectedIndex = 0;
@@ -41,8 +40,6 @@ void CalibreSettingsActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
 }
 
 void CalibreSettingsActivity::loop() {

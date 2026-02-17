@@ -52,7 +52,6 @@ void XtcReaderChapterSelectionActivity::onEnter() {
     return;
   }
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
   selectorIndex = findChapterIndexForPage(currentPage);
@@ -71,10 +70,6 @@ void XtcReaderChapterSelectionActivity::onExit() {
 
   if (displayTaskHandle != nullptr) {
     TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  }
-  if (renderingMutex != nullptr) {
-    vSemaphoreDelete(renderingMutex);
-    renderingMutex = nullptr;
   }
 }
 

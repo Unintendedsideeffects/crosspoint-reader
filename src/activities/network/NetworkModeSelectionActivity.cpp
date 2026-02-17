@@ -25,7 +25,6 @@ void NetworkModeSelectionActivity::taskTrampoline(void* param) {
 void NetworkModeSelectionActivity::onEnter() {
   Activity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
 
@@ -47,8 +46,6 @@ void NetworkModeSelectionActivity::onExit() {
   Activity::onExit();
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
 }
 
 void NetworkModeSelectionActivity::loop() {

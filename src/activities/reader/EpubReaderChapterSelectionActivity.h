@@ -20,7 +20,6 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   int totalPagesInSpine = 0;
   int selectorIndex = 0;
   TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;

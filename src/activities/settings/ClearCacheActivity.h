@@ -24,7 +24,6 @@ class ClearCacheActivity final : public ActivityWithSubactivity {
 
   State state = WARNING;
   TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;

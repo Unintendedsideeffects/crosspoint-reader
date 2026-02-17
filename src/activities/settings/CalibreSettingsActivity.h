@@ -24,7 +24,6 @@ class CalibreSettingsActivity final : public ActivityWithSubactivity {
 
  private:
   TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;

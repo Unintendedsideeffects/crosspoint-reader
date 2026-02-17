@@ -37,7 +37,6 @@ void XtcReaderActivity::onEnter() {
     return;
   }
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
 
@@ -66,8 +65,6 @@ void XtcReaderActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
   xtc.reset();
 }
 

@@ -36,7 +36,6 @@ void OpdsBookBrowserActivity::taskTrampoline(void* param) {
 void OpdsBookBrowserActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
   exitTaskRequested.store(false);
   taskHasExited.store(false);
   state = BrowserState::CHECK_WIFI;
@@ -66,8 +65,6 @@ void OpdsBookBrowserActivity::onExit() {
   WiFi.mode(WIFI_OFF);
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
   entries.clear();
   navigationHistory.clear();
 }

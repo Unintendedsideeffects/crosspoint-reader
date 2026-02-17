@@ -24,7 +24,6 @@ class OtaUpdateActivity : public ActivityWithSubactivity {
   static constexpr unsigned int UNINITIALIZED_PERCENTAGE = 111;
 
   TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;
