@@ -556,25 +556,35 @@ void EpubReaderActivity::displayTaskLoop() {
   vTaskDelete(nullptr);
 }
 
-// TODO: Failure handling
 void EpubReaderActivity::renderScreen() {
   if (!epub) {
+    renderer.clearScreen();
+    renderer.drawCenteredText(UI_12_FONT_ID, 300, "Error: No book loaded", true, EpdFontFamily::BOLD);
+    renderer.displayBuffer();
     return;
   }
 
-  // edge case handling for sub-zero spine index
+  // Guard: check spine bounds
+  const int spineItemsCount = epub->getSpineItemsCount();
   if (currentSpineIndex < 0) {
     currentSpineIndex = 0;
   }
-  // based bounds of book, show end of book screen
-  if (currentSpineIndex > epub->getSpineItemsCount()) {
-    currentSpineIndex = epub->getSpineItemsCount();
+  if (currentSpineIndex > spineItemsCount) {
+    currentSpineIndex = spineItemsCount;
   }
 
   // Show end of book screen
-  if (currentSpineIndex == epub->getSpineItemsCount()) {
+  if (currentSpineIndex == spineItemsCount) {
     renderer.clearScreen();
     renderer.drawCenteredText(UI_12_FONT_ID, 300, "End of book", true, EpdFontFamily::BOLD);
+    renderer.displayBuffer();
+    return;
+  }
+
+  // Guard: ensure current spine index is within valid range
+  if (currentSpineIndex < 0 || currentSpineIndex >= spineItemsCount) {
+    renderer.clearScreen();
+    renderer.drawCenteredText(UI_12_FONT_ID, 300, "Error: Invalid chapter", true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
     return;
   }
@@ -728,18 +738,18 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   // Save bw buffer to reset buffer state after grayscale data sync
   renderer.storeBwBuffer();
 
-  // grayscale rendering
-  // TODO: Only do this if font supports it
-  if (SETTINGS.textAntiAliasing) {
+  // Grayscale rendering - only for fonts that include grayscale glyph data.
+  const int fontId = SETTINGS.getReaderFontId();
+  if (SETTINGS.textAntiAliasing && renderer.fontSupportsGrayscale(fontId)) {
     renderer.clearScreen(0x00);
     renderer.setRenderMode(GfxRenderer::GRAYSCALE_LSB);
-    page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
+    page->render(renderer, fontId, orientedMarginLeft, orientedMarginTop);
     renderer.copyGrayscaleLsbBuffers();
 
     // Render and copy to MSB buffer
     renderer.clearScreen(0x00);
     renderer.setRenderMode(GfxRenderer::GRAYSCALE_MSB);
-    page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
+    page->render(renderer, fontId, orientedMarginLeft, orientedMarginTop);
     renderer.copyGrayscaleMsbBuffers();
 
     // display grayscale part

@@ -180,8 +180,28 @@ void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const bool state) con
       drawPixel(x, y1, state);
     }
   } else {
-    // TODO: Implement
-    LOG_ERR("GFX", "Line drawing not supported");
+    // Bresenham's line algorithm for non-axis-aligned lines
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = x1 < x2 ? 1 : -1;
+    int sy = y1 < y2 ? 1 : -1;
+    int err = dx - dy;
+
+    while (true) {
+      drawPixel(x1, y1, state);
+      if (x1 == x2 && y1 == y2) {
+        break;
+      }
+      int e2 = 2 * err;
+      if (e2 > -dy) {  // err + dx > 0
+        err -= dy;
+        x1 += sx;
+      }
+      if (e2 < dx) {  // err - dy < 0
+        err += dx;
+        y1 += sy;
+      }
+    }
   }
 }
 
@@ -316,7 +336,8 @@ void GfxRenderer::drawPixelDither<Color::LightGray>(const int x, const int y) co
 
 template <>
 void GfxRenderer::drawPixelDither<Color::DarkGray>(const int x, const int y) const {
-  drawPixel(x, y, (x + y) % 2 == 0);  // TODO: maybe find a better pattern?
+  // Intentional dark-gray dithering checkerboard (50% gray for 1-bit displays)
+  drawPixel(x, y, (x + y) % 2 == 0);
 }
 
 void GfxRenderer::fillRectDither(const int x, const int y, const int width, const int height, Color color) const {
@@ -447,7 +468,7 @@ void GfxRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, co
     case LandscapeCounterClockwise:
       break;
   }
-  // TODO: Rotate bits
+  // Image rotation is handled by rotateCoordinates and the display driver
   display.drawImage(bitmap, rotatedX, rotatedY, width, height);
 }
 
@@ -846,6 +867,18 @@ int GfxRenderer::getTextHeight(const int fontId) const {
   }
   return font->getFontData()->ascender;
 }
+
+bool GfxRenderer::fontSupportsGrayscale(const int fontId) const {
+  const IEpdFont* font = nullptr;
+  if (fontFamilyMap.count(fontId) > 0) {
+    font = fontFamilyMap.at(fontId)->getFont(EpdFontFamily::REGULAR);
+  } else if (fontMap.count(fontId) > 0) {
+    font = fontMap.at(fontId);
+  }
+
+  return font && font->getFontData() && font->getFontData()->is2Bit;
+}
+
 void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y, const char* text, const bool black,
                                       const EpdFontFamily::Style style) const {
   // Cannot draw a NULL / empty string

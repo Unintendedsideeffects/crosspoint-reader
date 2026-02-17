@@ -35,18 +35,18 @@ For the full rationale and contribution target branch guidance, see [`docs/fork-
 ## Features & Usage
 
 - [x] EPUB parsing and rendering (EPUB 2 and EPUB 3)
-- [ ] Image support within EPUB
+- [x] Image support within EPUB
 - [x] Saved reading position
 - [x] File explorer with file picker
   - [x] Basic EPUB picker from root directory
   - [x] Support nested folders
-  - [ ] EPUB picker with cover art
+  - [x] EPUB picker with cover art
 - [x] Custom sleep screen
   - [x] Cover sleep screen
 - [x] Wifi book upload
 - [x] Wifi OTA updates
 - [x] Configurable font, layout, and display options
-  - [ ] User provided fonts
+  - [x] User provided fonts
   - [ ] Full UTF support
 - [x] Screen rotation
 
@@ -69,7 +69,7 @@ back to the other partition using the "Swap boot partition" button here https://
 ### Web (specific firmware version)
 
 1. Connect your Xteink X4 to your computer via USB-C
-2. Download the `firmware.bin` file from the release of your choice via the [releases page](https://github.com/crosspoint-reader/crosspoint-reader/releases)
+2. Download the `firmware.bin` file from the release of your choice via the [releases page](https://github.com/Unintendedsideeffects/crosspoint-reader/releases)
 3. Go to https://xteink.dve.al/ and flash the firmware file using the "OTA fast flash controls" section
 
 To revert back to the official firmware, you can flash the latest official firmware from https://xteink.dve.al/, or swap

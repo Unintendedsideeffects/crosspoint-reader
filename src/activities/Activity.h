@@ -5,6 +5,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <cassert>
 #include <string>
 #include <utility>
@@ -20,6 +21,7 @@ class Activity {
 
   // Task to render and display the activity
   TaskHandle_t renderTaskHandle = nullptr;
+  std::atomic<TaskHandle_t> pendingUpdateAckTask{nullptr};
   static void renderTaskTrampoline(void* param);
   virtual void renderTaskLoop();
 

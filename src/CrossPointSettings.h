@@ -128,9 +128,6 @@ class CrossPointSettings {
   // UI Theme
   enum UI_THEME { CLASSIC = 0, LYRA = 1 };
 
-  // TODO fallback cover options
-  enum TODO_FALLBACK_COVER { TODO_FALLBACK_STANDARD = 0, TODO_FALLBACK_NONE = 1 };
-
   // Time mode options
   enum TIME_MODE { TIME_UTC = 0, TIME_LOCAL = 1, TIME_MANUAL = 2 };
 
@@ -199,8 +196,8 @@ class CrossPointSettings {
   uint8_t embeddedStyle = 1;
   // Background web server while charging (USB connected)
   uint8_t backgroundServerOnCharge = 0;
-  // TODO fallback cover when daily file is missing
-  uint8_t todoFallbackCover = TODO_FALLBACK_STANDARD;
+  // Deprecated: persisted for backward compat, not consumed at runtime
+  uint8_t todoFallbackCover = 0;
   // Time settings
   uint8_t timeMode = TIME_UTC;
   // Timezone offset index: 0 = UTC-12, 12 = UTC+0, 26 = UTC+14
@@ -212,6 +209,9 @@ class CrossPointSettings {
   uint8_t darkMode = 0;
   uint8_t usbMscPromptOnConnect = 0;
   char userFontPath[128] = "";
+  char selectedOtaBundle[32] = "";
+  char installedOtaBundle[32] = "";
+  char installedOtaFeatureFlags[192] = "";
 
   ~CrossPointSettings() = default;
 

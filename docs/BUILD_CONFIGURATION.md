@@ -624,3 +624,33 @@ To add a new optional feature:
 - Check [Troubleshooting](#troubleshooting) section above
 - Open an issue on GitHub
 - Consult the main [README.md](../README.md)
+
+---
+
+## Feature Store OTA Catalog
+
+The Feature Store provides over-the-air firmware bundles with different feature configurations. The catalog is a JSON file hosted alongside release artifacts.
+
+### Catalog Format
+
+Each bundle entry contains:
+- `id` — Unique bundle identifier (e.g., `stable-default`)
+- `displayName` — Human-readable name shown in the OTA picker UI
+- `version` — Version tag or `latest`/`nightly`
+- `board` — Target board (must match device, e.g., `esp32s3`)
+- `featureFlags` — Comma-separated compile-time feature flags included in the bundle
+- `downloadUrl` — Direct URL to the firmware binary
+- `checksum` — SHA-256 of the binary (empty string if not yet computed)
+- `binarySize` — Size in bytes (0 if not yet known)
+
+### Compatibility Checks
+
+Before offering a bundle for installation, the device checks:
+1. **Board match** — `bundle.board` must equal the device's configured board
+2. **Partition size** — `bundle.binarySize` (if non-zero) must fit in the OTA partition
+
+Incompatible bundles are shown in the picker with a warning and cannot be selected.
+
+### Catalog Location
+
+The catalog JSON is stored at `docs/ota/feature-store-catalog.json` in the repository and served from the GitHub releases page at runtime.

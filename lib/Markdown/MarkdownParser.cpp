@@ -45,6 +45,26 @@ static std::string formatLinkTarget(const std::string& target) {
   return target;
 }
 
+static std::string encodeUtf8Codepoint(uint32_t cp) {
+  std::string encoded;
+  if (cp <= 0x7F) {
+    encoded.push_back(static_cast<char>(cp));
+  } else if (cp <= 0x7FF) {
+    encoded.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+    encoded.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+  } else if (cp <= 0xFFFF) {
+    encoded.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+    encoded.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+    encoded.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+  } else if (cp <= 0x10FFFF) {
+    encoded.push_back(static_cast<char>(0xF0 | (cp >> 18)));
+    encoded.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+    encoded.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+    encoded.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+  }
+  return encoded;
+}
+
 std::unique_ptr<MdNode> MarkdownParser::parse(const std::string& markdown) {
   if (markdown.size() > MAX_INPUT_SIZE) {
     LOG_ERR("MD", "Parse failed: input size %zu exceeds limit %zu", markdown.size(), MAX_INPUT_SIZE);
@@ -491,12 +511,50 @@ int MarkdownParser::onText(MD_TEXTTYPE type, const char* text, MD_SIZE size) {
       }
       break;
 
-    case MD_TEXT_ENTITY:
-      // TODO: Decode HTML entities properly
-      if (!appendTextNode(current, std::move(content))) {
-        return -1;
+    case MD_TEXT_ENTITY: {
+      std::string decodedContent;
+      if (content == "&amp;") {
+        decodedContent = "&";
+      } else if (content == "&lt;") {
+        decodedContent = "<";
+      } else if (content == "&gt;") {
+        decodedContent = ">";
+      } else if (content == "&quot;") {
+        decodedContent = "\"";
+      } else if (content == "&apos;") {
+        decodedContent = "'";
+      } else if (content == "&nbsp;") {
+        decodedContent = " ";
+      } else if (content.size() > 3 && content[1] == '#') {
+        try {
+          int base = 10;
+          int start = 2;
+          if (content[2] == 'x' || content[2] == 'X') {
+            base = 16;
+            start = 3;
+          }
+          std::string numStr = content.substr(start, content.size() - start - 1);
+          unsigned long num = std::stoul(numStr, nullptr, base);
+          if (num <= 0x10FFFF) {
+            decodedContent = encodeUtf8Codepoint(static_cast<uint32_t>(num));
+          }
+        } catch (const std::exception& e) {
+          // Ignore malformed numeric entities
+          LOG_WRN("MD", "Malformed numeric entity: %s", content.c_str());
+        }
+      }
+
+      if (decodedContent.empty()) {
+        if (!appendTextNode(current, std::move(content))) {
+          return -1;
+        }
+      } else {
+        if (!appendTextNode(current, std::move(decodedContent))) {
+          return -1;
+        }
       }
       break;
+    }
 
     case MD_TEXT_CODE:
       // For inline code spans, append to the Code node's text

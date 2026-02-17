@@ -88,6 +88,15 @@ constexpr ThemeMetrics values = {.batteryWidth = 15,
 }
 
 class BaseTheme {
+ private:
+  // Helper methods for drawRecentBookCover
+  void drawBookCard(GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks, bool bookSelected,
+                    bool hasContinueReading, bool& coverRendered, bool& coverBufferStored, bool& bufferRestored,
+                    std::function<bool()> storeCoverBuffer) const;
+  void drawBookMetadata(const GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
+                        bool bookSelected, bool hasContinueReading, bool coverRendered) const;
+  void drawBookSelector(const GfxRenderer& renderer, Rect rect, bool bookSelected, bool coverRendered) const;
+
  public:
   virtual ~BaseTheme() = default;
 

@@ -4,7 +4,6 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
-#include <cstddef>
 
 /// Font data stored PER GLYPH
 typedef struct {

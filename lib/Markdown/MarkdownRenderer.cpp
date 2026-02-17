@@ -202,6 +202,84 @@ bool extractAltDimensions(const std::string& altText, std::string& outAlt, int& 
   return true;
 }
 
+std::vector<std::string> wrapTableCellText(const GfxRenderer& renderer, const int fontId, const std::string& rawText,
+                                           const int maxWidth) {
+  std::string text = trimWhitespace(rawText);
+  if (text.empty()) {
+    return {" "};
+  }
+  if (maxWidth <= 0) {
+    return {text};
+  }
+
+  std::vector<std::string> words;
+  words.reserve(8);
+  size_t i = 0;
+  while (i < text.size()) {
+    while (i < text.size() && std::isspace(static_cast<unsigned char>(text[i]))) {
+      i++;
+    }
+    const size_t start = i;
+    while (i < text.size() && !std::isspace(static_cast<unsigned char>(text[i]))) {
+      i++;
+    }
+    if (i > start) {
+      words.emplace_back(text.substr(start, i - start));
+    }
+  }
+
+  std::vector<std::string> lines;
+  std::string currentLine;
+  const auto pushCurrentLine = [&]() {
+    if (!currentLine.empty()) {
+      lines.push_back(currentLine);
+      currentLine.clear();
+    }
+  };
+
+  const auto pushBrokenWord = [&](const std::string& word) {
+    std::string remaining = word;
+    while (!remaining.empty()) {
+      size_t splitPos = remaining.size();
+      while (splitPos > 1 &&
+             renderer.getTextWidth(fontId, remaining.substr(0, splitPos).c_str(), EpdFontFamily::REGULAR) > maxWidth) {
+        splitPos--;
+      }
+      lines.push_back(remaining.substr(0, splitPos));
+      remaining.erase(0, splitPos);
+    }
+  };
+
+  for (const auto& word : words) {
+    if (currentLine.empty()) {
+      if (renderer.getTextWidth(fontId, word.c_str(), EpdFontFamily::REGULAR) <= maxWidth) {
+        currentLine = word;
+      } else {
+        pushBrokenWord(word);
+      }
+      continue;
+    }
+
+    std::string candidate = currentLine + " " + word;
+    if (renderer.getTextWidth(fontId, candidate.c_str(), EpdFontFamily::REGULAR) <= maxWidth) {
+      currentLine = std::move(candidate);
+    } else {
+      pushCurrentLine();
+      if (renderer.getTextWidth(fontId, word.c_str(), EpdFontFamily::REGULAR) <= maxWidth) {
+        currentLine = word;
+      } else {
+        pushBrokenWord(word);
+      }
+    }
+  }
+
+  pushCurrentLine();
+  if (lines.empty()) {
+    lines.push_back(" ");
+  }
+  return lines;
+}
+
 CssTextAlign normalizeAlignment(const uint8_t style) {
   switch (static_cast<CssTextAlign>(style)) {
     case CssTextAlign::Justify:
@@ -604,8 +682,9 @@ void MarkdownRenderer::renderTable(const MdNode& node) {
     return;
   }
 
-  // Calculate column width (equal distribution)
-  int cellWidth = viewportWidth / colCount;
+  // Calculate column width (equal distribution with small padding for readability).
+  const int cellWidth = std::max(1, viewportWidth / static_cast<int>(colCount));
+  const int wrappedCellWidth = std::max(1, cellWidth - renderer.getSpaceWidth(fontId));
 
   // Render table rows
   for (const auto& section : node.children) {
@@ -618,42 +697,49 @@ void MarkdownRenderer::renderTable(const MdNode& node) {
         continue;
       }
 
-      startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Left));
+      std::vector<std::vector<std::string>> wrappedCells;
+      std::vector<EpdFontFamily::Style> cellStyles;
+      wrappedCells.reserve(colCount);
+      cellStyles.reserve(colCount);
+      size_t rowHeight = 1;
 
-      int col = 0;
       for (const auto& cell : row->children) {
         if (cell->type != MdNodeType::TableCell) {
           continue;
         }
 
-        // Add separator between columns
-        if (col > 0) {
-          currentTextBlock->addWord("|", EpdFontFamily::REGULAR);
-        }
-
-        // Get cell text
+        // Get cell text.
         std::string cellText = cell->getPlainText();
-        if (cellText.empty()) {
-          cellText = " ";
-        }
-
-        // Truncate if needed
-        // TODO: proper text wrapping per cell
-        if (cellText.length() > 20) {
-          cellText = cellText.substr(0, 17) + "...";
-        }
-
-        // Apply header style
         EpdFontFamily::Style style = EpdFontFamily::REGULAR;
         if (cell->tableCell && cell->tableCell->isHeader) {
           style = EpdFontFamily::BOLD;
         }
-
-        currentTextBlock->addWord(cellText, style);
-        col++;
+        auto wrapped = wrapTableCellText(renderer, fontId, cellText, wrappedCellWidth);
+        rowHeight = std::max(rowHeight, wrapped.size());
+        wrappedCells.push_back(std::move(wrapped));
+        cellStyles.push_back(style);
       }
 
-      flushTextBlock();
+      while (wrappedCells.size() < colCount) {
+        wrappedCells.push_back({" "});
+        cellStyles.push_back(EpdFontFamily::REGULAR);
+      }
+
+      for (size_t lineIdx = 0; lineIdx < rowHeight; lineIdx++) {
+        startNewTextBlock(static_cast<uint8_t>(CssTextAlign::Left));
+
+        for (size_t col = 0; col < wrappedCells.size(); col++) {
+          if (col > 0) {
+            currentTextBlock->addWord("|", EpdFontFamily::REGULAR);
+          }
+
+          const auto& wrapped = wrappedCells[col];
+          const std::string& lineText = lineIdx < wrapped.size() ? wrapped[lineIdx] : std::string(" ");
+          currentTextBlock->addWord(lineText, cellStyles[col]);
+        }
+
+        flushTextBlock();
+      }
     }
 
     // Add separator line after header

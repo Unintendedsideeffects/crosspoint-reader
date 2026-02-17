@@ -12,6 +12,11 @@ void Activity::renderTaskLoop() {
       RenderLock lock(*this);
       render(std::move(lock));
     }
+
+    TaskHandle_t waitingTask = pendingUpdateAckTask.exchange(nullptr);
+    if (waitingTask) {
+      xTaskNotify(waitingTask, 1, eIncrement);
+    }
   }
 }
 
@@ -45,8 +50,22 @@ void Activity::requestUpdate() {
 }
 
 void Activity::requestUpdateAndWait() {
-  // FIXME @ngxson : properly implement this using freeRTOS notification
-  delay(100);
+  if (!renderTaskHandle) {
+    return;
+  }
+
+  const TaskHandle_t currentTask = xTaskGetCurrentTaskHandle();
+  if (currentTask == renderTaskHandle) {
+    requestUpdate();
+    return;
+  }
+
+  pendingUpdateAckTask.store(currentTask);
+  xTaskNotify(renderTaskHandle, 1, eIncrement);
+  ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(200));
+
+  TaskHandle_t expected = currentTask;
+  pendingUpdateAckTask.compare_exchange_strong(expected, nullptr);
 }
 
 // RenderLock

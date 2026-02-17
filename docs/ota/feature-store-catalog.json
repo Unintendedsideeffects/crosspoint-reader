@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "CrossPoint Reader Feature Store OTA Catalog",
+  "bundles": [
+    {
+      "id": "stable-default",
+      "displayName": "Stable (Default Features)",
+      "version": "latest",
+      "board": "esp32s3",
+      "featureFlags": "FEATURE_EPUB,FEATURE_MARKDOWN,FEATURE_TODO_PLANNER",
+      "downloadUrl": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/latest/download/crosspoint-reader-stable.bin",
+      "checksum": "",
+      "binarySize": 0
+    },
+    {
+      "id": "nightly-default",
+      "displayName": "Nightly (All Features)",
+      "version": "nightly",
+      "board": "esp32s3",
+      "featureFlags": "FEATURE_EPUB,FEATURE_MARKDOWN,FEATURE_TODO_PLANNER,FEATURE_EXPERIMENTAL",
+      "downloadUrl": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/download/nightly/crosspoint-reader-nightly.bin",
+      "checksum": "",
+      "binarySize": 0
+    }
+  ]
+}

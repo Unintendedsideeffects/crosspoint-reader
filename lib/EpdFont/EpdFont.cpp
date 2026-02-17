@@ -1,8 +1,41 @@
 #include "EpdFont.h"
 
+#include <Logging.h>
 #include <Utf8.h>
 
 #include <algorithm>
+
+namespace {
+int computeAverageAdvanceX(const EpdFontData* data) {
+  if (!data || !data->glyph || !data->intervals || data->intervalCount == 0) {
+    return 8;
+  }
+
+  uint64_t advanceTotal = 0;
+  uint32_t glyphCount = 0;
+  for (uint32_t i = 0; i < data->intervalCount; i++) {
+    const auto& interval = data->intervals[i];
+    if (interval.last < interval.first) {
+      continue;
+    }
+
+    const uint32_t span = interval.last - interval.first + 1;
+    for (uint32_t j = 0; j < span; j++) {
+      const uint8_t advanceX = data->glyph[interval.offset + j].advanceX;
+      if (advanceX == 0) {
+        continue;
+      }
+      advanceTotal += advanceX;
+      glyphCount++;
+    }
+  }
+
+  if (glyphCount == 0) {
+    return 8;
+  }
+  return std::max(1, static_cast<int>(advanceTotal / glyphCount));
+}
+}  // namespace
 
 void EpdFont::getTextBounds(const char* string, const int startX, const int startY, int* minX, int* minY, int* maxX,
                             int* maxY) const {
@@ -17,6 +50,8 @@ void EpdFont::getTextBounds(const char* string, const int startX, const int star
 
   int cursorX = startX;
   const int cursorY = startY;
+  int averageAdvanceX = 0;
+  bool averageAdvanceComputed = false;
   uint32_t cp;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&string)))) {
     const EpdGlyph* glyph = getGlyph(cp);
@@ -26,7 +61,12 @@ void EpdFont::getTextBounds(const char* string, const int startX, const int star
     }
 
     if (!glyph) {
-      // TODO: Better handle this?
+      if (!averageAdvanceComputed) {
+        averageAdvanceX = computeAverageAdvanceX(data);
+        averageAdvanceComputed = true;
+      }
+      LOG_WRN("EPF", "Missing glyph U+%04lX; advancing by %dpx", static_cast<unsigned long>(cp), averageAdvanceX);
+      cursorX += averageAdvanceX;
       continue;
     }
 

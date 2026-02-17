@@ -22,9 +22,9 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 }
 
 namespace {
-constexpr uint8_t SETTINGS_FILE_VERSION = 3;
+constexpr uint8_t SETTINGS_FILE_VERSION = 4;
 // Increment this when adding new persisted settings fields
-constexpr uint8_t SETTINGS_COUNT = 32;
+constexpr uint8_t SETTINGS_COUNT = 35;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 
 // Validate front button mapping to ensure each hardware button is unique.
@@ -98,6 +98,9 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writePod(outputFile, sleepScreenSource);
   serialization::writeString(outputFile, std::string(userFontPath));
   serialization::writePod(outputFile, usbMscPromptOnConnect);
+  serialization::writeString(outputFile, std::string(selectedOtaBundle));
+  serialization::writeString(outputFile, std::string(installedOtaBundle));
+  serialization::writeString(outputFile, std::string(installedOtaFeatureFlags));
   // New fields added at end for backward compatibility
   outputFile.close();
 
@@ -215,6 +218,25 @@ bool CrossPointSettings::loadFromFile() {
       serialization::readPod(inputFile, usbMscPromptOnConnect);
       if (++settingsRead >= fileSettingsCount) break;
     }
+    if (version >= 4) {
+      std::string selectedOtaBundleStr;
+      serialization::readString(inputFile, selectedOtaBundleStr);
+      strncpy(selectedOtaBundle, selectedOtaBundleStr.c_str(), sizeof(selectedOtaBundle) - 1);
+      selectedOtaBundle[sizeof(selectedOtaBundle) - 1] = '\0';
+      if (++settingsRead >= fileSettingsCount) break;
+
+      std::string installedOtaBundleStr;
+      serialization::readString(inputFile, installedOtaBundleStr);
+      strncpy(installedOtaBundle, installedOtaBundleStr.c_str(), sizeof(installedOtaBundle) - 1);
+      installedOtaBundle[sizeof(installedOtaBundle) - 1] = '\0';
+      if (++settingsRead >= fileSettingsCount) break;
+
+      std::string installedOtaFeatureFlagsStr;
+      serialization::readString(inputFile, installedOtaFeatureFlagsStr);
+      strncpy(installedOtaFeatureFlags, installedOtaFeatureFlagsStr.c_str(), sizeof(installedOtaFeatureFlags) - 1);
+      installedOtaFeatureFlags[sizeof(installedOtaFeatureFlags) - 1] = '\0';
+      if (++settingsRead >= fileSettingsCount) break;
+    }
     // New fields added at end for backward compatibility
   } while (false);
 
@@ -299,7 +321,7 @@ void CrossPointSettings::validateAndClamp() {
   if (shortPwrBtn > SELECT) shortPwrBtn = IGNORE;
   if (hideBatteryPercentage > HIDE_ALWAYS) hideBatteryPercentage = HIDE_NEVER;
   if (timeMode > TIME_MANUAL) timeMode = TIME_UTC;
-  if (todoFallbackCover > TODO_FALLBACK_NONE) todoFallbackCover = TODO_FALLBACK_STANDARD;
+  if (todoFallbackCover > 1) todoFallbackCover = 0;
   if (releaseChannel >= RELEASE_CHANNEL_COUNT) releaseChannel = RELEASE_STABLE;
 
   // Range values

@@ -1,9 +1,27 @@
 #pragma once
 
+#include <Arduino.h>
+
+#include <cstddef>
 #include <functional>
 #include <string>
+#include <vector>
 
 class OtaUpdater {
+ public:
+  struct FeatureStoreEntry {
+    String id;
+    String displayName;
+    String version;
+    String featureFlags;
+    String downloadUrl;
+    String checksum;
+    size_t binarySize = 0;
+    bool compatible = true;
+    String compatibilityError;
+  };
+
+ private:
   bool updateAvailable = false;
   std::string latestVersion;
   std::string otaUrl;
@@ -12,6 +30,11 @@ class OtaUpdater {
   size_t totalSize = 0;
   bool render = false;
   bool factoryResetOnInstall = false;
+  std::vector<FeatureStoreEntry> featureStoreEntries;
+  String selectedBundleId;
+  String selectedFeatureFlags;
+  String selectedChecksum;
+  String lastError;
 
  public:
   enum OtaUpdaterError {
@@ -23,6 +46,10 @@ class OtaUpdater {
     INTERNAL_UPDATE_ERROR,
     OOM_ERROR,
   };
+
+  static constexpr const char* CATALOG_UNAVAILABLE_ERROR = "Feature store catalog unavailable";
+  static constexpr const char* BUNDLE_UNAVAILABLE_ERROR = "Selected bundle unavailable";
+  static constexpr const char* INCOMPATIBLE_BUNDLE_ERROR = "Selected bundle incompatible with this device";
 
   size_t getOtaSize() const { return otaSize; }
 
@@ -39,4 +66,9 @@ class OtaUpdater {
   const std::string& getLatestVersion() const;
   OtaUpdaterError checkForUpdate();
   OtaUpdaterError installUpdate();
+  bool loadFeatureStoreCatalog();
+  bool hasFeatureStoreCatalog() const;
+  const std::vector<FeatureStoreEntry>& getFeatureStoreEntries() const;
+  bool selectFeatureStoreBundleByIndex(size_t index);
+  const String& getLastError() const;
 };

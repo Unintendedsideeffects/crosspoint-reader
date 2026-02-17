@@ -366,6 +366,10 @@ void CrossPointWebServer::handleStatus() const {
   doc["rssi"] = apMode ? 0 : WiFi.RSSI();
   doc["freeHeap"] = ESP.getFreeHeap();
   doc["uptime"] = millis() / 1000;
+  doc["otaSelectedBundle"] = SETTINGS.selectedOtaBundle;
+  doc["otaInstalledBundle"] = SETTINGS.installedOtaBundle;
+  doc["otaInstalledFeatures"] = SETTINGS.installedOtaFeatureFlags[0] != '\0' ? SETTINGS.installedOtaFeatureFlags
+                                                                             : FeatureManifest::getBuildString();
 
   String json;
   serializeJson(doc, json);
