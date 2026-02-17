@@ -26,9 +26,9 @@
 #include "html/PokedexPluginPageHtml.generated.h"
 #endif
 #include "html/SettingsPageHtml.generated.h"
+#include "util/DateUtils.h"
 #include "util/PathUtils.h"
 #include "util/StringUtils.h"
-#include "util/DateUtils.h"
 #if ENABLE_TODO_PLANNER
 #include "activities/todo/TodoPlannerStorage.h"
 #endif
