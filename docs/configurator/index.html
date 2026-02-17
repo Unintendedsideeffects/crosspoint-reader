@@ -1477,6 +1477,8 @@
           default: false,
         },
         epub_support: {
+          // Keep in sync with scripts/generate_build_config.py feature-size deltas.
+          // Current measured delta is negative because recent baseline changes reduced net EPUB footprint.
           sizeKb: -2,
           flag: "ENABLE_EPUB_SUPPORT",
           default: true,
