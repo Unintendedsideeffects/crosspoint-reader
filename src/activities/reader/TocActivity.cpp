@@ -50,31 +50,14 @@ void TocActivity::ensureSelectionVisible(int visibleItems) {
   }
 }
 
-void TocActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<TocActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void TocActivity::onEnter() {
   Activity::onEnter();
-
-  renderingMutex = xSemaphoreCreateMutex();
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
   selectedIndex = 0;
   scrollOffset = 0;
-  updateRequired = true;
-
-  xTaskCreate(&TocActivity::taskTrampoline, "TocActivityTask", 4096, this, 1, &displayTaskHandle);
+  requestUpdate();
 }
 
-void TocActivity::onExit() {
-  Activity::onExit();
-
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
-}
+void TocActivity::onExit() { Activity::onExit(); }
 
 void TocActivity::loop() {
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
@@ -115,25 +98,10 @@ void TocActivity::loop() {
   }
 
   ensureSelectionVisible(visibleItems);
-  updateRequired = true;
+  requestUpdate();
 }
 
-void TocActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        renderScreen();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
+void TocActivity::render(Activity::RenderLock&& lock) { renderScreen(); }
 
 void TocActivity::renderScreen() {
   renderer.clearScreen();

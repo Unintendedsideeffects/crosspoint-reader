@@ -30,61 +30,12 @@ TodoActivity::TodoActivity(GfxRenderer& renderer, MappedInputManager& mappedInpu
 
 void TodoActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
-  renderingMutex = xSemaphoreCreateMutex();
-  if (renderingMutex == nullptr) {
-    Serial.printf("[%lu] [TODO] Failed to create rendering mutex\n", millis());
-    onBack();
-    return;
-  }
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
   skipInitialInput = true;
-
   loadTasks();
-  updateRequired.store(true);
-
-  if (xTaskCreate(&TodoActivity::taskTrampoline, "TodoActivityTask", 4096, this, 1, &displayTaskHandle) != pdPASS) {
-    Serial.printf("[%lu] [TODO] Failed to create display task\n", millis());
-    vSemaphoreDelete(renderingMutex);
-    renderingMutex = nullptr;
-    displayTaskHandle = nullptr;
-    onBack();
-  }
+  requestUpdate();
 }
 
-void TodoActivity::onExit() {
-  ActivityWithSubactivity::onExit();
-
-  if (displayTaskHandle != nullptr) {
-    TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  }
-  if (renderingMutex != nullptr) {
-    vSemaphoreDelete(renderingMutex);
-    renderingMutex = nullptr;
-  }
-}
-
-void TodoActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<TodoActivity*>(param);
-  self->displayTaskLoop();
-}
-
-void TodoActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired.load()) {
-      updateRequired.store(false);
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
+void TodoActivity::onExit() { ActivityWithSubactivity::onExit(); }
 
 void TodoActivity::loop() {
   ActivityWithSubactivity::loop();
@@ -109,15 +60,12 @@ void TodoActivity::loop() {
     return;
   }
 
-  // Capture input state before acquiring mutex
+  // Capture input state
   const bool upPressed = mappedInput.wasPressed(MappedInputManager::Button::Up);
   const bool downPressed = mappedInput.wasPressed(MappedInputManager::Button::Down);
   const bool leftPressed = mappedInput.wasPressed(MappedInputManager::Button::Left);
   const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
   const bool confirmReleased = mappedInput.wasReleased(MappedInputManager::Button::Confirm);
-
-  // Guard shared state modifications with mutex to prevent race with displayTaskLoop
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
 
   // +1 for the "Add New Task" button at the end
   const int totalItems = static_cast<int>(items.size()) + 1;
@@ -131,7 +79,7 @@ void TodoActivity::loop() {
       if (selectedIndex < scrollOffset) {
         scrollOffset = selectedIndex;
       }
-      updateRequired.store(true);
+      requestUpdate();
     }
   } else if (downPressed) {
     if (selectedIndex < totalItems - 1) {
@@ -140,7 +88,7 @@ void TodoActivity::loop() {
       if (selectedIndex >= scrollOffset + visibleItems) {
         scrollOffset = selectedIndex - visibleItems + 1;
       }
-      updateRequired.store(true);
+      requestUpdate();
     }
   }
 
@@ -159,7 +107,7 @@ void TodoActivity::loop() {
           scrollOffset = selectedIndex;
         }
         saveTasks();
-        updateRequired.store(true);
+        requestUpdate();
       }
     } else if (rightPressed) {
       // Move task DOWN in list (swap with next item, skipping headers)
@@ -174,22 +122,18 @@ void TodoActivity::loop() {
           scrollOffset = selectedIndex - visibleItems + 1;
         }
         saveTasks();
-        updateRequired.store(true);
+        requestUpdate();
       }
     }
   }
 
-  // Toggle / Select - handle inside mutex for toggleCurrentTask, release for addNewTask
+  // Toggle / Select
   if (confirmReleased) {
     if (selectedIndex < static_cast<int>(items.size())) {
       toggleCurrentTask();
-      xSemaphoreGive(renderingMutex);
     } else {
-      xSemaphoreGive(renderingMutex);
-      addNewTask();  // addNewTask manages its own mutex
+      addNewTask();
     }
-  } else {
-    xSemaphoreGive(renderingMutex);
   }
 }
 
@@ -268,18 +212,16 @@ void TodoActivity::saveTasks() {
 }
 
 void TodoActivity::toggleCurrentTask() {
-  // Note: Called with renderingMutex held by caller
   if (selectedIndex >= 0 && selectedIndex < static_cast<int>(items.size())) {
     if (!items[selectedIndex].isHeader) {
       items[selectedIndex].checked = !items[selectedIndex].checked;
       saveTasks();
-      updateRequired.store(true);
+      requestUpdate();
     }
   }
 }
 
 void TodoActivity::addNewTask() {
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
   exitActivity();  // Hide current activity during sub-activity
   enterNewActivity(new KeyboardEntryActivity(
       renderer, mappedInput, "New Task", "", 10, 0, false,
@@ -291,8 +233,6 @@ void TodoActivity::addNewTask() {
           newItem.isHeader = false;
           items.push_back(newItem);
           saveTasks();
-          // Scroll to bottom to show new task
-          selectedIndex = items.size();  // Position on "Add New" button again? Or on the new task?
           // Let's position on the new task so user can see it
           selectedIndex = items.size() - 1;
           const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
@@ -301,16 +241,17 @@ void TodoActivity::addNewTask() {
           }
         }
         exitActivity();  // Close keyboard
-        updateRequired.store(true);
+        requestUpdate();
       },
       [this]() {
         exitActivity();  // Close keyboard
-        updateRequired.store(true);
+        requestUpdate();
       }));
-  xSemaphoreGive(renderingMutex);
 }
 
-void TodoActivity::render() {
+void TodoActivity::render(Activity::RenderLock&& lock) { renderScreen(); }
+
+void TodoActivity::renderScreen() {
   renderer.clearScreen();
 
   // Header
@@ -375,9 +316,6 @@ void TodoActivity::renderItem(int y, const TodoItem& item, bool isSelected) cons
   const int textY = y + (ITEM_HEIGHT - renderer.getLineHeight(UI_10_FONT_ID)) / 2;
   // Truncate text if needed
   std::string text = item.text;
-  // Simple strikethrough simulation if checked?
-  // GfxRenderer doesn't support strikethrough natively easily without font support.
-  // We can just draw a line over it.
 
   renderer.drawText(UI_10_FONT_ID, x, textY, text.c_str(), !isSelected);
 

@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <FeatureFlags.h>
+#include <Logging.h>
 
 /**
  * FeatureManifest provides compile-time and runtime information about
@@ -126,29 +127,29 @@ class FeatureManifest {
    * Call this during setup() to log the build configuration.
    */
   static void printToSerial() {
-    Serial.println("[FEATURES] CrossPoint Reader build configuration:");
-    Serial.printf("  Extended Fonts:    %s\n", hasExtendedFonts() ? "ENABLED " : "DISABLED");
-    Serial.printf("  OpenDyslexic:      %s\n", hasOpenDyslexicFonts() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Image Sleep:       %s\n", hasImageSleep() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Markdown:          %s\n", hasMarkdown() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Integrations:      %s\n", hasIntegrations() ? "ENABLED " : "DISABLED");
-    Serial.printf("  KOReader Sync:     %s\n", hasKOReaderSync() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Calibre Sync:      %s\n", hasCalibreSync() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Background Server: %s\n", hasBackgroundServer() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Home Media Picker: %s\n", hasHomeMediaPicker() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Web Pokedex:       %s\n", hasWebPokedexPlugin() ? "ENABLED " : "DISABLED");
-    Serial.printf("  EPUB Support:      %s\n", hasEpubSupport() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Hyphenation:       %s\n", hasHyphenation() ? "ENABLED " : "DISABLED");
-    Serial.printf("  XTC Support:       %s\n", hasXtcSupport() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Lyra Theme:        %s\n", hasLyraTheme() ? "ENABLED " : "DISABLED");
-    Serial.printf("  OTA Updates:       %s\n", hasOtaUpdates() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Todo Planner:      %s\n", hasTodoPlanner() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Dark Mode:         %s\n", hasDarkMode() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Visual Cov Picker: %s\n", hasVisualCoverPicker() ? "ENABLED " : "DISABLED");
-    Serial.printf("  BLE WiFi Provision: %s\n", hasBleWifiProvisioning() ? "ENABLED " : "DISABLED");
-    Serial.printf("  User Fonts:        %s\n", hasUserFonts() ? "ENABLED " : "DISABLED");
-    Serial.printf("  Web WiFi Setup:    %s\n", hasWebWifiSetup() ? "ENABLED " : "DISABLED");
-    Serial.printf("[FEATURES] %d/21 compile-time features enabled\n", enabledFeatureCount());
-    Serial.printf("[FEATURES] Build: %s\n", getBuildString().c_str());
+    LOG_INF("FEATURES", "CrossPoint Reader build configuration:");
+    LOG_INF("FEATURES", "  Extended Fonts:    %s", hasExtendedFonts() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  OpenDyslexic:      %s", hasOpenDyslexicFonts() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Image Sleep:       %s", hasImageSleep() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Markdown:          %s", hasMarkdown() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Integrations:      %s", hasIntegrations() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  KOReader Sync:     %s", hasKOReaderSync() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Calibre Sync:      %s", hasCalibreSync() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Background Server: %s", hasBackgroundServer() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Home Media Picker: %s", hasHomeMediaPicker() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Web Pokedex:       %s", hasWebPokedexPlugin() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  EPUB Support:      %s", hasEpubSupport() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Hyphenation:       %s", hasHyphenation() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  XTC Support:       %s", hasXtcSupport() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Lyra Theme:        %s", hasLyraTheme() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  OTA Updates:       %s", hasOtaUpdates() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Todo Planner:      %s", hasTodoPlanner() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Dark Mode:         %s", hasDarkMode() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Visual Cov Picker: %s", hasVisualCoverPicker() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  BLE WiFi Provision: %s", hasBleWifiProvisioning() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  User Fonts:        %s", hasUserFonts() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Web WiFi Setup:    %s", hasWebWifiSetup() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "%d/21 compile-time features enabled", enabledFeatureCount());
+    LOG_INF("FEATURES", "Build: %s", getBuildString().c_str());
   }
 };

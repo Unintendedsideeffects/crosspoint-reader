@@ -27,7 +27,7 @@ bool markFactoryResetPending() {
   {
     SpiBusMutex::Guard guard;
     if (!Storage.openFileForWrite("OTA", factoryResetMarkerFile, markerFile)) {
-      Serial.printf("[%lu] [OTA] Failed to create factory reset marker: %s\n", millis(), factoryResetMarkerFile);
+      LOG_ERR("OTA", "Failed to create factory reset marker: %s", factoryResetMarkerFile);
       return false;
     }
     static constexpr uint8_t markerByte = 1;
@@ -35,7 +35,7 @@ bool markFactoryResetPending() {
     markerFile.close();
   }
 
-  Serial.printf("[%lu] [OTA] Factory reset marker created: %s\n", millis(), factoryResetMarkerFile);
+  LOG_INF("OTA", "Factory reset marker created: %s", factoryResetMarkerFile);
   return true;
 }
 
@@ -53,11 +53,11 @@ bool wipeCrossPointData() {
   }
 
   if (!removed || !ensuredDir) {
-    Serial.printf("[%lu] [OTA] Factory reset wipe failed (removed=%d, ensuredDir=%d)\n", millis(), removed, ensuredDir);
+    LOG_ERR("OTA", "Factory reset wipe failed (removed=%d, ensuredDir=%d)", removed, ensuredDir);
     return false;
   }
 
-  Serial.printf("[%lu] [OTA] Factory reset wipe completed\n", millis());
+  LOG_INF("OTA", "Factory reset wipe completed");
   return true;
 }
 
@@ -118,7 +118,7 @@ esp_err_t event_handler(esp_http_client_event_t* event) {
   const int data_len = event->data_len;
   char* new_buf = static_cast<char*>(realloc(local_buf, output_len + data_len + 1));
   if (new_buf == NULL) {
-    Serial.printf("[%lu] [OTA] HTTP Client Out of Memory Failed, Allocation %d\n", millis(), data_len);
+    LOG_ERR("OTA", "HTTP Client Out of Memory Failed, Allocation %d", data_len);
     return ESP_ERR_NO_MEM;
   }
 

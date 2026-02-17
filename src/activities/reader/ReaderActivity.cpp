@@ -1,6 +1,7 @@
 #include "ReaderActivity.h"
 
 #include <HalStorage.h>
+#include <Logging.h>
 
 #include "FeatureFlags.h"
 #include "Txt.h"
@@ -93,7 +94,7 @@ std::unique_ptr<Txt> ReaderActivity::loadTxt(const std::string& path) {
 #if ENABLE_MARKDOWN
 std::unique_ptr<Markdown> ReaderActivity::loadMarkdown(const std::string& path) {
   if (!Storage.exists(path.c_str())) {
-    Serial.printf("[%lu] [   ] File does not exist: %s\n", millis(), path.c_str());
+    LOG_ERR("READER", "File does not exist: %s", path.c_str());
     return nullptr;
   }
 
@@ -102,7 +103,7 @@ std::unique_ptr<Markdown> ReaderActivity::loadMarkdown(const std::string& path) 
     return markdown;
   }
 
-  Serial.printf("[%lu] [   ] Failed to load Markdown\n", millis());
+  LOG_ERR("READER", "Failed to load Markdown");
   return nullptr;
 }
 #endif  // ENABLE_MARKDOWN
@@ -182,10 +183,10 @@ void ReaderActivity::loop() {
 void ReaderActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
-  Serial.printf("[%lu] [RDR] onEnter with path: %s\n", millis(), initialBookPath.c_str());
+  LOG_DBG("READER", "onEnter with path: %s", initialBookPath.c_str());
 
   if (initialBookPath.empty()) {
-    Serial.printf("[%lu] [RDR] Empty path, going to library\n", millis());
+    LOG_DBG("READER", "Empty path, going to library");
     goToLibrary();  // Start from root when entering via Browse
     return;
   }
@@ -204,32 +205,32 @@ void ReaderActivity::onEnter() {
 #endif
       if (isMarkdownFile(initialBookPath)) {
 #if ENABLE_MARKDOWN
-    Serial.printf("[%lu] [RDR] Detected as Markdown file\n", millis());
+    LOG_DBG("READER", "Detected as Markdown file");
     auto markdown = loadMarkdown(initialBookPath);
     if (!markdown) {
-      Serial.printf("[%lu] [RDR] Failed to load Markdown, going back\n", millis());
+      LOG_ERR("READER", "Failed to load Markdown, going back");
       onGoBack();
       return;
     }
-    Serial.printf("[%lu] [RDR] Markdown loaded, opening reader\n", millis());
+    LOG_DBG("READER", "Markdown loaded, opening reader");
     onGoToMarkdownReader(std::move(markdown));
 #else
     // Markdown support not compiled in this build
-    Serial.printf("[%lu] [RDR] Markdown support disabled in this build\n", millis());
+    LOG_ERR("READER", "Markdown support disabled in this build");
     exitActivity();
     enterNewActivity(new FullScreenMessageActivity(renderer, mappedInput,
                                                    "Markdown support\nnot available\nin this build",
                                                    EpdFontFamily::BOLD, [this] { onGoBack(); }));
 #endif  // ENABLE_MARKDOWN
   } else if (isTxtFile(initialBookPath)) {
-    Serial.printf("[%lu] [RDR] Detected as TXT file\n", millis());
+    LOG_DBG("READER", "Detected as TXT file");
     auto txt = loadTxt(initialBookPath);
     if (!txt) {
-      Serial.printf("[%lu] [RDR] Failed to load TXT, going back\n", millis());
+      LOG_ERR("READER", "Failed to load TXT, going back");
       onGoBack();
       return;
     }
-    Serial.printf("[%lu] [RDR] TXT loaded, opening reader\n", millis());
+    LOG_DBG("READER", "TXT loaded, opening reader");
     onGoToTxtReader(std::move(txt));
   } else {
 #if ENABLE_EPUB_SUPPORT
@@ -240,7 +241,7 @@ void ReaderActivity::onEnter() {
     }
     onGoToEpubReader(std::move(epub));
 #else
-    Serial.printf("[%lu] [RDR] EPUB support disabled in this build\n", millis());
+    LOG_ERR("READER", "EPUB support disabled in this build");
     exitActivity();
     enterNewActivity(new FullScreenMessageActivity(renderer, mappedInput, "EPUB support\nnot available\nin this build",
                                                    EpdFontFamily::BOLD, [this] { onGoBack(); }));

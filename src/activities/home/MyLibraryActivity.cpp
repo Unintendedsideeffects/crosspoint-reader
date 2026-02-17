@@ -3,6 +3,7 @@
 #include <Epub.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
+#include <I18n.h>
 
 #include <algorithm>
 #include <cctype>
@@ -80,46 +81,6 @@ void sortFileList(std::vector<std::string>& strs) {
 }
 }  // namespace
 
-int MyLibraryActivity::getPageItems() const {
-  const int screenHeight = renderer.getScreenHeight();
-  const int bottomBarHeight = 60;  // Space for button hints
-  const int availableHeight = screenHeight - CONTENT_START_Y - bottomBarHeight;
-
-#if ENABLE_VISUAL_COVER_PICKER
-  if (viewMode == ViewMode::Grid) {
-    const auto m = getGridMetrics();
-    return m.cols * m.rows;
-  }
-#endif
-
-  int items = availableHeight / LINE_HEIGHT;
-  if (items < 1) {
-    items = 1;
-  }
-  return items;
-}
-
-int MyLibraryActivity::getCurrentItemCount() const {
-  if (currentTab == Tab::Recent) {
-    return static_cast<int>(recentBooks.size());
-  }
-  return static_cast<int>(files.size());
-}
-
-void MyLibraryActivity::loadRecentBooks() {
-  recentBooks.clear();
-  const auto& books = RECENT_BOOKS.getBooks();
-  recentBooks.reserve(books.size());
-
-  for (const auto& book : books) {
-    // Skip if file no longer exists
-    if (!Storage.exists(book.path.c_str())) {
-      continue;
-    }
-    recentBooks.push_back(book);
-  }
-}
-
 void MyLibraryActivity::loadFiles() {
   files.clear();
 
@@ -163,40 +124,25 @@ size_t MyLibraryActivity::findEntry(const std::string& name) const {
   return 0;
 }
 
-void MyLibraryActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<MyLibraryActivity*>(param);
-  self->displayTaskLoop();
+int MyLibraryActivity::getPageItems() const {
+  auto metrics = UITheme::getInstance().getMetrics();
+  const int contentHeight = renderer.getScreenHeight() - metrics.topPadding - metrics.headerHeight -
+                            metrics.verticalSpacing - metrics.buttonHintsHeight - metrics.verticalSpacing;
+  const int rowHeight = (currentTab == Tab::Recent) ? metrics.listWithSubtitleRowHeight : metrics.listRowHeight;
+  return std::max(1, contentHeight / rowHeight);
 }
 
 void MyLibraryActivity::onEnter() {
   Activity::onEnter();
 
-  renderingMutex = xSemaphoreCreateMutex();
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
-
-  // Load data for both tabs
-  loadRecentBooks();
   loadFiles();
-
   selectorIndex = 0;
-  updateRequired = true;
 
-  xTaskCreate(&MyLibraryActivity::taskTrampoline, "MyLibraryActivityTask",
-              4096,               // Stack size (increased for epub metadata loading)
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
 void MyLibraryActivity::onExit() {
   Activity::onExit();
-
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
-
   files.clear();
 }
 
@@ -211,7 +157,7 @@ void MyLibraryActivity::loop() {
       basepath = "/";
       loadFiles();
       selectorIndex = 0;
-      updateRequired = true;
+      requestUpdate();
     }
     return;
   }
@@ -220,8 +166,6 @@ void MyLibraryActivity::loop() {
   const bool downReleased = mappedInput.wasReleased(MappedInputManager::Button::Down);
   const bool leftReleased = mappedInput.wasReleased(MappedInputManager::Button::Left);
   const bool rightReleased = mappedInput.wasReleased(MappedInputManager::Button::Right);
-
-  const bool skipPage = mappedInput.getHeldTime() > SKIP_PAGE_MS;
 
   // Confirm button - open selected item
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
@@ -238,11 +182,11 @@ void MyLibraryActivity::loop() {
           basepath += files[selectorIndex].substr(0, files[selectorIndex].length() - 1);
           loadFiles();
           selectorIndex = 0;
-          updateRequired = true;
+          requestUpdate();
         } else {
           // Open file
           const auto fullPath = basepath + files[selectorIndex];
-          Serial.printf("[%lu] [LIB] Opening file: %s\n", millis(), fullPath.c_str());
+          LOG_INF("LIB", "Opening file: %s", fullPath.c_str());
           onSelectBook(fullPath, currentTab);
         }
       }
@@ -265,7 +209,7 @@ void MyLibraryActivity::loop() {
         const std::string dirName = oldPath.substr(pos + 1) + "/";
         selectorIndex = static_cast<int>(findEntry(dirName));
 
-        updateRequired = true;
+        requestUpdate();
       } else {
         // Go home
         onGoHome();
@@ -278,71 +222,52 @@ void MyLibraryActivity::loop() {
   if (leftReleased && currentTab == Tab::Files) {
     currentTab = Tab::Recent;
     selectorIndex = 0;
-    updateRequired = true;
+    requestUpdate();
     return;
   }
   if (rightReleased && currentTab == Tab::Recent) {
     currentTab = Tab::Files;
     selectorIndex = 0;
-    updateRequired = true;
+    requestUpdate();
     return;
   }
-
-  // Navigation: Up/Down moves through items only
-  const bool prevReleased = upReleased;
-  const bool nextReleased = downReleased;
 
 #if ENABLE_VISUAL_COVER_PICKER
   if (mappedInput.getHeldTime() >= 500 && mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     viewMode = (viewMode == ViewMode::List) ? ViewMode::Grid : ViewMode::List;
-    updateRequired = true;
+    requestUpdate();
     return;
   }
 #endif
 
-  if (prevReleased && itemCount > 0) {
-    if (skipPage) {
-      selectorIndex = ((selectorIndex / pageItems - 1) * pageItems + itemCount) % itemCount;
-    } else {
-      selectorIndex = (selectorIndex + itemCount - 1) % itemCount;
-    }
-    updateRequired = true;
-  } else if (nextReleased && itemCount > 0) {
-    if (skipPage) {
-      selectorIndex = ((selectorIndex / pageItems + 1) * pageItems) % itemCount;
-    } else {
-      selectorIndex = (selectorIndex + 1) % itemCount;
-    }
-    updateRequired = true;
-  }
+  int listSize = static_cast<int>(itemCount);
+
+  buttonNavigator.onNextRelease([this, listSize] {
+    selectorIndex = ButtonNavigator::nextIndex(static_cast<int>(selectorIndex), listSize);
+    requestUpdate();
+  });
+
+  buttonNavigator.onPreviousRelease([this, listSize] {
+    selectorIndex = ButtonNavigator::previousIndex(static_cast<int>(selectorIndex), listSize);
+    requestUpdate();
+  });
+
+  buttonNavigator.onNextContinuous([this, listSize, pageItems] {
+    selectorIndex = ButtonNavigator::nextPageIndex(static_cast<int>(selectorIndex), listSize, pageItems);
+    requestUpdate();
+  });
+
+  buttonNavigator.onPreviousContinuous([this, listSize, pageItems] {
+    selectorIndex = ButtonNavigator::previousPageIndex(static_cast<int>(selectorIndex), listSize, pageItems);
+    requestUpdate();
+  });
 }
 
-void MyLibraryActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-
-#if ENABLE_VISUAL_COVER_PICKER
-    if (viewMode == ViewMode::Grid) {
-      extractCovers();
-    }
-#endif
-
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-void MyLibraryActivity::render() const {
+void MyLibraryActivity::render(Activity::RenderLock&& lock) {
   renderer.clearScreen();
+
+  const auto pageWidth = renderer.getScreenWidth();
+  auto metrics = UITheme::getInstance().getMetrics();
 
   // Draw tab bar
   std::vector<ScreenComponents::TabInfo> tabs = {
@@ -351,33 +276,36 @@ void MyLibraryActivity::render() const {
   };
   ScreenComponents::drawTabBar(renderer, TAB_BAR_Y, tabs);
 
-  // Draw content based on current tab
-  if (currentTab == Tab::Recent) {
-    renderRecentTab();
+  auto folderName = basepath == "/" ? tr(STR_SD_CARD) : basepath.substr(basepath.rfind('/') + 1).c_str();
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, folderName);
+
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  if (getCurrentItemCount() == 0) {
+    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, tr(STR_NO_BOOKS_FOUND));
   } else {
 #if ENABLE_VISUAL_COVER_PICKER
     if (viewMode == ViewMode::Grid) {
       renderGrid();
     } else {
-      renderFilesTab();
+      if (currentTab == Tab::Recent) {
+        renderRecentTab();
+      } else {
+        renderFilesTab();
+      }
     }
 #else
-    renderFilesTab();
+    if (currentTab == Tab::Recent) {
+      renderRecentTab();
+    } else {
+      renderFilesTab();
+    }
 #endif
   }
 
-  // Draw scroll indicator
-  const int screenHeight = renderer.getScreenHeight();
-  const int contentHeight = screenHeight - CONTENT_START_Y - 60;  // 60 for bottom bar
-  ScreenComponents::drawScrollIndicator(renderer, getCurrentPage(), getTotalPages(), CONTENT_START_Y, contentHeight);
-
-  // Draw side button hints (up/down navigation on right side)
-  // Note: text is rotated 90° CW, so ">" appears as "^" and "<" appears as "v"
-  renderer.drawSideButtonHints(UI_10_FONT_ID, ">", "<");
-
-  // Draw bottom button hints
-  const auto labels = mappedInput.mapLabels("« Back", "Open", "<", ">");
-  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  // Help text
+  const auto labels = mappedInput.mapLabels(basepath == "/" ? tr(STR_HOME) : tr(STR_BACK), tr(STR_OPEN), tr(STR_DIR_UP),
+                                            tr(STR_DIR_DOWN));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }
@@ -457,99 +385,68 @@ void MyLibraryActivity::renderFilesTab() const {
 
 MyLibraryActivity::GridMetrics MyLibraryActivity::getGridMetrics() const {
   const int pageWidth = renderer.getScreenWidth();
-
   GridMetrics m;
-
   m.cols = 3;
-
   m.rows = 2;
-
   m.paddingX = 20;
-
   m.paddingY = 20;
-
   m.startX = 30;
-
   m.startY = CONTENT_START_Y + 10;
-
   const int availableWidth = pageWidth - m.startX * 2;
-
   m.thumbWidth = (availableWidth - (m.cols - 1) * m.paddingX) / m.cols;
-
   m.thumbHeight = (m.thumbWidth * 3) / 2;  // 2:3 aspect ratio
-
   return m;
 }
 
 void MyLibraryActivity::renderGrid() const {
   const auto m = getGridMetrics();
-
   const int itemsPerPage = m.cols * m.rows;
-
   const int itemCount = getCurrentItemCount();
-
   const int pageStartIndex = selectorIndex / itemsPerPage * itemsPerPage;
 
   for (int i = 0; i < itemsPerPage && (pageStartIndex + i) < itemCount; i++) {
     const int idx = pageStartIndex + i;
-
     const int col = i % m.cols;
-
     const int row = i / m.cols;
-
     const int x = m.startX + col * (m.thumbWidth + m.paddingX);
-
     const int y = m.startY + row * (m.thumbHeight + m.paddingY + 20);  // Extra for title
-
     const bool selected = (idx == selectorIndex);
 
     std::string path;
-
     std::string title;
-
     if (currentTab == Tab::Recent) {
       path = recentBooks[idx].path;
-
       title = recentBooks[idx].title;
-
     } else {
       path = basepath + files[idx];
-
       title = files[idx];
-
       if (title.back() == '/') title.pop_back();
     }
 
     if (selected) {
-      renderer.drawRect(x - 4, y - 4, m.thumbWidth + 8, m.thumbHeight + 8, 2, true);
+      renderer.drawRect(x - 4, y - 4, m.thumbWidth + 8, m.thumbHeight + 8);
     }
 
     bool hasCover = false;
-
     if (path.find(".epub") != std::string::npos || path.find(".xtc") != std::string::npos) {
       hasCover = drawCoverAt(path, x, y, m.thumbWidth, m.thumbHeight);
     }
 
     if (!hasCover) {
       renderer.drawRect(x, y, m.thumbWidth, m.thumbHeight);
-
       renderer.drawCenteredText(SMALL_FONT_ID, y + m.thumbHeight / 2 - 4, "No Cover");
     }
 
     auto truncatedTitle = renderer.truncatedText(SMALL_FONT_ID, title.c_str(), m.thumbWidth);
-
     renderer.drawText(SMALL_FONT_ID,
                       x + (m.thumbWidth - renderer.getTextWidth(SMALL_FONT_ID, truncatedTitle.c_str())) / 2,
-
                       y + m.thumbHeight + 5, truncatedTitle.c_str());
   }
 }
 
 bool MyLibraryActivity::drawCoverAt(const std::string& path, const int x, const int y, const int width,
-
                                     const int height) const {
   std::string cacheKey = "/.crosspoint/epub_" + std::to_string(std::hash<std::string>{}(path));
-
   std::string thumbPath = cacheKey + "/thumb_" + std::to_string(height) + ".bmp";
 
   if (!Storage.exists(thumbPath.c_str())) {
@@ -557,29 +454,20 @@ bool MyLibraryActivity::drawCoverAt(const std::string& path, const int x, const 
   }
 
   SpiBusMutex::Guard guard;
-
   FsFile file;
-
   if (!Storage.openFileForRead("LIB", thumbPath, file)) {
     return false;
   }
 
   Bitmap bitmap(file);
-
   const bool ok = bitmap.parseHeaders() == BmpReaderError::Ok;
-
   if (ok) {
     renderer.drawBitmap(bitmap, x, y, width, height);
   }
-
   file.close();
-
   return ok;
 }
 
-#endif
-
-#if ENABLE_VISUAL_COVER_PICKER
 void MyLibraryActivity::extractCovers() {
   if (viewMode != ViewMode::Grid) return;
 
@@ -589,8 +477,6 @@ void MyLibraryActivity::extractCovers() {
   const int pageStartIndex = selectorIndex / itemsPerPage * itemsPerPage;
 
   for (int i = 0; i < itemsPerPage && (pageStartIndex + i) < itemCount; i++) {
-    if (exitTaskRequested.load()) return;
-
     const int idx = pageStartIndex + i;
     std::string path;
     if (currentTab == Tab::Recent) {
@@ -609,7 +495,7 @@ void MyLibraryActivity::extractCovers() {
         // Load without CSS to save time/RAM
         if (epub.load(true, true)) {
           if (epub.generateThumbBmp(m.thumbHeight)) {
-            updateRequired = true;
+            requestUpdate();
           }
         }
       }

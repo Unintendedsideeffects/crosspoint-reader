@@ -1,9 +1,5 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
-#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -48,12 +44,8 @@ enum class WifiSelectionState {
  * The onComplete callback receives true if connected successfully, false if cancelled.
  */
 class WifiSelectionActivity final : public ActivityWithSubactivity {
-  TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
-  std::atomic<bool> exitTaskRequested{false};
-  std::atomic<bool> taskHasExited{false};
   ButtonNavigator buttonNavigator;
-  bool updateRequired = false;
+
   WifiSelectionState state = WifiSelectionState::SCANNING;
   int selectedNetworkIndex = 0;
   std::vector<WifiNetworkInfo> networks;
@@ -91,9 +83,6 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   unsigned long connectionStartTime = 0;
   BleWifiProvisioner bleProvisioner;
 
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();
-  void render() const;
   void renderNetworkList() const;
   void renderPasswordEntry() const;
   void renderBleProvisioning() const;
@@ -121,6 +110,7 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&& lock) override;
 
   // Get the IP address after successful connection
   const std::string& getConnectedIP() const { return connectedIP; }

@@ -2,7 +2,6 @@
 
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-#include <I18n.h>
 
 #include <algorithm>
 
@@ -11,10 +10,6 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
-
-namespace {
-constexpr unsigned long GO_HOME_MS = 1000;
-}  // namespace
 
 void RecentBooksActivity::loadRecentBooks() {
   recentBooks.clear();
@@ -49,7 +44,7 @@ void RecentBooksActivity::loop() {
   const int pageItems = UITheme::getInstance().getNumberOfItemsPerPage(renderer, true, false, true, true);
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    if (!recentBooks.empty() && selectorIndex < static_cast<int>(recentBooks.size())) {
+    if (!recentBooks.empty() && selectorIndex < recentBooks.size()) {
       LOG_DBG("RBA", "Selected recent book: %s", recentBooks[selectorIndex].path.c_str());
       onSelectBook(recentBooks[selectorIndex].path);
       return;
@@ -83,21 +78,21 @@ void RecentBooksActivity::loop() {
   });
 }
 
-void RecentBooksActivity::render(Activity::RenderLock&&) {
+void RecentBooksActivity::render(Activity::RenderLock&& lock) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
   auto metrics = UITheme::getInstance().getMetrics();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_MENU_RECENT_BOOKS));
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, "Recent Books");
 
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
 
   // Recent tab
   if (recentBooks.empty()) {
-    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, tr(STR_NO_RECENT_BOOKS));
+    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, "No recent books");
   } else {
     GUI.drawList(
         renderer, Rect{0, contentTop, pageWidth, contentHeight}, recentBooks.size(), selectorIndex,
@@ -106,7 +101,7 @@ void RecentBooksActivity::render(Activity::RenderLock&&) {
   }
 
   // Help text
-  const auto labels = mappedInput.mapLabels(tr(STR_HOME), tr(STR_OPEN), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  const auto labels = mappedInput.mapLabels("« Home", "Open", "Up", "Down");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <iosfwd>
 
+class FsFile;
+
 class CrossPointSettings {
  private:
   // Private constructor for singleton
@@ -233,6 +235,7 @@ class CrossPointSettings {
  private:
   // Validate loaded settings and clamp to valid ranges
   void validateAndClamp();
+  uint8_t writeSettings(FsFile& file, bool count_only = false) const;
 
  public:
   float getReaderLineCompression() const;

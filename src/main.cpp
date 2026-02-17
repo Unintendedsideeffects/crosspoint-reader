@@ -4,6 +4,7 @@
 #include <HalDisplay.h>
 #include <HalGPIO.h>
 #include <HalStorage.h>
+#include <I18n.h>
 #include <Logging.h>
 #include <SPI.h>
 #include <builtinFonts/all.h>
@@ -164,7 +165,7 @@ void applyPendingFactoryReset() {
     return;
   }
 
-  Serial.printf("[%lu] [RESET] Pending factory reset marker detected\n", millis());
+  LOG_INF("RESET", "Pending factory reset marker detected");
 
   bool removed = true;
   if (Storage.exists(kCrossPointDataDir)) {
@@ -173,17 +174,17 @@ void applyPendingFactoryReset() {
   const bool ensuredDir = Storage.exists(kCrossPointDataDir) || Storage.mkdir(kCrossPointDataDir);
 
   if (!removed || !ensuredDir) {
-    Serial.printf("[%lu] [RESET] Failed to wipe CrossPoint data (removed=%d, ensuredDir=%d). Retrying on next boot.\n",
-                  millis(), removed, ensuredDir);
+    LOG_ERR("RESET", "Failed to wipe CrossPoint data (removed=%d, ensuredDir=%d). Retrying on next boot.", (int)removed,
+            (int)ensuredDir);
     return;
   }
 
   if (!Storage.remove(kFactoryResetMarkerFile)) {
-    Serial.printf("[%lu] [RESET] Wipe completed, but marker removal failed: %s\n", millis(), kFactoryResetMarkerFile);
+    LOG_ERR("RESET", "Wipe completed, but marker removal failed: %s", kFactoryResetMarkerFile);
     return;
   }
 
-  Serial.printf("[%lu] [RESET] Factory reset completed from pending marker\n", millis());
+  LOG_INF("RESET", "Factory reset completed from pending marker");
 }
 }  // namespace
 
@@ -433,13 +434,7 @@ void setup() {
   applyPendingFactoryReset();
 
   SETTINGS.loadFromFile();
-
-#if ENABLE_USER_FONTS
-  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
-    UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath);
-  }
-#endif
-  renderer.setDarkMode(SETTINGS.darkMode);
+  I18N.loadSettings();
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.loadFromFile();
 #endif

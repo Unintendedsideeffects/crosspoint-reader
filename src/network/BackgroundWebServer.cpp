@@ -65,7 +65,7 @@ bool BackgroundWebServer::wantsFastLoop() const { return isRunning(); }
 void BackgroundWebServer::invalidateCredentialsCache() {
   credentialsLoaded = false;
   credentials.clear();
-  Serial.printf("[%lu] [BWS] Credentials cache invalidated\n", millis());
+  LOG_INF("BWS", "Credentials cache invalidated");
 }
 
 void BackgroundWebServer::ensureCredentialsLoaded() {
@@ -76,7 +76,7 @@ void BackgroundWebServer::ensureCredentialsLoaded() {
   // so we just copy the cached credentials without SD card access here.
   credentials = WIFI_STORE.getCredentials();
   credentialsLoaded = true;
-  Serial.printf("[%lu] [BWS] Using %zu saved WiFi networks\n", millis(), credentials.size());
+  LOG_INF("BWS", "Using %zu saved WiFi networks", credentials.size());
 }
 
 void BackgroundWebServer::startScan() {
@@ -90,7 +90,7 @@ void BackgroundWebServer::startScan() {
   delay(100);
   WiFi.scanDelete();
   WiFi.scanNetworks(true);
-  Serial.printf("[%lu] [BWS] Started WiFi scan\n", millis());
+  LOG_INF("BWS", "Started WiFi scan");
 }
 
 void BackgroundWebServer::startConnect(const std::string& ssid, const std::string& password) {
@@ -108,7 +108,7 @@ void BackgroundWebServer::startConnect(const std::string& ssid, const std::strin
   } else {
     WiFi.begin(targetSsid.c_str());
   }
-  Serial.printf("[%lu] [BWS] Connecting to %s\n", millis(), targetSsid.c_str());
+  LOG_INF("BWS", "Connecting to %s", targetSsid.c_str());
 }
 
 void BackgroundWebServer::startServer() {
@@ -135,9 +135,9 @@ void BackgroundWebServer::startServer() {
 
   if (MDNS.begin(hostname)) {
     mdnsStarted = true;
-    Serial.printf("[%lu] [BWS] mDNS started: http://%s.local/\n", millis(), hostname);
+    LOG_INF("BWS", "mDNS started: http://%s.local/", hostname);
   } else {
-    Serial.printf("[%lu] [BWS] mDNS failed to start\n", millis());
+    LOG_ERR("BWS", "mDNS failed to start");
   }
 
   state = State::RUNNING;
@@ -175,7 +175,7 @@ void BackgroundWebServer::scheduleRetry(const char* reason) {
   state = State::WAIT_RETRY;
   retryAttempts++;
   nextRetryMs = millis() + computeBackoffMs();
-  Serial.printf("[%lu] [BWS] Retry scheduled (%s) in %lu ms\n", millis(), reason, nextRetryMs - millis());
+  LOG_INF("BWS", "Retry scheduled (%s) in %lu ms", reason, nextRetryMs - millis());
 }
 
 void BackgroundWebServer::stopAll() {
@@ -260,7 +260,7 @@ void BackgroundWebServer::loop(const bool usbConnected, const bool allowRun) {
   static bool warnedEmpty = false;
   if (credentials.empty()) {
     if (!warnedEmpty) {
-      Serial.printf("[%lu] [BWS] No saved WiFi credentials - background server disabled\n", millis());
+      LOG_INF("BWS", "No saved WiFi credentials - background server disabled");
       warnedEmpty = true;
     }
     if (state != State::IDLE) {
@@ -274,10 +274,10 @@ void BackgroundWebServer::loop(const bool usbConnected, const bool allowRun) {
     if (WiFi.status() == WL_CONNECTED) {
       // Use existing connection but don't claim ownership - another activity
       // may have established it. Only claim ownership when we connect ourselves.
-      Serial.printf("[%lu] [BWS] WiFi already connected, starting server\n", millis());
+      LOG_INF("BWS", "WiFi already connected, starting server");
       startServer();
     } else {
-      Serial.printf("[%lu] [BWS] WiFi not connected (status=%d), starting scan\n", millis(), WiFi.status());
+      LOG_INF("BWS", "WiFi not connected (status=%d), starting scan", WiFi.status());
       startScan();
     }
     return;

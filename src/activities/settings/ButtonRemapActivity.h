@@ -14,11 +14,9 @@ class ButtonRemapActivity final : public Activity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
+  void render(Activity::RenderLock&& lock) override;
 
  private:
-  // Rendering task state.
-
   // Callback used to exit the remap flow back to the settings list.
   const std::function<void()> onBack;
   // Index of the logical role currently awaiting input.
@@ -28,6 +26,8 @@ class ButtonRemapActivity final : public Activity {
   // Error banner timing (used when reassigning duplicate buttons).
   unsigned long errorUntil = 0;
   std::string errorMessage;
+
+  void renderScreen();
 
   // Commit temporary mapping to settings.
   void applyTempMapping();

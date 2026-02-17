@@ -1,7 +1,4 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <atomic>
 #include <functional>
@@ -32,11 +29,6 @@ enum class WebServerActivityState {
  * with mode-specific UI rendering.
  */
 class CrossPointWebServerActivity final : public ActivityWithSubactivity {
-  TaskHandle_t displayTaskHandle = nullptr;
-  SemaphoreHandle_t renderingMutex = nullptr;
-  std::atomic<bool> exitTaskRequested{false};  // Signal for graceful task shutdown
-  std::atomic<bool> taskHasExited{false};      // Confirmation that task exited
-  bool updateRequired = false;
   WebServerActivityState state = WebServerActivityState::MODE_SELECTION;
   const std::function<void()> onGoBack;
 
@@ -51,19 +43,17 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   std::string connectedIP;
   std::string connectedSSID;  // For STA mode: network name, For AP mode: AP name
 
-  // Performance monitoring
-  unsigned long lastHandleClientTime = 0;
-
-  // Upload progress tracking (for Calibre mode UI)
+  // Upload progress tracking
   size_t lastProgressReceived = 0;
   size_t lastProgressTotal = 0;
   std::string currentUploadName;
   std::string lastCompleteName;
   unsigned long lastCompleteAt = 0;
+  bool updateRequired = false;
 
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();  // No longer [[noreturn]] - exits gracefully
-  void render() const;
+  // Performance monitoring
+  unsigned long lastHandleClientTime = 0;
+
   void renderServerRunning() const;
   void renderCalibreUI() const;
   void renderFileTransferUI() const;
@@ -82,6 +72,7 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(Activity::RenderLock&& lock) override;
   bool skipLoopDelay() override { return webServer && webServer->isRunning(); }
   bool preventAutoSleep() override { return webServer && webServer->isRunning(); }
   bool blocksBackgroundServer() override { return true; }

@@ -150,7 +150,7 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
     if (available == 0) {
       // Check for timeout - no data received for too long
       if (millis() - lastDataTime > DOWNLOAD_TIMEOUT_MS) {
-        Serial.printf("[%lu] [HTTP] Download timeout - no data for %lu ms\n", millis(), DOWNLOAD_TIMEOUT_MS);
+        LOG_ERR("HTTP", "Download timeout - no data for %lu ms", DOWNLOAD_TIMEOUT_MS);
         {
           SpiBusMutex::Guard guard;
           file.close();

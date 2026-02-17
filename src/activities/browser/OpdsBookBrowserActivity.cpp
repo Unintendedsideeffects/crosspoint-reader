@@ -9,6 +9,10 @@
 #include <OpdsStream.h>
 #include <WiFi.h>
 
+#if ENABLE_EPUB_SUPPORT
+#include <Epub.h>
+#endif
+
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "ScreenComponents.h"

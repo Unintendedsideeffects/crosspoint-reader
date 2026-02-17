@@ -16,55 +16,18 @@ constexpr char CROSSPOINT_DIR[] = "/.crosspoint";
 constexpr unsigned long RESTART_DELAY_MS = 1500;
 }  // namespace
 
-void FactoryResetActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<FactoryResetActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void FactoryResetActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
-
-  renderingMutex = xSemaphoreCreateMutex();
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
   state = WARNING;
   restartAtMs = 0;
-  updateRequired = true;
-
-  xTaskCreate(&FactoryResetActivity::taskTrampoline, "FactoryResetActivityTask",
-              4096,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
-void FactoryResetActivity::onExit() {
-  ActivityWithSubactivity::onExit();
+void FactoryResetActivity::onExit() { ActivityWithSubactivity::onExit(); }
 
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
-}
+void FactoryResetActivity::render(Activity::RenderLock&& lock) { renderScreen(); }
 
-void FactoryResetActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-void FactoryResetActivity::render() {
+void FactoryResetActivity::renderScreen() {
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
@@ -109,7 +72,7 @@ void FactoryResetActivity::render() {
 }
 
 bool FactoryResetActivity::performFactoryReset() {
-  Serial.printf("[%lu] [FACTORY_RESET] Resetting %s\n", millis(), CROSSPOINT_DIR);
+  LOG_INF("FACTORY_RESET", "Resetting %s", CROSSPOINT_DIR);
 
   bool removed = true;
   bool ensuredDir = true;
@@ -126,24 +89,21 @@ bool FactoryResetActivity::performFactoryReset() {
   }
 
   if (!removed || !ensuredDir) {
-    Serial.printf("[%lu] [FACTORY_RESET] Failed (removed=%d, ensuredDir=%d)\n", millis(), removed, ensuredDir);
+    LOG_ERR("FACTORY_RESET", "Failed (removed=%d, ensuredDir=%d)", removed, ensuredDir);
     return false;
   }
 
-  Serial.printf("[%lu] [FACTORY_RESET] Completed successfully\n", millis());
+  LOG_INF("FACTORY_RESET", "Completed successfully");
   return true;
 }
 
 void FactoryResetActivity::loop() {
   if (state == WARNING) {
     if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
       state = RESETTING;
-      xSemaphoreGive(renderingMutex);
-      updateRequired = true;
-      vTaskDelay(10 / portTICK_PERIOD_MS);
+      requestUpdate();
+      yield();
 
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
       const bool ok = performFactoryReset();
       if (ok) {
         state = SUCCESS;
@@ -151,8 +111,7 @@ void FactoryResetActivity::loop() {
       } else {
         state = FAILED;
       }
-      xSemaphoreGive(renderingMutex);
-      updateRequired = true;
+      requestUpdate();
     }
 
     if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
