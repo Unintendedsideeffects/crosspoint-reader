@@ -8,7 +8,9 @@ This document describes all HTTP and WebSocket endpoints available on the CrossP
     - [GET `/` - Home Page](#get----home-page)
     - [GET `/files` - File Browser Page](#get-files---file-browser-page)
     - [GET `/api/status` - Device Status](#get-apistatus---device-status)
+    - [GET `/api/plugins` - Compile-Time Feature Manifest](#get-apiplugins---compile-time-feature-manifest)
     - [GET `/api/files` - List Files](#get-apifiles---list-files)
+    - [POST `/api/todo/entry` - Add TODO or Agenda Entry](#post-apitodoentry---add-todo-or-agenda-entry)
     - [GET `/download` - Download File](#get-download---download-file)
     - [POST `/upload` - Upload File](#post-upload---upload-file)
     - [POST `/mkdir` - Create Folder](#post-mkdir---create-folder)
@@ -90,6 +92,26 @@ curl http://crosspoint.local/api/status
 
 ---
 
+### GET `/api/plugins` - Compile-Time Feature Manifest
+
+Returns JSON booleans describing which compile-time features are included in this firmware build.
+
+**Request:**
+```bash
+curl http://crosspoint.local/api/plugins
+```
+
+**Response (200 OK, example):**
+```json
+{
+  "markdown": true,
+  "todo_planner": true,
+  "web_pokedex_plugin": false
+}
+```
+
+---
+
 ### GET `/api/files` - List Files
 
 Returns a JSON array of files and folders in the specified directory.
@@ -128,6 +150,48 @@ curl "http://crosspoint.local/api/files?path=/Books"
 **Notes:**
 - Hidden files (starting with `.`) are automatically filtered out
 - System folders (`System Volume Information`, `XTCache`) are hidden
+
+---
+
+### POST `/api/todo/entry` - Add TODO or Agenda Entry
+
+Appends an entry to today's daily TODO file when the TODO planner feature is compiled in.
+
+**Request:**
+```bash
+# Add a task entry
+curl -X POST -d "type=todo&text=Buy milk" http://crosspoint.local/api/todo/entry
+
+# Add an agenda/note entry
+curl -X POST -d "type=agenda&text=Meeting at 14:00" http://crosspoint.local/api/todo/entry
+```
+
+**Form Parameters:**
+
+| Parameter | Required | Description |
+| --------- | -------- | ----------- |
+| `text`    | Yes      | Entry text (1-300 chars, newlines are normalized to spaces) |
+| `type`    | No       | `todo` (default) or `agenda` |
+
+**Storage selection:**
+- If today's `.md` file exists, append there.
+- Else if today's `.txt` file exists, append there.
+- Else create `.md` when markdown support is enabled, or `.txt` when markdown support is disabled.
+
+**Response (200 OK):**
+```json
+{"ok":true}
+```
+
+**Error Responses:**
+
+| Status | Body | Cause |
+| ------ | ---- | ----- |
+| 400 | `Missing text` | `text` parameter missing |
+| 400 | `Invalid text` | Empty or too long text |
+| 404 | `TODO planner disabled` | Feature is not compiled in |
+| 503 | `Date unavailable` | Device date could not be resolved |
+| 500 | `Failed to write TODO entry` | SD write failed |
 
 ---
 

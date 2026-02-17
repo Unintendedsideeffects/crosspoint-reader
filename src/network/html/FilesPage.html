@@ -720,6 +720,8 @@
   <div class="action-buttons">
     <button class="action-btn upload-action-btn" onclick="openUploadModal()">📤 Upload</button>
     <button class="action-btn folder-action-btn" onclick="openFolderModal()">📁 New Folder</button>
+    <button class="action-btn plugin-action-btn" id="todoEntryBtn" onclick="openTodoPrompt(false)" style="display:none;">📝 Add TODO</button>
+    <button class="action-btn plugin-action-btn" id="agendaEntryBtn" onclick="openTodoPrompt(true)" style="display:none;">📅 Add Agenda</button>
     <button class="action-btn plugin-action-btn" id="pokedexPluginBtn" onclick="openPokedexPlugin()" style="display:none;">🧩 Pokedex</button>
   </div>
 </div>
@@ -1014,7 +1016,9 @@ async function loadPluginCapabilities() {
 
 function updatePluginButtons() {
   const pokedexButton = document.getElementById('pokedexPluginBtn');
-  if (!pokedexButton) {
+  const todoEntryButton = document.getElementById('todoEntryBtn');
+  const agendaEntryButton = document.getElementById('agendaEntryBtn');
+  if (!pokedexButton || !todoEntryButton || !agendaEntryButton) {
     return;
   }
 
@@ -1023,10 +1027,46 @@ function updatePluginButtons() {
   } else {
     pokedexButton.style.display = 'none';
   }
+
+  if (pluginCapabilities.todo_planner) {
+    todoEntryButton.style.display = 'inline-flex';
+    agendaEntryButton.style.display = 'inline-flex';
+  } else {
+    todoEntryButton.style.display = 'none';
+    agendaEntryButton.style.display = 'none';
+  }
 }
 
 function openPokedexPlugin() {
   window.location.href = '/plugins/pokedex';
+}
+
+async function openTodoPrompt(agendaEntry) {
+  const label = agendaEntry ? 'agenda' : 'TODO';
+  const text = prompt(`Enter ${label} text`);
+  if (!text) {
+    return;
+  }
+
+  const payload = new URLSearchParams();
+  payload.append('type', agendaEntry ? 'agenda' : 'todo');
+  payload.append('text', text);
+
+  try {
+    const response = await fetch('/api/todo/entry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: payload.toString()
+    });
+    if (!response.ok) {
+      const message = await response.text();
+      alert(message || 'Failed to add entry');
+      return;
+    }
+    hydrate();
+  } catch (error) {
+    alert(`Failed to add entry: ${error.message}`);
+  }
 }
 
 // Get WebSocket URL based on current page location
