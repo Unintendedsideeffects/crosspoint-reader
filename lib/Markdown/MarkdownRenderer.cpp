@@ -6,6 +6,7 @@
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <ImageConverter.h>
+#include <Logging.h>
 #include <esp_task_wdt.h>
 
 #include <algorithm>
@@ -264,8 +265,8 @@ bool MarkdownRenderer::render(const MdNode& root, const PageCallback& pageCallba
     }
   }
 
-  // Reserve space for node mapping
-  nodeToPage.reserve(totalNodes);
+  // Reserve space for node mapping - bounded to avoid OOM
+  nodeToPage.reserve(std::min(totalNodes, MAX_NODE_MAPPING));
 
   updateProgress();
 
@@ -286,15 +287,17 @@ bool MarkdownRenderer::render(const MdNode& root, const PageCallback& pageCallba
 void MarkdownRenderer::renderNode(const MdNode& node) {
   if (currentDepth >= MAX_RENDER_DEPTH) {
     if (!depthLimitExceeded) {
-      Serial.printf("[%lu] [MD ] Render depth limit exceeded (%zu)\n", millis(), MAX_RENDER_DEPTH);
+      LOG_WRN("MD", "Render depth limit exceeded (%zu)", MAX_RENDER_DEPTH);
       depthLimitExceeded = true;
     }
     return;
   }
   currentDepth++;
 
-  // Record which page this node starts on
-  nodeToPage.push_back(static_cast<size_t>(pageCount));
+  // Record which page this node starts on - bounded to avoid OOM
+  if (nodeToPage.size() < MAX_NODE_MAPPING) {
+    nodeToPage.push_back(static_cast<size_t>(pageCount));
+  }
   currentNodeIndex++;
   updateProgress();
   if (currentNodeIndex % 100 == 0) {
