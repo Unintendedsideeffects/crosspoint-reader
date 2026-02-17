@@ -1243,8 +1243,8 @@ void CrossPointWebServer::handleGetSettings() const {
 
     doc.clear();
     doc["key"] = s.key;
-    doc["name"] = s.name;
-    doc["category"] = s.category;
+    doc["name"] = I18N.get(s.nameId);
+    doc["category"] = I18N.get(s.category);
 
     switch (s.type) {
       case SettingType::TOGGLE: {
@@ -1263,7 +1263,7 @@ void CrossPointWebServer::handleGetSettings() const {
         }
         JsonArray options = doc["options"].to<JsonArray>();
         for (const auto& opt : s.enumValues) {
-          options.add(opt);
+          options.add(I18N.get(opt));
         }
         break;
       }
@@ -1279,8 +1279,8 @@ void CrossPointWebServer::handleGetSettings() const {
       }
       case SettingType::STRING: {
         doc["type"] = "string";
-        const bool isPasswordField = (s.key && (strstr(s.key, "password") != nullptr || strstr(s.key, "Password"))) ||
-                                     (s.name && strstr(s.name, "Password"));
+        const bool isPasswordField =
+            s.key && (strstr(s.key, "password") != nullptr || strstr(s.key, "Password") != nullptr);
         if (isPasswordField) {
           // Do not expose stored passwords over the settings API.
           doc["value"] = "";

@@ -42,6 +42,12 @@ void logPrintf(const char* level, const char* origin, const char* format, ...);
 #define LOG_INF(origin, format, ...)
 #endif
 
+#if LOG_LEVEL >= 1
+#define LOG_WRN(origin, format, ...) logPrintf("[WRN]", origin, format "\n", ##__VA_ARGS__)
+#else
+#define LOG_WRN(origin, format, ...)
+#endif
+
 #if LOG_LEVEL >= 2
 #define LOG_DBG(origin, format, ...) logPrintf("[DBG]", origin, format "\n", ##__VA_ARGS__)
 #else
@@ -51,6 +57,7 @@ void logPrintf(const char* level, const char* origin, const char* format, ...);
 #define LOG_DBG(origin, format, ...)
 #define LOG_ERR(origin, format, ...)
 #define LOG_INF(origin, format, ...)
+#define LOG_WRN(origin, format, ...)
 #endif
 
 #ifndef HOST_BUILD

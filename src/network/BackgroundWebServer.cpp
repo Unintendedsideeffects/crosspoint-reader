@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <ESPmDNS.h>
 #include <HardwareSerial.h>
+#include <Logging.h>
 #include <WiFi.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -11,6 +12,7 @@
 
 #include "CrossPointWebServer.h"
 #include "FeatureFlags.h"
+#include "Logging.h"
 #include "util/TimeSync.h"
 
 namespace {

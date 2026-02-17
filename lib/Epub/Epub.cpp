@@ -3,6 +3,7 @@
 #include <FsHelpers.h>
 #include <HalStorage.h>
 #include <ImageConverter.h>
+#include <JpegToBmpConverter.h>
 #include <Logging.h>
 #include <ZipFile.h>
 
