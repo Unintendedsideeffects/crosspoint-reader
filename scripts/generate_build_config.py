@@ -97,7 +97,7 @@ FEATURES = {
     'hyphenation': Feature(
         name='Hyphenation',
         flag='ENABLE_HYPHENATION',
-        size_kb=491,
+        size_kb=-2,
         description='Language-aware hyphenation for justified EPUB text'
     ),
     'xtc_support': Feature(
@@ -115,7 +115,7 @@ FEATURES = {
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=239,
+        size_kb=240,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
@@ -151,7 +151,7 @@ FEATURES = {
     'web_wifi_setup': Feature(
         name='Web WiFi Setup',
         flag='ENABLE_WEB_WIFI_SETUP',
-        size_kb=5,
+        size_kb=6,
         description='Manage WiFi networks directly from the web interface'
     ),
     'usb_mass_storage': Feature(
