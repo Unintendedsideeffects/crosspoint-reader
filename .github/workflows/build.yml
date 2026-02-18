@@ -136,9 +136,75 @@ jobs:
           path: artifact/
           retention-days: 30
 
+  # ── Build (latest channel): gh_latest env, fork-drift only ─────
+  build-latest:
+    needs: validate
+    if: >-
+      !startsWith(github.ref, 'refs/tags/')
+      && github.ref == 'refs/heads/fork-drift'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0  # full history needed for accurate commit count
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Ensure pip for PlatformIO
+        run: |
+          uv run python -m ensurepip --upgrade || true
+          uv run python -m pip --version
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
+          restore-keys: ${{ runner.os }}-platformio-
+
+      - name: Compute commit count and version
+        id: ver
+        run: |
+          COUNT=$(git rev-list --count HEAD)
+          COUNT=$((COUNT > 99999 ? 99999 : COUNT))
+          echo "version=${COUNT}-dev" >> $GITHUB_OUTPUT
+          echo "GIT_COMMIT_COUNT=${COUNT}" >> $GITHUB_ENV
+
+      - name: Build firmware (gh_latest)
+        run: uv run pio run -e gh_latest | tee pio.log
+
+      - name: Enforce flash headroom
+        run: |
+          uv run python scripts/check_flash_headroom.py \
+            --log pio.log \
+            --firmware .pio/build/gh_latest/firmware.bin \
+            --min-headroom-kb 64
+
+      - name: Upload latest firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-latest
+          path: |
+            .pio/build/gh_latest/firmware.bin
+            .pio/build/gh_latest/partitions.bin
+          retention-days: 7
+
   # ── Publish: update rolling release channels on fork-drift push ─
   publish-channels:
-    needs: build
+    needs: [build, build-latest]
     if: >-
       !startsWith(github.ref, 'refs/tags/')
       && github.ref == 'refs/heads/fork-drift'
@@ -150,19 +216,31 @@ jobs:
         include:
           - profile: lean
             tag: latest-lean
-            name: Latest Lean
+            artifact: firmware-lean
+            fallback_name: Latest Lean
           - profile: standard
             tag: latest
-            name: Latest
+            artifact: firmware-latest
+            fallback_name: Latest
           - profile: full
             tag: latest-full
-            name: Latest Full
+            artifact: firmware-full
+            fallback_name: Latest Full
     steps:
       - name: Download firmware
         uses: actions/download-artifact@v4
         with:
-          name: firmware-${{ matrix.profile }}
+          name: ${{ matrix.artifact }}
           path: firmware
+
+      - name: Resolve channel version name
+        id: ver
+        run: |
+          if [ "${{ matrix.profile }}" = "standard" ]; then
+            echo "name=${{ needs.build-latest.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "name=${{ matrix.fallback_name }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Remove existing assets
         env:
@@ -184,7 +262,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ matrix.tag }}
-          name: ${{ matrix.name }}
+          name: ${{ steps.ver.outputs.name }}
           prerelease: true
           draft: false
           generate_release_notes: false
@@ -250,9 +328,12 @@ jobs:
           path: artifacts
 
       - name: Prepare release assets
+        id: version
         run: |
           set -euo pipefail
           TAG="${{ github.ref_name }}"
+          VER="${TAG#v}"  # strip leading 'v' for the rolling release channel name
+          echo "ver=${VER}" >> $GITHUB_OUTPUT
 
           # Standard firmware (default names)
           cp artifacts/firmware-standard/firmware.bin firmware.bin
@@ -317,7 +398,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: release
-          name: Release
+          name: ${{ steps.version.outputs.ver }}
           prerelease: false
           draft: false
           generate_release_notes: false

@@ -1088,7 +1088,10 @@ void GfxRenderer::renderChar(const IEpdFont& font, const uint32_t cp, int* x, co
 
   // no glyph?
   if (!glyph) {
-    LOG_ERR("GFX", "No glyph for codepoint %d", cp);
+    LOG_WRN("GFX", "Missing glyph U+%04lX; advancing cursor", static_cast<unsigned long>(cp));
+    // Advance by space width as a reasonable fallback so subsequent glyphs aren't stacked
+    const EpdGlyph* spaceGlyph = font.getGlyph(' ');
+    *x += spaceGlyph ? spaceGlyph->advanceX : 8;
     return;
   }
 

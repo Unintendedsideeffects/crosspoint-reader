@@ -24,9 +24,9 @@ constexpr char latestChannelUrl[] =
 constexpr char resetChannelUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/reset";
 constexpr char featureStoreCatalogUrl[] =
-    "https://raw.githubusercontent.com/Unintendedsideeffects/crosspoint-reader/master/docs/ota/"
+    "https://raw.githubusercontent.com/Unintendedsideeffects/crosspoint-reader/fork-drift/docs/ota/"
     "feature-store-catalog.json";
-constexpr char expectedBoard[] = "esp32s3";
+constexpr char expectedBoard[] = "esp32c3";
 constexpr char crosspointDataDir[] = "/.crosspoint";
 constexpr char factoryResetMarkerFile[] = "/.factory-reset-pending";
 
@@ -77,6 +77,28 @@ bool parseSemver(const std::string& version, int& major, int& minor, int& patch)
   return sscanf(versionStr, "%d.%d.%d", &major, &minor, &patch) == 3;
 }
 
+// "12345-dev" → commit count format. Returns true and sets count on match.
+bool parseCommitDev(const std::string& v, unsigned long& count) {
+  if (v.size() < 5 || v.compare(v.size() - 4, 4, "-dev") != 0) return false;
+  const auto numStr = v.substr(0, v.size() - 4);
+  if (numStr.empty()) return false;
+  for (const char c : numStr) {
+    if (c < '0' || c > '9') return false;
+  }
+  return sscanf(numStr.c_str(), "%lu", &count) == 1;
+}
+
+// "20240218" → YYYYMMDD date format. Returns true and sets date on match.
+bool parseBuildDate(const std::string& v, unsigned long& date) {
+  if (v.size() != 8) return false;
+  for (const char c : v) {
+    if (c < '0' || c > '9') return false;
+  }
+  if (sscanf(v.c_str(), "%lu", &date) != 1) return false;
+  // Sanity check: must look like a real date after year 2020
+  return date >= 20200101UL && date <= 29991231UL;
+}
+
 /* This is buffer and size holder to keep upcoming data from latestReleaseUrl */
 char* local_buf;
 int output_len;
@@ -95,38 +117,14 @@ esp_err_t http_client_set_header_cb(esp_http_client_handle_t http_client) {
 }
 
 esp_err_t event_handler(esp_http_client_event_t* event) {
-  /* We do interested in only HTTP_EVENT_ON_DATA event only */
   if (event->event_id != HTTP_EVENT_ON_DATA) return ESP_OK;
 
-  if (!esp_http_client_is_chunked_response(event->client)) {
-    int content_len = esp_http_client_get_content_length(event->client);
-    int copy_len = 0;
-
-    if (local_buf == NULL) {
-      /* local_buf life span is tracked by caller checkForUpdate */
-      local_buf = static_cast<char*>(calloc(content_len + 1, sizeof(char)));
-      output_len = 0;
-      if (local_buf == NULL) {
-        LOG_ERR("OTA", "HTTP Client Out of Memory Failed, Allocation %d", content_len);
-        return ESP_ERR_NO_MEM;
-      }
-    }
-    copy_len = min(event->data_len, (content_len - output_len));
-    if (copy_len) {
-      memcpy(local_buf + output_len, event->data, copy_len);
-    }
-    output_len += copy_len;
-  } else {
-    /* Code might be hits here, It happened once (for version checking) but I need more logs to handle that */
-    int chunked_len;
-    esp_http_client_get_chunk_length(event->client, &chunked_len);
-    LOG_DBG("OTA", "esp_http_client_is_chunked_response failed, chunked_len: %d", chunked_len);
-  }
-
+  // Append this chunk to local_buf regardless of whether the response is chunked or content-length based.
+  // realloc(NULL, n) behaves as malloc(n), so this handles the first call correctly for both paths.
   const int data_len = event->data_len;
   char* new_buf = static_cast<char*>(realloc(local_buf, output_len + data_len + 1));
   if (new_buf == NULL) {
-    LOG_ERR("OTA", "HTTP Client Out of Memory Failed, Allocation %d", data_len);
+    LOG_ERR("OTA", "Failed to allocate HTTP response buffer (%d bytes)", output_len + data_len + 1);
     return ESP_ERR_NO_MEM;
   }
 
@@ -135,7 +133,7 @@ esp_err_t event_handler(esp_http_client_event_t* event) {
   output_len += data_len;
   local_buf[output_len] = '\0';
   return ESP_OK;
-} /* event_handler */
+}
 
 /**
  * Fetch JSON from a URL into ArduinoJson doc, using the shared local_buf/output_len globals.
@@ -249,6 +247,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   JsonDocument filter;
   JsonDocument doc;
   filter["tag_name"] = true;
+  filter["name"] = true;  // release title — CI sets this to the build version string
   filter["assets"][0]["name"] = true;
   filter["assets"][0]["browser_download_url"] = true;
   filter["assets"][0]["size"] = true;
@@ -268,7 +267,11 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     return JSON_PARSE_ERROR;
   }
 
-  latestVersion = doc["tag_name"].as<std::string>();
+  // Use the release title (name) as the build version identifier — it carries
+  // meaningful version strings like "12345-dev", "20240218", or "1.0.0".
+  // Fall back to tag_name for older releases that predate this convention.
+  const std::string releaseName = doc["name"] | "";
+  latestVersion = releaseName.empty() ? doc["tag_name"].as<std::string>() : releaseName;
 
   for (int i = 0; i < doc["assets"].size(); i++) {
     if (doc["assets"][i]["name"] == "firmware.bin") {
@@ -369,6 +372,7 @@ bool OtaUpdater::selectFeatureStoreBundleByIndex(size_t index) {
   // Persist selection
   strncpy(SETTINGS.selectedOtaBundle, entry.id.c_str(), sizeof(SETTINGS.selectedOtaBundle) - 1);
   SETTINGS.selectedOtaBundle[sizeof(SETTINGS.selectedOtaBundle) - 1] = '\0';
+  SETTINGS.saveToFile();
 
   return true;
 }
@@ -380,52 +384,48 @@ bool OtaUpdater::isUpdateNewer() const {
     return false;
   }
 
+  // Identical strings → same build, nothing to do.
   if (latestVersion == CROSSPOINT_VERSION) {
     return false;
   }
 
-  int currentMajor = 0;
-  int currentMinor = 0;
-  int currentPatch = 0;
-  int latestMajor = 0;
-  int latestMinor = 0;
-  int latestPatch = 0;
+  const std::string currentV(CROSSPOINT_VERSION);
+  const std::string& latestV = latestVersion;
 
-  const auto currentVersion = std::string(CROSSPOINT_VERSION);
-
-  const bool latestParsed = parseSemver(latestVersion, latestMajor, latestMinor, latestPatch);
-  const bool currentParsed = parseSemver(currentVersion, currentMajor, currentMinor, currentPatch);
-  if (!latestParsed || !currentParsed) {
-    return latestVersion != currentVersion;
+  // --- Commit-dev format: "12345-dev" ---
+  unsigned long latestCommit = 0, currentCommit = 0;
+  const bool latestIsCommitDev = parseCommitDev(latestV, latestCommit);
+  const bool currentIsCommitDev = parseCommitDev(currentV, currentCommit);
+  if (latestIsCommitDev && currentIsCommitDev) {
+    return latestCommit > currentCommit;
   }
 
-  /*
-   * Compare major versions.
-   * If they differ, return true if latest major version greater than current major version
-   * otherwise return false.
-   */
-  if (latestMajor != currentMajor) return latestMajor > currentMajor;
-
-  /*
-   * Compare minor versions.
-   * If they differ, return true if latest minor version greater than current minor version
-   * otherwise return false.
-   */
-  if (latestMinor != currentMinor) return latestMinor > currentMinor;
-
-  /*
-   * Check patch versions.
-   */
-  if (latestPatch != currentPatch) return latestPatch > currentPatch;
-
-  // If we reach here, it means all segments are equal.
-  // One final check, if we're on an RC build (contains "-rc"), we should consider the latest version as newer even if
-  // the segments are equal, since RC builds are pre-release versions.
-  if (strstr(currentVersion.c_str(), "-rc") != nullptr) {
-    return true;
+  // --- Date format: "YYYYMMDD" ---
+  unsigned long latestDate = 0, currentDate = 0;
+  const bool latestIsDate = parseBuildDate(latestV, latestDate);
+  const bool currentIsDate = parseBuildDate(currentV, currentDate);
+  if (latestIsDate && currentIsDate) {
+    return latestDate > currentDate;
   }
 
-  return false;
+  // --- Semver: "1.2.3" or "v1.2.3" ---
+  int latestMaj = 0, latestMin = 0, latestPat = 0;
+  int currentMaj = 0, currentMin = 0, currentPat = 0;
+  const bool latestIsSemver = parseSemver(latestV, latestMaj, latestMin, latestPat);
+  const bool currentIsSemver = parseSemver(currentV, currentMaj, currentMin, currentPat);
+  if (latestIsSemver && currentIsSemver) {
+    if (latestMaj != currentMaj) return latestMaj > currentMaj;
+    if (latestMin != currentMin) return latestMin > currentMin;
+    if (latestPat != currentPat) return latestPat > currentPat;
+    // Equal semver segments: still offer the update if currently on a pre-release
+    // (e.g. RC build getting the final stable, or dev/custom suffix builds).
+    return strstr(currentV.c_str(), "-") != nullptr;
+  }
+
+  // --- Cross-format or unrecognised tokens (e.g. feature-store "latest"/"nightly") ---
+  // Formats differ → this is a different channel or a deliberate bundle switch.
+  // Allow the install — the version strings are not comparable as scalars.
+  return true;
 }
 
 const std::string& OtaUpdater::getLatestVersion() const { return latestVersion; }
@@ -506,6 +506,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     strncpy(SETTINGS.installedOtaFeatureFlags, selectedFeatureFlags.c_str(),
             sizeof(SETTINGS.installedOtaFeatureFlags) - 1);
     SETTINGS.installedOtaFeatureFlags[sizeof(SETTINGS.installedOtaFeatureFlags) - 1] = '\0';
+    SETTINGS.saveToFile();
   }
 
   return OK;

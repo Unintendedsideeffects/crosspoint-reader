@@ -44,14 +44,20 @@ jobs:
           key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
           restore-keys: ${{ runner.os }}-platformio-
 
+      - name: Set build date
+        run: |
+          DATE=$(date -u +%Y%m%d)
+          echo "BUILD_DATE=${DATE}" >> $GITHUB_ENV
+          echo "CHANNEL_VERSION=${DATE}" >> $GITHUB_ENV
+
       - name: Build firmware (nightly)
-        run: uv run pio run -e gh_release | tee pio.log
+        run: uv run pio run -e gh_nightly | tee pio.log
 
       - name: Enforce flash headroom
         run: |
           uv run python scripts/check_flash_headroom.py \
             --log pio.log \
-            --firmware .pio/build/gh_release/firmware.bin \
+            --firmware .pio/build/gh_nightly/firmware.bin \
             --min-headroom-kb 64
 
       - name: Remove existing nightly assets (if any)
@@ -72,11 +78,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
-          name: Nightly
+          name: ${{ env.CHANNEL_VERSION }}
           generate_release_notes: false
           draft: false
           prerelease: true
           files: |
-            .pio/build/gh_release/firmware.bin
-            .pio/build/gh_release/partitions.bin
-            .pio/build/gh_release/bootloader.bin
+            .pio/build/gh_nightly/firmware.bin
+            .pio/build/gh_nightly/partitions.bin
+            .pio/build/gh_nightly/bootloader.bin
