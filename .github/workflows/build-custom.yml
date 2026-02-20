@@ -13,13 +13,18 @@ on:
           - standard
           - full
           - custom
-      extended_fonts:
-        description: 'Extended Fonts (12/16/18pt, ~2.5MB)'
+      bookerly_fonts:
+        description: 'Bookerly Fonts (12/16/18pt, ~1.3MB)'
+        required: false
+        type: boolean
+        default: true
+      notosans_fonts:
+        description: 'Noto Sans Fonts (12/16/18pt, ~1.3MB)'
         required: false
         type: boolean
         default: true
       opendyslexic_fonts:
-        description: 'OpenDyslexic Fonts (~1.0MB, requires Extended Fonts)'
+        description: 'OpenDyslexic Fonts (~1.0MB, requires Bookerly + Noto Sans)'
         required: false
         type: boolean
         default: false
@@ -169,7 +174,8 @@ jobs:
           # This ensures toggles are respected even if a profile is selected
           
           # Boolean inputs from GitHub Actions are strings "true" or "false"
-          [ "${{ inputs.extended_fonts }}" == "true" ] && CMD+=(--enable extended_fonts) || CMD+=(--disable extended_fonts)
+          [ "${{ inputs.bookerly_fonts }}" == "true" ] && CMD+=(--enable bookerly_fonts) || CMD+=(--disable bookerly_fonts)
+          [ "${{ inputs.notosans_fonts }}" == "true" ] && CMD+=(--enable notosans_fonts) || CMD+=(--disable notosans_fonts)
           [ "${{ inputs.opendyslexic_fonts }}" == "true" ] && CMD+=(--enable opendyslexic_fonts) || CMD+=(--disable opendyslexic_fonts)
           [ "${{ inputs.image_sleep }}" == "true" ] && CMD+=(--enable image_sleep) || CMD+=(--disable image_sleep)
           [ "${{ inputs.book_images }}" == "true" ] && CMD+=(--enable book_images) || CMD+=(--disable book_images)
@@ -438,7 +444,8 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Feature Toggles:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Extended Fonts: ${{ inputs.extended_fonts }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Bookerly Fonts: ${{ inputs.bookerly_fonts }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Noto Sans Fonts: ${{ inputs.notosans_fonts }}" >> $GITHUB_STEP_SUMMARY
           echo "- OpenDyslexic: ${{ inputs.opendyslexic_fonts }}" >> $GITHUB_STEP_SUMMARY
           echo "- PNG/JPEG/BMP Sleep: ${{ inputs.image_sleep }}" >> $GITHUB_STEP_SUMMARY
           echo "- Book Images: ${{ inputs.book_images }}" >> $GITHUB_STEP_SUMMARY

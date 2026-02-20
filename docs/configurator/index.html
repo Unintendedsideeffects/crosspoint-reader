@@ -1036,14 +1036,14 @@
           <div class="cat-body">
             <div class="skill-grid">
 
-              <div class="dep-group" data-dep-parent="extended_fonts">
-                <label class="skill-card dep-parent" data-feature="extended_fonts" data-node-id="extended_fonts">
-                  <input type="checkbox" id="extended_fonts" data-feature="extended_fonts" />
+              <div class="dep-group" data-dep-parent="bookerly_fonts">
+                <label class="skill-card dep-parent" data-feature="bookerly_fonts" data-node-id="bookerly_fonts">
+                  <input type="checkbox" id="bookerly_fonts" data-feature="bookerly_fonts" />
                   <div class="card-icon"><span>A</span></div>
                   <div class="card-body">
-                    <div class="card-name">Extended Fonts</div>
+                    <div class="card-name">Bookerly Fonts</div>
                     <div class="card-size"></div>
-                    <div class="card-desc">12/16/18pt Bookerly and Noto Sans families</div>
+                    <div class="card-desc">12/16/18pt Bookerly family</div>
                   </div>
                   <div class="card-toggle"><span class="toggle-box"></span></div>
                 </label>
@@ -1054,12 +1054,23 @@
                     <div class="card-body">
                       <div class="card-name">OpenDyslexic</div>
                       <div class="card-size"></div>
-                      <div class="card-desc">Optional OpenDyslexic 8/10/12/14pt family</div>
+                      <div class="card-desc">Optional OpenDyslexic 8/10/12/14pt family (requires Bookerly + Noto Sans)</div>
                     </div>
                     <div class="card-toggle"><span class="toggle-box"></span></div>
                   </label>
                 </div>
               </div>
+
+              <label class="skill-card" data-feature="notosans_fonts" data-node-id="notosans_fonts">
+                <input type="checkbox" id="notosans_fonts" data-feature="notosans_fonts" />
+                <div class="card-icon"><span>NS</span></div>
+                <div class="card-body">
+                  <div class="card-name">Noto Sans Fonts</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">12/16/18pt Noto Sans family</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
 
               <label class="skill-card" data-feature="home_media_picker" data-node-id="home_media_picker">
                 <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
@@ -1475,9 +1486,14 @@
     <script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
     <script>
       const FEATURES = {
-        extended_fonts: {
-          sizeKb: 0,
-          flag: "ENABLE_EXTENDED_FONTS",
+        bookerly_fonts: {
+          sizeKb: 1283,
+          flag: "ENABLE_BOOKERLY_FONTS",
+          default: true,
+        },
+        notosans_fonts: {
+          sizeKb: 1283,
+          flag: "ENABLE_NOTOSANS_FONTS",
           default: true,
         },
         opendyslexic_fonts: {
@@ -1531,17 +1547,17 @@
           default: false,
         },
         epub_support: {
-          sizeKb: 203,
+          sizeKb: -2,
           flag: "ENABLE_EPUB_SUPPORT",
           default: true,
         },
         hyphenation: {
-          sizeKb: 515,
+          sizeKb: -2,
           flag: "ENABLE_HYPHENATION",
           default: true,
         },
         xtc_support: {
-          sizeKb: 24,
+          sizeKb: -2,
           flag: "ENABLE_XTC_SUPPORT",
           default: true,
         },
@@ -1605,20 +1621,20 @@
       const FEATURE_DEPENDENCIES = {
         koreader_sync: ["integrations"],
         calibre_sync: ["integrations"],
-        opendyslexic_fonts: ["extended_fonts"],
+        opendyslexic_fonts: ["bookerly_fonts", "notosans_fonts"],
         hyphenation: ["epub_support"],
         web_wifi_setup: ["background_server"],
       };
 
       const HUB_FEATURES = {
         reading_hub: ["markdown", "xtc_support", "epub_support", "book_images", "hyphenation", "todo_planner"],
-        interface_hub: ["extended_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin", "dark_mode", "visual_cover_picker", "user_fonts"],
+        interface_hub: ["bookerly_fonts", "notosans_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin", "dark_mode", "visual_cover_picker", "user_fonts"],
         network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync", "ble_wifi_provisioning", "web_wifi_setup", "usb_mass_storage"],
         extras_hub: ["ota_updates", "integrations", "home_media_picker"],
       };
 
       const NOTE_FEATURES = {
-        specific_fonts_note: ["extended_fonts", "user_fonts"],
+        specific_fonts_note: ["bookerly_fonts", "notosans_fonts", "user_fonts"],
         dark_theme_note: ["dark_mode"],
         fork_drift_note: ["home_media_picker"],
         future_themes_note: ["home_media_picker", "lyra_theme"],
@@ -1636,7 +1652,8 @@
       const PROFILES = {
         lean: {},
         standard: {
-          extended_fonts: true,
+          bookerly_fonts: true,
+          notosans_fonts: true,
           image_sleep: true,
           epub_support: true,
           book_images: true,
@@ -1651,7 +1668,8 @@
           usb_mass_storage: true,
         },
         full: {
-          extended_fonts: true,
+          bookerly_fonts: true,
+          notosans_fonts: true,
           opendyslexic_fonts: false,
           image_sleep: true,
           book_images: true,
@@ -1850,6 +1868,11 @@
         const requestedProfile = params.get("profile");
         const initialProfile = PROFILES[requestedProfile] ? requestedProfile : "standard";
         const selections = profileToSelections(initialProfile);
+        const legacyExtendedFonts = parseBooleanParam(params.get("extended_fonts"));
+        if (legacyExtendedFonts !== null) {
+          selections.bookerly_fonts = legacyExtendedFonts;
+          selections.notosans_fonts = legacyExtendedFonts;
+        }
         Object.keys(FEATURES).forEach((feature) => {
           const parsed = parseBooleanParam(params.get(feature));
           if (parsed !== null) selections[feature] = parsed;

@@ -22,17 +22,23 @@ class Feature:
 
 # Define all toggleable features
 FEATURES = {
-    'extended_fonts': Feature(
-        name='Extended Fonts',
-        flag='ENABLE_EXTENDED_FONTS',
-        size_kb=0,
-        description='12/16/18pt Bookerly and Noto Sans families'
+    'bookerly_fonts': Feature(
+        name='Bookerly Fonts',
+        flag='ENABLE_BOOKERLY_FONTS',
+        size_kb=1283,
+        description='12/16/18pt Bookerly family'
+    ),
+    'notosans_fonts': Feature(
+        name='Noto Sans Fonts',
+        flag='ENABLE_NOTOSANS_FONTS',
+        size_kb=1283,
+        description='12/16/18pt Noto Sans family'
     ),
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
         size_kb=604,
-        description='Optional OpenDyslexic 8/10/12/14pt family'
+        description='Optional OpenDyslexic 8/10/12/14pt family (requires Bookerly + Noto Sans)'
     ),
     'image_sleep': Feature(
         name='PNG/JPEG Sleep Images',
@@ -177,7 +183,14 @@ class FeatureMetadata:
 
 
 FEATURE_METADATA = {
-    'extended_fonts': FeatureMetadata(
+    'bookerly_fonts': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
+    'notosans_fonts': FeatureMetadata(
         implemented=True,
         stable=True,
         requires=[],
@@ -187,7 +200,7 @@ FEATURE_METADATA = {
     'opendyslexic_fonts': FeatureMetadata(
         implemented=True,
         stable=True,
-        requires=['extended_fonts'],
+        requires=['bookerly_fonts', 'notosans_fonts'],
         conflicts=[],
         recommends=[]
     ),
@@ -432,7 +445,8 @@ PROFILES = {
     'standard': {
         'description': 'Balanced defaults (~5.0MB, recommended)',
         'features': {
-            'extended_fonts': True,
+            'bookerly_fonts': True,
+            'notosans_fonts': True,
             'image_sleep': True,
             'epub_support': True,
             'book_images': True,
@@ -450,7 +464,8 @@ PROFILES = {
     'full': {
         'description': 'Feature-rich build (~6.0MB, fits in flash)',
         'features': {
-            'extended_fonts': True,
+            'bookerly_fonts': True,
+            'notosans_fonts': True,
             'opendyslexic_fonts': False,  # Too large to include with other fonts
             'image_sleep': True,
             'book_images': True,
@@ -579,7 +594,7 @@ Examples:
   %(prog)s --profile full
 
   # Enable specific plugins
-  %(prog)s --enable extended_fonts --enable image_sleep
+  %(prog)s --enable bookerly_fonts --enable image_sleep
 
   # Disable specific plugins from full profile
   %(prog)s --profile full --disable markdown
