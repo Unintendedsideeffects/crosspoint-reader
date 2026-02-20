@@ -13,6 +13,8 @@
 
 #include <cstring>
 
+#include "SpiBusMutex.h"
+
 namespace xtc {
 
 XtcParser::XtcParser()
@@ -441,6 +443,7 @@ XtcError XtcParser::loadPageStreaming(uint32_t pageIndex,
 }
 
 bool XtcParser::isValidXtcFile(const char* filepath) {
+  SpiBusMutex::Guard guard;
   FsFile file;
   if (!Storage.openFileForRead("XTC", filepath, file)) {
     return false;

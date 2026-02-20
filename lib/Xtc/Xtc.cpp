@@ -598,6 +598,7 @@ uint8_t Xtc::getBitDepth() const {
 }
 
 size_t Xtc::loadPage(uint32_t pageIndex, uint8_t* buffer, size_t bufferSize) const {
+  SpiBusMutex::Guard guard;
   if (!loaded || !parser) {
     return 0;
   }
@@ -607,6 +608,7 @@ size_t Xtc::loadPage(uint32_t pageIndex, uint8_t* buffer, size_t bufferSize) con
 xtc::XtcError Xtc::loadPageStreaming(uint32_t pageIndex,
                                      std::function<void(const uint8_t* data, size_t size, size_t offset)> callback,
                                      size_t chunkSize) const {
+  SpiBusMutex::Guard guard;
   if (!loaded || !parser) {
     return xtc::XtcError::FILE_NOT_FOUND;
   }

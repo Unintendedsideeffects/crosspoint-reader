@@ -9,6 +9,7 @@
 
 #include "../converters/DitherUtils.h"
 #include "../converters/ImageDecoderFactory.h"
+#include "SpiBusMutex.h"
 
 // Cache file format:
 // - uint16_t width
@@ -96,6 +97,7 @@ bool renderFromCache(GfxRenderer& renderer, const std::string& cachePath, int x,
 }  // namespace
 
 void ImageBlock::render(GfxRenderer& renderer, const int x, const int y) {
+  SpiBusMutex::Guard guard;
   LOG_DBG("IMG", "Rendering image at %d,%d: %s (%dx%d)", x, y, imagePath.c_str(), width, height);
 
   const int screenWidth = renderer.getScreenWidth();
