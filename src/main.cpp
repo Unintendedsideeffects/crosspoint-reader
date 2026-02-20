@@ -444,6 +444,7 @@ void setup() {
   t1 = millis();
 
   gpio.begin();
+  powerManager.begin();
 
   // Only start serial if USB connected
   if (gpio.isUsbConnected()) {

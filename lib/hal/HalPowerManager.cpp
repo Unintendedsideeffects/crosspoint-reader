@@ -70,6 +70,12 @@ uint16_t HalPowerManager::getBatteryPercentage() const {
 }
 
 HalPowerManager::Lock::Lock() {
+  if (powerManager.modeMutex == nullptr) {
+    LOG_ERR("PWR", "HalPowerManager used before begin(); skipping lock");
+    valid = false;
+    return;
+  }
+
   xSemaphoreTake(powerManager.modeMutex, portMAX_DELAY);
   // Current limitation: only one lock at a time
   if (powerManager.currentLockMode != None) {
@@ -87,6 +93,10 @@ HalPowerManager::Lock::Lock() {
 }
 
 HalPowerManager::Lock::~Lock() {
+  if (powerManager.modeMutex == nullptr) {
+    return;
+  }
+
   xSemaphoreTake(powerManager.modeMutex, portMAX_DELAY);
   if (valid) {
     powerManager.currentLockMode = None;

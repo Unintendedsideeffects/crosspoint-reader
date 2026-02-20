@@ -617,6 +617,15 @@
         opacity: 0.8;
       }
 
+      .note-item.runtime-selectable {
+        cursor: pointer;
+      }
+
+      .note-item.runtime-selectable.runtime-disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
       /* ── Roadmap category — lighter treatment ── */
       .category.roadmap .cat-head {
         background: var(--dk);
@@ -1284,11 +1293,11 @@
 
             <!-- Network notes -->
             <div class="note-grid">
-              <div class="note-item" data-node-id="webserver_always_on_note">
+              <div class="note-item runtime-selectable" data-node-id="webserver_always_on_note" data-runtime-mode="always_on">
                 <span class="note-icon">&#x221E;</span>
                 <span class="note-label">Always on</span>
               </div>
-              <div class="note-item" data-node-id="webserver_on_charge_note">
+              <div class="note-item runtime-selectable" data-node-id="webserver_on_charge_note" data-runtime-mode="on_charge">
                 <span class="note-icon">&#x26A1;</span>
                 <span class="note-label">On charge</span>
               </div>
