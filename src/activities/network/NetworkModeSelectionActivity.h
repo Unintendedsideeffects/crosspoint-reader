@@ -25,7 +25,7 @@ class NetworkModeSelectionActivity final : public Activity {
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   int selectedIndex = 0;
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
   const std::function<void(NetworkMode)> onModeSelected;
   const std::function<void()> onCancel;
 

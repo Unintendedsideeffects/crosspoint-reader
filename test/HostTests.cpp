@@ -20,6 +20,9 @@ void testPathNormalisation() {
   assert(FsHelpers::normalisePath("a/b/../../c") == "c");
   assert(FsHelpers::normalisePath("///a//b/") == "a/b");
   assert(FsHelpers::normalisePath("test/../test/dir") == "test/dir");
+  assert(FsHelpers::normalisePath("a/b/.") == "a/b");
+  assert(FsHelpers::normalisePath("a/b/..") == "a");
+  assert(FsHelpers::normalisePath("a/./b/../c/.") == "a/c");
   std::cout << "Path Normalisation tests passed!" << std::endl;
 }
 

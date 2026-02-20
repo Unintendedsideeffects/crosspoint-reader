@@ -16,7 +16,7 @@ class XtcReaderChapterSelectionActivity final : public Activity {
   std::atomic<bool> taskHasExited{false};
   uint32_t currentPage = 0;
   int selectorIndex = 0;
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
   const std::function<void()> onGoBack;
   const std::function<void(uint32_t newPage)> onSelectPage;
 

@@ -287,7 +287,7 @@ void CrossPointWebServerActivity::updateUploadProgress() {
   }
 
   if (changed) {
-    updateRequired = true;
+    requestUpdate();
   }
 }
 

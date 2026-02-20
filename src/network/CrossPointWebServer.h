@@ -6,6 +6,7 @@
 #include <WebSocketsServer.h>
 #include <WiFiUdp.h>
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
@@ -61,8 +62,41 @@ class CrossPointWebServer {
   bool udpActive = false;
 
   // WebSocket upload state
+  FsFile wsUploadFile;
+  String wsUploadFileName;
+  String wsUploadPath;
+  size_t wsUploadSize = 0;
+  size_t wsUploadReceived = 0;
+  size_t wsLastProgressSent = 0;
+  unsigned long wsUploadStartTime = 0;
+  bool wsUploadInProgress = false;
+  String wsLastCompleteName;
+  size_t wsLastCompleteSize = 0;
+  unsigned long wsLastCompleteAt = 0;
+
+  // HTTP upload state
+  static constexpr size_t kUploadBufferSize = 4096;
+  FsFile uploadFile;
+  String uploadFileName;
+  String uploadPath = "/";
+  size_t uploadSize = 0;
+  bool uploadSuccess = false;
+  String uploadError;
+  uint8_t uploadBuffer[kUploadBufferSize] = {};
+  size_t uploadBufferPos = 0;
+  unsigned long uploadStartTime = 0;
+  unsigned long totalWriteTime = 0;
+  size_t writeCount = 0;
+  size_t uploadLastLoggedSize = 0;
+
+  // WebSocket upload state
   void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length);
   static void wsEventCallback(uint8_t num, WStype_t type, uint8_t* payload, size_t length);
+  bool flushUploadBuffer();
+
+  // File visibility/protection checks
+  bool isProtectedComponent(const String& component) const;
+  bool pathContainsProtectedItem(const String& path) const;
 
   // File scanning
   void scanFiles(const char* path, const std::function<void(FileInfo)>& callback) const;
@@ -78,8 +112,8 @@ class CrossPointWebServer {
   void handleFileList() const;
   void handleFileListData() const;
   void handleDownload() const;
-  void handleUpload() const;
-  void handleUploadPost() const;
+  void handleUpload();
+  void handleUploadPost();
   void handleCreateFolder() const;
   void handleRename() const;
   void handleMove() const;

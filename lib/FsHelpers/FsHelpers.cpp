@@ -5,17 +5,23 @@
 std::string FsHelpers::normalisePath(const std::string& path) {
   std::vector<std::string> components;
   std::string component;
+  auto flushComponent = [&components](const std::string& part) {
+    if (part.empty() || part == ".") {
+      return;
+    }
+    if (part == "..") {
+      if (!components.empty()) {
+        components.pop_back();
+      }
+      return;
+    }
+    components.push_back(part);
+  };
 
   for (const auto c : path) {
     if (c == '/') {
       if (!component.empty()) {
-        if (component == "..") {
-          if (!components.empty()) {
-            components.pop_back();
-          }
-        } else {
-          components.push_back(component);
-        }
+        flushComponent(component);
         component.clear();
       }
     } else {
@@ -24,7 +30,7 @@ std::string FsHelpers::normalisePath(const std::string& path) {
   }
 
   if (!component.empty()) {
-    components.push_back(component);
+    flushComponent(component);
   }
 
   std::string result;

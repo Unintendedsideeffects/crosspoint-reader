@@ -67,7 +67,7 @@ class KeyboardEntryActivity : public Activity {
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
 
   // Keyboard state
   int selectedRow = 0;

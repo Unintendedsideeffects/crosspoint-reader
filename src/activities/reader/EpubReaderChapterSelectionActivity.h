@@ -22,7 +22,7 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
 
   const std::function<void()> onGoBack;
   const std::function<void(int newSpineIndex)> onSelectSpineIndex;

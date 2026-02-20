@@ -48,19 +48,6 @@ constexpr size_t TODO_ENTRY_MAX_TEXT_LENGTH = 300;
 // Static pointer for WebSocket callback (WebSocketsServer requires C-style callback)
 CrossPointWebServer* wsInstance = nullptr;
 
-// WebSocket upload state
-FsFile wsUploadFile;
-String wsUploadFileName;
-String wsUploadPath;
-size_t wsUploadSize = 0;
-size_t wsUploadReceived = 0;
-size_t wsLastProgressSent = 0;
-unsigned long wsUploadStartTime = 0;
-bool wsUploadInProgress = false;
-String wsLastCompleteName;
-size_t wsLastCompleteSize = 0;
-unsigned long wsLastCompleteAt = 0;
-
 // Helper function to clear epub cache after upload
 void clearEpubCacheIfNeeded(const String& filePath) {
 #if ENABLE_EPUB_SUPPORT
@@ -226,6 +213,15 @@ void CrossPointWebServer::stop() {
     wsUploadInProgress = false;
   }
 
+  // Close any in-progress HTTP upload
+  if (uploadFile) {
+    uploadFile.close();
+  }
+  uploadBufferPos = 0;
+  uploadSuccess = false;
+  uploadError = "";
+  uploadLastLoggedSize = 0;
+
   // Stop WebSocket server
   if (wsServer) {
     LOG_DBG("WEB", "Stopping WebSocket server...");
@@ -252,9 +248,6 @@ void CrossPointWebServer::stop() {
   server.reset();
   LOG_DBG("WEB", "Web server stopped and deleted");
   LOG_DBG("WEB", "[MEM] Free heap after delete server: %d bytes", ESP.getFreeHeap());
-
-  // Note: Static upload variables (uploadFileName, uploadPath, uploadError) are declared
-  // later in the file and will be cleared when they go out of scope or on next upload
   LOG_DBG("WEB", "[MEM] Free heap final: %d bytes", ESP.getFreeHeap());
 }
 
@@ -528,6 +521,44 @@ bool CrossPointWebServer::isEpubFile(const String& filename) const {
   return lower.endsWith(".epub");
 }
 
+bool CrossPointWebServer::isProtectedComponent(const String& component) const {
+  if (component.isEmpty()) {
+    return false;
+  }
+  if (component.startsWith(".")) {
+    return true;
+  }
+  for (size_t i = 0; i < HIDDEN_ITEMS_COUNT; i++) {
+    if (component.equalsIgnoreCase(HIDDEN_ITEMS[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool CrossPointWebServer::pathContainsProtectedItem(const String& path) const {
+  String normalized = PathUtils::normalizePath(path);
+  if (normalized == "/") {
+    return false;
+  }
+
+  int start = (normalized.startsWith("/")) ? 1 : 0;
+  while (start < static_cast<int>(normalized.length())) {
+    int slash = normalized.indexOf('/', start);
+    if (slash < 0) {
+      slash = normalized.length();
+    }
+
+    const String component = normalized.substring(start, slash);
+    if (isProtectedComponent(component)) {
+      return true;
+    }
+    start = slash + 1;
+  }
+
+  return false;
+}
+
 void CrossPointWebServer::handleFileList() const {
   sendPrecompressedHtml(server.get(), FilesPageHtml, FilesPageHtmlCompressedSize);
 }
@@ -551,6 +582,10 @@ void CrossPointWebServer::handleFileListData() const {
     LOG_DBG("WEB", "Path validation OK");
 
     currentPath = PathUtils::normalizePath(currentPath);
+    if (pathContainsProtectedItem(currentPath)) {
+      server->send(403, "text/plain", "Cannot access protected items");
+      return;
+    }
   }
 
   server->setContentLength(CONTENT_LENGTH_UNKNOWN);
@@ -607,6 +642,10 @@ void CrossPointWebServer::handleDownload() const {
     server->send(400, "text/plain", "Invalid path");
     return;
   }
+  if (pathContainsProtectedItem(itemPath)) {
+    server->send(403, "text/plain", "Cannot access protected items");
+    return;
+  }
 
   const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
   if (itemName.startsWith(".")) {
@@ -645,8 +684,10 @@ void CrossPointWebServer::handleDownload() const {
     isDirectory = file.isDirectory();
   }
   if (isDirectory) {
-    SpiBusMutex::Guard guard;
-    file.close();
+    {
+      SpiBusMutex::Guard guard;
+      file.close();
+    }
     server->send(400, "text/plain", "Path is a directory");
     return;
   }
@@ -701,27 +742,10 @@ void CrossPointWebServer::handleDownload() const {
   }
 }
 
-// Static variables for upload handling
-static FsFile uploadFile;
-static String uploadFileName;
-static String uploadPath = "/";
-static size_t uploadSize = 0;
-static bool uploadSuccess = false;
-static String uploadError = "";
-
 // Upload write buffer - batches small writes into larger SD card operations
 // 4KB is a good balance: large enough to reduce syscall overhead, small enough
 // to keep individual write times short and avoid watchdog issues
-constexpr size_t UPLOAD_BUFFER_SIZE = 4096;  // 4KB buffer
-static uint8_t uploadBuffer[UPLOAD_BUFFER_SIZE];
-static size_t uploadBufferPos = 0;
-
-// Diagnostic counters for upload performance analysis
-static unsigned long uploadStartTime = 0;
-static unsigned long totalWriteTime = 0;
-static size_t writeCount = 0;
-
-static bool flushUploadBuffer() {
+bool CrossPointWebServer::flushUploadBuffer() {
   if (uploadBufferPos > 0 && uploadFile) {
     SpiBusMutex::Guard guard;
     esp_task_wdt_reset();  // Reset watchdog before potentially slow SD write
@@ -741,9 +765,7 @@ static bool flushUploadBuffer() {
   return true;
 }
 
-void CrossPointWebServer::handleUpload() const {
-  static size_t lastLoggedSize = 0;
-
+void CrossPointWebServer::handleUpload() {
   // Reset watchdog at start of every upload callback - HTTP parsing can be slow
   esp_task_wdt_reset();
 
@@ -764,7 +786,7 @@ void CrossPointWebServer::handleUpload() const {
     uploadSuccess = false;
     uploadError = "";
     uploadStartTime = millis();
-    lastLoggedSize = 0;
+    uploadLastLoggedSize = 0;
     uploadBufferPos = 0;
     totalWriteTime = 0;
     writeCount = 0;
@@ -773,6 +795,11 @@ void CrossPointWebServer::handleUpload() const {
     if (!PathUtils::isValidFilename(uploadFileName)) {
       uploadError = "Invalid filename";
       LOG_WRN("WEB", "[UPLOAD] Invalid filename rejected: %s", uploadFileName.c_str());
+      return;
+    }
+    if (isProtectedComponent(uploadFileName)) {
+      uploadError = "Cannot upload protected files";
+      LOG_WRN("WEB", "[UPLOAD] Protected filename rejected: %s", uploadFileName.c_str());
       return;
     }
 
@@ -790,6 +817,11 @@ void CrossPointWebServer::handleUpload() const {
       }
 
       uploadPath = PathUtils::normalizePath(uploadPath);
+      if (pathContainsProtectedItem(uploadPath)) {
+        uploadError = "Cannot upload to protected path";
+        LOG_WRN("WEB", "[UPLOAD] Protected upload path rejected: %s", uploadPath.c_str());
+        return;
+      }
     } else {
       uploadPath = "/";
     }
@@ -828,7 +860,7 @@ void CrossPointWebServer::handleUpload() const {
       size_t remaining = upload.currentSize;
 
       while (remaining > 0) {
-        const size_t space = UPLOAD_BUFFER_SIZE - uploadBufferPos;
+        const size_t space = kUploadBufferSize - uploadBufferPos;
         const size_t toCopy = (remaining < space) ? remaining : space;
 
         memcpy(uploadBuffer + uploadBufferPos, data, toCopy);
@@ -837,7 +869,7 @@ void CrossPointWebServer::handleUpload() const {
         remaining -= toCopy;
 
         // Flush buffer when full
-        if (uploadBufferPos >= UPLOAD_BUFFER_SIZE) {
+        if (uploadBufferPos >= kUploadBufferSize) {
           if (!flushUploadBuffer()) {
             uploadError = "Failed to write to SD card - disk may be full";
             {
@@ -852,12 +884,12 @@ void CrossPointWebServer::handleUpload() const {
       uploadSize += upload.currentSize;
 
       // Log progress every 100KB
-      if (uploadSize - lastLoggedSize >= 102400) {
+      if (uploadSize - uploadLastLoggedSize >= 102400) {
         const unsigned long elapsed = millis() - uploadStartTime;
         const float kbps = (elapsed > 0) ? (uploadSize / 1024.0) / (elapsed / 1000.0) : 0;
         LOG_DBG("WEB", "[UPLOAD] %d bytes (%.1f KB), %.1f KB/s, %d writes", uploadSize, uploadSize / 1024.0, kbps,
                 writeCount);
-        lastLoggedSize = uploadSize;
+        uploadLastLoggedSize = uploadSize;
       }
     }
   } else if (upload.status == UPLOAD_FILE_END) {
@@ -912,7 +944,7 @@ void CrossPointWebServer::handleUpload() const {
   }
 }
 
-void CrossPointWebServer::handleUploadPost() const {
+void CrossPointWebServer::handleUploadPost() {
   if (uploadSuccess) {
     server->send(200, "text/plain", "File uploaded successfully: " + uploadFileName);
   } else {
@@ -936,6 +968,10 @@ void CrossPointWebServer::handleCreateFolder() const {
     server->send(400, "text/plain", "Invalid folder name");
     return;
   }
+  if (isProtectedComponent(folderName)) {
+    server->send(403, "text/plain", "Cannot create protected folders");
+    return;
+  }
 
   // Get parent path
   String parentPath = "/";
@@ -950,6 +986,10 @@ void CrossPointWebServer::handleCreateFolder() const {
     }
 
     parentPath = PathUtils::normalizePath(parentPath);
+    if (pathContainsProtectedItem(parentPath)) {
+      server->send(403, "text/plain", "Cannot access protected items");
+      return;
+    }
   }
 
   // Build full folder path
@@ -1000,6 +1040,10 @@ void CrossPointWebServer::handleRename() const {
     server->send(400, "text/plain", "Invalid path");
     return;
   }
+  if (pathContainsProtectedItem(itemPath)) {
+    server->send(403, "text/plain", "Cannot rename protected item");
+    return;
+  }
   if (newName.isEmpty()) {
     server->send(400, "text/plain", "New name cannot be empty");
     return;
@@ -1010,6 +1054,10 @@ void CrossPointWebServer::handleRename() const {
   }
   if (newName.startsWith(".")) {
     server->send(403, "text/plain", "Cannot rename to hidden name");
+    return;
+  }
+  if (isProtectedComponent(newName)) {
+    server->send(403, "text/plain", "Cannot rename to protected name");
     return;
   }
 
@@ -1023,12 +1071,14 @@ void CrossPointWebServer::handleRename() const {
     return;
   }
 
+  bool itemExists = false;
   {
     SpiBusMutex::Guard guard;
-    if (!Storage.exists(itemPath.c_str())) {
-      server->send(404, "text/plain", "Item not found");
-      return;
-    }
+    itemExists = Storage.exists(itemPath.c_str());
+  }
+  if (!itemExists) {
+    server->send(404, "text/plain", "Item not found");
+    return;
   }
 
   FsFile file;
@@ -1040,13 +1090,17 @@ void CrossPointWebServer::handleRename() const {
     server->send(500, "text/plain", "Failed to open file");
     return;
   }
+  bool isDir = false;
   {
     SpiBusMutex::Guard guard;
-    if (file.isDirectory()) {
+    isDir = file.isDirectory();
+    if (isDir) {
       file.close();
-      server->send(400, "text/plain", "Only files can be renamed");
-      return;
     }
+  }
+  if (isDir) {
+    server->send(400, "text/plain", "Only files can be renamed");
+    return;
   }
 
   String parentPath = itemPath.substring(0, itemPath.lastIndexOf('/'));
@@ -1108,6 +1162,10 @@ void CrossPointWebServer::handleMove() const {
     server->send(400, "text/plain", "Invalid path");
     return;
   }
+  if (pathContainsProtectedItem(itemPath) || pathContainsProtectedItem(destPath)) {
+    server->send(403, "text/plain", "Cannot move protected items");
+    return;
+  }
 
   const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
   if (itemName.startsWith(".")) {
@@ -1115,12 +1173,14 @@ void CrossPointWebServer::handleMove() const {
     return;
   }
 
+  bool itemExists = false;
   {
     SpiBusMutex::Guard guard;
-    if (!Storage.exists(itemPath.c_str())) {
-      server->send(404, "text/plain", "Item not found");
-      return;
-    }
+    itemExists = Storage.exists(itemPath.c_str());
+  }
+  if (!itemExists) {
+    server->send(404, "text/plain", "Item not found");
+    return;
   }
 
   FsFile file;
@@ -1132,13 +1192,17 @@ void CrossPointWebServer::handleMove() const {
     server->send(500, "text/plain", "Failed to open file");
     return;
   }
+  bool isDir = false;
   {
     SpiBusMutex::Guard guard;
-    if (file.isDirectory()) {
+    isDir = file.isDirectory();
+    if (isDir) {
       file.close();
-      server->send(400, "text/plain", "Only files can be moved");
-      return;
     }
+  }
+  if (isDir) {
+    server->send(400, "text/plain", "Only files can be moved");
+    return;
   }
 
   bool destExists = false;
@@ -1227,6 +1291,11 @@ void CrossPointWebServer::handleDelete() const {
   // Validate path
   if (itemPath == "/") {
     server->send(400, "text/plain", "Cannot delete root directory");
+    return;
+  }
+  if (pathContainsProtectedItem(itemPath)) {
+    LOG_DBG("WEB", "Delete rejected - protected path: %s", itemPath.c_str());
+    server->send(403, "text/plain", "Cannot delete protected items");
     return;
   }
 
@@ -1556,6 +1625,10 @@ void CrossPointWebServer::handleFontUpload() {
       uploadError = "Invalid filename";
       return;
     }
+    if (isProtectedComponent(uploadFileName)) {
+      uploadError = "Invalid filename";
+      return;
+    }
 
     String lowerName = uploadFileName;
     lowerName.toLowerCase();
@@ -1587,13 +1660,13 @@ void CrossPointWebServer::handleFontUpload() {
       const uint8_t* data = upload.buf;
       size_t remaining = upload.currentSize;
       while (remaining > 0) {
-        const size_t space = UPLOAD_BUFFER_SIZE - uploadBufferPos;
+        const size_t space = kUploadBufferSize - uploadBufferPos;
         const size_t toCopy = (remaining < space) ? remaining : space;
         memcpy(uploadBuffer + uploadBufferPos, data, toCopy);
         uploadBufferPos += toCopy;
         data += toCopy;
         remaining -= toCopy;
-        if (uploadBufferPos >= UPLOAD_BUFFER_SIZE) {
+        if (uploadBufferPos >= kUploadBufferSize) {
           if (!flushUploadBuffer()) {
             uploadError = "Failed to write font data - disk may be full";
             SpiBusMutex::Guard guard;
@@ -1699,6 +1772,10 @@ void CrossPointWebServer::handleCover() const {
     return;
   }
   bookPath = PathUtils::normalizePath(bookPath);
+  if (pathContainsProtectedItem(bookPath)) {
+    server->send(403, "text/plain", "Cannot access protected items");
+    return;
+  }
 
   // Look up the book in recent books to get the cached cover path
   const auto& books = RECENT_BOOKS.getBooks();
@@ -1850,6 +1927,11 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
             wsServer->sendTXT(num, "ERROR:Invalid filename");
             return;
           }
+          if (isProtectedComponent(wsUploadFileName)) {
+            LOG_WRN("WS", "Protected filename rejected: %s", wsUploadFileName.c_str());
+            wsServer->sendTXT(num, "ERROR:Protected filename");
+            return;
+          }
 
           // Validate path against traversal attacks
           if (!PathUtils::isValidSdPath(wsUploadPath)) {
@@ -1859,6 +1941,11 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
           }
 
           wsUploadPath = PathUtils::normalizePath(wsUploadPath);
+          if (pathContainsProtectedItem(wsUploadPath)) {
+            LOG_WRN("WS", "Protected path rejected: %s", wsUploadPath.c_str());
+            wsServer->sendTXT(num, "ERROR:Protected path");
+            return;
+          }
 
           // Build file path
           String filePath = wsUploadPath;
@@ -1879,13 +1966,15 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
 
           // Open file for writing
           esp_task_wdt_reset();
+          bool fileOpened = false;
           {
             SpiBusMutex::Guard guard;
-            if (!Storage.openFileForWrite("WS", filePath, wsUploadFile)) {
-              wsServer->sendTXT(num, "ERROR:Failed to create file");
-              wsUploadInProgress = false;
-              return;
-            }
+            fileOpened = Storage.openFileForWrite("WS", filePath, wsUploadFile);
+          }
+          if (!fileOpened) {
+            wsServer->sendTXT(num, "ERROR:Failed to create file");
+            wsUploadInProgress = false;
+            return;
           }
           esp_task_wdt_reset();
 
@@ -1914,8 +2003,10 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       esp_task_wdt_reset();
 
       if (written != length) {
-        SpiBusMutex::Guard guard;
-        wsUploadFile.close();
+        {
+          SpiBusMutex::Guard guard;
+          wsUploadFile.close();
+        }
         wsUploadInProgress = false;
         wsServer->sendTXT(num, "ERROR:Write failed - disk full?");
         return;

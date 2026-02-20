@@ -26,7 +26,7 @@ class ClearCacheActivity final : public ActivityWithSubactivity {
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
   const std::function<void()> goBack;
 
   int clearedCount = 0;

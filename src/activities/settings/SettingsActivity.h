@@ -142,7 +142,6 @@ class SettingsActivity final : public ActivityWithSubactivity {
   int selectedCategoryIndex = 0;  // Currently selected category
   int selectedSettingIndex = 0;
   int settingsCount = 0;
-  bool updateRequired = false;
 
   // Per-category settings derived from shared list + device-only actions
   std::vector<SettingInfo> displaySettings;

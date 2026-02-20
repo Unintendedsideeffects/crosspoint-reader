@@ -138,10 +138,12 @@ void OtaUpdateActivity::render() {
 
   float updaterProgress = 0;
   if (state == UPDATE_IN_PROGRESS) {
-    LOG_DBG("OTA", "Update progress: %u / %u", (unsigned)updater.getProcessedSize(), (unsigned)updater.getTotalSize());
-    updaterProgress = static_cast<float>(updater.getProcessedSize()) / static_cast<float>(updater.getTotalSize());
+    const size_t processed = updater.getProcessedSize();
+    const size_t total = updater.getTotalSize();
+    LOG_DBG("OTA", "Update progress: %u / %u", (unsigned)processed, (unsigned)total);
+    updaterProgress = (total > 0) ? static_cast<float>(processed) / static_cast<float>(total) : 0.0f;
     // Only update every 2% at the most
-    if (static_cast<int>(updaterProgress * 50) == lastUpdaterPercentage / 2) {
+    if (total > 0 && static_cast<int>(updaterProgress * 50) == lastUpdaterPercentage / 2) {
       return;
     }
     lastUpdaterPercentage = static_cast<int>(updaterProgress * 100);

@@ -13,20 +13,23 @@
 // Initialize the static instance
 CrossPointSettings CrossPointSettings::instance;
 
-void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
-  uint8_t tempValue;
-  serialization::readPod(file, tempValue);
+bool readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
+  uint8_t tempValue = 0;
+  if (!serialization::readPod(file, tempValue)) {
+    return false;
+  }
   if (tempValue < maxValue) {
     member = tempValue;
   }
+  return true;
 }
 
 namespace {
 constexpr uint8_t SETTINGS_FILE_VERSION = 4;
 // Increment this when adding new persisted settings fields.
 // Must match the number of writePod/writeString calls in saveToFile() (excluding the
-// version and count header writes). Current count: 35.
-constexpr uint8_t SETTINGS_COUNT = 35;
+// version and count header writes). Current count: 39.
+constexpr uint8_t SETTINGS_COUNT = 39;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 
 // Validate front button mapping to ensure each hardware button is unique.
@@ -103,7 +106,11 @@ bool CrossPointSettings::saveToFile() const {
   serialization::writeString(outputFile, std::string(selectedOtaBundle));
   serialization::writeString(outputFile, std::string(installedOtaBundle));
   serialization::writeString(outputFile, std::string(installedOtaFeatureFlags));
-  // New fields added at end for backward compatibility
+  // Front button remap persisted at end for backward compatibility.
+  serialization::writePod(outputFile, frontButtonBack);
+  serialization::writePod(outputFile, frontButtonConfirm);
+  serialization::writePod(outputFile, frontButtonLeft);
+  serialization::writePod(outputFile, frontButtonRight);
   outputFile.close();
 
   LOG_DBG("CPS", "Settings saved to file");
@@ -117,8 +124,12 @@ bool CrossPointSettings::loadFromFile() {
     return false;
   }
 
-  uint8_t version;
-  serialization::readPod(inputFile, version);
+  uint8_t version = 0;
+  if (!serialization::readPod(inputFile, version)) {
+    LOG_ERR("CPS", "Deserialization failed: Could not read version");
+    inputFile.close();
+    return false;
+  }
   if (version < 1 || version > SETTINGS_FILE_VERSION) {
     LOG_ERR("CPS", "Deserialization failed: Unknown version %u", version);
     inputFile.close();
@@ -126,14 +137,23 @@ bool CrossPointSettings::loadFromFile() {
   }
 
   uint8_t fileSettingsCount = 0;
-  serialization::readPod(inputFile, fileSettingsCount);
+  if (!serialization::readPod(inputFile, fileSettingsCount)) {
+    LOG_ERR("CPS", "Deserialization failed: Could not read setting count");
+    inputFile.close();
+    return false;
+  }
+  if (fileSettingsCount > SETTINGS_COUNT) {
+    LOG_WRN("CPS", "Settings count %u exceeds supported %u, truncating", fileSettingsCount, SETTINGS_COUNT);
+    fileSettingsCount = SETTINGS_COUNT;
+  }
 
   // load settings that exist (support older files with fewer fields)
   uint8_t settingsRead = 0;
   // Track whether remap fields were present in the settings file.
   bool frontButtonMappingRead = false;
   do {
-    readAndValidate(inputFile, sleepScreen, SLEEP_SCREEN_MODE_COUNT);
+    // Keep legacy values (COVER/BLANK/COVER_CUSTOM) for migration in validateAndClamp().
+    serialization::readPod(inputFile, sleepScreen);
     if (++settingsRead >= fileSettingsCount) break;
     serialization::readPod(inputFile, extraParagraphSpacing);
     if (++settingsRead >= fileSettingsCount) break;
@@ -239,7 +259,17 @@ bool CrossPointSettings::loadFromFile() {
       installedOtaFeatureFlags[sizeof(installedOtaFeatureFlags) - 1] = '\0';
       if (++settingsRead >= fileSettingsCount) break;
     }
-    // New fields added at end for backward compatibility
+
+    // Front button remap fields (v4+ append-only extension).
+    const bool backRead = readAndValidate(inputFile, frontButtonBack, FRONT_BUTTON_HARDWARE_COUNT);
+    if (++settingsRead >= fileSettingsCount) break;
+    const bool confirmRead = readAndValidate(inputFile, frontButtonConfirm, FRONT_BUTTON_HARDWARE_COUNT);
+    if (++settingsRead >= fileSettingsCount) break;
+    const bool leftRead = readAndValidate(inputFile, frontButtonLeft, FRONT_BUTTON_HARDWARE_COUNT);
+    if (++settingsRead >= fileSettingsCount) break;
+    const bool rightRead = readAndValidate(inputFile, frontButtonRight, FRONT_BUTTON_HARDWARE_COUNT);
+    if (++settingsRead >= fileSettingsCount) break;
+    frontButtonMappingRead = backRead && confirmRead && leftRead && rightRead;
   } while (false);
 
   if (frontButtonMappingRead) {
@@ -298,10 +328,16 @@ void CrossPointSettings::enforceButtonLayoutConstraints() {
 
 void CrossPointSettings::validateAndClamp() {
   // Enum bounds - clamp to valid range, reset to default if out of bounds
-  if (sleepScreen >= SLEEP_SCREEN_MODE_COUNT) sleepScreen = DARK;
+  if (sleepScreen == COVER || sleepScreen == COVER_CUSTOM) {
+    sleepScreen = CUSTOM;
+  } else if (sleepScreen == BLANK) {
+    sleepScreen = DARK;
+  } else if (sleepScreen >= SLEEP_SCREEN_MODE_COUNT) {
+    sleepScreen = DARK;
+  }
   if (sleepScreenCoverMode > CROP) sleepScreenCoverMode = FIT;
   if (sleepScreenSource >= SLEEP_SCREEN_SOURCE_COUNT) sleepScreenSource = SLEEP_SOURCE_SLEEP;
-  if (statusBar > FULL) statusBar = FULL;
+  if (statusBar >= STATUS_BAR_MODE_COUNT) statusBar = FULL;
   if (orientation > LANDSCAPE_CCW) orientation = PORTRAIT;
   if (frontButtonLayout > LEFT_LEFT_RIGHT_RIGHT) frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
   if (sideButtonLayout > NEXT_PREV) sideButtonLayout = PREV_NEXT;
@@ -317,7 +353,7 @@ void CrossPointSettings::validateAndClamp() {
   if (fontFamily == USER_SD) fontFamily = BOOKERLY;
 #endif
   if (lineSpacing > WIDE) lineSpacing = NORMAL;
-  if (paragraphAlignment > RIGHT_ALIGN) paragraphAlignment = JUSTIFIED;
+  if (paragraphAlignment >= PARAGRAPH_ALIGNMENT_COUNT) paragraphAlignment = JUSTIFIED;
   if (sleepTimeout > SLEEP_30_MIN) sleepTimeout = SLEEP_10_MIN;
   if (refreshFrequency > REFRESH_30) refreshFrequency = REFRESH_15;
   if (shortPwrBtn > SELECT) shortPwrBtn = IGNORE;

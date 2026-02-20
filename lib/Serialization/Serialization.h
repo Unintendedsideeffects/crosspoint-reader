@@ -41,6 +41,10 @@ static bool readString(std::istream& is, std::string& s) {
   uint32_t len;
   if (!readPod(is, len)) return false;
   if (len > 65536) return false;  // Sanity check: max 64KB for metadata strings
+  if (len == 0) {
+    s.clear();
+    return true;
+  }
   s.resize(len);
   is.read(&s[0], len);
   return is.good();
@@ -50,7 +54,11 @@ static bool readString(FsFile& file, std::string& s) {
   uint32_t len;
   if (!readPod(file, len)) return false;
   if (len > 65536) return false;  // Sanity check: max 64KB for metadata strings
+  if (len == 0) {
+    s.clear();
+    return true;
+  }
   s.resize(len);
-  return file.read(&s[0], len) == len;
+  return file.read(reinterpret_cast<uint8_t*>(&s[0]), len) == len;
 }
 }  // namespace serialization

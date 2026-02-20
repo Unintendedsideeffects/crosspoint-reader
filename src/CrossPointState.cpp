@@ -65,11 +65,19 @@ bool CrossPointState::loadFromFile() {
   }
 
   if (version >= 3) {
-    serialization::readPod(inputFile, readerActivityLoadCount);
+    if (!serialization::readPod(inputFile, readerActivityLoadCount)) {
+      LOG_ERR("CPS", "Failed to read reader activity counter");
+      inputFile.close();
+      return false;
+    }
   }
 
   if (version >= 4) {
-    serialization::readPod(inputFile, lastSleepFromReader);
+    if (!serialization::readPod(inputFile, lastSleepFromReader)) {
+      LOG_ERR("CPS", "Failed to read sleep source flag");
+      inputFile.close();
+      return false;
+    }
   } else {
     lastSleepFromReader = false;
   }

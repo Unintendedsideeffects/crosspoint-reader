@@ -41,7 +41,7 @@ class OpdsBookBrowserActivity final : public ActivityWithSubactivity {
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
 
   BrowserState state = BrowserState::LOADING;
   std::vector<OpdsEntry> entries;

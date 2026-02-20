@@ -23,7 +23,7 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   std::atomic<bool> taskHasExited{false};
   uint32_t currentPage = 0;
   int pagesUntilFullRefresh = 0;
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;
 

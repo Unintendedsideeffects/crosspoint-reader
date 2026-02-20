@@ -26,7 +26,7 @@ class KOReaderSettingsActivity final : public ActivityWithSubactivity {
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
 
   size_t selectedIndex = 0;
   const std::function<void()> onBack;

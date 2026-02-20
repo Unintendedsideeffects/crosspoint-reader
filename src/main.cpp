@@ -641,7 +641,8 @@ void loop() {
 #if ENABLE_BACKGROUND_SERVER
   {
     const bool usbConn = gpio.isUsbConnected();
-    const bool allowRun = SETTINGS.backgroundServerOnCharge && usbConn;
+    const bool activityBlocksBackgroundServer = currentActivity && currentActivity->blocksBackgroundServer();
+    const bool allowRun = SETTINGS.backgroundServerOnCharge && usbConn && !activityBlocksBackgroundServer;
     backgroundServer.loop(usbConn, allowRun);
   }
 #endif

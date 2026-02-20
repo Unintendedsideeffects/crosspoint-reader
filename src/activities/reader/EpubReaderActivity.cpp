@@ -68,7 +68,7 @@ bool EpubReaderActivity::waitForRenderingMutex() {
   int retries = 0;
   while (xSemaphoreTake(renderingMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
     if (exitTaskRequested.load() || ++retries >= 50) {
-      Serial.printf("[%lu] [ERS] Mutex timeout after %d retries\n", millis(), retries);
+      LOG_ERR("ERS", "Mutex timeout after %d retries", retries);
       return false;
     }
     esp_task_wdt_reset();
@@ -107,6 +107,7 @@ void EpubReaderActivity::onEnter() {
       cachedSpineIndex = currentSpineIndex;
       LOG_DBG("ERS", "Loaded cache: %d, %d", currentSpineIndex, nextPageNumber);
     }
+    f.close();
   }
   // We may want a better condition to detect if we are opening for the first time.
   // This will trigger if the book is re-opened at Chapter 0.
@@ -618,6 +619,7 @@ void EpubReaderActivity::renderScreen() {
     const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
     const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
 
+    SpiBusMutex::Guard guard;
     if (!section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
                                   SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
                                   viewportHeight, SETTINGS.hyphenationEnabled, SETTINGS.embeddedStyle)) {
@@ -637,7 +639,7 @@ void EpubReaderActivity::renderScreen() {
     }
 
     if (nextPageNumber == UINT16_MAX) {
-      section->currentPage = section->pageCount - 1;
+      section->currentPage = (section->pageCount > 0) ? section->pageCount - 1 : 0;
     } else {
       section->currentPage = nextPageNumber;
     }
@@ -790,7 +792,8 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
   int progressTextWidth = 0;
 
   // Calculate progress in book
-  const float sectionChapterProg = static_cast<float>(section->currentPage) / section->pageCount;
+  const float sectionChapterProg =
+      (section->pageCount > 0) ? static_cast<float>(section->currentPage) / section->pageCount : 0.0f;
   const float bookProgress = epub->calculateProgress(currentSpineIndex, sectionChapterProg) * 100;
 
   if (showProgressText || showProgressPercentage || showBookPercentage) {

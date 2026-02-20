@@ -20,7 +20,7 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   int cachedChapterTotalPageCount = 0;
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
   // Signals that the next render should reposition within the newly loaded section
   // based on a cross-book percentage jump.
   bool pendingPercentJump = false;

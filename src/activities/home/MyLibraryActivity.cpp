@@ -470,6 +470,7 @@ bool MyLibraryActivity::drawCoverAt(const std::string& path, const int x, const 
 
 void MyLibraryActivity::extractCovers() {
   if (viewMode != ViewMode::Grid) return;
+  SpiBusMutex::Guard guard;
 
   const auto m = getGridMetrics();
   const int itemsPerPage = m.cols * m.rows;

@@ -1,7 +1,7 @@
 #include "WifiCredentialStore.h"
 
 #include <HalStorage.h>
-#include <HardwareSerial.h>
+#include <Logging.h>
 #include <Serialization.h>
 
 #include "SpiBusMutex.h"
@@ -24,7 +24,7 @@ constexpr size_t KEY_LENGTH = sizeof(OBFUSCATION_KEY);
 }  // namespace
 
 void WifiCredentialStore::obfuscate(std::string& data) const {
-  Serial.printf("[%lu] [WCS] Obfuscating/deobfuscating %zu bytes\n", millis(), data.size());
+  LOG_DBG("WCS", "Obfuscating/deobfuscating %zu bytes", data.size());
   for (size_t i = 0; i < data.size(); i++) {
     data[i] ^= OBFUSCATION_KEY[i % KEY_LENGTH];
   }
@@ -48,8 +48,7 @@ bool WifiCredentialStore::saveToFile() const {
   for (const auto& cred : credentials) {
     // Write SSID (plaintext - not sensitive)
     serialization::writeString(file, cred.ssid);
-    Serial.printf("[%lu] [WCS] Saving SSID: %s, password length: %zu\n", millis(), cred.ssid.c_str(),
-                  cred.password.size());
+    LOG_DBG("WCS", "Saving SSID: %s, password length: %zu", cred.ssid.c_str(), cred.password.size());
 
     // Write password (obfuscated)
     std::string obfuscatedPwd = cred.password;
@@ -58,7 +57,7 @@ bool WifiCredentialStore::saveToFile() const {
   }
 
   file.close();
-  Serial.printf("[%lu] [WCS] Saved %zu WiFi credentials to file\n", millis(), credentials.size());
+  LOG_INF("WCS", "Saved %zu WiFi credentials to file", credentials.size());
   return true;
 }
 
@@ -70,17 +69,25 @@ bool WifiCredentialStore::loadFromFile() {
   }
 
   // Read and verify version
-  uint8_t version;
-  serialization::readPod(file, version);
+  uint8_t version = 0;
+  if (!serialization::readPod(file, version)) {
+    LOG_ERR("WCS", "Failed to read file version");
+    file.close();
+    return false;
+  }
   if (version != WIFI_FILE_VERSION) {
-    Serial.printf("[%lu] [WCS] Unknown file version: %u\n", millis(), version);
+    LOG_ERR("WCS", "Unknown file version: %u", version);
     file.close();
     return false;
   }
 
   // Read credential count
-  uint8_t count;
-  serialization::readPod(file, count);
+  uint8_t count = 0;
+  if (!serialization::readPod(file, count)) {
+    LOG_ERR("WCS", "Failed to read credential count");
+    file.close();
+    return false;
+  }
 
   // Read credentials
   credentials.clear();
@@ -88,20 +95,27 @@ bool WifiCredentialStore::loadFromFile() {
     WifiCredential cred;
 
     // Read SSID
-    serialization::readString(file, cred.ssid);
+    if (!serialization::readString(file, cred.ssid)) {
+      LOG_ERR("WCS", "Failed to read SSID at index %u", i);
+      file.close();
+      return false;
+    }
 
     // Read and deobfuscate password
-    serialization::readString(file, cred.password);
-    Serial.printf("[%lu] [WCS] Loaded SSID: %s, obfuscated password length: %zu\n", millis(), cred.ssid.c_str(),
-                  cred.password.size());
+    if (!serialization::readString(file, cred.password)) {
+      LOG_ERR("WCS", "Failed to read password at index %u", i);
+      file.close();
+      return false;
+    }
+    LOG_DBG("WCS", "Loaded SSID: %s, obfuscated password length: %zu", cred.ssid.c_str(), cred.password.size());
     obfuscate(cred.password);  // XOR is symmetric, so same function deobfuscates
-    Serial.printf("[%lu] [WCS] After deobfuscation, password length: %zu\n", millis(), cred.password.size());
+    LOG_DBG("WCS", "After deobfuscation, password length: %zu", cred.password.size());
 
     credentials.push_back(cred);
   }
 
   file.close();
-  Serial.printf("[%lu] [WCS] Loaded %zu WiFi credentials from file\n", millis(), credentials.size());
+  LOG_INF("WCS", "Loaded %zu WiFi credentials from file", credentials.size());
   return true;
 }
 
@@ -111,7 +125,7 @@ bool WifiCredentialStore::addCredential(const std::string& ssid, const std::stri
                             [&ssid](const WifiCredential& cred) { return cred.ssid == ssid; });
   if (cred != credentials.end()) {
     cred->password = password;
-    Serial.printf("[%lu] [WCS] Updated credentials for: %s\n", millis(), ssid.c_str());
+    LOG_INF("WCS", "Updated credentials for: %s", ssid.c_str());
     const bool saved = saveToFile();
     if (saved) {
       BackgroundWebServer::getInstance().invalidateCredentialsCache();
@@ -121,13 +135,13 @@ bool WifiCredentialStore::addCredential(const std::string& ssid, const std::stri
 
   // Check if we've reached the limit
   if (credentials.size() >= MAX_NETWORKS) {
-    Serial.printf("[%lu] [WCS] Cannot add more networks, limit of %zu reached\n", millis(), MAX_NETWORKS);
+    LOG_WRN("WCS", "Cannot add more networks, limit of %zu reached", MAX_NETWORKS);
     return false;
   }
 
   // Add new credential
   credentials.push_back({ssid, password});
-  Serial.printf("[%lu] [WCS] Added credentials for: %s\n", millis(), ssid.c_str());
+  LOG_INF("WCS", "Added credentials for: %s", ssid.c_str());
   const bool saved = saveToFile();
   if (saved) {
     BackgroundWebServer::getInstance().invalidateCredentialsCache();
@@ -140,7 +154,7 @@ bool WifiCredentialStore::removeCredential(const std::string& ssid) {
                             [&ssid](const WifiCredential& cred) { return cred.ssid == ssid; });
   if (cred != credentials.end()) {
     credentials.erase(cred);
-    Serial.printf("[%lu] [WCS] Removed credentials for: %s\n", millis(), ssid.c_str());
+    LOG_INF("WCS", "Removed credentials for: %s", ssid.c_str());
     const bool saved = saveToFile();
     if (saved) {
       BackgroundWebServer::getInstance().invalidateCredentialsCache();
@@ -175,5 +189,5 @@ void WifiCredentialStore::clearAll() {
   if (saveToFile()) {
     BackgroundWebServer::getInstance().invalidateCredentialsCache();
   }
-  Serial.printf("[%lu] [WCS] Cleared all WiFi credentials\n", millis());
+  LOG_INF("WCS", "Cleared all WiFi credentials");
 }

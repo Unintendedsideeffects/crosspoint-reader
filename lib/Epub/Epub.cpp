@@ -11,6 +11,7 @@
 #include "Epub/parsers/ContentOpfParser.h"
 #include "Epub/parsers/TocNavParser.h"
 #include "Epub/parsers/TocNcxParser.h"
+#include "SpiBusMutex.h"
 
 namespace {
 bool extractItemToTempFile(const Epub* epub, const std::string& itemHref, const std::string& tempPath) {
@@ -362,6 +363,7 @@ void Epub::parseCssFiles() const {
 
 // load in the meta data for the epub file
 bool Epub::load(const bool buildIfMissing, const bool skipLoadingCss) {
+  SpiBusMutex::Guard guard;
   LOG_DBG("EBP", "Loading ePub: %s", filepath.c_str());
 
   // Initialize spine/TOC cache

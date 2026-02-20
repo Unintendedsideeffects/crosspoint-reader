@@ -49,8 +49,6 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   std::string currentUploadName;
   std::string lastCompleteName;
   unsigned long lastCompleteAt = 0;
-  bool updateRequired = false;
-
   // Performance monitoring
   unsigned long lastHandleClientTime = 0;
 

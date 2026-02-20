@@ -21,9 +21,7 @@ inline std::vector<SettingInfo> getSettingsList() {
   std::vector<SettingInfo> list = {
       // --- Display ---
       SettingInfo::Enum(StrId::STR_SLEEP_SCREEN, &CrossPointSettings::sleepScreen,
-                        {StrId::STR_DARK, StrId::STR_LIGHT, StrId::STR_CUSTOM, StrId::STR_COVER, StrId::STR_NONE_OPT,
-                         StrId::STR_COVER_CUSTOM},
-                        "sleepScreen", StrId::STR_CAT_DISPLAY),
+                        {StrId::STR_DARK, StrId::STR_LIGHT, StrId::STR_CUSTOM}, "sleepScreen", StrId::STR_CAT_DISPLAY),
       SettingInfo::Enum(StrId::STR_SLEEP_COVER_MODE, &CrossPointSettings::sleepScreenCoverMode,
                         {StrId::STR_FIT, StrId::STR_CROP}, "sleepScreenCoverMode", StrId::STR_CAT_DISPLAY),
       SettingInfo::Enum(StrId::STR_SLEEP_COVER_FILTER, &CrossPointSettings::sleepScreenCoverFilter,

@@ -4,6 +4,7 @@
 #include <Logging.h>
 
 #include "FeatureFlags.h"
+#include "SpiBusMutex.h"
 #include "Txt.h"
 #include "TxtReaderActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
@@ -44,6 +45,7 @@ bool ReaderActivity::isMarkdownFile(const std::string& path) { return StringUtil
 
 #if ENABLE_EPUB_SUPPORT
 std::unique_ptr<Epub> ReaderActivity::loadEpub(const std::string& path) {
+  SpiBusMutex::Guard guard;
   if (!Storage.exists(path.c_str())) {
     LOG_ERR("READER", "File does not exist: %s", path.c_str());
     return nullptr;
@@ -61,6 +63,7 @@ std::unique_ptr<Epub> ReaderActivity::loadEpub(const std::string& path) {
 
 #if ENABLE_XTC_SUPPORT
 std::unique_ptr<Xtc> ReaderActivity::loadXtc(const std::string& path) {
+  SpiBusMutex::Guard guard;
   if (!Storage.exists(path.c_str())) {
     LOG_ERR("READER", "File does not exist: %s", path.c_str());
     return nullptr;
@@ -77,6 +80,7 @@ std::unique_ptr<Xtc> ReaderActivity::loadXtc(const std::string& path) {
 #endif
 
 std::unique_ptr<Txt> ReaderActivity::loadTxt(const std::string& path) {
+  SpiBusMutex::Guard guard;
   if (!Storage.exists(path.c_str())) {
     LOG_ERR("READER", "File does not exist: %s", path.c_str());
     return nullptr;
@@ -93,6 +97,7 @@ std::unique_ptr<Txt> ReaderActivity::loadTxt(const std::string& path) {
 
 #if ENABLE_MARKDOWN
 std::unique_ptr<Markdown> ReaderActivity::loadMarkdown(const std::string& path) {
+  SpiBusMutex::Guard guard;
   if (!Storage.exists(path.c_str())) {
     LOG_ERR("READER", "File does not exist: %s", path.c_str());
     return nullptr;

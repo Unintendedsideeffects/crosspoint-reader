@@ -29,7 +29,7 @@ class KOReaderAuthActivity final : public ActivityWithSubactivity {
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
-  bool updateRequired = false;
+  std::atomic<bool> updateRequired{false};
 
   State state = WIFI_SELECTION;
   std::string statusMessage;

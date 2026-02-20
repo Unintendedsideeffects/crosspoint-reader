@@ -153,7 +153,7 @@ void SettingsActivity::loop() {
 void SettingsActivity::enterCategory(int categoryIndex) {
   if (selectedSettingIndex > 0) {
     toggleCurrentSetting();
-    updateRequired = true;
+    requestUpdate();
     return;
   }
 
@@ -182,7 +182,7 @@ void SettingsActivity::enterCategory(int categoryIndex) {
   }
   settingsCount = static_cast<int>(currentSettings->size());
 
-  updateRequired = true;
+  requestUpdate();
 }
 
 void SettingsActivity::toggleCurrentSetting() {
@@ -343,9 +343,29 @@ void SettingsActivity::render(Activity::RenderLock&&) {
         if (setting.type == SettingType::TOGGLE && setting.valuePtr != nullptr) {
           const bool value = SETTINGS.*(setting.valuePtr);
           valueText = value ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
-        } else if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
-          const uint8_t value = SETTINGS.*(setting.valuePtr);
-          valueText = I18N.get(setting.enumValues[value]);
+        } else if (setting.type == SettingType::ENUM) {
+          uint8_t value = 0;
+          bool hasValue = false;
+          if (setting.valuePtr != nullptr) {
+            value = SETTINGS.*(setting.valuePtr);
+            hasValue = true;
+          } else if (setting.valueGetter) {
+            value = setting.valueGetter();
+            hasValue = true;
+          }
+
+          if (hasValue) {
+            if (setting.dynamicValuesGetter) {
+              const auto dynamicValues = setting.dynamicValuesGetter();
+              if (!dynamicValues.empty()) {
+                const size_t valueIndex = std::min(static_cast<size_t>(value), dynamicValues.size() - 1);
+                valueText = dynamicValues[valueIndex];
+              }
+            } else if (!setting.enumValues.empty()) {
+              const size_t valueIndex = std::min(static_cast<size_t>(value), setting.enumValues.size() - 1);
+              valueText = I18N.get(setting.enumValues[valueIndex]);
+            }
+          }
         } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
           valueText = std::to_string(SETTINGS.*(setting.valuePtr));
         }

@@ -237,7 +237,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
       }
     }
     lastError = BUNDLE_UNAVAILABLE_ERROR;
-    return JSON_PARSE_ERROR;
+    return INTERNAL_UPDATE_ERROR;
   }
 
   // Fall back to channel-based OTA
@@ -467,6 +467,9 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
 
   /* For better timing and connectivity, we disable power saving for WiFi */
   esp_wifi_set_ps(WIFI_PS_NONE);
+  struct WifiPsRestore {
+    ~WifiPsRestore() { esp_wifi_set_ps(WIFI_PS_MIN_MODEM); }
+  } wifiPsRestore;
 
   esp_err = esp_https_ota_begin(&ota_config, &ota_handle);
   if (esp_err != ESP_OK) {
@@ -481,9 +484,6 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     render = true;
     vTaskDelay(10 / portTICK_PERIOD_MS);
   } while (esp_err == ESP_ERR_HTTPS_OTA_IN_PROGRESS);
-
-  /* Return back to default power saving for WiFi in case of failing */
-  esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 
   if (esp_err != ESP_OK) {
     LOG_ERR("OTA", "esp_https_ota_perform Failed: %s", esp_err_to_name(esp_err));

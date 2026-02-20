@@ -11,6 +11,7 @@
 
 #include "I18n.h"
 #include "RecentBooksStore.h"
+#include "SpiBusMutex.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -341,6 +342,7 @@ void BaseTheme::drawTabBar(const GfxRenderer& renderer, const Rect rect, const s
 void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
                                     const int selectorIndex, bool& coverRendered, bool& coverBufferStored,
                                     bool& bufferRestored, std::function<bool()> storeCoverBuffer) const {
+  SpiBusMutex::Guard guard;
   const bool hasContinueReading = !recentBooks.empty();
   const bool bookSelected = hasContinueReading && selectorIndex == 0;
 
