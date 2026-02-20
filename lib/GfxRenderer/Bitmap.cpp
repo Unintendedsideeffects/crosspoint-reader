@@ -115,7 +115,13 @@ BmpReaderError Bitmap::parseHeaders() {
   file.seekCur(12);  // biSizeImage, biXPelsPerMeter, biYPelsPerMeter
   colorsUsed = readLE32(file);
   // BMP spec: colorsUsed==0 means default (2^bpp for paletted formats)
-  if (colorsUsed == 0 && bpp <= 8) colorsUsed = 1u << bpp;
+  if (colorsUsed == 0 && bpp <= 8) {
+    colorsUsed = 1u << bpp;
+  }
+  const uint32_t maxPossibleColors = (bpp <= 8) ? (1u << bpp) : 256u;
+  if (colorsUsed > maxPossibleColors) {
+    colorsUsed = maxPossibleColors;
+  }
   if (colorsUsed > 256u) return BmpReaderError::PaletteTooLarge;
   file.seekCur(4);  // biClrImportant
 

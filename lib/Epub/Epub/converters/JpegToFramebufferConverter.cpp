@@ -24,12 +24,12 @@ struct JpegContext {
 };
 
 // Callback for picojpeg to read bytes
-unsigned char jpegReadCallback(unsigned char* pBuf, unsigned char buf_size, unsigned char* pBytes_actually_read,
-                               void* pCallback_data) {
+unsigned char JpegToFramebufferConverter::jpegReadCallback(unsigned char* pBuf, unsigned char buf_size,
+                                                           unsigned char* pBytes_actually_read, void* pCallback_data) {
   JpegContext* context = static_cast<JpegContext*>(pCallback_data);
   size_t read = context->file->read(pBuf, buf_size);
   *pBytes_actually_read = (unsigned char)read;
-  return read == buf_size ? 0 : PJPEG_STREAM_READ_ERROR;
+  return read == buf_size ? 0 : PJPG_STREAM_READ_ERROR;
 }
 
 bool JpegToFramebufferConverter::getDimensionsStatic(const std::string& imagePath, ImageDimensions& out) {
@@ -40,7 +40,8 @@ bool JpegToFramebufferConverter::getDimensionsStatic(const std::string& imagePat
   }
 
   pjpeg_image_info_t imageInfo;
-  int status = pjpeg_decode_init(&imageInfo, jpegReadCallback, &file, 0);
+  JpegContext context = {&file, nullptr, 0, 0, 0, 0, 1.0f, false, false, nullptr};
+  int status = pjpeg_decode_init(&imageInfo, jpegReadCallback, &context, 0);
   file.close();
 
   if (status != 0) {
@@ -120,7 +121,7 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
   for (;;) {
     status = pjpeg_decode_mcu();
     if (status != 0) {
-      if (status == PJPEG_STREAM_READ_ERROR) {
+      if (status == PJPG_STREAM_READ_ERROR) {
         // expected at end of stream?
         break;
       }
@@ -137,8 +138,16 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
 
   // Write cache file if caching was enabled
   if (caching) {
-    cache.saveToFile(config.cachePath);
+    cache.writeToFile(config.cachePath);
   }
 
   return true;
+}
+
+bool JpegToFramebufferConverter::supportsFormat(const std::string& extension) {
+  std::string ext = extension;
+  for (auto& c : ext) {
+    c = tolower(c);
+  }
+  return (ext == ".jpg" || ext == ".jpeg");
 }

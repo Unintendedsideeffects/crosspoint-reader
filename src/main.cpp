@@ -383,7 +383,8 @@ void onGoToTodo() {
   // 2. Try EPUB (ReadOnly/ReaderActivity)
   const std::string todoEpubPath = "/daily/" + today + ".epub";
   if (Storage.exists(todoEpubPath.c_str())) {
-    enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, onGoHome, onGoToMyLibraryWithPath));
+    enterNewActivity(new ReaderActivity(renderer, mappedInputManager, todoEpubPath, MyLibraryActivity::Tab::Recent,
+                                        onGoHome, onGoToMyLibraryWithPath));
     return;
   }
 

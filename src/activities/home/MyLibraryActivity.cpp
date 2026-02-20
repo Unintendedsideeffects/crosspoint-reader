@@ -82,9 +82,9 @@ void sortFileList(std::vector<std::string>& strs) {
 }  // namespace
 
 void MyLibraryActivity::loadFiles() {
+  SpiBusMutex::Guard guard;
   files.clear();
 
-  SpiBusMutex::Guard guard;
   auto root = Storage.open(basepath.c_str());
   if (!root || !root.isDirectory()) {
     if (root) root.close();

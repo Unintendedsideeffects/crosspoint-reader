@@ -145,7 +145,6 @@ void TodoActivity::loadTasks() {
   items.clear();
 
   if (!Storage.exists(filePath.c_str())) {
-    // If file doesn't exist, we start empty
     return;
   }
 
@@ -154,37 +153,47 @@ void TodoActivity::loadTasks() {
     return;
   }
 
+  char buffer[256];
+  std::string line;
   while (file.available()) {
-    std::string line;
-    while (file.available()) {
-      char c = static_cast<char>(file.read());
-      if (c == '\n') break;
-      line.push_back(c);
-    }
-    // Remove CR if present (handles CRLF)
-    if (!line.empty() && line.back() == '\r') {
-      line.pop_back();
-    }
+    int n = file.read(buffer, sizeof(buffer));
+    if (n <= 0) break;
 
-    TodoItem item;
-    // Check for Markdown task format: "- [ ] " or "- [x] "
-    if (line.rfind("- [ ] ", 0) == 0) {
-      item.checked = false;
-      item.isHeader = false;
-      item.text = line.substr(6);
-    } else if (line.rfind("- [x] ", 0) == 0 || line.rfind("- [X] ", 0) == 0) {
-      item.checked = true;
-      item.isHeader = false;
-      item.text = line.substr(6);
-    } else {
-      // Treat as header or note
-      item.checked = false;
-      item.isHeader = true;
-      item.text = line;
+    for (int i = 0; i < n; i++) {
+      if (buffer[i] == '\n') {
+        processTaskLine(line);
+        line.clear();
+      } else {
+        line.push_back(buffer[i]);
+      }
     }
-    items.push_back(item);
+  }
+  if (!line.empty()) {
+    processTaskLine(line);
   }
   file.close();
+}
+
+void TodoActivity::processTaskLine(std::string& line) {
+  if (!line.empty() && line.back() == '\r') {
+    line.pop_back();
+  }
+
+  TodoItem item;
+  if (line.rfind("- [ ] ", 0) == 0) {
+    item.checked = false;
+    item.isHeader = false;
+    item.text = line.substr(6);
+  } else if (line.rfind("- [x] ", 0) == 0 || line.rfind("- [X] ", 0) == 0) {
+    item.checked = true;
+    item.isHeader = false;
+    item.text = line.substr(6);
+  } else {
+    item.checked = false;
+    item.isHeader = true;
+    item.text = line;
+  }
+  items.push_back(item);
 }
 
 void TodoActivity::saveTasks() {
@@ -358,8 +367,10 @@ void TodoActivity::renderItem(int y, const TodoItem& item, bool isSelected) cons
 
   // Draw Text
   const int textY = y + (ITEM_HEIGHT - renderer.getLineHeight(UI_10_FONT_ID)) / 2;
+  const int maxTextWidth = renderer.getScreenWidth() - x - MARGIN_X;
+
   // Truncate text if needed
-  std::string text = item.text;
+  std::string text = renderer.truncatedText(UI_10_FONT_ID, item.text.c_str(), maxTextWidth);
 
   renderer.drawText(UI_10_FONT_ID, x, textY, text.c_str(), !isSelected);
 

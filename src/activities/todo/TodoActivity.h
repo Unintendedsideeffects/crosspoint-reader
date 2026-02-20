@@ -35,6 +35,7 @@ class TodoActivity final : public ActivityWithSubactivity {
   bool skipInitialInput = true;
 
   void loadTasks();
+  void processTaskLine(std::string& line);
   void saveTasks();
   void toggleCurrentTask();
   void addNewTask();

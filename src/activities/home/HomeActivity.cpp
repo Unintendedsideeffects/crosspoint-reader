@@ -73,13 +73,16 @@ void HomeActivity::rebuildMenuLayout() {
 }
 
 void HomeActivity::loadRecentBooks() {
+  auto metrics = UITheme::getInstance().getMetrics();
+  const int maxBooks = metrics.homeRecentBooksCount;
+
   recentBooks.clear();
   const auto& storedBooks = RECENT_BOOKS.getBooks();
-  recentBooks.reserve(storedBooks.size());
+  recentBooks.reserve(std::min(static_cast<size_t>(maxBooks), storedBooks.size()));
 
   for (const auto& stored : storedBooks) {
-    if (!Storage.exists(stored.path.c_str())) {
-      continue;
+    if (recentBooks.size() >= static_cast<size_t>(maxBooks)) {
+      break;
     }
 
     RecentBook entry = stored;
@@ -111,6 +114,7 @@ void HomeActivity::loadRecentBooks() {
 }
 
 void HomeActivity::loadRecentCovers(int coverHeight) {
+  SpiBusMutex::Guard guard;
   recentsLoading = true;
   bool showingLoading = false;
   Rect popupRect;
@@ -479,6 +483,7 @@ void HomeActivity::render(Activity::RenderLock&& lock) {
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
+  bool bufferRestored = coverBufferStored && restoreCoverBuffer();
   // If we are using the new media picker UI, use its specialized rendering
 #if ENABLE_HOME_MEDIA_PICKER
   GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, pageHeight), recentBooks, selectedBookIndex, coverRendered,

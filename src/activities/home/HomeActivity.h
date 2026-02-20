@@ -31,7 +31,6 @@ class HomeActivity final : public Activity {
   bool coverRendered = false;      // Track if cover has been rendered once
   bool coverBufferStored = false;  // Track if cover buffer is stored
   bool updateRequired = false;
-  bool bufferRestored = false;
 
   uint8_t* coverBuffer = nullptr;  // HomeActivity's own buffer for cover image
   std::string lastBookTitle;
