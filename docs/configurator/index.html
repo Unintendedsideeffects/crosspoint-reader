@@ -397,6 +397,15 @@
         pointer-events: none;
       }
 
+      .skill-card.static-card {
+        cursor: default;
+      }
+
+      .skill-card.static-card .card-toggle {
+        border-left-style: dashed;
+        opacity: 0.45;
+      }
+
       .card-icon {
         width: 42px;
         min-height: 42px;
@@ -950,12 +959,12 @@
            ═══════════════════════════════════════ -->
       <div class="categories">
 
-        <!-- ── READING ── -->
-        <section class="category" data-hub="reading_hub">
+        <!-- ── READER ── -->
+        <section class="category" data-hub="reader_hub">
           <div class="cat-head">
             <div class="cat-icon"><span>&#x25A0;</span></div>
-            <h2 class="cat-title">Reading</h2>
-            <span class="cat-stat" id="stat-reading_hub"></span>
+            <h2 class="cat-title">Reader</h2>
+            <span class="cat-stat" id="stat-reader_hub"></span>
           </div>
           <div class="cat-body">
             <div class="skill-grid">
@@ -996,18 +1005,16 @@
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
 
-              <div class="dep-group" data-dep-parent="markdown">
-                <label class="skill-card dep-parent" data-feature="markdown" data-node-id="markdown">
-                  <input type="checkbox" id="markdown" data-feature="markdown" />
-                  <div class="card-icon"><span>&#x00B6;</span></div>
-                  <div class="card-body">
-                    <div class="card-name">Markdown/Obsidian</div>
-                    <div class="card-size"></div>
-                    <div class="card-desc">Markdown and Obsidian vault reading support</div>
-                  </div>
-                  <div class="card-toggle"><span class="toggle-box"></span></div>
-                </label>
-              </div>
+              <label class="skill-card" data-feature="markdown" data-node-id="markdown">
+                <input type="checkbox" id="markdown" data-feature="markdown" />
+                <div class="card-icon"><span>&#x00B6;</span></div>
+                <div class="card-body">
+                  <div class="card-name">Markdown</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Markdown and Obsidian vault reading support</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
 
               <label class="skill-card" data-feature="todo_planner" data-node-id="todo_planner">
                 <input type="checkbox" id="todo_planner" data-feature="todo_planner" />
@@ -1024,9 +1031,9 @@
                 <input type="checkbox" id="xtc_support" data-feature="xtc_support" />
                 <div class="card-icon"><span>&#x25C7;</span></div>
                 <div class="card-body">
-                  <div class="card-name">XTC Support</div>
+                  <div class="card-name">XTC Images</div>
                   <div class="card-size"></div>
-                  <div class="card-desc">XTC format reader with chapter navigation</div>
+                  <div class="card-desc">XTC format reader with chapter navigation and image support</div>
                 </div>
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
@@ -1045,17 +1052,16 @@
           <div class="cat-body">
             <div class="skill-grid">
 
-              <div class="dep-group" data-dep-parent="bookerly_fonts">
-                <label class="skill-card dep-parent" data-feature="bookerly_fonts" data-node-id="bookerly_fonts">
-                  <input type="checkbox" id="bookerly_fonts" data-feature="bookerly_fonts" />
-                  <div class="card-icon"><span>A</span></div>
+              <div class="dep-group">
+                <div class="skill-card dep-parent static-card" data-node-id="system_fonts">
+                  <div class="card-icon"><span>SF</span></div>
                   <div class="card-body">
-                    <div class="card-name">Bookerly Fonts</div>
+                    <div class="card-name">System Fonts</div>
                     <div class="card-size"></div>
-                    <div class="card-desc">12/16/18pt Bookerly family</div>
+                    <div class="card-desc">Base bundled font families</div>
                   </div>
-                  <div class="card-toggle"><span class="toggle-box"></span></div>
-                </label>
+                  <div class="card-toggle"></div>
+                </div>
                 <div class="dep-children">
                   <label class="skill-card dep-child" data-feature="opendyslexic_fonts" data-node-id="opendyslexic_fonts">
                     <input type="checkbox" id="opendyslexic_fonts" data-feature="opendyslexic_fonts" />
@@ -1067,63 +1073,97 @@
                     </div>
                     <div class="card-toggle"><span class="toggle-box"></span></div>
                   </label>
+                  <label class="skill-card dep-child" data-feature="notosans_fonts" data-node-id="notosans_fonts">
+                    <input type="checkbox" id="notosans_fonts" data-feature="notosans_fonts" />
+                    <div class="card-icon"><span>NS</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Noto Sans Fonts</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">12/16/18pt Noto Sans family</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
+                  <label class="skill-card dep-child" data-feature="bookerly_fonts" data-node-id="bookerly_fonts">
+                    <input type="checkbox" id="bookerly_fonts" data-feature="bookerly_fonts" />
+                    <div class="card-icon"><span>A</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Bookerly Fonts</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">12/16/18pt Bookerly family</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
                 </div>
               </div>
 
-              <label class="skill-card" data-feature="notosans_fonts" data-node-id="notosans_fonts">
-                <input type="checkbox" id="notosans_fonts" data-feature="notosans_fonts" />
-                <div class="card-icon"><span>NS</span></div>
-                <div class="card-body">
-                  <div class="card-name">Noto Sans Fonts</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">12/16/18pt Noto Sans family</div>
+              <div class="dep-group" data-dep-parent="home_media_picker">
+                <label class="skill-card dep-parent" data-feature="home_media_picker" data-node-id="home_media_picker">
+                  <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
+                  <div class="card-icon"><span>&#x2302;</span></div>
+                  <div class="card-body">
+                    <div class="card-name">Home UI</div>
+                    <div class="card-size"></div>
+                    <div class="card-desc">Streamlined home UI with horizontal book shelf + vertical menu</div>
+                  </div>
+                  <div class="card-toggle"><span class="toggle-box"></span></div>
+                </label>
+                <div class="dep-children">
+                  <label class="skill-card dep-child" data-feature="lyra_theme" data-node-id="lyra_theme">
+                    <input type="checkbox" id="lyra_theme" data-feature="lyra_theme" />
+                    <div class="card-icon"><span>&#x2606;</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Lyra (Default)</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Alternative UI theme with refined spacing and layout</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
+                  <label class="skill-card dep-child" data-feature="visual_cover_picker" data-node-id="visual_cover_picker">
+                    <input type="checkbox" id="visual_cover_picker" data-feature="visual_cover_picker" />
+                    <div class="card-icon"><span>&#x25A6;</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Visual Covers</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Grid-based book explorer with cached cover art thumbnails</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
+                  <div class="skill-card dep-child static-card" data-node-id="fork_drift_note">
+                    <div class="card-icon"><span>&#x21BB;</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Fork Drift Theme</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Theme branch to isolate upstream drift and experimentation</div>
+                    </div>
+                    <div class="card-toggle"></div>
+                  </div>
                 </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
+              </div>
 
-              <label class="skill-card" data-feature="home_media_picker" data-node-id="home_media_picker">
-                <input type="checkbox" id="home_media_picker" data-feature="home_media_picker" />
-                <div class="card-icon"><span>&#x2302;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Home Media Picker</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Streamlined home UI with horizontal book shelf + vertical menu</div>
+              <div class="dep-group" data-dep-parent="image_sleep">
+                <label class="skill-card dep-parent" data-feature="image_sleep" data-node-id="image_sleep">
+                  <input type="checkbox" id="image_sleep" data-feature="image_sleep" />
+                  <div class="card-icon"><span>&#x263E;</span></div>
+                  <div class="card-body">
+                    <div class="card-name">Sleep Customization</div>
+                    <div class="card-size"></div>
+                    <div class="card-desc">PNG and JPEG sleep screen support (BMP always included)</div>
+                  </div>
+                  <div class="card-toggle"><span class="toggle-box"></span></div>
+                </label>
+                <div class="dep-children">
+                  <label class="skill-card dep-child" data-feature="web_pokedex_plugin" data-node-id="web_pokedex_plugin">
+                    <input type="checkbox" id="web_pokedex_plugin" data-feature="web_pokedex_plugin" />
+                    <div class="card-icon"><span>&#x26A1;</span></div>
+                    <div class="card-body">
+                      <div class="card-name">Web Pokedex Plugin</div>
+                      <div class="card-size"></div>
+                      <div class="card-desc">Browser-side Pokemon wallpaper generator at /plugins/pokedex</div>
+                    </div>
+                    <div class="card-toggle"><span class="toggle-box"></span></div>
+                  </label>
                 </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
-              <label class="skill-card" data-feature="lyra_theme" data-node-id="lyra_theme">
-                <input type="checkbox" id="lyra_theme" data-feature="lyra_theme" />
-                <div class="card-icon"><span>&#x2606;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Lyra Theme</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Alternative UI theme with refined spacing and layout</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
-              <label class="skill-card" data-feature="image_sleep" data-node-id="image_sleep">
-                <input type="checkbox" id="image_sleep" data-feature="image_sleep" />
-                <div class="card-icon"><span>&#x263E;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Sleep Art</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">PNG and JPEG sleep screen support (BMP always included)</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
-              <label class="skill-card" data-feature="web_pokedex_plugin" data-node-id="web_pokedex_plugin">
-                <input type="checkbox" id="web_pokedex_plugin" data-feature="web_pokedex_plugin" />
-                <div class="card-icon"><span>&#x26A1;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Web Pokedex Plugin</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Browser-side Pokemon wallpaper generator at /plugins/pokedex</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
+              </div>
 
               <label class="skill-card" data-feature="dark_mode" data-node-id="dark_mode">
                 <input type="checkbox" id="dark_mode" data-feature="dark_mode" />
@@ -1132,17 +1172,6 @@
                   <div class="card-name">Dark Mode</div>
                   <div class="card-size"></div>
                   <div class="card-desc">System-wide inverted color scheme for reading in the dark</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
-              <label class="skill-card" data-feature="visual_cover_picker" data-node-id="visual_cover_picker">
-                <input type="checkbox" id="visual_cover_picker" data-feature="visual_cover_picker" />
-                <div class="card-icon"><span>&#x25A6;</span></div>
-                <div class="card-body">
-                  <div class="card-name">Visual Covers</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Grid-based book explorer with cached cover art thumbnails</div>
                 </div>
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
@@ -1160,29 +1189,6 @@
 
             </div>
 
-            <!-- Interface notes -->
-            <div class="note-grid">
-              <div class="note-item" data-node-id="specific_fonts_note">
-                <span class="note-icon">&#x25AA;</span>
-                <span class="note-label">Targeted fonts</span>
-              </div>
-              <div class="note-item" data-node-id="font_converter_note">
-                <span class="note-icon">&#x2702;</span>
-                <span class="note-label">Font converter</span>
-              </div>
-              <div class="note-item" data-node-id="fork_drift_note">
-                <span class="note-icon">&#x21BB;</span>
-                <span class="note-label">Fork-drift</span>
-              </div>
-              <div class="note-item" data-node-id="future_themes_note">
-                <span class="note-icon">&#x22EF;</span>
-                <span class="note-label">{themes}</span>
-              </div>
-              <div class="note-item" data-node-id="dark_theme_note">
-                <span class="note-icon">&#x25D0;</span>
-                <span class="note-label">Dark mode</span>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -1196,41 +1202,41 @@
           <div class="cat-body">
             <div class="skill-grid">
 
-              <div class="dep-group" data-dep-parent="background_server">
-                <label class="skill-card dep-parent" data-feature="background_server" data-node-id="background_server">
-                  <input type="checkbox" id="background_server" data-feature="background_server" />
-                  <div class="card-icon"><span>&#x25A1;</span></div>
+              <label class="skill-card" data-feature="background_server" data-node-id="background_server">
+                <input type="checkbox" id="background_server" data-feature="background_server" />
+                <div class="card-icon"><span>&#x25A1;</span></div>
+                <div class="card-body">
+                  <div class="card-name">Background Server</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Background web server for file management</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
+
+              <div class="dep-group" data-dep-parent="web_wifi_setup">
+                <label class="skill-card dep-parent" data-feature="web_wifi_setup" data-node-id="web_wifi_setup">
+                  <input type="checkbox" id="web_wifi_setup" data-feature="web_wifi_setup" />
+                  <div class="card-icon"><span>&#x21D4;</span></div>
                   <div class="card-body">
-                    <div class="card-name">Background Server</div>
+                    <div class="card-name">Web WiFi</div>
                     <div class="card-size"></div>
-                    <div class="card-desc">Background web server for file management</div>
+                    <div class="card-desc">Manage WiFi networks directly from the web interface</div>
                   </div>
                   <div class="card-toggle"><span class="toggle-box"></span></div>
                 </label>
                 <div class="dep-children">
-                  <label class="skill-card dep-child" data-feature="web_wifi_setup" data-node-id="web_wifi_setup">
-                    <input type="checkbox" id="web_wifi_setup" data-feature="web_wifi_setup" />
-                    <div class="card-icon"><span>&#x21D4;</span></div>
+                  <label class="skill-card dep-child" data-feature="ble_wifi_provisioning" data-node-id="ble_wifi_provisioning">
+                    <input type="checkbox" id="ble_wifi_provisioning" data-feature="ble_wifi_provisioning" />
+                    <div class="card-icon"><span>&#x264B;</span></div>
                     <div class="card-body">
-                      <div class="card-name">Web WiFi</div>
+                      <div class="card-name">BLE WiFi Provisioning</div>
                       <div class="card-size"></div>
-                      <div class="card-desc">Manage WiFi networks directly from the web interface</div>
+                      <div class="card-desc">Initial WiFi setup via Bluetooth LE</div>
                     </div>
                     <div class="card-toggle"><span class="toggle-box"></span></div>
                   </label>
                 </div>
               </div>
-
-              <label class="skill-card" data-feature="usb_mass_storage" data-node-id="usb_mass_storage">
-                <input type="checkbox" id="usb_mass_storage" data-feature="usb_mass_storage" />
-                <div class="card-icon"><span>&#x2398;</span></div>
-                <div class="card-body">
-                  <div class="card-name">USB Mass Storage</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Compile-time USB MSC with runtime System toggle, on-connect prompt, and locked safety mode</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
 
               <label class="skill-card" data-feature="ota_updates" data-node-id="ota_updates">
                 <input type="checkbox" id="ota_updates" data-feature="ota_updates" />
@@ -1278,17 +1284,6 @@
                 </div>
               </div>
 
-              <label class="skill-card" data-feature="ble_wifi_provisioning" data-node-id="ble_wifi_provisioning">
-                <input type="checkbox" id="ble_wifi_provisioning" data-feature="ble_wifi_provisioning" />
-                <div class="card-icon"><span>&#x264B;</span></div>
-                <div class="card-body">
-                  <div class="card-name">BLE WiFi Provisioning</div>
-                  <div class="card-size"></div>
-                  <div class="card-desc">Initial WiFi setup via Bluetooth LE</div>
-                </div>
-                <div class="card-toggle"><span class="toggle-box"></span></div>
-              </label>
-
             </div>
 
             <!-- Network notes -->
@@ -1301,42 +1296,37 @@
                 <span class="note-icon">&#x26A1;</span>
                 <span class="note-label">On charge</span>
               </div>
-              <div class="note-item" data-node-id="ble_setup_note">
-                <span class="note-icon">&#x25AA;</span>
-                <span class="note-label">BLE setup</span>
-              </div>
             </div>
           </div>
         </section>
 
-        <!-- ── FEATURE STATUS ── -->
-        <section class="category roadmap" data-hub="extras_hub">
+        <!-- ── STORAGE ── -->
+        <section class="category" data-hub="storage_hub">
           <div class="cat-head">
-            <div class="cat-icon"><span>&#x2605;</span></div>
-            <h2 class="cat-title">Feature Status</h2>
-            <span class="cat-stat" id="stat-extras_hub"></span>
+            <div class="cat-icon"><span>&#x2398;</span></div>
+            <h2 class="cat-title">Storage</h2>
+            <span class="cat-stat" id="stat-storage_hub"></span>
           </div>
           <div class="cat-body">
-            <div class="note-grid">
-              <div class="note-item" data-node-id="obsidian_xte_sync_note">
-                <span class="note-icon">&#x25AB;</span>
-                <span class="note-label">Obsidian XTE sync (planned)</span>
-              </div>
-              <div class="note-item" data-node-id="feature_store_note">
-                <span class="note-icon">&#x25AB;</span>
-                <span class="note-label">Feature store OTA flow (in progress)</span>
-              </div>
-              <div class="note-item" data-node-id="todo_web_entry_note">
-                <span class="note-icon">&#x25AB;</span>
-                <span class="note-label">Todo planner web /files quick-entry (shipped)</span>
-              </div>
-              <div class="note-item" data-node-id="font_sd_flow_note">
-                <span class="note-icon">&#x25AB;</span>
-                <span class="note-label">User fonts canonical SD flow + hot rescan (shipped)</span>
-              </div>
-              <div class="note-item" data-node-id="usb_mass_storage_note">
-                <span class="note-icon">&#x25AB;</span>
-                <span class="note-label">USB mass storage prompt + safe lock mode (shipped)</span>
+            <div class="skill-grid">
+              <label class="skill-card" data-feature="usb_mass_storage" data-node-id="usb_mass_storage">
+                <input type="checkbox" id="usb_mass_storage" data-feature="usb_mass_storage" />
+                <div class="card-icon"><span>&#x2398;</span></div>
+                <div class="card-body">
+                  <div class="card-name">USB Mass Storage</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Compile-time USB MSC with runtime System toggle, on-connect prompt, and locked safety mode</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
+              <div class="skill-card static-card" data-node-id="serial_access_with_android_note">
+                <div class="card-icon"><span>&#x25A4;</span></div>
+                <div class="card-body">
+                  <div class="card-name">Serial Access with Android</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Use Android USB serial workflows for debug and maintenance tasks</div>
+                </div>
+                <div class="card-toggle"></div>
               </div>
             </div>
           </div>
@@ -1373,7 +1363,7 @@
           <a class="btn btn-solid" id="build-link" href="#" target="_blank" rel="noopener">Build on GitHub</a>
         </div>
         <div class="info-bar">
-          Compile-time dependencies are enforced automatically. Feature status items are informational and do not affect builds.
+          Compile-time dependencies are enforced automatically. Static hierarchy cards and notes are informational and do not affect builds.
         </div>
       </div>
 
@@ -1633,29 +1623,22 @@
         opendyslexic_fonts: ["bookerly_fonts", "notosans_fonts"],
         hyphenation: ["epub_support"],
         web_wifi_setup: ["background_server"],
+        ble_wifi_provisioning: ["web_wifi_setup"],
+        lyra_theme: ["home_media_picker"],
+        visual_cover_picker: ["home_media_picker"],
+        web_pokedex_plugin: ["image_sleep"],
       };
 
       const HUB_FEATURES = {
-        reading_hub: ["markdown", "xtc_support", "epub_support", "book_images", "hyphenation", "todo_planner"],
-        interface_hub: ["bookerly_fonts", "notosans_fonts", "opendyslexic_fonts", "home_media_picker", "lyra_theme", "image_sleep", "web_pokedex_plugin", "dark_mode", "visual_cover_picker", "user_fonts"],
-        network_hub: ["background_server", "ota_updates", "integrations", "koreader_sync", "calibre_sync", "ble_wifi_provisioning", "web_wifi_setup", "usb_mass_storage"],
-        extras_hub: ["ota_updates", "integrations", "home_media_picker"],
+        reader_hub: ["markdown", "xtc_support", "epub_support", "book_images", "hyphenation", "todo_planner"],
+        interface_hub: ["opendyslexic_fonts", "notosans_fonts", "bookerly_fonts", "home_media_picker", "lyra_theme", "visual_cover_picker", "image_sleep", "web_pokedex_plugin", "dark_mode", "user_fonts"],
+        network_hub: ["background_server", "web_wifi_setup", "ble_wifi_provisioning", "ota_updates", "integrations", "koreader_sync", "calibre_sync"],
+        storage_hub: ["usb_mass_storage"],
       };
 
       const NOTE_FEATURES = {
-        specific_fonts_note: ["bookerly_fonts", "notosans_fonts", "user_fonts"],
-        dark_theme_note: ["dark_mode"],
-        fork_drift_note: ["home_media_picker"],
-        future_themes_note: ["home_media_picker", "lyra_theme"],
         webserver_always_on_note: ["background_server"],
         webserver_on_charge_note: ["background_server"],
-        obsidian_xte_sync_note: ["integrations"],
-        feature_store_note: ["ota_updates"],
-        todo_web_entry_note: ["todo_planner"],
-        font_sd_flow_note: ["user_fonts"],
-        usb_mass_storage_note: [],
-        ble_setup_note: ["ble_wifi_provisioning"],
-        font_converter_note: ["user_fonts"],
       };
 
       const PROFILES = {
