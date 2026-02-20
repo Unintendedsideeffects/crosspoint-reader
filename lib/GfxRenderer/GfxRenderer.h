@@ -60,6 +60,9 @@ class GfxRenderer {
   void begin();  // must be called right after display.begin()
   void insertFont(int fontId, IEpdFont* font);
   void insertFontFamily(int fontId, EpdFontFamily* fontFamily);
+  // Compatibility shim for reader activities that explicitly clear font caches.
+  // Current renderer implementation does not maintain a separate font cache.
+  void clearFontCache() {}
 
   // Orientation control (affects logical width/height and coordinate transforms)
   void setOrientation(const Orientation o) { orientation = o; }
