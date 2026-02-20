@@ -783,10 +783,12 @@ int GfxRenderer::getScreenHeight() const {
   return HalDisplay::DISPLAY_WIDTH;
 }
 
-int GfxRenderer::getSpaceWidth(const int fontId) const {
+int GfxRenderer::getSpaceWidth(const int fontId) const { return getSpaceWidth(fontId, EpdFontFamily::REGULAR); }
+
+int GfxRenderer::getSpaceWidth(const int fontId, const EpdFontFamily::Style style) const {
   const IEpdFont* font = nullptr;
   if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(EpdFontFamily::REGULAR);
+    font = fontFamilyMap.at(fontId)->getFont(style);
   } else if (fontMap.count(fontId) > 0) {
     font = fontMap.at(fontId);
   }
@@ -796,13 +798,18 @@ int GfxRenderer::getSpaceWidth(const int fontId) const {
     return 0;
   }
 
-  return font->getGlyph(' ')->advanceX;
+  const EpdGlyph* glyph = font->getGlyph(' ');
+  return glyph ? glyph->advanceX : 0;
 }
 
 int GfxRenderer::getTextAdvanceX(const int fontId, const char* text) const {
+  return getTextAdvanceX(fontId, text, EpdFontFamily::REGULAR);
+}
+
+int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, const EpdFontFamily::Style style) const {
   const IEpdFont* font = nullptr;
   if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(EpdFontFamily::REGULAR);
+    font = fontFamilyMap.at(fontId)->getFont(style);
   } else if (fontMap.count(fontId) > 0) {
     font = fontMap.at(fontId);
   }

@@ -117,7 +117,9 @@ class GfxRenderer {
   void drawButtonHints(int fontId, const char* btn1, const char* btn2, const char* btn3, const char* btn4) const;
   void drawSideButtonHints(int fontId, const char* topBtn, const char* bottomBtn) const;
   int getSpaceWidth(int fontId) const;
+  int getSpaceWidth(int fontId, EpdFontFamily::Style style) const;
   int getTextAdvanceX(int fontId, const char* text) const;
+  int getTextAdvanceX(int fontId, const char* text, EpdFontFamily::Style style) const;
   int getFontAscenderSize(int fontId) const;
   int getLineHeight(int fontId) const;
   std::string truncatedText(int fontId, const char* text, int maxWidth,

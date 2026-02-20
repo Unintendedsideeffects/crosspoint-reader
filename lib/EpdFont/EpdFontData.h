@@ -2,7 +2,6 @@
 // https://github.com/vroland/epdiy/blob/c61e9e923ce2418150d54f88cea5d196cdc40c54/src/epd_internals.h
 
 #pragma once
-#include <cstddef>
 #include <cstdint>
 
 /// Font data stored PER GLYPH
@@ -13,11 +12,17 @@ typedef struct {
   int16_t left;         ///< X dist from cursor pos to UL corner
   int16_t top;          ///< Y dist from cursor pos to UL corner
   uint16_t dataLength;  ///< Size of the font data.
-  uint32_t dataOffset;  ///< Pointer into EpdFont->bitmap
+  uint32_t dataOffset;  ///< Pointer into EpdFont->bitmap (or within-group offset for compressed fonts)
 } EpdGlyph;
 
-static_assert(sizeof(EpdGlyph) == 16, "EpdGlyph must remain 16 bytes for CPF compatibility");
-static_assert(offsetof(EpdGlyph, dataOffset) == 12, "EpdGlyph::dataOffset layout changed");
+/// Compressed font group: a DEFLATE-compressed block of glyph bitmaps
+typedef struct {
+  uint32_t compressedOffset;  ///< Byte offset into compressed data array
+  uint32_t compressedSize;    ///< Compressed DEFLATE stream size
+  uint32_t uncompressedSize;  ///< Decompressed size
+  uint16_t glyphCount;        ///< Number of glyphs in this group
+  uint16_t firstGlyphIndex;   ///< First glyph index in the global glyph array
+} EpdFontGroup;
 
 /// Glyph interval structure
 typedef struct {
@@ -25,8 +30,6 @@ typedef struct {
   uint32_t last;    ///< The last unicode code point of the interval
   uint32_t offset;  ///< Index of the first code point into the glyph array
 } EpdUnicodeInterval;
-
-static_assert(sizeof(EpdUnicodeInterval) == 12, "EpdUnicodeInterval must remain 12 bytes for CPF compatibility");
 
 /// Data stored for FONT AS A WHOLE
 typedef struct {
@@ -38,4 +41,6 @@ typedef struct {
   int ascender;                         ///< Maximal height of a glyph above the base line
   int descender;                        ///< Maximal height of a glyph below the base line
   bool is2Bit;
+  const EpdFontGroup* groups;  ///< NULL for uncompressed fonts
+  uint16_t groupCount;         ///< 0 for uncompressed fonts
 } EpdFontData;

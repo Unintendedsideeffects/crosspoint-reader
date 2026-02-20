@@ -2,6 +2,7 @@
 
 #include <GfxRenderer.h>
 #include <HardwareSerial.h>
+#include <Logging.h>
 #include <PNGdec.h>
 #include <SDCardManager.h>
 #include <SdFat.h>

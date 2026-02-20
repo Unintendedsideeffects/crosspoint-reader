@@ -1,16 +1,20 @@
 #include "UITheme.h"
 
-#include <FeatureFlags.h>
 #include <GfxRenderer.h>
 #include <Logging.h>
 
 #include <memory>
 
+#include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "components/themes/BaseTheme.h"
-#if ENABLE_LYRA_THEME
+#include "components/themes/lyra/Lyra3CoversTheme.h"
 #include "components/themes/lyra/LyraTheme.h"
-#endif
+#include "util/StringUtils.h"
+
+namespace {
+constexpr int SKIP_PAGE_MS = 700;
+}  // namespace
 
 UITheme UITheme::instance;
 
@@ -28,16 +32,19 @@ void UITheme::setTheme(CrossPointSettings::UI_THEME type) {
   switch (type) {
     case CrossPointSettings::UI_THEME::CLASSIC:
       LOG_DBG("UI", "Using Classic theme");
-      currentTheme = new BaseTheme();
+      currentTheme = std::make_unique<BaseTheme>();
       currentMetrics = &BaseMetrics::values;
       break;
-#if ENABLE_LYRA_THEME
     case CrossPointSettings::UI_THEME::LYRA:
       LOG_DBG("UI", "Using Lyra theme");
-      currentTheme = new LyraTheme();
+      currentTheme = std::make_unique<LyraTheme>();
       currentMetrics = &LyraMetrics::values;
       break;
-#endif
+    case CrossPointSettings::UI_THEME::LYRA_3_COVERS:
+      LOG_DBG("UI", "Using Lyra 3 Covers theme");
+      currentTheme = std::make_unique<Lyra3CoversTheme>();
+      currentMetrics = &Lyra3CoversMetrics::values;
+      break;
   }
 }
 
@@ -65,4 +72,21 @@ std::string UITheme::getCoverThumbPath(std::string coverBmpPath, int coverHeight
     coverBmpPath.replace(pos, 8, std::to_string(coverHeight));
   }
   return coverBmpPath;
+}
+
+UIIcon UITheme::getFileIcon(std::string filename) {
+  if (filename.back() == '/') {
+    return Folder;
+  }
+  if (StringUtils::checkFileExtension(filename, ".epub") || StringUtils::checkFileExtension(filename, ".xtch") ||
+      StringUtils::checkFileExtension(filename, ".xtc")) {
+    return Book;
+  }
+  if (StringUtils::checkFileExtension(filename, ".txt") || StringUtils::checkFileExtension(filename, ".md")) {
+    return Text;
+  }
+  if (StringUtils::checkFileExtension(filename, ".bmp")) {
+    return Image;
+  }
+  return File;
 }

@@ -3,6 +3,7 @@
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
+#include <HalPowerManager.h>
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Logging.h>
@@ -289,7 +290,7 @@ void verifyPowerButtonDuration() {
   if (abort) {
     // Button released too early. Returning to sleep.
     // IMPORTANT: Re-arm the wakeup trigger before sleeping again
-    gpio.startDeepSleep();
+    powerManager.startDeepSleep(gpio);
   }
 }
 
@@ -313,7 +314,7 @@ void enterDeepSleep() {
   LOG_DBG("MAIN", "Power button press calibration value: %lu ms", t2 - t1);
   LOG_DBG("MAIN", "Entering deep sleep");
 
-  gpio.startDeepSleep();
+  powerManager.startDeepSleep(gpio);
 }
 
 void onGoHome();
@@ -509,7 +510,7 @@ void setup() {
     case HalGPIO::WakeupReason::AfterUSBPower:
       // If USB power caused a cold boot, go back to sleep
       LOG_DBG("MAIN", "Wakeup reason: After USB Power");
-      gpio.startDeepSleep();
+      powerManager.startDeepSleep(gpio);
       break;
     case HalGPIO::WakeupReason::AfterFlash:
       // After flashing, just proceed to boot
