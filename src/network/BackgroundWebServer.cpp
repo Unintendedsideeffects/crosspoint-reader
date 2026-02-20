@@ -119,7 +119,7 @@ void BackgroundWebServer::startServer() {
     return;
   }
   if (xTaskCreate(ntpSyncTask, "TimeSyncTask", 4096, nullptr, 1, nullptr) != pdPASS) {
-    TimeSync::syncTimeWithNtpLowMemory();
+    LOG_ERR("BWS", "Failed to start time sync task");
   }
   if (!server) {
     server.reset(new CrossPointWebServer());

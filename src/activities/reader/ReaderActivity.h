@@ -19,12 +19,13 @@ class Markdown;
 
 class ReaderActivity final : public ActivityWithSubactivity {
   std::string initialBookPath;
-  std::string currentBookPath;  // Track current book path for navigation
+  std::string currentBookPath;     // Track current book path for navigation
+  MyLibraryActivity::Tab fromTab;  // Remember which tab we came from
   bool pendingGoHome = false;
   bool pendingGoToLibrary = false;
   std::string pendingLibraryPath;
   const std::function<void()> onGoBack;
-  const std::function<void(const std::string&)> onGoToLibrary;
+  const std::function<void(const std::string&, MyLibraryActivity::Tab)> onGoToLibrary;
 #if ENABLE_EPUB_SUPPORT
   static std::unique_ptr<Epub> loadEpub(const std::string& path);
 #endif
@@ -58,10 +59,11 @@ class ReaderActivity final : public ActivityWithSubactivity {
 
  public:
   explicit ReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string initialBookPath,
-                          const std::function<void()>& onGoBack,
-                          const std::function<void(const std::string&)>& onGoToLibrary)
+                          MyLibraryActivity::Tab fromTab, const std::function<void()>& onGoBack,
+                          const std::function<void(const std::string&, MyLibraryActivity::Tab)>& onGoToLibrary)
       : ActivityWithSubactivity("Reader", renderer, mappedInput),
         initialBookPath(std::move(initialBookPath)),
+        fromTab(fromTab),
         onGoBack(onGoBack),
         onGoToLibrary(onGoToLibrary) {}
   void onEnter() override;

@@ -318,15 +318,14 @@ void enterDeepSleep() {
 }
 
 void onGoHome();
-void onGoToMyLibraryWithPath(const std::string& path);
+void onGoToMyLibraryWithPath(const std::string& path, MyLibraryActivity::Tab fromTab);
 #if ENABLE_TODO_PLANNER
 void onGoToTodo();
 #endif
 void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
-  (void)fromTab;
   exitActivity();
   enterNewActivity(
-      new ReaderActivity(renderer, mappedInputManager, initialEpubPath, onGoHome, onGoToMyLibraryWithPath));
+      new ReaderActivity(renderer, mappedInputManager, initialEpubPath, fromTab, onGoHome, onGoToMyLibraryWithPath));
 }
 void onContinueReading() { onGoToReader(APP_STATE.openEpubPath, MyLibraryActivity::Tab::Recent); }
 
@@ -345,10 +344,9 @@ void onGoToMyLibrary() {
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
 }
 
-void onGoToMyLibraryWithPath(const std::string& path) {
+void onGoToMyLibraryWithPath(const std::string& path, MyLibraryActivity::Tab fromTab) {
   exitActivity();
-  enterNewActivity(
-      new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, MyLibraryActivity::Tab::Files, path));
+  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, fromTab, path));
 }
 
 void onGoToBrowser() {

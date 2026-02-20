@@ -149,9 +149,21 @@ bool RecentBooksStore::loadFromFile() {
           inputFile.close();
           return false;
         }
-        // Title and author will be empty, they will be filled when the book is
-        // opened again
-        recentBooks.push_back({path, "", ""});
+
+        // Try to recover metadata from the book file itself
+        RecentBook book = getDataFromBook(path);
+
+        // If version 2, we might have title/author in the file, but getDataFromBook is fresher
+        if (version == 2) {
+          std::string title, author;
+          if (serialization::readString(inputFile, title) && serialization::readString(inputFile, author)) {
+            // Only use file data if book lookup failed (e.g. file deleted)
+            if (book.title.empty()) book.title = title;
+            if (book.author.empty()) book.author = author;
+          }
+        }
+
+        recentBooks.push_back(book);
       }
     } else {
       LOG_ERR("RBS", "Deserialization failed: Unknown version %u", version);

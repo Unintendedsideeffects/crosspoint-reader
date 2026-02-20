@@ -111,7 +111,7 @@ std::unique_ptr<Markdown> ReaderActivity::loadMarkdown(const std::string& path) 
 void ReaderActivity::goToLibrary(const std::string& fromBookPath) {
   // If coming from a book, start in that book's folder; otherwise start from root
   const auto initialPath = fromBookPath.empty() ? "/" : extractFolderPath(fromBookPath);
-  onGoToLibrary(initialPath);
+  onGoToLibrary(initialPath, fromTab);
 }
 
 void ReaderActivity::requestGoHome() { pendingGoHome = true; }

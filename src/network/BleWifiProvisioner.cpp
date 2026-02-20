@@ -220,25 +220,27 @@ bool BleWifiProvisioner::parseWifiQrPayload(const std::string& payload, std::str
     return false;
   }
 
-  auto findField = [&payload](const char field) -> std::string {
-    std::string token;
-    token.push_back(field);
-    token.push_back(':');
-    const size_t start = payload.find(token);
-    if (start == std::string::npos) {
-      return "";
-    }
+  auto extractField = [&](const std::string& prefix) -> std::string {
+    size_t start = payload.find(prefix);
+    if (start == std::string::npos) return "";
+    start += prefix.length();
 
-    const size_t valueStart = start + token.size();
-    const size_t valueEnd = payload.find(';', valueStart);
-    if (valueEnd == std::string::npos) {
-      return payload.substr(valueStart);
+    std::string result;
+    for (size_t i = start; i < payload.length(); ++i) {
+      char c = payload[i];
+      if (c == '\\' && i + 1 < payload.length()) {
+        result += payload[++i];  // Skip escape and add next char
+      } else if (c == ';') {
+        break;  // End of field
+      } else {
+        result += c;
+      }
     }
-    return payload.substr(valueStart, valueEnd - valueStart);
+    return result;
   };
 
-  ssidOut = trim(findField('S'));
-  passwordOut = trim(findField('P'));
+  ssidOut = extractField("S:");
+  passwordOut = extractField("P:");
   return !ssidOut.empty();
 }
 

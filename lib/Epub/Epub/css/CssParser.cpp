@@ -30,28 +30,23 @@ std::string readFileContent(FsFile& file) {
   return content;
 }
 
-// Remove CSS comments (/* ... */) from content
-std::string stripComments(const std::string& css) {
-  std::string result;
-  result.reserve(css.size());
-
-  size_t pos = 0;
+// Skip whitespace and CSS comments (/* ... */)
+void skipWhitespaceAndComments(const std::string& css, size_t& pos) {
   while (pos < css.size()) {
-    // Look for start of comment
-    if (pos + 1 < css.size() && css[pos] == '/' && css[pos + 1] == '*') {
-      // Find end of comment
-      const size_t endPos = css.find("*/", pos + 2);
-      if (endPos == std::string::npos) {
-        // Unterminated comment - skip rest of file
-        break;
-      }
-      pos = endPos + 2;
-    } else {
-      result.push_back(css[pos]);
+    if (isCssWhitespace(css[pos])) {
       ++pos;
+    } else if (pos + 1 < css.size() && css[pos] == '/' && css[pos + 1] == '*') {
+      pos += 2;
+      const size_t endPos = css.find("*/", pos);
+      if (endPos == std::string::npos) {
+        pos = css.size();  // Unterminated comment
+      } else {
+        pos = endPos + 2;
+      }
+    } else {
+      break;
     }
   }
-  return result;
 }
 
 // Skip @-rules (like @media, @import, @font-face)
@@ -69,6 +64,18 @@ size_t skipAtRule(const std::string& css, const size_t start) {
   int braceDepth = 0;
   while (pos < css.size()) {
     const char c = css[pos];
+
+    // Ignore characters inside comments
+    if (c == '/' && pos + 1 < css.size() && css[pos + 1] == '*') {
+      pos += 2;
+      const size_t endPos = css.find("*/", pos);
+      if (endPos == std::string::npos) {
+        return css.size();
+      }
+      pos = endPos + 2;
+      continue;
+    }
+
     if (c == '{') {
       ++braceDepth;
     } else if (c == '}') {
@@ -92,10 +99,7 @@ bool extractNextRule(const std::string& css, size_t& pos, std::string& selector,
 
   // Skip whitespace and @-rules until we find a regular rule
   while (pos < css.size()) {
-    // Skip whitespace
-    while (pos < css.size() && isCssWhitespace(css[pos])) {
-      ++pos;
-    }
+    skipWhitespaceAndComments(css, pos);
 
     if (pos >= css.size()) return false;
 
@@ -110,8 +114,25 @@ bool extractNextRule(const std::string& css, size_t& pos, std::string& selector,
 
   if (pos >= css.size()) return false;
 
-  // Find opening brace
-  const size_t bracePos = css.find('{', pos);
+  // Find opening brace, while being mindful of comments
+  size_t bracePos = std::string::npos;
+  for (size_t i = pos; i < css.size(); ++i) {
+    if (css[i] == '/' && i + 1 < css.size() && css[i + 1] == '*') {
+      i += 2;
+      const size_t end = css.find("*/", i);
+      if (end == std::string::npos) {
+        pos = css.size();
+        return false;
+      }
+      i = end + 1;  // loop will increment
+      continue;
+    }
+    if (css[i] == '{') {
+      bracePos = i;
+      break;
+    }
+  }
+
   if (bracePos == std::string::npos) return false;
 
   // Extract selector (everything before the brace)
@@ -123,6 +144,17 @@ bool extractNextRule(const std::string& css, size_t& pos, std::string& selector,
   size_t bodyEnd = bodyStart;
 
   while (bodyEnd < css.size() && depth > 0) {
+    if (css[bodyEnd] == '/' && bodyEnd + 1 < css.size() && css[bodyEnd + 1] == '*') {
+      bodyEnd += 2;
+      const size_t end = css.find("*/", bodyEnd);
+      if (end == std::string::npos) {
+        pos = css.size();
+        return false;
+      }
+      bodyEnd = end + 2;
+      continue;
+    }
+
     if (css[bodyEnd] == '{')
       ++depth;
     else if (css[bodyEnd] == '}')
@@ -461,14 +493,11 @@ bool CssParser::loadFromStream(FsFile& source) {
     return true;  // Empty file is valid
   }
 
-  // Remove comments
-  const std::string cleaned = stripComments(content);
-
   // Parse rules
   size_t pos = 0;
   std::string selector, body;
 
-  while (extractNextRule(cleaned, pos, selector, body)) {
+  while (extractNextRule(content, pos, selector, body)) {
     processRuleBlock(selector, body);
   }
 

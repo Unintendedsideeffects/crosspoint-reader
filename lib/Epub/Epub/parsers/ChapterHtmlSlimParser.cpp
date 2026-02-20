@@ -270,7 +270,10 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
         cleanupCachedCopy = true;
 
         FsFile cachedImageFile;
-        if (Storage.openFileForWrite("EHP", cachedImagePath, cachedImageFile)) {
+        // Optimization: Check if file exists first to avoid unnecessary writes
+        if (Storage.exists(cachedImagePath.c_str())) {
+          extractSuccess = true;
+        } else if (Storage.openFileForWrite("EHP", cachedImagePath, cachedImageFile)) {
           extractSuccess = self->epub->readItemContentsToStream(resolvedPath, cachedImageFile, 4096);
           cachedImageFile.flush();
           cachedImageFile.close();

@@ -16,9 +16,8 @@ class HalPowerManager {
   int normalFreq = 0;  // MHz
   bool isLowPower = false;
 
-  enum LockMode { None, NormalSpeed };
-  LockMode currentLockMode = None;
-  SemaphoreHandle_t modeMutex = nullptr;  // Protect access to currentLockMode
+  int lockCount = 0;
+  SemaphoreHandle_t modeMutex = nullptr;  // Protect access to lockCount
 
  public:
   static constexpr int LOW_POWER_FREQ = 10;                    // MHz
