@@ -103,7 +103,7 @@ FEATURES = {
     'xtc_support': Feature(
         name='XTC Support',
         flag='ENABLE_XTC_SUPPORT',
-        size_kb=21,
+        size_kb=-2,
         description='XTC format reader with chapter navigation'
     ),
     'lyra_theme': Feature(
@@ -115,7 +115,7 @@ FEATURES = {
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=240,
+        size_kb=239,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
