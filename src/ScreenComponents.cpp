@@ -1,18 +1,18 @@
 #include "ScreenComponents.h"
 
 #include <GfxRenderer.h>
+#include <HalPowerManager.h>
 
 #include <cstdint>
 #include <string>
 
-#include "Battery.h"
 #include "fontIds.h"
 #include "network/BackgroundWebServer.h"
 
 void ScreenComponents::drawBattery(const GfxRenderer& renderer, const int left, const int top,
                                    const bool showPercentage) {
   // Left aligned battery icon and percentage
-  const uint16_t percentage = battery.readPercentage();
+  const uint16_t percentage = powerManager.getBatteryPercentage();
   const auto percentageText = showPercentage ? std::to_string(percentage) + "%" : "";
   renderer.drawText(SMALL_FONT_ID, left + 20, top, percentageText.c_str());
 

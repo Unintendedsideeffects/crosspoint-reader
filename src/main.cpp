@@ -11,7 +11,6 @@
 
 #include <cstring>
 
-#include "Battery.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "FeatureManifest.h"

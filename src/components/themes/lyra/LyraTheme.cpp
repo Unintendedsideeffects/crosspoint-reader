@@ -1,12 +1,12 @@
 #include "LyraTheme.h"
 
 #include <GfxRenderer.h>
+#include <HalPowerManager.h>
 #include <HalStorage.h>
 
 #include <cstdint>
 #include <string>
 
-#include "Battery.h"
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -22,7 +22,7 @@ constexpr int topHintButtonY = 345;
 
 void LyraTheme::drawBatteryLeft(const GfxRenderer& renderer, Rect rect, const bool showPercentage) const {
   // Left aligned: icon on left, percentage on right (reader mode)
-  const uint16_t percentage = battery.readPercentage();
+  const uint16_t percentage = powerManager.getBatteryPercentage();
   const int y = rect.y + 6;
   const int battWidth = LyraMetrics::values.batteryWidth;
 
@@ -59,7 +59,7 @@ void LyraTheme::drawBatteryLeft(const GfxRenderer& renderer, Rect rect, const bo
 
 void LyraTheme::drawBatteryRight(const GfxRenderer& renderer, Rect rect, const bool showPercentage) const {
   // Right aligned: percentage on left, icon on right (UI headers)
-  const uint16_t percentage = battery.readPercentage();
+  const uint16_t percentage = powerManager.getBatteryPercentage();
   const int y = rect.y + 6;
   const int battWidth = LyraMetrics::values.batteryWidth;
 

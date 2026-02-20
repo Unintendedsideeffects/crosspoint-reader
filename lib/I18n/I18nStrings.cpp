@@ -86,12 +86,6 @@ const char* const CHARACTER_SETS[] = {
     "\x99"
     "\xE2"
     "\x80"
-    "\x9C"
-    "\xE2"
-    "\x80"
-    "\x9D"
-    "\xE2"
-    "\x80"
     "\xA6"
     "",  // Français
     " !\"%&'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]abcdefghiklmnoprstuvwxyz|\xC2"
@@ -342,7 +336,7 @@ const char* const STRINGS_EN[] = {
     "CrossPoint",
     "BOOTING",
     "SLEEPING",
-    "Entering Sleep...",
+    "Going to sleep",
     "Browse Files",
     "File Transfer",
     "Settings",
@@ -356,12 +350,13 @@ const char* const STRINGS_EN[] = {
     "No chapters",
     "End of book",
     "Empty chapter",
-    "Indexing...",
+    "Indexing",
     "Memory error",
     "Page load error",
     "Empty file",
     "Out of bounds",
     "Loading...",
+    "Loading",
     "Failed to load XTC",
     "Failed to load TXT",
     "Failed to load EPUB",
@@ -601,6 +596,7 @@ const char* const STRINGS_EN[] = {
     "UI Theme",
     "Classic",
     "Lyra",
+    "Lyra Extended",
     "Sunlight Fading Fix",
     "Remap Front Buttons",
     "OPDS Browser",
@@ -669,7 +665,7 @@ const char* const STRINGS_ES[] = {
     "CrossPoint",
     "BOOTING",
     "SLEEPING",
-    "ENTERING SLEEP...",
+    "ENTERING SLEEP",
     "Buscar archivos",
     "Transferencia de archivos",
     "Configuraci\xC3"
@@ -693,7 +689,7 @@ const char* const STRINGS_ES[] = {
     "tulo vac\xC3"
     "\xAD"
     "o",
-    "Indexando...",
+    "Indexando",
     "Error de memoria",
     "Error al cargar la p\xC3"
     "\xA1"
@@ -703,6 +699,7 @@ const char* const STRINGS_ES[] = {
     "o",
     "Out of bounds",
     "Cargando...",
+    "Cargando",
     "Error al cargar XTC",
     "Error al cargar TXT",
     "Error al cargar EPUB",
@@ -1120,7 +1117,8 @@ const char* const STRINGS_ES[] = {
     "Cl\xC3"
     "\xA1"
     "sico",
-    "LYRA",
+    "Lyra",
+    "Lyra Extended",
     "Correcci\xC3"
     "\xB3"
     "n de desvastado por sol",
@@ -1249,10 +1247,7 @@ const char* const STRINGS_FR[] = {
     "\x89"
     "MARRAGE EN COURS",
     "VEILLE",
-    "Mise en veille\xE2"
-    "\x80"
-    "\xA6"
-    "",
+    "Mise en veille",
     "Fichiers",
     "Transfert",
     "R\xC3"
@@ -1270,10 +1265,7 @@ const char* const STRINGS_FR[] = {
     "Aucun chapitre",
     "Fin du livre",
     "Chapitre vide",
-    "Indexation en cours\xE2"
-    "\x80"
-    "\xA6"
-    "",
+    "Indexation en cours",
     "Erreur de m\xC3"
     "\xA9"
     "moire",
@@ -1288,6 +1280,7 @@ const char* const STRINGS_FR[] = {
     "\x80"
     "\xA6"
     "",
+    "Chargement",
     "Erreur de chargement du fichier XTC",
     "Erreur de chargement du fichier TXT",
     "Erreur de chargement du fichier EPUB",
@@ -1365,7 +1358,7 @@ const char* const STRINGS_FR[] = {
     "\xA9"
     "er un r\xC3"
     "\xA9"
-    "seau WiFi accessible depuis d\xE2"
+    "seau WiFi accessible sur d\xE2"
     "\x80"
     "\x99"
     "autres appareils",
@@ -1500,15 +1493,9 @@ const char* const STRINGS_FR[] = {
     "\x80"
     "\x99"
     "",
-    "\xE2"
-    "\x80"
-    "\x9C"
-    "Gardez cet \xC3"
+    "4) Gardez cet \xC3"
     "\xA9"
-    "cran ouvert pendant le transfert\xE2"
-    "\x80"
-    "\x9D"
-    "",
+    "cran ouvert pendant le transfert",
     "Affichage",
     "Lecteur",
     "Commandes",
@@ -1822,7 +1809,7 @@ const char* const STRINGS_FR[] = {
     "R\xC3"
     "\xA9"
     "seau : ",
-    "Adresse IP : ",
+    "IP : ",
     "or scan QR code with your phone to connect to Wifi.",
     "Erreur : \xC3"
     "\x89"
@@ -1906,6 +1893,7 @@ const char* const STRINGS_FR[] = {
     "interface",
     "Classique",
     "Lyra",
+    "Lyra Extended",
     "Am\xC3"
     "\xA9"
     "lioration de la lisibilit\xC3"
@@ -2069,7 +2057,7 @@ const char* const STRINGS_DE[] = {
     "CrossPoint",
     "STARTEN",
     "STANDBY",
-    "Standby...",
+    "Standby",
     "Durchsuchen",
     "Datentransfer",
     "Einstellungen",
@@ -2089,10 +2077,7 @@ const char* const STRINGS_DE[] = {
     "Keine Kapitel",
     "Buchende",
     "Kapitelende",
-    "Indexieren\xE2"
-    "\x80"
-    "\xA6"
-    "",
+    "Indexieren",
     "Speicherfehler",
     "Seitenladefehler",
     "Leere Datei",
@@ -2103,6 +2088,7 @@ const char* const STRINGS_DE[] = {
     "\x80"
     "\xA6"
     "",
+    "Laden",
     "Ladefehler bei XTC",
     "Ladefehler bei TXT",
     "Ladefehler bei EPUB",
@@ -2467,6 +2453,7 @@ const char* const STRINGS_DE[] = {
     "System-Design",
     "Klassisch",
     "Lyra",
+    "Lyra Extended",
     "Anti-Verblassen",
     "Vordere Tasten belegen",
     "OPDS-Browser",
@@ -2575,7 +2562,7 @@ const char* const STRINGS_CZ[] = {
     "\xBE"
     "imu sp\xC3"
     "\xA1"
-    "nku...",
+    "nku",
     "Proch\xC3"
     "\xA1"
     "zet soubory",
@@ -2645,7 +2632,7 @@ const char* const STRINGS_CZ[] = {
     "\xA1"
     "n\xC3"
     "\xAD"
-    "...",
+    "",
     "Chyba pam\xC4"
     "\x9B"
     "ti",
@@ -2675,6 +2662,15 @@ const char* const STRINGS_CZ[] = {
     "n\xC3"
     "\xAD"
     "...",
+    "Na\xC4"
+    "\x8D"
+    "\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "n\xC3"
+    "\xAD"
+    "",
     "Nepoda\xC5"
     "\x99"
     "ilo se na\xC4"
@@ -3816,6 +3812,7 @@ const char* const STRINGS_CZ[] = {
     "\xA1"
     "",
     "Lyra",
+    "Lyra Extended",
     "Oprava blednut\xC3"
     "\xAD"
     " na slunci",
@@ -4178,7 +4175,7 @@ const char* const STRINGS_PO[] = {
     "CrossPoint",
     "INICIANDO",
     "EM REPOUSO",
-    "Entrando em repouso...",
+    "Entrando em repouso",
     "Arquivos",
     "Transfer\xC3"
     "\xAA"
@@ -4204,7 +4201,7 @@ const char* const STRINGS_PO[] = {
     "Cap\xC3"
     "\xAD"
     "tulo vazio",
-    "Indexando...",
+    "Indexando",
     "Erro de mem\xC3"
     "\xB3"
     "ria",
@@ -4214,6 +4211,7 @@ const char* const STRINGS_PO[] = {
     "Arquivo vazio",
     "Fora dos limites",
     "Carregando...",
+    "Carregando",
     "Falha ao carregar XTC",
     "Falha ao carregar TXT",
     "Falha ao carregar EPUB",
@@ -4680,6 +4678,7 @@ const char* const STRINGS_PO[] = {
     "\xA1"
     "ssico",
     "Lyra",
+    "Lyra Extended",
     "Ajuste desbotamento ao sol",
     "Remapear bot\xC3"
     "\xB5"
@@ -4882,7 +4881,7 @@ const char* const STRINGS_RU[] = {
     "\xBE"
     "\xD0"
     "\xBD"
-    "...",
+    "",
     "\xD0"
     "\x9E"
     "\xD0"
@@ -5220,7 +5219,7 @@ const char* const STRINGS_RU[] = {
     "\xB8"
     "\xD1"
     "\x8F"
-    "...",
+    "",
     "\xD0"
     "\x9E"
     "\xD1"
@@ -5358,6 +5357,23 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB0"
     "...",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x83"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "",
     "\xD0"
     "\x9D"
     "\xD0"
@@ -11261,6 +11277,7 @@ const char* const STRINGS_RU[] = {
     "\x8F"
     "",
     "Lyra",
+    "Lyra Extended",
     "\xD0"
     "\x9A"
     "\xD0"
@@ -13143,10 +13160,7 @@ const char* const STRINGS_SV[] = {
     "VILA",
     "G\xC3"
     "\xA5"
-    "r i vila\xE2"
-    "\x80"
-    "\xA6"
-    "",
+    "r i vila",
     "Bl\xC3"
     "\xA4"
     "ddra filer\xE2"
@@ -13189,10 +13203,7 @@ const char* const STRINGS_SV[] = {
     "\xA5"
     " boken",
     "Tomt kapitel",
-    "Indexerar\xE2"
-    "\x80"
-    "\xA6"
-    "",
+    "Indexerar",
     "Minnesfel",
     "Sidladdningsfel",
     "Tom fil",
@@ -13205,6 +13216,7 @@ const char* const STRINGS_SV[] = {
     "\x80"
     "\xA6"
     "",
+    "Laddar",
     "Misslyckades ladda XTC",
     "Misslyckades ladda TCT",
     "Misslyckades ladda EPUB",
@@ -13824,6 +13836,7 @@ const char* const STRINGS_SV[] = {
     "nssnittstema",
     "Klassisk",
     "Lyra",
+    "Lyra Extended",
     "Fix f\xC3"
     "\xB6"
     "r solskensmattning",
