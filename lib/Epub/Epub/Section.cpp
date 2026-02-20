@@ -5,6 +5,7 @@
 #include <Logging.h>
 #include <Serialization.h>
 
+#include "Epub/css/CssParser.h"
 #include "Page.h"
 #if ENABLE_HYPHENATION
 #include "hyphenation/Hyphenator.h"

@@ -28,7 +28,7 @@ class CalibreSettingsActivity final : public ActivityWithSubactivity {
   std::atomic<bool> taskHasExited{false};
   bool updateRequired = false;
 
-  int selectedIndex = 0;
+  size_t selectedIndex = 0;
   const std::function<void()> onBack;
 
   static void taskTrampoline(void* param);
