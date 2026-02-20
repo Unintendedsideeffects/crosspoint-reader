@@ -45,6 +45,9 @@ inline std::vector<SettingInfo> getSettingsList() {
                         {StrId::STR_THEME_CLASSIC, StrId::STR_THEME_LYRA}, "uiTheme", StrId::STR_CAT_DISPLAY),
       SettingInfo::Toggle(StrId::STR_SUNLIGHT_FADING_FIX, &CrossPointSettings::fadingFix, "fadingFix",
                           StrId::STR_CAT_DISPLAY),
+#if ENABLE_DARK_MODE
+      SettingInfo::Toggle(StrId::STR_DARK_MODE, &CrossPointSettings::darkMode, "darkMode", StrId::STR_CAT_DISPLAY),
+#endif
 
       // --- Reader ---
       SettingInfo::Enum(StrId::STR_FONT_FAMILY, &CrossPointSettings::fontFamily,
@@ -96,6 +99,10 @@ inline std::vector<SettingInfo> getSettingsList() {
 #if ENABLE_USB_MASS_STORAGE
       SettingInfo::Toggle(StrId::STR_FILE_TRANSFER, &CrossPointSettings::usbMscPromptOnConnect, "usbMscPromptOnConnect",
                           StrId::STR_CAT_SYSTEM),
+#endif
+#if ENABLE_BACKGROUND_SERVER
+      SettingInfo::Toggle(StrId::STR_BACKGROUND_SERVER_ON_CHARGE, &CrossPointSettings::backgroundServerOnCharge,
+                          "backgroundServerOnCharge", StrId::STR_CAT_SYSTEM),
 #endif
   };
 

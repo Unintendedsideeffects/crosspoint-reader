@@ -92,6 +92,8 @@ class CrossPointWebServer {
   void handlePostSettings();
 #if ENABLE_USER_FONTS
   void handleRescanUserFonts();
+  void handleFontUpload();
+  void handleFontUploadPost();
 #endif
 
   // API handlers for web UI

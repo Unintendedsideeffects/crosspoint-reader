@@ -43,7 +43,7 @@ const char* const CHARACTER_SETS[] = {
     " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXY[\\]abcdefghijklmnopqrstuvwxyz|\xC2"
     "\xAB"
     "",  // English
-    " !\"%'()*+,-./01235:=?ABCDEFGHIJKLMNOPQRSTUVWXY[\\]abcdefghijlmnopqrstuvwxyz|\xC2"
+    " !\"%'()*+,-./01235:=?ABCDEFGHIJKLMNOPQRSTUVWXY[\\]abcdefghijklmnopqrstuvwxyz|\xC2"
     "\xA1"
     "\xC2"
     "\xAB"
@@ -194,7 +194,7 @@ const char* const CHARACTER_SETS[] = {
     "\x80"
     "\x91"
     "",  // Português (Brasil)
-    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefhiklnoprstuxyz|\xC2"
+    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklnoprstuvxyz|\xC2"
     "\xAB"
     "\xC2"
     "\xBB"
@@ -661,6 +661,8 @@ const char* const STRINGS_EN[] = {
     "Book's Style",
     "Embedded Style",
     "OPDS Server URL",
+    "Dark Mode",
+    "Background Server on Charge",
 };
 
 const char* const STRINGS_ES[] = {
@@ -1237,6 +1239,8 @@ const char* const STRINGS_ES[] = {
     "Estilo del libro",
     "Estilo integrado",
     "URL del servidor OPDS",
+    "Dark Mode",
+    "Background Server on Charge",
 };
 
 const char* const STRINGS_FR[] = {
@@ -2057,6 +2061,8 @@ const char* const STRINGS_FR[] = {
     "\xA9"
     "",
     "URL du serveur OPDS",
+    "Dark Mode",
+    "Background Server on Charge",
 };
 
 const char* const STRINGS_DE[] = {
@@ -2549,6 +2555,8 @@ const char* const STRINGS_DE[] = {
     "Buch-Stil",
     "Eingebetteter Stil",
     "OPDS-Server-URL",
+    "Dark Mode",
+    "Background Server on Charge",
 };
 
 const char* const STRINGS_CZ[] = {
@@ -4162,6 +4170,8 @@ const char* const STRINGS_CZ[] = {
     "\xBD"
     " styl",
     "URL serveru OPDS",
+    "Dark Mode",
+    "Background Server on Charge",
 };
 
 const char* const STRINGS_PO[] = {
@@ -4804,6 +4814,8 @@ const char* const STRINGS_PO[] = {
     "Estilo do livro",
     "Estilo embutido",
     "URL do servidor OPDS",
+    "Dark Mode",
+    "Background Server on Charge",
 };
 
 const char* const STRINGS_RU[] = {
@@ -13121,6 +13133,8 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB0"
     "",
+    "Dark Mode",
+    "Background Server on Charge",
 };
 
 const char* const STRINGS_SV[] = {
@@ -13964,6 +13978,8 @@ const char* const STRINGS_SV[] = {
     "\xA4"
     "ddad stil",
     "OPDS-serveradress",
+    "Dark Mode",
+    "Background Server on Charge",
 };
 
 }  // namespace i18n_strings

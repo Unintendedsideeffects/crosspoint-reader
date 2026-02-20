@@ -60,7 +60,7 @@ EpdFont bookerly14ItalicFont(&bookerly_14_italic);
 EpdFont bookerly14BoldItalicFont(&bookerly_14_bolditalic);
 EpdFontFamily bookerly14FontFamily(&bookerly14RegularFont, &bookerly14BoldFont, &bookerly14ItalicFont,
                                    &bookerly14BoldItalicFont);
-#if ENABLE_EXTENDED_FONTS
+#if ENABLE_BOOKERLY_FONTS
 EpdFont bookerly12RegularFont(&bookerly_12_regular);
 EpdFont bookerly12BoldFont(&bookerly_12_bold);
 EpdFont bookerly12ItalicFont(&bookerly_12_italic);
@@ -79,7 +79,9 @@ EpdFont bookerly18ItalicFont(&bookerly_18_italic);
 EpdFont bookerly18BoldItalicFont(&bookerly_18_bolditalic);
 EpdFontFamily bookerly18FontFamily(&bookerly18RegularFont, &bookerly18BoldFont, &bookerly18ItalicFont,
                                    &bookerly18BoldItalicFont);
+#endif  // ENABLE_BOOKERLY_FONTS
 
+#if ENABLE_NOTOSANS_FONTS
 EpdFont notosans12RegularFont(&notosans_12_regular);
 EpdFont notosans12BoldFont(&notosans_12_bold);
 EpdFont notosans12ItalicFont(&notosans_12_italic);
@@ -104,6 +106,7 @@ EpdFont notosans18ItalicFont(&notosans_18_italic);
 EpdFont notosans18BoldItalicFont(&notosans_18_bolditalic);
 EpdFontFamily notosans18FontFamily(&notosans18RegularFont, &notosans18BoldFont, &notosans18ItalicFont,
                                    &notosans18BoldItalicFont);
+#endif  // ENABLE_NOTOSANS_FONTS
 
 #if ENABLE_OPENDYSLEXIC_FONTS
 EpdFont opendyslexic8RegularFont(&opendyslexic_8_regular);
@@ -131,7 +134,6 @@ EpdFont opendyslexic14BoldItalicFont(&opendyslexic_14_bolditalic);
 EpdFontFamily opendyslexic14FontFamily(&opendyslexic14RegularFont, &opendyslexic14BoldFont, &opendyslexic14ItalicFont,
                                        &opendyslexic14BoldItalicFont);
 #endif  // ENABLE_OPENDYSLEXIC_FONTS
-#endif  // ENABLE_EXTENDED_FONTS
 
 EpdFont smallFont(&notosans_8_regular);
 EpdFontFamily smallFontFamily(&smallFont);
@@ -410,22 +412,23 @@ void setupDisplayAndFonts() {
   renderer.begin();
   LOG_DBG("MAIN", "Display initialized");
   renderer.insertFontFamily(BOOKERLY_14_FONT_ID, &bookerly14FontFamily);
-#if ENABLE_EXTENDED_FONTS
+#if ENABLE_BOOKERLY_FONTS
   renderer.insertFontFamily(BOOKERLY_12_FONT_ID, &bookerly12FontFamily);
   renderer.insertFontFamily(BOOKERLY_16_FONT_ID, &bookerly16FontFamily);
   renderer.insertFontFamily(BOOKERLY_18_FONT_ID, &bookerly18FontFamily);
-
+#endif  // ENABLE_BOOKERLY_FONTS
+#if ENABLE_NOTOSANS_FONTS
   renderer.insertFontFamily(NOTOSANS_12_FONT_ID, &notosans12FontFamily);
   renderer.insertFontFamily(NOTOSANS_14_FONT_ID, &notosans14FontFamily);
   renderer.insertFontFamily(NOTOSANS_16_FONT_ID, &notosans16FontFamily);
   renderer.insertFontFamily(NOTOSANS_18_FONT_ID, &notosans18FontFamily);
+#endif  // ENABLE_NOTOSANS_FONTS
 #if ENABLE_OPENDYSLEXIC_FONTS
   renderer.insertFontFamily(OPENDYSLEXIC_8_FONT_ID, &opendyslexic8FontFamily);
   renderer.insertFontFamily(OPENDYSLEXIC_10_FONT_ID, &opendyslexic10FontFamily);
   renderer.insertFontFamily(OPENDYSLEXIC_12_FONT_ID, &opendyslexic12FontFamily);
   renderer.insertFontFamily(OPENDYSLEXIC_14_FONT_ID, &opendyslexic14FontFamily);
 #endif  // ENABLE_OPENDYSLEXIC_FONTS
-#endif  // ENABLE_EXTENDED_FONTS
   renderer.insertFontFamily(UI_10_FONT_ID, &ui10FontFamily);
   renderer.insertFontFamily(UI_12_FONT_ID, &ui12FontFamily);
   renderer.insertFontFamily(SMALL_FONT_ID, &smallFontFamily);
@@ -493,6 +496,9 @@ void setup() {
 #endif
   WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
   UITheme::getInstance().reload();
+#if ENABLE_DARK_MODE
+  renderer.setDarkMode(SETTINGS.darkMode);
+#endif
   ButtonNavigator::setMappedInputManager(mappedInputManager);
 
   switch (gpio.getWakeupReason()) {
@@ -630,6 +636,14 @@ void loop() {
   }
 
   usbConnectedLast = usbConnected;
+#endif
+
+#if ENABLE_BACKGROUND_SERVER
+  {
+    const bool usbConn = gpio.isUsbConnected();
+    const bool allowRun = SETTINGS.backgroundServerOnCharge && usbConn;
+    backgroundServer.loop(usbConn, allowRun);
+  }
 #endif
 
   // Check for any user activity (button press or release) or active background work

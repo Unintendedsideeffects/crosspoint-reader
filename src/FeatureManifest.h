@@ -18,6 +18,8 @@ class FeatureManifest {
  public:
   // Compile-time feature detection (constexpr for zero runtime cost)
   static constexpr bool hasExtendedFonts() { return ENABLE_EXTENDED_FONTS != 0; }
+  static constexpr bool hasBookerlyFonts() { return ENABLE_BOOKERLY_FONTS != 0; }
+  static constexpr bool hasNotoSansFonts() { return ENABLE_NOTOSANS_FONTS != 0; }
   static constexpr bool hasOpenDyslexicFonts() { return ENABLE_OPENDYSLEXIC_FONTS != 0; }
   static constexpr bool hasImageSleep() { return ENABLE_IMAGE_SLEEP != 0; }
   static constexpr bool hasBookImages() { return ENABLE_BOOK_IMAGES != 0; }
@@ -46,11 +48,11 @@ class FeatureManifest {
    * Useful for debugging and capacity planning.
    */
   static constexpr int enabledFeatureCount() {
-    return hasExtendedFonts() + hasOpenDyslexicFonts() + hasImageSleep() + hasBookImages() + hasMarkdown() +
-           hasIntegrations() + hasKOReaderSync() + hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() +
-           hasWebPokedexPlugin() + hasEpubSupport() + hasHyphenation() + hasXtcSupport() + hasLyraTheme() +
-           hasOtaUpdates() + hasTodoPlanner() + hasDarkMode() + hasVisualCoverPicker() + hasBleWifiProvisioning() +
-           hasUserFonts() + hasWebWifiSetup() + hasUsbMassStorage();
+    return hasExtendedFonts() + hasBookerlyFonts() + hasNotoSansFonts() + hasOpenDyslexicFonts() + hasImageSleep() +
+           hasBookImages() + hasMarkdown() + hasIntegrations() + hasKOReaderSync() + hasCalibreSync() +
+           hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin() + hasEpubSupport() + hasHyphenation() +
+           hasXtcSupport() + hasLyraTheme() + hasOtaUpdates() + hasTodoPlanner() + hasDarkMode() +
+           hasVisualCoverPicker() + hasBleWifiProvisioning() + hasUserFonts() + hasWebWifiSetup() + hasUsbMassStorage();
   }
 
   /**
@@ -70,6 +72,8 @@ class FeatureManifest {
     };
 
     addFeature(hasExtendedFonts(), "extended_fonts");
+    addFeature(hasBookerlyFonts(), "bookerly_fonts");
+    addFeature(hasNotoSansFonts(), "notosans_fonts");
     addFeature(hasOpenDyslexicFonts(), "opendyslexic_fonts");
     addFeature(hasImageSleep(), "image_sleep");
     addFeature(hasBookImages(), "book_images");
@@ -103,6 +107,8 @@ class FeatureManifest {
   static String toJson() {
     String json = "{";
     json += "\"extended_fonts\":" + String(hasExtendedFonts() ? "true" : "false");
+    json += ",\"bookerly_fonts\":" + String(hasBookerlyFonts() ? "true" : "false");
+    json += ",\"notosans_fonts\":" + String(hasNotoSansFonts() ? "true" : "false");
     json += ",\"opendyslexic_fonts\":" + String(hasOpenDyslexicFonts() ? "true" : "false");
     json += ",\"image_sleep\":" + String(hasImageSleep() ? "true" : "false");
     json += ",\"book_images\":" + String(hasBookImages() ? "true" : "false");
@@ -136,6 +142,8 @@ class FeatureManifest {
   static void printToSerial() {
     LOG_INF("FEATURES", "CrossPoint Reader build configuration:");
     LOG_INF("FEATURES", "  Extended Fonts:    %s", hasExtendedFonts() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Bookerly Fonts:    %s", hasBookerlyFonts() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  NotoSans Fonts:    %s", hasNotoSansFonts() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  OpenDyslexic:      %s", hasOpenDyslexicFonts() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  Image Sleep:       %s", hasImageSleep() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  Book Images:       %s", hasBookImages() ? "ENABLED " : "DISABLED");
@@ -158,7 +166,7 @@ class FeatureManifest {
     LOG_INF("FEATURES", "  User Fonts:        %s", hasUserFonts() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  Web WiFi Setup:    %s", hasWebWifiSetup() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  USB Mass Storage:  %s", hasUsbMassStorage() ? "ENABLED " : "DISABLED");
-    LOG_INF("FEATURES", "%d/23 compile-time features enabled", enabledFeatureCount());
+    LOG_INF("FEATURES", "%d/25 compile-time features enabled", enabledFeatureCount());
     LOG_INF("FEATURES", "Build: %s", getBuildString().c_str());
   }
 };

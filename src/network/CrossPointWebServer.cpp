@@ -169,6 +169,7 @@ void CrossPointWebServer::begin() {
   server->on("/api/settings", HTTP_POST, [this] { handlePostSettings(); });
 #if ENABLE_USER_FONTS
   server->on("/api/user-fonts/rescan", HTTP_POST, [this] { handleRescanUserFonts(); });
+  server->on("/api/user-fonts/upload", HTTP_POST, [this] { handleFontUploadPost(); }, [this] { handleFontUpload(); });
 #endif
 
   // WiFi endpoints
@@ -1527,6 +1528,122 @@ void CrossPointWebServer::handleRescanUserFonts() {
   JsonDocument response;
   response["families"] = manager.getAvailableFonts().size();
   response["activeLoaded"] = activeFontLoaded;
+
+  String output;
+  serializeJson(response, output);
+  server->send(200, "application/json", output);
+}
+
+void CrossPointWebServer::handleFontUpload() {
+  esp_task_wdt_reset();
+
+  if (!running || !server) return;
+
+  const HTTPUpload& upload = server->upload();
+
+  if (upload.status == UPLOAD_FILE_START) {
+    esp_task_wdt_reset();
+    uploadFileName = upload.filename;
+    uploadSize = 0;
+    uploadSuccess = false;
+    uploadError = "";
+    uploadBufferPos = 0;
+    uploadStartTime = millis();
+    totalWriteTime = 0;
+    writeCount = 0;
+
+    if (!PathUtils::isValidFilename(uploadFileName)) {
+      uploadError = "Invalid filename";
+      return;
+    }
+
+    String lowerName = uploadFileName;
+    lowerName.toLowerCase();
+    if (!lowerName.endsWith(".cpf")) {
+      uploadError = "Only .cpf font files are accepted";
+      return;
+    }
+
+    // Ensure /fonts directory exists
+    if (!Storage.exists("/fonts")) {
+      SpiBusMutex::Guard guard;
+      Storage.mkdir("/fonts");
+    }
+
+    const String filePath = String("/fonts/") + uploadFileName;
+    esp_task_wdt_reset();
+    if (Storage.exists(filePath.c_str())) {
+      SpiBusMutex::Guard guard;
+      Storage.remove(filePath.c_str());
+    }
+    esp_task_wdt_reset();
+    if (!Storage.openFileForWrite("FONT", filePath, uploadFile)) {
+      uploadError = "Failed to create font file on SD card";
+    }
+    esp_task_wdt_reset();
+
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    if (uploadFile && uploadError.isEmpty()) {
+      const uint8_t* data = upload.buf;
+      size_t remaining = upload.currentSize;
+      while (remaining > 0) {
+        const size_t space = UPLOAD_BUFFER_SIZE - uploadBufferPos;
+        const size_t toCopy = (remaining < space) ? remaining : space;
+        memcpy(uploadBuffer + uploadBufferPos, data, toCopy);
+        uploadBufferPos += toCopy;
+        data += toCopy;
+        remaining -= toCopy;
+        if (uploadBufferPos >= UPLOAD_BUFFER_SIZE) {
+          if (!flushUploadBuffer()) {
+            uploadError = "Failed to write font data - disk may be full";
+            SpiBusMutex::Guard guard;
+            uploadFile.close();
+            return;
+          }
+        }
+      }
+      uploadSize += upload.currentSize;
+    }
+
+  } else if (upload.status == UPLOAD_FILE_END) {
+    if (uploadFile) {
+      if (!flushUploadBuffer()) {
+        uploadError = "Failed to write final font data";
+      }
+      {
+        SpiBusMutex::Guard guard;
+        uploadFile.close();
+      }
+      if (uploadError.isEmpty()) {
+        uploadSuccess = true;
+        LOG_DBG("WEB", "[FONT] Upload complete: %s (%d bytes)", uploadFileName.c_str(), uploadSize);
+      }
+    }
+
+  } else if (upload.status == UPLOAD_FILE_ABORTED) {
+    uploadBufferPos = 0;
+    if (uploadFile) {
+      SpiBusMutex::Guard guard;
+      uploadFile.close();
+      Storage.remove((String("/fonts/") + uploadFileName).c_str());
+    }
+    uploadError = "Font upload aborted";
+  }
+}
+
+void CrossPointWebServer::handleFontUploadPost() {
+  if (!uploadSuccess) {
+    const String error = uploadError.isEmpty() ? "Upload failed" : uploadError;
+    server->send(400, "text/plain", error);
+    return;
+  }
+
+  auto& manager = UserFontManager::getInstance();
+  manager.scanFonts();
+
+  JsonDocument response;
+  response["ok"] = true;
+  response["families"] = (int)manager.getAvailableFonts().size();
 
   String output;
   serializeJson(response, output);

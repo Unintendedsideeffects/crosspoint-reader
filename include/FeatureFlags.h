@@ -3,12 +3,23 @@
 // Central source of truth for compile-time feature toggles.
 // Build flags (e.g. -DENABLE_MARKDOWN=0) override these defaults.
 
-#ifndef ENABLE_EXTENDED_FONTS
-#define ENABLE_EXTENDED_FONTS 1
+#ifndef ENABLE_BOOKERLY_FONTS
+#define ENABLE_BOOKERLY_FONTS 1
+#endif
+
+#ifndef ENABLE_NOTOSANS_FONTS
+#define ENABLE_NOTOSANS_FONTS 1
 #endif
 
 #ifndef ENABLE_OPENDYSLEXIC_FONTS
 #define ENABLE_OPENDYSLEXIC_FONTS 0
+#endif
+
+// Legacy alias: ENABLE_EXTENDED_FONTS is true when any extended font family is enabled.
+#if ENABLE_BOOKERLY_FONTS || ENABLE_NOTOSANS_FONTS || ENABLE_OPENDYSLEXIC_FONTS
+#define ENABLE_EXTENDED_FONTS 1
+#else
+#define ENABLE_EXTENDED_FONTS 0
 #endif
 
 #ifndef ENABLE_IMAGE_SLEEP
@@ -80,7 +91,7 @@
 #endif
 
 #ifndef ENABLE_BLE_WIFI_PROVISIONING
-#define ENABLE_BLE_WIFI_PROVISIONING 0
+#define ENABLE_BLE_WIFI_PROVISIONING 1
 #endif
 
 #ifndef ENABLE_USER_FONTS
@@ -113,7 +124,7 @@
 #define ENABLE_BOOK_IMAGES 0
 #endif
 
-#if !ENABLE_EXTENDED_FONTS
+#if !ENABLE_BOOKERLY_FONTS && !ENABLE_NOTOSANS_FONTS
 #undef ENABLE_OPENDYSLEXIC_FONTS
 #define ENABLE_OPENDYSLEXIC_FONTS 0
 #endif
