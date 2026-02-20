@@ -23,7 +23,9 @@ void readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
 
 namespace {
 constexpr uint8_t SETTINGS_FILE_VERSION = 4;
-// Increment this when adding new persisted settings fields
+// Increment this when adding new persisted settings fields.
+// Must match the number of writePod/writeString calls in saveToFile() (excluding the
+// version and count header writes). Current count: 35.
 constexpr uint8_t SETTINGS_COUNT = 35;
 constexpr char SETTINGS_FILE[] = "/.crosspoint/settings.bin";
 

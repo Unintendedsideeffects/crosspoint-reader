@@ -23,9 +23,13 @@ constexpr char latestChannelUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/latest";
 constexpr char resetChannelUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/reset";
-constexpr char featureStoreCatalogUrl[] =
-    "https://raw.githubusercontent.com/Unintendedsideeffects/crosspoint-reader/fork-drift/docs/ota/"
-    "feature-store-catalog.json";
+// Override at build time via -DFEATURE_STORE_CATALOG_URL='"..."' in platformio.ini build_flags.
+#ifndef FEATURE_STORE_CATALOG_URL
+#define FEATURE_STORE_CATALOG_URL                                                                  \
+  "https://raw.githubusercontent.com/Unintendedsideeffects/crosspoint-reader/fork-drift/docs/ota/" \
+  "feature-store-catalog.json"
+#endif
+constexpr char featureStoreCatalogUrl[] = FEATURE_STORE_CATALOG_URL;
 constexpr char expectedBoard[] = "esp32c3";
 constexpr char crosspointDataDir[] = "/.crosspoint";
 constexpr char factoryResetMarkerFile[] = "/.factory-reset-pending";
@@ -99,10 +103,6 @@ bool parseBuildDate(const std::string& v, unsigned long& date) {
   return date >= 20200101UL && date <= 29991231UL;
 }
 
-/* This is buffer and size holder to keep upcoming data from latestReleaseUrl */
-char* local_buf;
-int output_len;
-
 /*
  * When esp_crt_bundle.h included, it is pointing wrong header file
  * which is something under WifiClientSecure because of our framework based on arduno platform.
@@ -112,6 +112,13 @@ extern "C" {
 extern esp_err_t esp_crt_bundle_attach(void* conf);
 }
 
+// Buffer accumulated by the HTTP event handler during a JSON fetch.
+// Passed via user_data so each fetch call has its own isolated state.
+struct HttpBuf {
+  char* data = nullptr;
+  size_t len = 0;
+};
+
 esp_err_t http_client_set_header_cb(esp_http_client_handle_t http_client) {
   return esp_http_client_set_header(http_client, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
 }
@@ -119,49 +126,49 @@ esp_err_t http_client_set_header_cb(esp_http_client_handle_t http_client) {
 esp_err_t event_handler(esp_http_client_event_t* event) {
   if (event->event_id != HTTP_EVENT_ON_DATA) return ESP_OK;
 
-  // Append this chunk to local_buf regardless of whether the response is chunked or content-length based.
-  // realloc(NULL, n) behaves as malloc(n), so this handles the first call correctly for both paths.
-  const int data_len = event->data_len;
-  char* new_buf = static_cast<char*>(realloc(local_buf, output_len + data_len + 1));
-  if (new_buf == NULL) {
-    LOG_ERR("OTA", "Failed to allocate HTTP response buffer (%d bytes)", output_len + data_len + 1);
+  // Append this chunk to the caller-supplied buffer.
+  // realloc(NULL, n) behaves as malloc(n), so this handles the first call correctly.
+  auto* buf = static_cast<HttpBuf*>(event->user_data);
+  const size_t data_len = static_cast<size_t>(event->data_len);
+  char* new_data = static_cast<char*>(realloc(buf->data, buf->len + data_len + 1));
+  if (new_data == NULL) {
+    LOG_ERR("OTA", "Failed to allocate HTTP response buffer (%zu bytes)", buf->len + data_len + 1);
     return ESP_ERR_NO_MEM;
   }
 
-  local_buf = new_buf;
-  memcpy(local_buf + output_len, event->data, data_len);
-  output_len += data_len;
-  local_buf[output_len] = '\0';
+  buf->data = new_data;
+  memcpy(buf->data + buf->len, event->data, data_len);
+  buf->len += data_len;
+  buf->data[buf->len] = '\0';
   return ESP_OK;
 }
 
 /**
- * Fetch JSON from a URL into ArduinoJson doc, using the shared local_buf/output_len globals.
+ * Fetch JSON from a URL into ArduinoJson doc.
  * Returns OtaUpdater::OK on success, or an error code.
  */
 OtaUpdater::OtaUpdaterError fetchReleaseJson(const char* url, JsonDocument& doc, const JsonDocument& filter) {
-  local_buf = nullptr;
-  output_len = 0;
+  HttpBuf httpBuf;
 
   esp_http_client_config_t client_config = {
       .url = url,
       .event_handler = event_handler,
       .buffer_size = 8192,
       .buffer_size_tx = 8192,
-      .skip_cert_common_name_check = true,
+      .user_data = &httpBuf,
       .crt_bundle_attach = esp_crt_bundle_attach,
       .keep_alive_enable = true,
   };
 
   struct localBufCleaner {
-    char** bufPtr;
+    HttpBuf* buf;
     ~localBufCleaner() {
-      if (*bufPtr) {
-        free(*bufPtr);
-        *bufPtr = NULL;
+      if (buf->data) {
+        free(buf->data);
+        buf->data = nullptr;
       }
     }
-  } cleaner = {&local_buf};
+  } cleaner = {&httpBuf};
 
   esp_http_client_handle_t client_handle = esp_http_client_init(&client_config);
   if (!client_handle) {
@@ -189,7 +196,7 @@ OtaUpdater::OtaUpdaterError fetchReleaseJson(const char* url, JsonDocument& doc,
     return OtaUpdater::INTERNAL_UPDATE_ERROR;
   }
 
-  const DeserializationError error = deserializeJson(doc, local_buf, DeserializationOption::Filter(filter));
+  const DeserializationError error = deserializeJson(doc, httpBuf.data, DeserializationOption::Filter(filter));
   if (error) {
     LOG_ERR("OTA", "JSON parse failed: %s", error.c_str());
     return OtaUpdater::JSON_PARSE_ERROR;
@@ -307,9 +314,6 @@ bool OtaUpdater::loadFeatureStoreCatalog() {
   filter["bundles"][0]["checksum"] = true;
   filter["bundles"][0]["binarySize"] = true;
 
-  local_buf = nullptr;
-  output_len = 0;
-
   const auto res = fetchReleaseJson(featureStoreCatalogUrl, doc, filter);
   if (res != OK) {
     lastError = CATALOG_UNAVAILABLE_ERROR;
@@ -423,8 +427,11 @@ bool OtaUpdater::isUpdateNewer() const {
   }
 
   // --- Cross-format or unrecognised tokens (e.g. feature-store "latest"/"nightly") ---
-  // Formats differ → this is a different channel or a deliberate bundle switch.
-  // Allow the install — the version strings are not comparable as scalars.
+  // Formats differ → device is on one version scheme, server returned another.
+  // This is a deliberate channel switch (e.g. semver stable → date-format nightly).
+  // Version strings are not comparable as scalars, so we allow the install.
+  // If gating is required, the calling UI layer should confirm with the user before
+  // invoking installUpdate() when isUpdateNewer() returns true across channel types.
   return true;
 }
 
@@ -449,7 +456,6 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
        */
       .buffer_size = 8192,
       .buffer_size_tx = 8192,
-      .skip_cert_common_name_check = true,
       .crt_bundle_attach = esp_crt_bundle_attach,
       .keep_alive_enable = true,
   };
@@ -507,6 +513,13 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
             sizeof(SETTINGS.installedOtaFeatureFlags) - 1);
     SETTINGS.installedOtaFeatureFlags[sizeof(SETTINGS.installedOtaFeatureFlags) - 1] = '\0';
     SETTINGS.saveToFile();
+  }
+
+  // Write the deferred factory-reset sentinel so boot picks it up on next cold start.
+  // The flash itself already succeeded; log a warning if the marker write fails rather than
+  // returning an error that would prevent the activity from signalling reboot to the user.
+  if (factoryResetOnInstall && !markFactoryResetPending()) {
+    LOG_WRN("OTA", "Factory reset marker write failed — data wipe will NOT occur on next boot");
   }
 
   return OK;

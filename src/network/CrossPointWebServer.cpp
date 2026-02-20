@@ -407,25 +407,33 @@ void CrossPointWebServer::handleTodoEntry() {
 
   const std::string markdownPath = "/daily/" + today + ".md";
   const std::string textPath = "/daily/" + today + ".txt";
-  const bool markdownExists = Storage.exists(markdownPath.c_str());
-  const bool textExists = Storage.exists(textPath.c_str());
-  const std::string targetPath = TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, markdownExists, textExists);
   const std::string dirPath = "/daily";
-  if (!Storage.exists(dirPath.c_str())) {
-    Storage.mkdir(dirPath.c_str());
-  }
 
+  // All SD operations serialised under one mutex guard to prevent data races
+  // with concurrent tasks (e.g. TodoActivity) accessing the SPI bus.
   std::string content;
-  if (Storage.exists(targetPath.c_str())) {
-    content = Storage.readFile(targetPath.c_str()).c_str();
-    if (!content.empty() && content.back() != '\n') {
-      content.push_back('\n');
+  std::string targetPath;
+  bool writeOk = false;
+  {
+    SpiBusMutex::Guard guard;
+    const bool markdownExists = Storage.exists(markdownPath.c_str());
+    const bool textExists = Storage.exists(textPath.c_str());
+    targetPath = TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, markdownExists, textExists);
+    if (!Storage.exists(dirPath.c_str())) {
+      Storage.mkdir(dirPath.c_str());
     }
+    if (Storage.exists(targetPath.c_str())) {
+      content = Storage.readFile(targetPath.c_str()).c_str();
+      if (!content.empty() && content.back() != '\n') {
+        content.push_back('\n');
+      }
+    }
+    content += TodoPlannerStorage::formatEntry(text.c_str(), agendaEntry);
+    content.push_back('\n');
+    writeOk = Storage.writeFile(targetPath.c_str(), content.c_str());
   }
-  content += TodoPlannerStorage::formatEntry(text.c_str(), agendaEntry);
-  content.push_back('\n');
 
-  if (!Storage.writeFile(targetPath.c_str(), content.c_str())) {
+  if (!writeOk) {
     server->send(500, "text/plain", "Failed to write TODO entry");
     return;
   }
@@ -1240,8 +1248,14 @@ void CrossPointWebServer::handleDelete() const {
     }
   }
 
-  // Check if item exists
-  if (!Storage.exists(itemPath.c_str())) {
+  // Check if item exists (guarded to close TOCTOU window with concurrent SD tasks).
+  // Result captured outside the guard so server->send is not called while holding the SPI mutex.
+  bool itemExists = false;
+  {
+    SpiBusMutex::Guard guard;
+    itemExists = Storage.exists(itemPath.c_str());
+  }
+  if (!itemExists) {
     LOG_DBG("WEB", "Delete failed - item not found: %s", itemPath.c_str());
     server->send(404, "text/plain", "Item not found");
     return;
@@ -1252,7 +1266,9 @@ void CrossPointWebServer::handleDelete() const {
   bool success = false;
 
   if (itemType == "folder") {
-    // For folders, try to remove (will fail if not empty)
+    // For folders, try to remove (will fail if not empty).
+    // Capture result inside the guard; send response after releasing the SPI mutex.
+    bool folderNotEmpty = false;
     {
       SpiBusMutex::Guard guard;
       FsFile dir = Storage.open(itemPath.c_str());
@@ -1260,15 +1276,16 @@ void CrossPointWebServer::handleDelete() const {
         // Check if folder is empty
         FsFile entry = dir.openNextFile();
         if (entry) {
-          // Folder is not empty
           entry.close();
-          dir.close();
-          LOG_WRN("WEB", "Delete failed - folder not empty: %s", itemPath.c_str());
-          server->send(400, "text/plain", "Folder is not empty. Delete contents first.");
-          return;
+          folderNotEmpty = true;
         }
         dir.close();
       }
+    }
+    if (folderNotEmpty) {
+      LOG_WRN("WEB", "Delete failed - folder not empty: %s", itemPath.c_str());
+      server->send(400, "text/plain", "Folder is not empty. Delete contents first.");
+      return;
     }
     {
       SpiBusMutex::Guard guard;
