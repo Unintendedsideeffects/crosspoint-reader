@@ -25,19 +25,19 @@ FEATURES = {
     'bookerly_fonts': Feature(
         name='Bookerly Fonts',
         flag='ENABLE_BOOKERLY_FONTS',
-        size_kb=1283,
+        size_kb=537,
         description='12/16/18pt Bookerly family'
     ),
     'notosans_fonts': Feature(
         name='Noto Sans Fonts',
         flag='ENABLE_NOTOSANS_FONTS',
-        size_kb=1283,
+        size_kb=742,
         description='12/16/18pt Noto Sans family'
     ),
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
-        size_kb=604,
+        size_kb=1883,
         description='Optional OpenDyslexic 8/10/12/14pt family (requires Bookerly + Noto Sans)'
     ),
     'image_sleep': Feature(
@@ -55,7 +55,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=284,
+        size_kb=283,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -139,7 +139,7 @@ FEATURES = {
     'visual_cover_picker': Feature(
         name='Visual Covers',
         flag='ENABLE_VISUAL_COVER_PICKER',
-        size_kb=146,
+        size_kb=145,
         description='Grid-based book explorer with thumbnails'
     ),
     'ble_wifi_provisioning': Feature(
@@ -510,7 +510,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 2.98  # Lean profile size baseline (measured)
+    base_size_mb = 1.72  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
