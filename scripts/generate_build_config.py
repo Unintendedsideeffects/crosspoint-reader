@@ -25,13 +25,13 @@ FEATURES = {
     'extended_fonts': Feature(
         name='Extended Fonts',
         flag='ENABLE_EXTENDED_FONTS',
-        size_kb=2566,
+        size_kb=0,
         description='12/16/18pt Bookerly and Noto Sans families'
     ),
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
-        size_kb=3630,
+        size_kb=604,
         description='Optional OpenDyslexic 8/10/12/14pt family'
     ),
     'image_sleep': Feature(
@@ -49,7 +49,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=282,
+        size_kb=284,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -73,7 +73,7 @@ FEATURES = {
     'background_server': Feature(
         name='Background Server',
         flag='ENABLE_BACKGROUND_SERVER',
-        size_kb=0,
+        size_kb=3,
         description='Background web server for file management'
     ),
     'home_media_picker': Feature(
@@ -145,13 +145,13 @@ FEATURES = {
     'user_fonts': Feature(
         name='User Fonts',
         flag='ENABLE_USER_FONTS',
-        size_kb=8,
+        size_kb=10,
         description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
     ),
     'web_wifi_setup': Feature(
         name='Web WiFi Setup',
         flag='ENABLE_WEB_WIFI_SETUP',
-        size_kb=6,
+        size_kb=9,
         description='Manage WiFi networks directly from the web interface'
     ),
     'usb_mass_storage': Feature(
@@ -495,7 +495,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 1.87  # Lean profile size baseline (measured)
+    base_size_mb = 2.98  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
