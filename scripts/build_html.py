@@ -58,8 +58,10 @@ for root, _, files in os.walk(SRC_DIR):
                 h.write(f"#pragma once\n")
                 h.write(f"#include <cstddef>\n\n")
 
-                # Write the compressed data as a byte array
+                # Write the compressed data as a byte array.
+                # clang-format off/on guards prevent it from repacking the rows.
                 h.write(f"constexpr char {base_name}[] PROGMEM = {{\n")
+                h.write(f"  // clang-format off\n")
 
                 # Write bytes in rows of 16
                 for i in range(0, len(compressed), 16):
@@ -67,6 +69,7 @@ for root, _, files in os.walk(SRC_DIR):
                     hex_values = ', '.join(f'0x{b:02x}' for b in chunk)
                     h.write(f"  {hex_values},\n")
 
+                h.write(f"  // clang-format on\n")
                 h.write(f"}};\n\n")
                 h.write(f"constexpr size_t {base_name}CompressedSize = {len(compressed)};\n")
                 h.write(f"constexpr size_t {base_name}OriginalSize = {len(minified)};\n")
