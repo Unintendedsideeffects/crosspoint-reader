@@ -31,6 +31,8 @@ pushd "$ROOT_DIR" >/dev/null
   -Ilib/Logging \
   -Ilib/Serialization \
   -Iopen-x4-sdk/libs/display/EInkDisplay/include \
+  -Iopen-x4-sdk/libs/hardware/InputManager/include \
+  -Iopen-x4-sdk/libs/hardware/BatteryMonitor/include \
   -Isrc \
   tools/screen-harness/main.cpp \
   tools/screen-harness/stubs/stubs.cpp \

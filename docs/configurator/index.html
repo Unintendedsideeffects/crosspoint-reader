@@ -930,6 +930,32 @@
         font-family: 'IBM Plex Mono', monospace;
       }
 
+      /* ── Cloud build trigger ── */
+      .gh-token-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      #gh-build-status a {
+        color: var(--blk);
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 9px;
+      }
+
+      #gh-build-status.status-error {
+        border-left-color: var(--md);
+      }
+
+      #gh-build-status code {
+        background: var(--bone);
+        padding: 0 3px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 9px;
+      }
+
       /* ── Responsive ── */
       @media (max-width: 700px) {
         .skill-grid {
@@ -1401,6 +1427,30 @@
         <div class="info-bar">
           Compile-time dependencies are enforced automatically. Static hierarchy cards and notes are informational and do not affect builds.
         </div>
+      </div>
+
+      <!-- Cloud Build Trigger -->
+      <div class="panel">
+        <div class="panel-heading">Build &amp; Download</div>
+        <div class="companion-desc" style="line-height: 1.6">
+          Trigger a GitHub Actions build with your current configuration and track it here.
+          Requires a <strong>fine-grained PAT</strong> with <code>Actions: Read and write</code>
+          permission, or a classic PAT with <code>workflow</code> scope. Your token is held
+          in memory only and never stored.
+        </div>
+        <div class="gh-token-row">
+          <input
+            id="gh-token"
+            type="password"
+            class="device-input"
+            placeholder="github_pat_... or ghp_..."
+            style="flex: 1; min-width: 220px;"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="btn btn-solid" id="gh-trigger-btn">Trigger Build</button>
+        </div>
+        <div id="gh-build-status" class="info-bar" style="display: none; margin-top: 10px; line-height: 1.8;"></div>
       </div>
 
       <!-- Device Access -->
@@ -2068,6 +2118,187 @@
         }, 1200);
       }
 
+      /* ─────────────────────────────────────────────────────────────────────
+         GitHub Actions Build Trigger
+         Dispatches build-custom.yml via REST API, polls for completion,
+         and surfaces a direct link to the run's artifact download page.
+         ───────────────────────────────────────────────────────────────── */
+
+      function buildDispatchInputs(selections, selectedProfile) {
+        // The workflow requires 'custom' profile when the user has overrides so that
+        // per-feature inputs aren't ignored by the profile-preset fast path.
+        const isNamedProfile = ["lean", "standard", "full"].includes(selectedProfile);
+        let finalProfile = selectedProfile;
+        if (isNamedProfile) {
+          const profileDefaults = profileToSelections(selectedProfile);
+          const hasOverrides = Object.keys(FEATURES).some(f => selections[f] !== profileDefaults[f]);
+          if (hasOverrides) finalProfile = "custom";
+        }
+        const inputs = { profile: finalProfile };
+        Object.keys(FEATURES).forEach(feature => {
+          inputs[feature] = selections[feature] ? "true" : "false";
+        });
+        return inputs;
+      }
+
+      function setGhBuildStatus(html, cssClass) {
+        const el = document.getElementById("gh-build-status");
+        el.style.display = "";
+        el.innerHTML = html;
+        el.className = "info-bar" + (cssClass ? ` ${cssClass}` : "");
+      }
+
+      async function ghApiFetch(token, path, options) {
+        return fetch("https://api.github.com" + path, Object.assign({}, options, {
+          headers: Object.assign({
+            "Authorization": "Bearer " + token,
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+          }, (options && options.headers) || {}),
+        }));
+      }
+
+      async function findTriggeredRun(token, owner, repo, afterMs) {
+        // GitHub doesn't return the run ID from the dispatch endpoint.
+        // We poll the runs list and match by creation time and workflow name.
+        const url = "/repos/" + owner + "/" + repo + "/actions/runs?event=workflow_dispatch&per_page=15";
+        for (let attempt = 0; attempt < 20; attempt++) {
+          await new Promise(r => setTimeout(r, 4000));
+          setGhBuildStatus("Locating queued run\u2026 (" + (attempt + 1) + "/20)");
+          try {
+            const resp = await ghApiFetch(token, url);
+            if (!resp.ok) continue;
+            const data = await resp.json();
+            const candidates = (data.workflow_runs || []).filter(function(run) {
+              return new Date(run.created_at).getTime() >= afterMs &&
+                     run.name === "Build Custom Firmware";
+            });
+            if (candidates.length > 0) return candidates[0];
+          } catch (_) { /* network hiccup, retry */ }
+        }
+        return null;
+      }
+
+      async function triggerGitHubBuild() {
+        const tokenInput = document.getElementById("gh-token");
+        const token = tokenInput.value.trim();
+        if (!token) {
+          setGhBuildStatus("Please enter a GitHub personal access token.", "status-error");
+          return;
+        }
+
+        const triggerBtn = document.getElementById("gh-trigger-btn");
+        triggerBtn.disabled = true;
+
+        try {
+          const repo = getRepoInfo();
+          const selections = readSelections();
+          const matchingProfile = detectMatchingProfile(selections) || "custom";
+          const inputs = buildDispatchInputs(selections, matchingProfile);
+
+          setGhBuildStatus("Dispatching workflow\u2026");
+          const beforeDispatch = Date.now();
+
+          const dispatchResp = await ghApiFetch(
+            token,
+            "/repos/" + repo.owner + "/" + repo.repo + "/actions/workflows/build-custom.yml/dispatches",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ref: "master", inputs: inputs }),
+            }
+          );
+
+          if (!dispatchResp.ok) {
+            let detail = "";
+            try {
+              const body = await dispatchResp.json();
+              detail = body.message || "";
+            } catch (_) {}
+            if (dispatchResp.status === 404) {
+              detail = "Workflow not found on master \u2014 ensure build-custom.yml is merged to master.";
+            } else if (dispatchResp.status === 401 || dispatchResp.status === 403) {
+              detail = "Token rejected \u2014 check it has Actions\u00A0Read\u00A0and\u00A0write permission.";
+            }
+            throw new Error("Dispatch failed (" + dispatchResp.status + ")" + (detail ? ": " + detail : "."));
+          }
+
+          setGhBuildStatus("Dispatch accepted. Waiting for run to appear\u2026");
+
+          const run = await findTriggeredRun(token, repo.owner, repo.repo, beforeDispatch - 5000);
+          if (!run) {
+            throw new Error("Could not locate the triggered run. Check the Actions tab manually.");
+          }
+
+          const runUrl = "https://github.com/" + repo.owner + "/" + repo.repo + "/actions/runs/" + run.id;
+          const safeUrl = escapeHtml(runUrl);
+
+          setGhBuildStatus(
+            "Build queued: <a href=\"" + safeUrl + "\" target=\"_blank\" rel=\"noopener\">Run #" + run.id + "</a><br>" +
+            "Status: " + escapeHtml(run.status) + "\u2026"
+          );
+
+          // Poll every 10 s for up to 12 minutes (72 attempts).
+          const POLL_MS = 10000;
+          const MAX_POLLS = 72;
+          for (let i = 0; i < MAX_POLLS; i++) {
+            await new Promise(r => setTimeout(r, POLL_MS));
+            let updatedRun;
+            try {
+              const pollResp = await ghApiFetch(
+                token,
+                "/repos/" + repo.owner + "/" + repo.repo + "/actions/runs/" + run.id
+              );
+              if (!pollResp.ok) continue;
+              updatedRun = await pollResp.json();
+            } catch (_) { continue; }
+
+            if (updatedRun.status !== "completed") {
+              const elapsed = Math.round((Date.now() - beforeDispatch) / 1000);
+              setGhBuildStatus(
+                "Building\u2026 <a href=\"" + safeUrl + "\" target=\"_blank\" rel=\"noopener\">Run #" + run.id + "</a><br>" +
+                "Status: " + escapeHtml(updatedRun.status) + " \u00B7 " + elapsed + "s elapsed"
+              );
+              continue;
+            }
+
+            // Build completed.
+            if (updatedRun.conclusion === "success") {
+              setGhBuildStatus(
+                "\u2714 Build complete! <a href=\"" + safeUrl + "\" target=\"_blank\" rel=\"noopener\">Open Actions run</a><br>" +
+                "Download <strong>firmware.bin</strong> from the Artifacts section of the run page.<br>" +
+                "Flash with: <code>esptool.py write_flash 0x10000 firmware.bin</code>"
+              );
+            } else {
+              setGhBuildStatus(
+                "Build " + escapeHtml(updatedRun.conclusion || "ended") + ". " +
+                "<a href=\"" + safeUrl + "\" target=\"_blank\" rel=\"noopener\">View logs</a>",
+                "status-error"
+              );
+            }
+            return;
+          }
+
+          setGhBuildStatus(
+            "Timed out polling. <a href=\"" + safeUrl + "\" target=\"_blank\" rel=\"noopener\">Check run manually</a>",
+            "status-error"
+          );
+        } catch (err) {
+          setGhBuildStatus("Error: " + escapeHtml(err.message), "status-error");
+        } finally {
+          triggerBtn.disabled = false;
+        }
+      }
+
+      function setupGitHubBuildTrigger() {
+        const btn = document.getElementById("gh-trigger-btn");
+        if (!btn) return;
+        btn.addEventListener("click", triggerGitHubBuild);
+        document.getElementById("gh-token").addEventListener("keydown", function(e) {
+          if (e.key === "Enter") { e.preventDefault(); triggerGitHubBuild(); }
+        });
+      }
+
       function setupEvents() {
         document.querySelectorAll(".preset-btn").forEach((btn) => {
           btn.addEventListener("click", () => applyProfile(btn.dataset.preset));
@@ -2526,6 +2757,7 @@
       setupEvents();
       setupFontConverter();
       setupDeviceTools();
+      setupGitHubBuildTrigger();
       const initialState = parseInitialStateFromUrl();
       baseProfile = initialState.initialProfile;
       setSelections(initialState.selections);

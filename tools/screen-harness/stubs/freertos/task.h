@@ -22,3 +22,5 @@ inline void vTaskDelay(TickType_t /*ticks*/) {}
 inline uint32_t ulTaskNotifyTake(BaseType_t /*clearCountOnExit*/, TickType_t /*ticksToWait*/) { return 1; }
 
 inline BaseType_t xTaskNotify(TaskHandle_t /*task*/, uint32_t /*value*/, eNotifyAction /*action*/) { return pdTRUE; }
+
+inline TaskHandle_t xTaskGetCurrentTaskHandle() { return reinterpret_cast<TaskHandle_t>(1); }
