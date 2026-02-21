@@ -36,6 +36,11 @@ const char* const LANGUAGE_NAMES[] = {
     "\xB9"
     "",
     "Svenska",
+    "Rom\xC3"
+    "\xA2"
+    "n\xC4"
+    "\x83"
+    "",
 };
 
 // Character sets for each language
@@ -328,6 +333,25 @@ const char* const CHARACTER_SETS[] = {
     "\x80"
     "\xA6"
     "",  // Svenska
+    " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWX[\\]abcdefghijklmnoprstuvwxyz|\xC2"
+    "\xAB"
+    "\xC3"
+    "\x82"
+    "\xC3"
+    "\x8E"
+    "\xC3"
+    "\xA2"
+    "\xC3"
+    "\xAE"
+    "\xC4"
+    "\x83"
+    "\xC5"
+    "\x9E"
+    "\xC5"
+    "\x9F"
+    "\xC5"
+    "\xA3"
+    "",  // Română
 };
 
 namespace i18n_strings {
@@ -606,7 +630,7 @@ const char* const STRINGS_EN[] = {
     "No recent books",
     "Use Calibre wireless device transfers",
     "Forget network and remove saved password?",
-    "Forget network",
+    "Forget",
     "Starting Calibre...",
     "Setup",
     "Status",
@@ -1134,7 +1158,7 @@ const char* const STRINGS_ES[] = {
     "Olvidar la red y eliminar la contrase\xC3"
     "\xB1"
     "a guardada?",
-    "Olvidar la red",
+    "Olvidar",
     "Iniciando calibre...",
     "Configuraci\xC3"
     "\xB3"
@@ -1919,9 +1943,7 @@ const char* const STRINGS_FR[] = {
     "seau et supprimer le mot de passe enregistr\xC3"
     "\xA9"
     " ?",
-    "Oublier le r\xC3"
-    "\xA9"
-    "seau",
+    "Oublier",
     "D\xC3"
     "\xA9"
     "marrage de Calibre...",
@@ -2469,7 +2491,7 @@ const char* const STRINGS_DE[] = {
     "WLAN entfernen & Passwort l\xC3"
     "\xB6"
     "schen?",
-    "WLAN entfernen",
+    "Entfernen",
     "Calibre starten\xE2"
     "\x80"
     "\xA6"
@@ -3886,11 +3908,7 @@ const char* const STRINGS_CZ[] = {
     "en\xC3"
     "\xA9"
     " heslo?",
-    "Zapomenout na s\xC3"
-    "\xAD"
-    "\xC5"
-    "\xA5"
-    "",
+    "Zapomenout",
     "Spu\xC5"
     "\xA1"
     "t\xC4"
@@ -4692,7 +4710,7 @@ const char* const STRINGS_PO[] = {
     "\xAA"
     "ncias sem fio Calibre",
     "Esquecer a rede e remover a senha salva?",
-    "Esquecer rede",
+    "Esquecer",
     "Iniciando Calibre...",
     "Configura\xC3"
     "\xA7"
@@ -11637,14 +11655,6 @@ const char* const STRINGS_RU[] = {
     "\x82"
     "\xD1"
     "\x8C"
-    " \xD1"
-    "\x81"
-    "\xD0"
-    "\xB5"
-    "\xD1"
-    "\x82"
-    "\xD1"
-    "\x8C"
     "",
     "\xD0"
     "\x97"
@@ -13874,9 +13884,7 @@ const char* const STRINGS_SV[] = {
     "senord?",
     "Gl\xC3"
     "\xB6"
-    "m n\xC3"
-    "\xA4"
-    "tverk",
+    "m",
     "Starar Calibre\xE2"
     "\x80"
     "\xA6"
@@ -13995,6 +14003,981 @@ const char* const STRINGS_SV[] = {
     "Background Server on Charge",
 };
 
+const char* const STRINGS_RO[] = {
+    "CrossPoint",
+    "PORNE\xC5"
+    "\x9E"
+    "TE",
+    "REPAUS",
+    "Intr\xC4"
+    "\x83"
+    " \xC3"
+    "\xAE"
+    "n repaus...",
+    "R\xC4"
+    "\x83"
+    "sfoie\xC5"
+    "\x9F"
+    "te fi\xC5"
+    "\x9F"
+    "ierele",
+    "Transfer de fi\xC5"
+    "\x9F"
+    "iere",
+    "Set\xC4"
+    "\x83"
+    "ri",
+    "Biblioteca Calibre",
+    "Continu\xC4"
+    "\x83"
+    " lectura",
+    "Nicio carte deschis\xC4"
+    "\x83"
+    "",
+    "\xC3"
+    "\x8E"
+    "ncepe\xC5"
+    "\xA3"
+    "i lectura",
+    "C\xC4"
+    "\x83"
+    "r\xC5"
+    "\xA3"
+    "i",
+    "Nicio carte g\xC4"
+    "\x83"
+    "sit\xC4"
+    "\x83"
+    "",
+    "Selecta\xC5"
+    "\xA3"
+    "i capitolul",
+    "Niciun capitol",
+    "Sf\xC3"
+    "\xA2"
+    "r\xC5"
+    "\x9F"
+    "itul c\xC4"
+    "\x83"
+    "r\xC5"
+    "\xA3"
+    "ii",
+    "Capitol gol",
+    "Indexeaz\xC4"
+    "\x83"
+    "...",
+    "Eroare de memorie",
+    "Eroare la \xC3"
+    "\xAE"
+    "nc\xC4"
+    "\x83"
+    "rcarea paginii",
+    "Fi\xC5"
+    "\x9F"
+    "ier gol",
+    "Eroare: \xC3"
+    "\x8E"
+    "n afara limitelor",
+    "Se \xC3"
+    "\xAE"
+    "ncarc\xC4"
+    "\x83"
+    "...",
+    "Se \xC3"
+    "\xAE"
+    "ncarc\xC4"
+    "\x83"
+    "...",
+    "Eroare la \xC3"
+    "\xAE"
+    "nc\xC4"
+    "\x83"
+    "rcarea XTC",
+    "Eroare la \xC3"
+    "\xAE"
+    "nc\xC4"
+    "\x83"
+    "rcarea TXT",
+    "Eroare la \xC3"
+    "\xAE"
+    "nc\xC4"
+    "\x83"
+    "rcarea EPUB",
+    "Eroare la cardul SD",
+    "Re\xC5"
+    "\xA3"
+    "ele WiFi",
+    "Nu s-au g\xC4"
+    "\x83"
+    "sit re\xC5"
+    "\xA3"
+    "ele",
+    "%zu re\xC5"
+    "\xA3"
+    "ele g\xC4"
+    "\x83"
+    "site",
+    "Scaneaz\xC4"
+    "\x83"
+    "...",
+    "Se conecteaz\xC4"
+    "\x83"
+    "...",
+    "Conectat!",
+    "Conexiune e\xC5"
+    "\x9F"
+    "uat\xC4"
+    "\x83"
+    "",
+    "Timp de conectare dep\xC4"
+    "\x83"
+    "\xC5"
+    "\x9F"
+    "it",
+    "Uita\xC5"
+    "\xA3"
+    "i re\xC5"
+    "\xA3"
+    "eaua?",
+    "Salva\xC5"
+    "\xA3"
+    "i parola?",
+    "\xC5"
+    "\x9E"
+    "terge\xC5"
+    "\xA3"
+    "i parola salvat\xC4"
+    "\x83"
+    "?",
+    "Ap\xC4"
+    "\x83"
+    "sa\xC5"
+    "\xA3"
+    "i OK pentru a scana din nou",
+    "Ap\xC4"
+    "\x83"
+    "sa\xC5"
+    "\xA3"
+    "i orice buton pentru a continua",
+    "ST\xC3"
+    "\x82"
+    "NGA/DREAPTA: Selecta\xC5"
+    "\xA3"
+    "i | OK: Confirma\xC5"
+    "\xA3"
+    "i",
+    "Cum dori\xC5"
+    "\xA3"
+    "i s\xC4"
+    "\x83"
+    " v\xC4"
+    "\x83"
+    " conecta\xC5"
+    "\xA3"
+    "i?",
+    "Conecta\xC5"
+    "\xA3"
+    "i-v\xC4"
+    "\x83"
+    " la o re\xC5"
+    "\xA3"
+    "ea",
+    "Crea\xC5"
+    "\xA3"
+    "i un hotspot",
+    "Conecta\xC5"
+    "\xA3"
+    "i-v\xC4"
+    "\x83"
+    " la o re\xC5"
+    "\xA3"
+    "ea WiFi existent\xC4"
+    "\x83"
+    "",
+    "Crea\xC5"
+    "\xA3"
+    "i un hotspot WiFi",
+    "Hotspot porne\xC5"
+    "\x9F"
+    "te...",
+    "Mod Hotspot",
+    "Conecta\xC5"
+    "\xA3"
+    "i-v\xC4"
+    "\x83"
+    " dispozitivul la aceast\xC4"
+    "\x83"
+    " re\xC5"
+    "\xA3"
+    "ea WiFi",
+    "Deschide\xC5"
+    "\xA3"
+    "i acest URL \xC3"
+    "\xAE"
+    "n browserul dvs.",
+    "sau http://",
+    "sau scana\xC5"
+    "\xA3"
+    "i codul QR cu telefonul dvs.:",
+    "Calibre Wireless",
+    "Calibre URL",
+    "Conecta\xC5"
+    "\xA3"
+    "i-v\xC4"
+    "\x83"
+    " ca dispozitiv wireless",
+    "* = Criptat | + = Salvat",
+    "Adres\xC4"
+    "\x83"
+    " MAC:",
+    "Verificare WiFi...",
+    "Introduce\xC5"
+    "\xA3"
+    "i parola WiFi",
+    "Introduce\xC5"
+    "\xA3"
+    "i textul",
+    "la ",
+    "Descoper\xC4"
+    "\x83"
+    " Calibre...",
+    "Se conecteaz\xC4"
+    "\x83"
+    " la ",
+    "Conectat la ",
+    "Se a\xC5"
+    "\x9F"
+    "teapt\xC4"
+    "\x83"
+    " comenzi...",
+    "(Conexiune e\xC5"
+    "\x9F"
+    "uat\xC4"
+    "\x83"
+    ", se re\xC3"
+    "\xAE"
+    "ncearc\xC4"
+    "\x83"
+    ")",
+    "Calibre deconectat",
+    "Se a\xC5"
+    "\x9F"
+    "teapt\xC4"
+    "\x83"
+    " transfer...",
+    "Dac\xC4"
+    "\x83"
+    " transferul e\xC5"
+    "\x9F"
+    "ueaz\xC4"
+    "\x83"
+    ", activa\xC5"
+    "\xA3"
+    "i\n'Ignora\xC5"
+    "\xA3"
+    "i spa\xC5"
+    "\xA3"
+    "iul liber' \xC3"
+    "\xAE"
+    "n set\xC4"
+    "\x83"
+    "rile\nplugin-ului SmartDevice din Calibre.",
+    "Se prime\xC5"
+    "\x9F"
+    "te: ",
+    "Primite: ",
+    "Se a\xC5"
+    "\x9F"
+    "teapt\xC4"
+    "\x83"
+    " mai multe...",
+    "Creare fi\xC5"
+    "\x9F"
+    "ier e\xC5"
+    "\x9F"
+    "uat\xC4"
+    "\x83"
+    "",
+    "Necesit\xC4"
+    "\x83"
+    " parol\xC4"
+    "\x83"
+    "",
+    "Transfer \xC3"
+    "\xAE"
+    "ntrerupt",
+    "1) Instala\xC5"
+    "\xA3"
+    "i plugin-ul CrossPoint Reader",
+    "2) Fi\xC5"
+    "\xA3"
+    "i \xC3"
+    "\xAE"
+    "n aceea\xC5"
+    "\x9F"
+    "i re\xC5"
+    "\xA3"
+    "ea WiFi",
+    "3) \xC3"
+    "\x8E"
+    "n Calibre: \"Trimite\xC5"
+    "\xA3"
+    "i la dispozitiv\"",
+    "\"P\xC4"
+    "\x83"
+    "stra\xC5"
+    "\xA3"
+    "i acest ecran deschis \xC3"
+    "\xAE"
+    "n timpul trimiterii\"",
+    "Ecran",
+    "Lectur\xC4"
+    "\x83"
+    "",
+    "Controale",
+    "Sistem",
+    "Ecran de repaus",
+    "Mod ecran de repaus cu copert\xC4"
+    "\x83"
+    "",
+    "Bara de stare",
+    "Ascunde procentul bateriei",
+    "Spa\xC5"
+    "\xA3"
+    "iere suplimentar\xC4"
+    "\x83"
+    " \xC3"
+    "\xAE"
+    "ntre paragrafe",
+    "Anti-Aliasing text",
+    "Ap\xC4"
+    "\x83"
+    "sare scurt\xC4"
+    "\x83"
+    " \xC3"
+    "\xAE"
+    "ntrerup\xC4"
+    "\x83"
+    "tor",
+    "Orientare lectur\xC4"
+    "\x83"
+    "",
+    "Aspect butoane frontale",
+    "Aspect butoane laterale (lectur\xC4"
+    "\x83"
+    ")",
+    "S\xC4"
+    "\x83"
+    "rire capitol la ap\xC4"
+    "\x83"
+    "sare lung\xC4"
+    "\x83"
+    "",
+    "Familie font lectur\xC4"
+    "\x83"
+    "",
+    "Font lectur\xC4"
+    "\x83"
+    " extern",
+    "Font lectur\xC4"
+    "\x83"
+    "",
+    "Font meniu",
+    "Dimensiune font",
+    "Spa\xC5"
+    "\xA3"
+    "iere \xC3"
+    "\xAE"
+    "ntre r\xC3"
+    "\xA2"
+    "nduri",
+    "Spa\xC5"
+    "\xA3"
+    "iere litere ASCII ",
+    "Spa\xC5"
+    "\xA3"
+    "iere cifre ASCII",
+    "Spa\xC5"
+    "\xA3"
+    "iere CJK",
+    "Mod culoare",
+    "Margine ecran lectur\xC4"
+    "\x83"
+    "",
+    "Aliniere paragrafe reader",
+    "Silabisire",
+    "Timp p\xC3"
+    "\xA2"
+    "n\xC4"
+    "\x83"
+    " la repaus",
+    "Frecven\xC5"
+    "\xA3"
+    "\xC4"
+    "\x83"
+    " re\xC3"
+    "\xAE"
+    "mprosp\xC4"
+    "\x83"
+    "tare",
+    "Set\xC4"
+    "\x83"
+    "ri Calibre",
+    "Sincronizare KOReader",
+    "C\xC4"
+    "\x83"
+    "uta\xC5"
+    "\xA3"
+    "i actualiz\xC4"
+    "\x83"
+    "ri",
+    "Limb\xC4"
+    "\x83"
+    "",
+    "Selecta\xC5"
+    "\xA3"
+    "i imaginea de fundal",
+    "Factory Reset",
+    "Goli\xC5"
+    "\xA3"
+    "i cache-ul de lectur\xC4"
+    "\x83"
+    "",
+    "Calibre",
+    "Utilizator",
+    "Parol\xC4"
+    "\x83"
+    "",
+    "URL server sincronizare",
+    "Coresponden\xC5"
+    "\xA3"
+    "\xC4"
+    "\x83"
+    " document",
+    "Autentificare",
+    "Nume utilizator KOReader",
+    "Parol\xC4"
+    "\x83"
+    " KOReader",
+    "Nume fi\xC5"
+    "\x9F"
+    "ier",
+    "Fi\xC5"
+    "\x9F"
+    "ier binar",
+    "V\xC4"
+    "\x83"
+    " rug\xC4"
+    "\x83"
+    "m s\xC4"
+    "\x83"
+    " seta\xC5"
+    "\xA3"
+    "i mai \xC3"
+    "\xAE"
+    "nt\xC3"
+    "\xA2"
+    "i acredit\xC4"
+    "\x83"
+    "rile",
+    "Conexiune WiFi e\xC5"
+    "\x9F"
+    "uat\xC4"
+    "\x83"
+    "",
+    "Se autentific\xC4"
+    "\x83"
+    "...",
+    "Autentificare reu\xC5"
+    "\x9F"
+    "it\xC4"
+    "\x83"
+    "!",
+    "Autentificare KOReader",
+    "Sincronizare KOReader gata de utilizare",
+    "Autentificare e\xC5"
+    "\x9F"
+    "uat\xC4"
+    "\x83"
+    "",
+    "Gata",
+    "Aceasta va \xC5"
+    "\x9F"
+    "terge tot cache-ul de lectur\xC4"
+    "\x83"
+    ".",
+    "Tot progresul de lectur\xC4"
+    "\x83"
+    " va fi pierdut!",
+    "C\xC4"
+    "\x83"
+    "r\xC5"
+    "\xA3"
+    "ile vor trebui reindexate",
+    "c\xC3"
+    "\xA2"
+    "nd vor fi deschise din nou.",
+    "Se \xC5"
+    "\x9F"
+    "terge cache-ul...",
+    "Cache \xC5"
+    "\x9F"
+    "ters",
+    "elemente eliminate",
+    "e\xC5"
+    "\x9F"
+    "uat",
+    "\xC5"
+    "\x9F"
+    "tergerea cache-ului a e\xC5"
+    "\x9F"
+    "uat",
+    "Verifica\xC5"
+    "\xA3"
+    "i ie\xC5"
+    "\x9F"
+    "irea serial\xC4"
+    "\x83"
+    " pentru detalii",
+    "\xC3"
+    "\x8E"
+    "ntunecat",
+    "Luminos",
+    "Personalizat",
+    "Copert\xC4"
+    "\x83"
+    "",
+    "Niciunul",
+    "Potrivit",
+    "Decupat",
+    "F\xC4"
+    "\x83"
+    "r\xC4"
+    "\x83"
+    " progres",
+    "Complet",
+    "Niciodat\xC4"
+    "\x83"
+    "",
+    "\xC3"
+    "\x8E"
+    "n lectur\xC4"
+    "\x83"
+    "",
+    "\xC3"
+    "\x8E"
+    "ntotdeauna",
+    "Ignor\xC4"
+    "\x83"
+    "",
+    "Repaus",
+    "R\xC4"
+    "\x83"
+    "sfoire pagin\xC4"
+    "\x83"
+    "",
+    "Vertical",
+    "Orizontal dreapta",
+    "Invers",
+    "Orizontal st\xC3"
+    "\xA2"
+    "nga",
+    "\xC3"
+    "\x8E"
+    "napoi, Cnfrm, St, Dr",
+    "St, Dr, \xC3"
+    "\x8E"
+    "napoi, Cnfrm",
+    "St, \xC3"
+    "\x8E"
+    "napoi, Cnfrm, Dr",
+    "\xC3"
+    "\x8E"
+    "nainte/\xC3"
+    "\x8E"
+    "napoi",
+    "\xC3"
+    "\x8E"
+    "napoi/\xC3"
+    "\x8E"
+    "nainte",
+    "Bookerly",
+    "Noto Sans",
+    "Open Dyslexic",
+    "Mic",
+    "Mediu",
+    "Mare",
+    "Foarte mare",
+    "Str\xC3"
+    "\xA2"
+    "ns",
+    "Normal",
+    "Larg",
+    "Aliniere",
+    "St\xC3"
+    "\xA2"
+    "nga",
+    "Centru",
+    "Dreapta",
+    "1 min",
+    "5 min",
+    "10 min",
+    "15 min",
+    "30 min",
+    "1 pagin\xC4"
+    "\x83"
+    "",
+    "5 pagini",
+    "10 pagini",
+    "15 pagini",
+    "30 pagini",
+    "Actualizare",
+    "Se verific\xC4"
+    "\x83"
+    " actualiz\xC4"
+    "\x83"
+    "rile...",
+    "Nou\xC4"
+    "\x83"
+    " actualizare disponibil\xC4"
+    "\x83"
+    "!",
+    "Versiune curent\xC4"
+    "\x83"
+    ": ",
+    "Noua versiune: ",
+    "Se actualizeaz\xC4"
+    "\x83"
+    "...",
+    "Nicio actualizare disponibil\xC4"
+    "\x83"
+    "",
+    "Actualizare e\xC5"
+    "\x9F"
+    "uat\xC4"
+    "\x83"
+    "",
+    "Actualizare complet\xC4"
+    "\x83"
+    "",
+    "Ap\xC4"
+    "\x83"
+    "sa\xC5"
+    "\xA3"
+    "i \xC5"
+    "\x9F"
+    "i men\xC5"
+    "\xA3"
+    "ine\xC5"
+    "\xA3"
+    "i ap\xC4"
+    "\x83"
+    "sat \xC3"
+    "\xAE"
+    "ntrerup\xC4"
+    "\x83"
+    "torul pentru a porni din nou",
+    "Font extern",
+    "\xC3"
+    "\x8E"
+    "ncorporat (Dezactivat)",
+    "Niciun rezultat g\xC4"
+    "\x83"
+    "sit",
+    "Se descarc\xC4"
+    "\x83"
+    "...",
+    "Desc\xC4"
+    "\x83"
+    "rcare e\xC5"
+    "\x9F"
+    "uat\xC4"
+    "\x83"
+    "",
+    "Eroare:",
+    "F\xC4"
+    "\x83"
+    "r\xC4"
+    "\x83"
+    " nume",
+    "Niciun URL de server configurat",
+    "E\xC5"
+    "\x9F"
+    "ec la preluarea feed-ului",
+    "E\xC5"
+    "\x9F"
+    "ec la analizarea feed-ului",
+    "Re\xC5"
+    "\xA3"
+    "ea: ",
+    "Adres\xC4"
+    "\x83"
+    " IP: ",
+    "sau scana\xC5"
+    "\xA3"
+    "i codul QR cu telefonul pentru a v\xC4"
+    "\x83"
+    " conecta la Wifi.",
+    "Eroare: E\xC5"
+    "\x9F"
+    "ec general",
+    "Eroare: Re\xC5"
+    "\xA3"
+    "ea neg\xC4"
+    "\x83"
+    "sit\xC4"
+    "\x83"
+    "",
+    "Eroare: Timp de conectare dep\xC4"
+    "\x83"
+    "\xC5"
+    "\x9F"
+    "it",
+    "Card SD",
+    "\xC2"
+    "\xAB"
+    " \xC3"
+    "\x8E"
+    "napoi",
+    "\xC2"
+    "\xAB"
+    " Ie\xC5"
+    "\x9F"
+    "ire",
+    "\xC2"
+    "\xAB"
+    " Acas\xC4"
+    "\x83"
+    "",
+    "\xC2"
+    "\xAB"
+    " Salvare",
+    "Selecteaz\xC4"
+    "\x83"
+    "",
+    "Schimb\xC4"
+    "\x83"
+    "",
+    "Confirm\xC4"
+    "\x83"
+    "",
+    "Anulare",
+    "Conectare",
+    "Deschidere",
+    "Descarc\xC4"
+    "\x83"
+    "",
+    "Re\xC3"
+    "\xAE"
+    "ncercare",
+    "Da",
+    "Nu",
+    "Pornit",
+    "Oprit",
+    "Setare",
+    "Neconfigurat",
+    "St\xC3"
+    "\xA2"
+    "nga",
+    "Dreapta",
+    "Sus",
+    "Jos",
+    "CAPS",
+    "caps",
+    "OK",
+    "[ON]",
+    "Filtru ecran de repaus",
+    "Contrast",
+    "Complet cu procentaj",
+    "Complet cu bara de carte",
+    "Doar bara de carte",
+    "Complet cu bara de capitol",
+    "Tema UI",
+    "Clasic",
+    "Lyra",
+    "Lyra Extended",
+    "Corec\xC5"
+    "\xA3"
+    "ie estompare lumin\xC4"
+    "\x83"
+    "",
+    "Remapare butoane frontale",
+    "Browser OPDS",
+    "Copert\xC4"
+    "\x83"
+    " + Personalizat",
+    "Recente",
+    "C\xC4"
+    "\x83"
+    "r\xC5"
+    "\xA3"
+    "i recente",
+    "Nicio carte recent\xC4"
+    "\x83"
+    "",
+    "Utiliza\xC5"
+    "\xA3"
+    "i transferurile wireless ale dispozitivului Calibre",
+    "Uita\xC5"
+    "\xA3"
+    "i re\xC5"
+    "\xA3"
+    "eaua \xC5"
+    "\x9F"
+    "i elimina\xC5"
+    "\xA3"
+    "i parola salvat\xC4"
+    "\x83"
+    "?",
+    "Uita\xC5"
+    "\xA3"
+    "i",
+    "Pornirea Calibre...",
+    "Configurare",
+    "Stare",
+    "\xC5"
+    "\x9F"
+    "tergere",
+    "Implicit",
+    "Ap\xC4"
+    "\x83"
+    "sa\xC5"
+    "\xA3"
+    "i un buton frontal pentru fiecare rol",
+    "Neatribuit",
+    "Deja atribuit",
+    "Buton lateral Sus: Reseta\xC5"
+    "\xA3"
+    "i la aspectul implicit",
+    "Buton lateral Jos: Anula\xC5"
+    "\xA3"
+    "i remaparea",
+    "\xC3"
+    "\x8E"
+    "napoi (butonul 1)",
+    "Confirmare (butonul 2)",
+    "St\xC3"
+    "\xA2"
+    "nga (butonul 3)",
+    "Dreapta (butonul 4)",
+    "S\xC4"
+    "\x83"
+    "ri\xC5"
+    "\xA3"
+    "i la %",
+    "Acas\xC4"
+    "\x83"
+    "",
+    "Progres sincronizare",
+    "\xC5"
+    "\x9E"
+    "tergere cache c\xC4"
+    "\x83"
+    "r\xC5"
+    "\xA3"
+    "i",
+    "Capitol: ",
+    " pagini  |  ",
+    "Carte: ",
+    "shift",
+    "SHIFT",
+    "LOCK",
+    "Pentru Calibre, ad\xC4"
+    "\x83"
+    "uga\xC5"
+    "\xA3"
+    "i /opds la URL",
+    "St\xC3"
+    "\xA2"
+    "nga/Dreapta: 1%  Sus/Jos: 10%",
+    "Timp de sincronizare...",
+    "Calcularea hash-ului documentului...",
+    "E\xC5"
+    "\x9F"
+    "ec la calcularea hash-ului documentului",
+    "Preluarea progresului de la distan\xC5"
+    "\xA3"
+    "\xC4"
+    "\x83"
+    "...",
+    "\xC3"
+    "\x8E"
+    "nc\xC4"
+    "\x83"
+    "rcarea progresului...",
+    "Nicio acreditare configurat\xC4"
+    "\x83"
+    "",
+    "Configura\xC5"
+    "\xA3"
+    "i contul KOReader \xC3"
+    "\xAE"
+    "n set\xC4"
+    "\x83"
+    "ri",
+    "Progres g\xC4"
+    "\x83"
+    "sit!",
+    "Remote:",
+    "Local:",
+    "Pagina %d, %.2f%% din total",
+    "Pagina %d/%d, %.2f%% din total",
+    "  De la: %s",
+    "Aplic\xC4"
+    "\x83"
+    " progresul remote",
+    "\xC3"
+    "\x8E"
+    "nc\xC4"
+    "\x83"
+    "rca\xC5"
+    "\xA3"
+    "i progresul local",
+    "Niciun progres remote g\xC4"
+    "\x83"
+    "sit",
+    "\xC3"
+    "\x8E"
+    "nc\xC4"
+    "\x83"
+    "rca\xC5"
+    "\xA3"
+    "i pozi\xC5"
+    "\xA3"
+    "ia curent\xC4"
+    "\x83"
+    "?",
+    "Progres \xC3"
+    "\xAE"
+    "nc\xC4"
+    "\x83"
+    "rcat!",
+    "Sincronizare e\xC5"
+    "\x9F"
+    "uat\xC4"
+    "\x83"
+    "",
+    "Sec\xC5"
+    "\xA3"
+    "iune ",
+    "\xC3"
+    "\x8E"
+    "nc\xC4"
+    "\x83"
+    "rcare",
+    "Stilul c\xC4"
+    "\x83"
+    "r\xC5"
+    "\xA3"
+    "ii",
+    "Stil \xC3"
+    "\xAE"
+    "ncorporat",
+    "URL server OPDS",
+    "Dark Mode",
+    "Background Server on Charge",
+};
+
 }  // namespace i18n_strings
 
 // Compile-time validation of array sizes
@@ -14022,3 +15005,6 @@ static_assert(sizeof(i18n_strings::STRINGS_RU) / sizeof(i18n_strings::STRINGS_RU
 static_assert(sizeof(i18n_strings::STRINGS_SV) / sizeof(i18n_strings::STRINGS_SV[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_SV size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_RO) / sizeof(i18n_strings::STRINGS_RO[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_RO size mismatch");
