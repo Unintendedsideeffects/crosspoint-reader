@@ -1029,8 +1029,13 @@ void CrossPointWebServer::handleCreateFolder() const {
     return;
   }
 
-  // Create the folder
-  if (Storage.mkdir(folderPath.c_str())) {
+  // Create the folder while holding the SPI mutex.
+  bool mkdirOk = false;
+  {
+    SpiBusMutex::Guard guard;
+    mkdirOk = Storage.mkdir(folderPath.c_str());
+  }
+  if (mkdirOk) {
     LOG_DBG("WEB", "Folder created successfully: %s", folderPath.c_str());
     server->send(200, "text/plain", "Folder created: " + folderName);
   } else {

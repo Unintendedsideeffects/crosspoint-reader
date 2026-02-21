@@ -53,6 +53,16 @@ jobs:
           uv run python scripts/generate_build_config.py --profile standard
           git diff --exit-code -- platformio-custom.ini
 
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Run host tests
+        run: bash test/run_host_tests.sh
+
   cppcheck:
     runs-on: ubuntu-latest
     steps:
@@ -141,6 +151,7 @@ jobs:
       - build
       - clang-format
       - feature-sync
+      - host-tests
       - cppcheck
     if: always()
     runs-on: ubuntu-latest

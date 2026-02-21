@@ -55,6 +55,9 @@ jobs:
       - name: Static checks (cppcheck)
         run: uv run pio check -e default
 
+      - name: Run host tests
+        run: bash test/run_host_tests.sh
+
   # ── Build: 3 profiles in parallel ──────────────────────────────
   build:
     needs: validate
