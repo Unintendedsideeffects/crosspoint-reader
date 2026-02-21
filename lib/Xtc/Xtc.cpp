@@ -313,7 +313,7 @@ std::string Xtc::getThumbBmpPath(int height) const { return cachePath + "/thumb_
 bool Xtc::generateThumbBmp(int height) const {
   SpiBusMutex::Guard guard;
   // Already generated
-  if (Storage.exists(getThumbBmpPath().c_str())) {
+  if (Storage.exists(getThumbBmpPath(height).c_str())) {
     return true;
   }
 
@@ -356,7 +356,7 @@ bool Xtc::generateThumbBmp(int height) const {
     if (generateCoverBmp()) {
       FsFile src, dst;
       if (Storage.openFileForRead("XTC", getCoverBmpPath(), src)) {
-        if (Storage.openFileForWrite("XTC", getThumbBmpPath(), dst)) {
+        if (Storage.openFileForWrite("XTC", getThumbBmpPath(height), dst)) {
           uint8_t buffer[512];
           while (src.available()) {
             size_t bytesRead = src.read(buffer, sizeof(buffer));
@@ -367,7 +367,7 @@ bool Xtc::generateThumbBmp(int height) const {
         src.close();
       }
       LOG_DBG("XTC", "Copied cover to thumb (no scaling needed)");
-      return Storage.exists(getThumbBmpPath().c_str());
+      return Storage.exists(getThumbBmpPath(height).c_str());
     }
     return false;
   }
@@ -401,7 +401,7 @@ bool Xtc::generateThumbBmp(int height) const {
 
   // Create thumbnail BMP file - use 1-bit format for fast home screen rendering (no gray passes)
   FsFile thumbBmp;
-  if (!Storage.openFileForWrite("XTC", getThumbBmpPath(), thumbBmp)) {
+  if (!Storage.openFileForWrite("XTC", getThumbBmpPath(height), thumbBmp)) {
     LOG_ERR("XTC", "Failed to create thumb BMP file");
     free(pageBuffer);
     return false;
@@ -565,7 +565,7 @@ bool Xtc::generateThumbBmp(int height) const {
   thumbBmp.close();
   free(pageBuffer);
 
-  LOG_DBG("XTC", "Generated thumb BMP (%dx%d): %s", thumbWidth, thumbHeight, getThumbBmpPath().c_str());
+  LOG_DBG("XTC", "Generated thumb BMP (%dx%d): %s", thumbWidth, thumbHeight, getThumbBmpPath(height).c_str());
   return true;
 }
 

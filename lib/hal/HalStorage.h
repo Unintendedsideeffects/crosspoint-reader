@@ -51,5 +51,5 @@ class HalStorage {
 
 // Compatibility alias for legacy call sites that still use SdMan.
 #ifndef SdMan
-#define SdMan SDCardManager::getInstance()
+#define SdMan Storage
 #endif

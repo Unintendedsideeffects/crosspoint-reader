@@ -1,6 +1,7 @@
 #include "MarkdownSection.h"
 
 #include <Arduino.h>
+#include <Logging.h>
 #include <SDCardManager.h>
 #include <Serialization.h>
 
@@ -92,10 +93,15 @@ bool MarkdownSection::loadSectionFile(int fontId, float lineCompression, bool ex
   }
 
   uint8_t version;
-  serialization::readPod(file, version);
+  if (!serialization::readPod(file, version)) {
+    file.close();
+    LOG_ERR("MSC", "Deserialization failed: truncated header");
+    clearCache();
+    return false;
+  }
   if (version != SECTION_FILE_VERSION) {
     file.close();
-    Serial.printf("[%lu] [MSC] Deserialization failed: Unknown version %u\n", millis(), version);
+    LOG_WRN("MSC", "Deserialization failed: unknown version %u", version);
     clearCache();
     return false;
   }
@@ -108,28 +114,35 @@ bool MarkdownSection::loadSectionFile(int fontId, float lineCompression, bool ex
   bool fileHyphenationEnabled;
   uint32_t fileSourceSize;
 
-  serialization::readPod(file, fileFontId);
-  serialization::readPod(file, fileLineCompression);
-  serialization::readPod(file, fileExtraParagraphSpacing);
-  serialization::readPod(file, fileParagraphAlignment);
-  serialization::readPod(file, fileViewportWidth);
-  serialization::readPod(file, fileViewportHeight);
-  serialization::readPod(file, fileHyphenationEnabled);
-  serialization::readPod(file, fileSourceSize);
+  if (!serialization::readPod(file, fileFontId) || !serialization::readPod(file, fileLineCompression) ||
+      !serialization::readPod(file, fileExtraParagraphSpacing) ||
+      !serialization::readPod(file, fileParagraphAlignment) || !serialization::readPod(file, fileViewportWidth) ||
+      !serialization::readPod(file, fileViewportHeight) || !serialization::readPod(file, fileHyphenationEnabled) ||
+      !serialization::readPod(file, fileSourceSize)) {
+    file.close();
+    LOG_ERR("MSC", "Deserialization failed: truncated parameters");
+    clearCache();
+    return false;
+  }
 
   if (fontId != fileFontId || !nearlyEqual(lineCompression, fileLineCompression) ||
       extraParagraphSpacing != fileExtraParagraphSpacing || paragraphAlignment != fileParagraphAlignment ||
       viewportWidth != fileViewportWidth || viewportHeight != fileViewportHeight ||
       hyphenationEnabled != fileHyphenationEnabled || sourceSize != fileSourceSize) {
     file.close();
-    Serial.printf("[%lu] [MSC] Deserialization failed: Parameters do not match\n", millis());
+    LOG_WRN("MSC", "Deserialization failed: parameters do not match");
     clearCache();
     return false;
   }
 
-  serialization::readPod(file, pageCount);
+  if (!serialization::readPod(file, pageCount)) {
+    file.close();
+    LOG_ERR("MSC", "Deserialization failed: truncated page count");
+    clearCache();
+    return false;
+  }
   file.close();
-  Serial.printf("[%lu] [MSC] Deserialization succeeded: %d pages\n", millis(), pageCount);
+  LOG_DBG("MSC", "Deserialization succeeded: %d pages", pageCount);
   return true;
 }
 

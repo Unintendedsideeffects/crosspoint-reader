@@ -172,7 +172,7 @@ Contributions are very welcome!
 If you're looking for a way to help out, take a look at the [ideas discussion board](https://github.com/crosspoint-reader/crosspoint-reader/discussions/categories/ideas).
 If there's something there you'd like to work on, leave a comment so that we can avoid duplicated effort.
 
-Everyone here is a volunteer, so please be respectful and patient. For more details on our goverance and community 
+Everyone here is a volunteer, so please be respectful and patient. For more details on our governance and community
 principles, please see [GOVERNANCE.md](GOVERNANCE.md).
 
 ### To submit a contribution:
@@ -188,3 +188,7 @@ CrossPoint Reader is **not affiliated with Xteink or any manufacturer of the X4 
 
 Huge shoutout to [**diy-esp32-epub-reader** by atomic14](https://github.com/atomic14/diy-esp32-epub-reader), which was a project I took a lot of inspiration from as I
 was making CrossPoint.
+
+Shoutout also to [**BOOX-Pokedex-Wallpaper-Generator** by m86-tech](https://github.com/m86-tech/BOOX-Pokedex-Wallpaper-Generator),
+the upstream project behind CrossPoint's Pokedex companion plugin. Go check it out if you want Pokédex wallpapers on
+any E-Ink device — it supports Boox, Remarkable, Kindle, Kobo, and more.

@@ -90,11 +90,17 @@ HalPowerManager::Lock::~Lock() {
     return;
   }
 
+  bool shouldReEnable = false;
   xSemaphoreTake(powerManager.modeMutex, portMAX_DELAY);
   if (valid) {
     if (powerManager.lockCount > 0) {
       powerManager.lockCount--;
     }
+    shouldReEnable = (powerManager.lockCount == 0);
   }
   xSemaphoreGive(powerManager.modeMutex);
+
+  if (shouldReEnable) {
+    powerManager.setPowerSaving(true);
+  }
 }
