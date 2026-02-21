@@ -1,4 +1,4 @@
-# CrossPoint Reader
+# CrossPoint Reader - UNSTABLE FORK DRIFT - VERY EXPERIMENTAL
 
 Firmware for the **Xteink X4** e-paper display reader (unaffiliated with Xteink).
 Built using **PlatformIO** and targeting the **ESP32-C3** microcontroller.
