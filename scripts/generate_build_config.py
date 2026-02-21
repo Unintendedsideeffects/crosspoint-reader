@@ -121,7 +121,7 @@ FEATURES = {
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=239,
+        size_kb=240,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
@@ -139,13 +139,13 @@ FEATURES = {
     'visual_cover_picker': Feature(
         name='Visual Covers',
         flag='ENABLE_VISUAL_COVER_PICKER',
-        size_kb=144,
+        size_kb=145,
         description='Grid-based book explorer with thumbnails'
     ),
     'ble_wifi_provisioning': Feature(
         name='BLE WiFi Provisioning',
         flag='ENABLE_BLE_WIFI_PROVISIONING',
-        size_kb=665,
+        size_kb=675,
         description='Initial WiFi setup via Bluetooth LE'
     ),
     'user_fonts': Feature(
@@ -510,7 +510,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 1.72  # Lean profile size baseline (measured)
+    base_size_mb = 1.73  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
