@@ -3,81 +3,87 @@
 Firmware for the **Xteink X4** e-paper display reader (unaffiliated with Xteink).
 Built using **PlatformIO** and targeting the **ESP32-C3** microcontroller.
 
-CrossPoint Reader is a purpose-built firmware designed to be a drop-in, fully open-source replacement for the official 
-Xteink firmware. It aims to match or improve upon the standard EPUB reading experience.
+This is the **`fork-drift`** branch. It tracks upstream while adding fork-specific capabilities (notably the web build configurator and modular feature profiles).
 
 ![](./docs/images/cover.jpg)
 
-## Motivation
+## Build Configurator
 
-E-paper devices are fantastic for reading, but most commercially available readers are closed systems with limited 
-customisation. The **Xteink X4** is an affordable, e-paper device, however the official firmware remains closed.
-CrossPoint exists partly as a fun side-project and partly to open up the ecosystem and truely unlock the device's
-potential.
+The **[Build Configurator](https://unintendedsideeffects.github.io/crosspoint-reader/configurator/)** is the primary entry point for this fork.
 
-CrossPoint Reader aims to:
-* Provide a **fully open-source alternative** to the official firmware.
-* Offer a **document reader** capable of handling EPUB content on constrained hardware.
-* Support **customisable font, layout, and display** options.
-* Run purely on the **Xteink X4 hardware**.
+Because the ESP32-C3 has limited flash and RAM, the configurator lets you choose only the features you need and generates matching build flags.
 
-This project is **not affiliated with Xteink**; it's built as a community project.
+- Presets: `Lean`, `Standard`, `Full`
+- Per-feature toggles with dependency enforcement
+- Flash-size budgeting and generated `platformio-custom.ini`
+- Direct bridge to forked web flasher/debug tools
+
+## Fork-Drift Additions vs Upstream
+
+Compared with `upstream/master`, this branch adds fork-specific user-facing capabilities:
+
+- Web Build Configurator UI (`docs/configurator`) for custom firmware composition
+- Modular compile-time feature flag system (`include/FeatureFlags.h`, `src/FeatureManifest.h`)
+- Markdown/Obsidian reader pipeline (`lib/Markdown`, `MarkdownReaderActivity`)
+- TODO planner activities and daily storage flow (`src/activities/todo`)
+- Background web server runtime modes (`src/network/BackgroundWebServer.*`)
+- Web Wi-Fi setup + BLE provisioning flow (`src/network/BleWifiProvisioner.*`)
+- USB Mass Storage mode integration (`ENABLE_USB_MASS_STORAGE`)
+- User font pipeline (`UserFontManager` + CPF tooling under `tools/font-converter/`)
+- Home UI variants exposed via configurator (Home Media Picker / Lyra / Visual Covers)
+- Fork plugin surfaces (including web Pokedex plugin page)
+- Fork release-channel/configuration docs and OTA catalog metadata (`docs/ota`, configurator docs)
+
+For full branch intent and maintenance model, see [`docs/fork-strategy.md`](./docs/fork-strategy.md).
 
 ## Fork Branch Strategy
 
-This fork tracks upstream while keeping a dedicated branch for fork-specific iteration.
+This repository tracks upstream while keeping dedicated branches for specific goals:
 
-- `master`: sync point with upstream `crosspoint-reader/master`.
-- `fork-drift`: active fork branch for experimental and fork-specific capabilities (for example, configurator and release-channel work).
+- `master`: Synchronized with upstream `crosspoint-reader/master`.
+- `fork-drift`: Active development for experimental and fork-specific capabilities (configurator, plugins, and UI drift).
 
-For the full rationale and contribution target branch guidance, see [`docs/fork-strategy.md`](./docs/fork-strategy.md).
+For the full rationale, see [`docs/fork-strategy.md`](./docs/fork-strategy.md).
 
 ## Features & Usage
 
-- [x] EPUB parsing and rendering (EPUB 2 and EPUB 3)
-- [x] Image support within EPUB
-- [x] Saved reading position
-- [x] File explorer with file picker
-  - [x] Basic EPUB picker from root directory
-  - [x] Support nested folders
-  - [x] EPUB picker with cover art
-- [x] Custom sleep screen
-  - [x] Cover sleep screen
-- [x] Wifi book upload
-- [x] Wifi OTA updates
-- [x] Configurable font, layout, and display options
-  - [x] User provided fonts
-  - [ ] Full UTF support
-- [x] Screen rotation
-
-Multi-language support: Read EPUBs in various languages, including English, Spanish, French, German, Italian, Portuguese, Russian, Ukrainian, Polish, Swedish, Norwegian, [and more](./USER_GUIDE.md#supported-languages).
+- EPUB parsing/rendering (EPUB 2 and EPUB 3)
+- Image support within EPUB
+- Saved reading position
+- File explorer with nested folders and cover-art picker
+- Custom sleep screens (cover/BMP/PNG/JPEG; optional plugin hooks)
+- Wi-Fi book upload + OTA updates
+- Configurable font/layout/display options (including user-provided CPF fonts)
+- Screen rotation and dark mode
+- Optional Markdown/Obsidian reader flow
+- Optional KOReader + Calibre integration flows
+- Optional TODO planner flow
+- Optional USB Mass Storage mode
 
 See [the user guide](./USER_GUIDE.md) for instructions on operating CrossPoint. 
 
-For more details about the scope of the project, see the [SCOPE.md](SCOPE.md) document.
+For scope/constraints, see [SCOPE.md](SCOPE.md).
 
 ## Installing
 
-### Web (latest firmware)
+### Web Configurator (Recommended)
 
-1. Connect your Xteink X4 to your computer via USB-C and wake/unlock the device
-2. Go to https://xteink.dve.al/ and click "Flash CrossPoint firmware"
+1. Go to the **[Build Configurator](https://unintendedsideeffects.github.io/crosspoint-reader/configurator/)**.
+2. Select features and click **Build on GitHub**.
+3. Once the build completes, download the `firmware.bin` or use the browser-based flasher.
 
-To revert back to the official firmware, you can flash the latest official firmware from https://xteink.dve.al/, or swap
-back to the other partition using the "Swap boot partition" button here https://xteink.dve.al/debug.
+### Quick Flash (Latest Stable)
 
-### Web (specific firmware version)
+1. Connect your Xteink X4 to your computer via USB-C.
+2. Go to [xteink.dve.al](https://xteink.dve.al/) and click **"Flash CrossPoint firmware"**.
 
-1. Connect your Xteink X4 to your computer via USB-C
-2. Download the `firmware.bin` file from the release of your choice via the [releases page](https://github.com/Unintendedsideeffects/crosspoint-reader/releases)
-3. Go to https://xteink.dve.al/ and flash the firmware file using the "OTA fast flash controls" section
+To revert to official firmware, use the "Swap boot partition" button at [xteink.dve.al/debug](https://xteink.dve.al/debug).
 
-To revert back to the official firmware, you can flash the latest official firmware from https://xteink.dve.al/, or swap
-back to the other partition using the "Swap boot partition" button here https://xteink.dve.al/debug.
+### Web (Specific Firmware Version)
 
-### Manual
-
-See [Development](#development) below.
+1. Connect your Xteink X4 via USB-C
+2. Download `firmware.bin` from the [releases page](https://github.com/Unintendedsideeffects/crosspoint-reader/releases)
+3. Flash it via [xteink.dve.al](https://xteink.dve.al/) (OTA fast flash controls)
 
 ## Development
 
