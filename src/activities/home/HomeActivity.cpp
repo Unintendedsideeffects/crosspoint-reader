@@ -487,8 +487,8 @@ void HomeActivity::render(Activity::RenderLock&& lock) {
   bool bufferRestored = coverBufferStored && restoreCoverBuffer();
   // If we are using the new media picker UI, use its specialized rendering
 #if ENABLE_HOME_MEDIA_PICKER
-  GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, pageHeight), recentBooks, selectedBookIndex, coverRendered,
-                          coverBufferStored, bufferRestored, [this]() { return storeCoverBuffer(); });
+  GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, metrics.homeCoverHeight), recentBooks, selectedBookIndex,
+                          coverRendered, coverBufferStored, bufferRestored, [this]() { return storeCoverBuffer(); });
 
   // Calculate menu layout
   const int menuTileWidth = (pageWidth - 40);

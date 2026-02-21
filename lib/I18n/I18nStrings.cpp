@@ -193,7 +193,7 @@ const char* const CHARACTER_SETS[] = {
     "\x80"
     "\x91"
     "",  // Português (Brasil)
-    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklnoprstuvxyz|\xC2"
+    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvxyz|\xC2"
     "\xAB"
     "\xC2"
     "\xBB"
@@ -505,6 +505,9 @@ const char* const STRINGS_EN[] = {
     "Dark",
     "Light",
     "Custom",
+    "Image Source",
+    "Pokedex",
+    "All",
     "Cover",
     "None",
     "Fit",
@@ -969,6 +972,9 @@ const char* const STRINGS_ES[] = {
     "Oscuro",
     "Claro",
     "Personalizado",
+    "Image Source",
+    "Pokedex",
+    "All",
     "Portada",
     "Ninguno",
     "Ajustar",
@@ -1686,6 +1692,9 @@ const char* const STRINGS_FR[] = {
     "Sombre",
     "Clair",
     "Custom",
+    "Image Source",
+    "Pokedex",
+    "All",
     "Couverture",
     "Aucun",
     "Ajust\xC3"
@@ -2313,6 +2322,9 @@ const char* const STRINGS_DE[] = {
     "Dunkel",
     "Hell",
     "Eigenes",
+    "Image Source",
+    "Pokedex",
+    "All",
     "Umschlag",
     "Leer",
     "Anpassen",
@@ -3440,6 +3452,9 @@ const char* const STRINGS_CZ[] = {
     "Vlastn\xC3"
     "\xAD"
     "",
+    "Image Source",
+    "Pokedex",
+    "All",
     "Ob\xC3"
     "\xA1"
     "lka",
@@ -4508,6 +4523,9 @@ const char* const STRINGS_PO[] = {
     "Escuro",
     "Claro",
     "Personalizado",
+    "Image Source",
+    "Pokedex",
+    "All",
     "Capa",
     "Nenhum",
     "Ajustar",
@@ -9222,6 +9240,9 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB9"
     "",
+    "Image Source",
+    "Pokedex",
+    "All",
     "\xD0"
     "\x9E"
     "\xD0"
@@ -13618,6 +13639,9 @@ const char* const STRINGS_SV[] = {
     "rk",
     "Ljus",
     "Valfri",
+    "Image Source",
+    "Pokedex",
+    "All",
     "Omslag",
     "Ingen \xC3"
     "\xB6"
@@ -14544,6 +14568,9 @@ const char* const STRINGS_RO[] = {
     "ntunecat",
     "Luminos",
     "Personalizat",
+    "Image Source",
+    "Pokedex",
+    "All",
     "Copert\xC4"
     "\x83"
     "",
