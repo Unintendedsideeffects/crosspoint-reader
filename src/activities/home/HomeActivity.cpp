@@ -483,6 +483,7 @@ void HomeActivity::render(Activity::RenderLock&& lock) {
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
+  renderer.clearScreen();
   bool bufferRestored = coverBufferStored && restoreCoverBuffer();
   // If we are using the new media picker UI, use its specialized rendering
 #if ENABLE_HOME_MEDIA_PICKER
