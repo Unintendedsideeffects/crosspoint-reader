@@ -30,6 +30,7 @@
 #endif
 #include "html/SettingsPageHtml.generated.h"
 #include "util/DateUtils.h"
+#include "util/InputValidation.h"
 #include "util/PathUtils.h"
 #include "util/StringUtils.h"
 #if ENABLE_TODO_PLANNER
@@ -44,6 +45,8 @@ constexpr size_t HIDDEN_ITEMS_COUNT = sizeof(HIDDEN_ITEMS) / sizeof(HIDDEN_ITEMS
 constexpr uint16_t UDP_PORTS[] = {54982, 48123, 39001, 44044, 59678};
 constexpr uint16_t LOCAL_UDP_PORT = 8134;
 constexpr size_t TODO_ENTRY_MAX_TEXT_LENGTH = 300;
+constexpr size_t WS_CONTROL_MESSAGE_MAX_BYTES = 1024;
+constexpr size_t WS_UPLOAD_MAX_BYTES = 512UL * 1024UL * 1024UL;
 
 // Static pointer for WebSocket callback (WebSocketsServer requires C-style callback)
 CrossPointWebServer* wsInstance = nullptr;
@@ -70,6 +73,7 @@ void invalidateSleepCacheIfNeeded(const String& filePath) {
     invalidateSleepImageCache();
   }
 }
+
 }  // namespace
 
 // File listing page template - now using generated headers:
@@ -323,6 +327,10 @@ static_assert(PokedexPluginPageHtmlCompressedSize == sizeof(PokedexPluginPageHtm
 
 static bool isGzipPayload(const char* data, size_t len) {
   return len >= 2 && static_cast<unsigned char>(data[0]) == 0x1f && static_cast<unsigned char>(data[1]) == 0x8b;
+}
+
+static bool parseStrictSize(const String& token, size_t& outValue) {
+  return InputValidation::parseStrictPositiveSize(token.c_str(), token.length(), WS_UPLOAD_MAX_BYTES, outValue);
 }
 
 static void sendPrecompressedHtml(WebServer* server, const char* data, size_t compressedLen) {
@@ -835,16 +843,27 @@ void CrossPointWebServer::handleUpload() {
     filePath += uploadFileName;
 
     // Check if file already exists - SD operations can be slow
+    bool hadExistingFile = false;
     esp_task_wdt_reset();
-    if (Storage.exists(filePath.c_str())) {
+    {
+      SpiBusMutex::Guard guard;
+      hadExistingFile = Storage.exists(filePath.c_str());
+      if (hadExistingFile) {
+        Storage.remove(filePath.c_str());
+      }
+    }
+    if (hadExistingFile) {
       LOG_DBG("WEB", "[UPLOAD] Overwriting existing file: %s", filePath.c_str());
-      esp_task_wdt_reset();
-      Storage.remove(filePath.c_str());
     }
 
     // Open file for writing - this can be slow due to FAT cluster allocation
     esp_task_wdt_reset();
-    if (!Storage.openFileForWrite("WEB", filePath, uploadFile)) {
+    bool opened = false;
+    {
+      SpiBusMutex::Guard guard;
+      opened = Storage.openFileForWrite("WEB", filePath, uploadFile);
+    }
+    if (!opened) {
       uploadError = "Failed to create file on SD card";
       LOG_DBG("WEB", "[UPLOAD] FAILED to create file: %s", filePath.c_str());
       return;
@@ -1638,19 +1657,28 @@ void CrossPointWebServer::handleFontUpload() {
     }
 
     // Ensure /fonts directory exists
-    if (!Storage.exists("/fonts")) {
+    {
       SpiBusMutex::Guard guard;
-      Storage.mkdir("/fonts");
+      if (!Storage.exists("/fonts")) {
+        Storage.mkdir("/fonts");
+      }
     }
 
     const String filePath = String("/fonts/") + uploadFileName;
     esp_task_wdt_reset();
-    if (Storage.exists(filePath.c_str())) {
+    {
       SpiBusMutex::Guard guard;
-      Storage.remove(filePath.c_str());
+      if (Storage.exists(filePath.c_str())) {
+        Storage.remove(filePath.c_str());
+      }
     }
     esp_task_wdt_reset();
-    if (!Storage.openFileForWrite("FONT", filePath, uploadFile)) {
+    bool opened = false;
+    {
+      SpiBusMutex::Guard guard;
+      opened = Storage.openFileForWrite("FONT", filePath, uploadFile);
+    }
+    if (!opened) {
       uploadError = "Failed to create font file on SD card";
     }
     esp_task_wdt_reset();
@@ -1874,28 +1902,49 @@ void CrossPointWebServer::wsEventCallback(uint8_t num, WStype_t type, uint8_t* p
 //   3. Server sends TEXT "PROGRESS:<received>:<total>" after each chunk
 //   4. Server sends TEXT "DONE" or "ERROR:<message>" when complete
 void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
+  auto buildWsUploadFilePath = [this]() {
+    String filePath = wsUploadPath;
+    if (!filePath.endsWith("/")) {
+      filePath += "/";
+    }
+    filePath += wsUploadFileName;
+    return filePath;
+  };
+
+  auto cleanupPartialWsUpload = [this, &buildWsUploadFilePath](const char* reason) {
+    const bool hasPath = !wsUploadPath.isEmpty() && !wsUploadFileName.isEmpty();
+    const String filePath = hasPath ? buildWsUploadFilePath() : String();
+    {
+      SpiBusMutex::Guard guard;
+      if (wsUploadFile) {
+        wsUploadFile.close();
+      }
+      if (hasPath) {
+        Storage.remove(filePath.c_str());
+      }
+    }
+    if (hasPath) {
+      LOG_DBG("WS", "Deleted incomplete upload (%s): %s", reason, filePath.c_str());
+    }
+  };
+
+  auto resetWsUploadState = [this]() {
+    wsUploadInProgress = false;
+    wsUploadFileName.clear();
+    wsUploadPath.clear();
+    wsUploadSize = 0;
+    wsUploadReceived = 0;
+    wsLastProgressSent = 0;
+    wsUploadStartTime = 0;
+  };
+
   switch (type) {
     case WStype_DISCONNECTED:
       LOG_DBG("WS", "Client %u disconnected", num);
-      // Clean up any in-progress upload
-      if (wsUploadInProgress && wsUploadFile) {
-        SpiBusMutex::Guard guard;
-        wsUploadFile.close();
-        // Delete incomplete file
-        String filePath = wsUploadPath;
-        if (!filePath.endsWith("/")) filePath += "/";
-        filePath += wsUploadFileName;
-        Storage.remove(filePath.c_str());
-        LOG_DBG("WS", "Deleted incomplete upload: %s", filePath.c_str());
+      if (wsUploadInProgress || wsUploadFile) {
+        cleanupPartialWsUpload("disconnect");
       }
-      // Reset all upload state to prevent stale data affecting next connection
-      wsUploadInProgress = false;
-      wsUploadFileName.clear();
-      wsUploadPath.clear();
-      wsUploadSize = 0;
-      wsUploadReceived = 0;
-      wsLastProgressSent = 0;
-      wsUploadStartTime = 0;
+      resetWsUploadState();
       break;
 
     case WStype_CONNECTED: {
@@ -1904,92 +1953,136 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
     }
 
     case WStype_TEXT: {
-      // Parse control messages
-      String msg = String((char*)payload);
+      if (!payload) {
+        wsServer->sendTXT(num, "ERROR:Missing control payload");
+        return;
+      }
+      if (length == 0 || length > WS_CONTROL_MESSAGE_MAX_BYTES) {
+        wsServer->sendTXT(num, "ERROR:Control message too large");
+        return;
+      }
+
+      String msg;
+      msg.reserve(length);
+      for (size_t i = 0; i < length; i++) {
+        const char c = static_cast<char>(payload[i]);
+        if (c == '\0') {
+          wsServer->sendTXT(num, "ERROR:Invalid control payload");
+          return;
+        }
+        msg += c;
+      }
       LOG_DBG("WS", "Text from client %u: %s", num, msg.c_str());
 
-      if (msg.startsWith("START:")) {
-        // Parse: START:<filename>:<size>:<path> (filename/path URL-encoded)
-        int firstColon = msg.indexOf(':', 6);
-        int secondColon = msg.indexOf(':', firstColon + 1);
+      if (!msg.startsWith("START:")) {
+        wsServer->sendTXT(num, "ERROR:Unknown command");
+        return;
+      }
 
-        if (firstColon > 0 && secondColon > 0) {
-          wsUploadFileName = PathUtils::urlDecode(msg.substring(6, firstColon));
-          wsUploadSize = msg.substring(firstColon + 1, secondColon).toInt();
-          wsUploadPath = PathUtils::urlDecode(msg.substring(secondColon + 1));
-          wsUploadReceived = 0;
-          wsLastProgressSent = 0;
-          wsUploadStartTime = millis();
+      // Parse: START:<filename>:<size>:<path> (filename/path URL-encoded)
+      const int firstColon = msg.indexOf(':', 6);
+      const int secondColon = firstColon > 0 ? msg.indexOf(':', firstColon + 1) : -1;
+      if (firstColon <= 0 || secondColon <= 0) {
+        wsServer->sendTXT(num, "ERROR:Invalid START format");
+        return;
+      }
 
-          // Validate filename against traversal attacks
-          if (!PathUtils::isValidFilename(wsUploadFileName)) {
-            LOG_WRN("WS", "Invalid filename rejected: %s", wsUploadFileName.c_str());
-            wsServer->sendTXT(num, "ERROR:Invalid filename");
-            return;
-          }
-          if (isProtectedComponent(wsUploadFileName)) {
-            LOG_WRN("WS", "Protected filename rejected: %s", wsUploadFileName.c_str());
-            wsServer->sendTXT(num, "ERROR:Protected filename");
-            return;
-          }
+      String requestedFileName = PathUtils::urlDecode(msg.substring(6, firstColon));
+      String requestedPath = PathUtils::urlDecode(msg.substring(secondColon + 1));
+      size_t requestedSize = 0;
+      if (!parseStrictSize(msg.substring(firstColon + 1, secondColon), requestedSize)) {
+        wsServer->sendTXT(num, "ERROR:Invalid size");
+        return;
+      }
 
-          // Validate path against traversal attacks
-          if (!PathUtils::isValidSdPath(wsUploadPath)) {
-            LOG_WRN("WS", "Path validation failed: %s", wsUploadPath.c_str());
-            wsServer->sendTXT(num, "ERROR:Invalid path");
-            return;
-          }
+      // Validate filename against traversal attacks
+      if (!PathUtils::isValidFilename(requestedFileName)) {
+        LOG_WRN("WS", "Invalid filename rejected: %s", requestedFileName.c_str());
+        wsServer->sendTXT(num, "ERROR:Invalid filename");
+        return;
+      }
+      if (isProtectedComponent(requestedFileName)) {
+        LOG_WRN("WS", "Protected filename rejected: %s", requestedFileName.c_str());
+        wsServer->sendTXT(num, "ERROR:Protected filename");
+        return;
+      }
 
-          wsUploadPath = PathUtils::normalizePath(wsUploadPath);
-          if (pathContainsProtectedItem(wsUploadPath)) {
-            LOG_WRN("WS", "Protected path rejected: %s", wsUploadPath.c_str());
-            wsServer->sendTXT(num, "ERROR:Protected path");
-            return;
-          }
+      // Validate path against traversal attacks
+      if (!PathUtils::isValidSdPath(requestedPath)) {
+        LOG_WRN("WS", "Path validation failed: %s", requestedPath.c_str());
+        wsServer->sendTXT(num, "ERROR:Invalid path");
+        return;
+      }
 
-          // Build file path
-          String filePath = wsUploadPath;
-          if (!filePath.endsWith("/")) filePath += "/";
-          filePath += wsUploadFileName;
+      requestedPath = PathUtils::normalizePath(requestedPath);
+      if (pathContainsProtectedItem(requestedPath)) {
+        LOG_WRN("WS", "Protected path rejected: %s", requestedPath.c_str());
+        wsServer->sendTXT(num, "ERROR:Protected path");
+        return;
+      }
 
-          LOG_DBG("WS", "Starting upload: %s (%d bytes) to %s", wsUploadFileName.c_str(), wsUploadSize,
-                  filePath.c_str());
+      if (wsUploadInProgress || wsUploadFile) {
+        cleanupPartialWsUpload("superseded");
+      }
 
-          // Check if file exists and remove it
-          esp_task_wdt_reset();
-          {
-            SpiBusMutex::Guard guard;
-            if (Storage.exists(filePath.c_str())) {
-              Storage.remove(filePath.c_str());
-            }
-          }
+      wsUploadFileName = requestedFileName;
+      wsUploadPath = requestedPath;
+      wsUploadSize = requestedSize;
+      wsUploadReceived = 0;
+      wsLastProgressSent = 0;
+      wsUploadStartTime = millis();
 
-          // Open file for writing
-          esp_task_wdt_reset();
-          bool fileOpened = false;
-          {
-            SpiBusMutex::Guard guard;
-            fileOpened = Storage.openFileForWrite("WS", filePath, wsUploadFile);
-          }
-          if (!fileOpened) {
-            wsServer->sendTXT(num, "ERROR:Failed to create file");
-            wsUploadInProgress = false;
-            return;
-          }
-          esp_task_wdt_reset();
+      const String filePath = buildWsUploadFilePath();
+      LOG_DBG("WS", "Starting upload: %s (%u bytes) to %s", wsUploadFileName.c_str(),
+              static_cast<unsigned int>(wsUploadSize), filePath.c_str());
 
-          wsUploadInProgress = true;
-          wsServer->sendTXT(num, "READY");
-        } else {
-          wsServer->sendTXT(num, "ERROR:Invalid START format");
+      // Check if file exists and remove it
+      esp_task_wdt_reset();
+      {
+        SpiBusMutex::Guard guard;
+        if (Storage.exists(filePath.c_str())) {
+          Storage.remove(filePath.c_str());
         }
       }
+
+      // Open file for writing
+      esp_task_wdt_reset();
+      bool fileOpened = false;
+      {
+        SpiBusMutex::Guard guard;
+        fileOpened = Storage.openFileForWrite("WS", filePath, wsUploadFile);
+      }
+      if (!fileOpened) {
+        wsServer->sendTXT(num, "ERROR:Failed to create file");
+        resetWsUploadState();
+        return;
+      }
+      esp_task_wdt_reset();
+
+      wsUploadInProgress = true;
+      wsServer->sendTXT(num, "READY");
       break;
     }
 
     case WStype_BIN: {
       if (!wsUploadInProgress || !wsUploadFile) {
         wsServer->sendTXT(num, "ERROR:No upload in progress");
+        return;
+      }
+      if (!payload) {
+        cleanupPartialWsUpload("missing chunk payload");
+        resetWsUploadState();
+        wsServer->sendTXT(num, "ERROR:Missing chunk payload");
+        return;
+      }
+      if (length == 0) {
+        wsServer->sendTXT(num, "ERROR:Empty chunk");
+        return;
+      }
+      if (wsUploadReceived > wsUploadSize || length > (wsUploadSize - wsUploadReceived)) {
+        cleanupPartialWsUpload("oversize chunk");
+        resetWsUploadState();
+        wsServer->sendTXT(num, "ERROR:Chunk exceeds declared size");
         return;
       }
 
@@ -2003,11 +2096,8 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       esp_task_wdt_reset();
 
       if (written != length) {
-        {
-          SpiBusMutex::Guard guard;
-          wsUploadFile.close();
-        }
-        wsUploadInProgress = false;
+        cleanupPartialWsUpload("write failure");
+        resetWsUploadState();
         wsServer->sendTXT(num, "ERROR:Write failed - disk full?");
         return;
       }
@@ -2022,7 +2112,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       }
 
       // Check if upload complete
-      if (wsUploadReceived >= wsUploadSize) {
+      if (wsUploadReceived == wsUploadSize) {
         {
           SpiBusMutex::Guard guard;
           wsUploadFile.close();
@@ -2036,8 +2126,8 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
         unsigned long elapsed = millis() - wsUploadStartTime;
         float kbps = (elapsed > 0) ? (wsUploadSize / 1024.0) / (elapsed / 1000.0) : 0;
 
-        LOG_DBG("WS", "Upload complete: %s (%d bytes in %lu ms, %.1f KB/s)", wsUploadFileName.c_str(), wsUploadSize,
-                elapsed, kbps);
+        LOG_DBG("WS", "Upload complete: %s (%u bytes in %lu ms, %.1f KB/s)", wsUploadFileName.c_str(),
+                static_cast<unsigned int>(wsUploadSize), elapsed, kbps);
 
         // Clear caches to prevent stale data when overwriting files
         String filePath = wsUploadPath;

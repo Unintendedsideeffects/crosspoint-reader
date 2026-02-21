@@ -2,6 +2,8 @@
 
 #include <Logging.h>
 
+#include "InputValidation.h"
+
 namespace PathUtils {
 
 bool containsTraversal(const String& path) {
@@ -74,12 +76,13 @@ bool isValidSdPath(const String& path) {
     return false;
   }
 
-  // Check for null bytes
+  size_t invalidPos = 0;
+  if (InputValidation::findAsciiControlChar(path.c_str(), path.length(), invalidPos)) {
+    LOG_WRN("PATH", "REJECT: control char at %d", static_cast<int>(invalidPos));
+    return false;
+  }
+
   for (size_t i = 0; i < path.length(); i++) {
-    if (path[i] == '\0') {
-      LOG_WRN("PATH", "REJECT: null at %d", i);
-      return false;
-    }
     if (path[i] == '\\') {
       LOG_WRN("PATH", "REJECT: backslash at %d", i);
       return false;
@@ -164,7 +167,11 @@ bool isValidFilename(const String& filename) {
     return false;
   }
 
-  // Reject filesystem-invalid characters
+  size_t invalidPos = 0;
+  if (InputValidation::findAsciiControlChar(filename.c_str(), filename.length(), invalidPos)) {
+    return false;
+  }
+
   for (size_t i = 0; i < filename.length(); i++) {
     const char c = filename[i];
     if (c == '"' || c == '*' || c == ':' || c == '<' || c == '>' || c == '?' || c == '|') {

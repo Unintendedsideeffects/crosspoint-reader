@@ -18,6 +18,7 @@ g++ -std=c++20 -O2 \
   "$ROOT_DIR/test/HostTests.cpp" \
   "$ROOT_DIR/lib/FsHelpers/FsHelpers.cpp" \
   "$ROOT_DIR/lib/Markdown/MarkdownParser.cpp" \
+  "$ROOT_DIR/src/util/InputValidation.cpp" \
   "$BUILD_DIR/md4c.o" \
   "$BUILD_DIR/entity.o" \
   -o "$BUILD_DIR/HostTests"
