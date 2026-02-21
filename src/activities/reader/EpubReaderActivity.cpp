@@ -525,7 +525,9 @@ void EpubReaderActivity::applyOrientation(const uint8_t orientation) {
 
   // Persist the selection so the reader keeps the new orientation on next launch.
   SETTINGS.orientation = orientation;
-  SETTINGS.saveToFile();
+  if (!SETTINGS.saveToFile()) {
+    LOG_WRN("EPUB", "Failed to persist orientation setting to SD card");
+  }
 
   // Update renderer orientation to match the new logical coordinate system.
   applyReaderOrientation(renderer, SETTINGS.orientation);

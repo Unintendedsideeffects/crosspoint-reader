@@ -63,6 +63,20 @@ jobs:
       - name: Run host tests
         run: bash test/run_host_tests.sh
 
+  hardware-patterns:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Check hardware coding patterns
+        run: python3 scripts/check_hardware_patterns.py
+
   cppcheck:
     runs-on: ubuntu-latest
     steps:
@@ -152,6 +166,7 @@ jobs:
       - clang-format
       - feature-sync
       - host-tests
+      - hardware-patterns
       - cppcheck
     if: always()
     runs-on: ubuntu-latest

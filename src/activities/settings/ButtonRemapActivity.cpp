@@ -44,7 +44,9 @@ void ButtonRemapActivity::loop() {
     SETTINGS.frontButtonLeft = CrossPointSettings::FRONT_HW_LEFT;
     SETTINGS.frontButtonRight = CrossPointSettings::FRONT_HW_RIGHT;
     SETTINGS.enforceButtonLayoutConstraints();
-    SETTINGS.saveToFile();
+    if (!SETTINGS.saveToFile()) {
+      LOG_WRN("REMAP", "Failed to persist button layout reset to SD card");
+    }
     onBack();
     return;
   }
@@ -80,7 +82,9 @@ void ButtonRemapActivity::loop() {
   if (currentStep >= kRoleCount) {
     // All roles assigned; save to settings and exit.
     applyTempMapping();
-    SETTINGS.saveToFile();
+    if (!SETTINGS.saveToFile()) {
+      LOG_WRN("REMAP", "Failed to persist button remap to SD card");
+    }
     onBack();
     return;
   }

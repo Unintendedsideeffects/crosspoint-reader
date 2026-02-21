@@ -216,6 +216,8 @@ void CrossPointWebServer::stop() {
     wsUploadFile.close();
     wsUploadInProgress = false;
   }
+  wsUploadOwnerValid = false;
+  wsUploadOwnerClient = 0;
 
   // Close any in-progress HTTP upload
   if (uploadFile) {
@@ -1598,7 +1600,9 @@ void CrossPointWebServer::handlePostSettings() {
 #endif
 
   SETTINGS.enforceButtonLayoutConstraints();
-  SETTINGS.saveToFile();
+  if (!SETTINGS.saveToFile()) {
+    LOG_WRN("WEB", "Failed to persist settings to SD card");
+  }
 
   LOG_DBG("WEB", "Applied %d setting(s)", applied);
   server->send(200, "text/plain", String("Applied ") + String(applied) + " setting(s)");
@@ -1614,7 +1618,9 @@ void CrossPointWebServer::handleRescanUserFonts() {
     activeFontLoaded = manager.loadFontFamily(SETTINGS.userFontPath);
     if (!activeFontLoaded) {
       SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-      SETTINGS.saveToFile();
+      if (!SETTINGS.saveToFile()) {
+        LOG_WRN("WEB", "Failed to persist font fallback to SD card");
+      }
     }
   }
 
@@ -1941,15 +1947,19 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
     wsUploadReceived = 0;
     wsLastProgressSent = 0;
     wsUploadStartTime = 0;
+    wsUploadOwnerClient = 0;
+    wsUploadOwnerValid = false;
   };
 
   switch (type) {
     case WStype_DISCONNECTED:
       LOG_DBG("WS", "Client %u disconnected", num);
-      if (wsUploadInProgress || wsUploadFile) {
-        cleanupPartialWsUpload("disconnect");
+      if ((wsUploadInProgress || wsUploadFile) && wsUploadOwnerValid && wsUploadOwnerClient == num) {
+        cleanupPartialWsUpload("owner disconnect");
+        resetWsUploadState();
+      } else if (wsUploadInProgress || wsUploadFile) {
+        LOG_DBG("WS", "Ignoring disconnect from non-owner client %u during upload", num);
       }
-      resetWsUploadState();
       break;
 
     case WStype_CONNECTED: {
@@ -1958,6 +1968,11 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
     }
 
     case WStype_TEXT: {
+      if ((wsUploadInProgress || wsUploadFile) && wsUploadOwnerValid && wsUploadOwnerClient != num) {
+        wsServer->sendTXT(num, "ERROR:Upload in progress by another client");
+        return;
+      }
+
       if (!payload) {
         wsServer->sendTXT(num, "ERROR:Missing control payload");
         return;
@@ -2033,7 +2048,8 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       }
 
       if (wsUploadInProgress || wsUploadFile) {
-        cleanupPartialWsUpload("superseded");
+        cleanupPartialWsUpload("superseded by owner");
+        resetWsUploadState();
       }
 
       wsUploadFileName = requestedFileName;
@@ -2042,6 +2058,8 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       wsUploadReceived = 0;
       wsLastProgressSent = 0;
       wsUploadStartTime = millis();
+      wsUploadOwnerClient = num;
+      wsUploadOwnerValid = true;
 
       const String filePath = buildWsUploadFilePath();
       LOG_DBG("WS", "Starting upload: %s (%u bytes) to %s", wsUploadFileName.c_str(),
@@ -2078,6 +2096,10 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
     case WStype_BIN: {
       if (!wsUploadInProgress || !wsUploadFile) {
         wsServer->sendTXT(num, "ERROR:No upload in progress");
+        return;
+      }
+      if (!wsUploadOwnerValid || wsUploadOwnerClient != num) {
+        wsServer->sendTXT(num, "ERROR:Upload in progress by another client");
         return;
       }
       if (!payload) {
@@ -2149,6 +2171,8 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
 
         wsServer->sendTXT(num, "DONE");
         wsLastProgressSent = 0;
+        wsUploadOwnerClient = 0;
+        wsUploadOwnerValid = false;
       }
       break;
     }

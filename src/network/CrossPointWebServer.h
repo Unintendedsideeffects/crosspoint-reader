@@ -70,6 +70,8 @@ class CrossPointWebServer {
   size_t wsLastProgressSent = 0;
   unsigned long wsUploadStartTime = 0;
   bool wsUploadInProgress = false;
+  uint8_t wsUploadOwnerClient = 0;
+  bool wsUploadOwnerValid = false;
   String wsLastCompleteName;
   size_t wsLastCompleteSize = 0;
   unsigned long wsLastCompleteAt = 0;

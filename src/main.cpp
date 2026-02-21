@@ -193,7 +193,9 @@ void renderUsbMscLockedScreen() {
 void enterUsbMscSession() {
   LOG_INF("USBMSC", "Entering USB mass storage lock mode");
   APP_STATE.saveToFile();
-  SETTINGS.saveToFile();
+  if (!SETTINGS.saveToFile()) {
+    LOG_WRN("USBMSC", "Failed to persist settings before USB MSC session");
+  }
   exitActivity();
   Storage.mkdir(kCrossPointDataDir);
   Storage.writeFile(kUsbMscSessionMarkerFile, "1");
@@ -487,7 +489,9 @@ void setup() {
   if (SETTINGS.fontFamily == CrossPointSettings::USER_SD &&
       !UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath)) {
     SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-    SETTINGS.saveToFile();
+    if (!SETTINGS.saveToFile()) {
+      LOG_WRN("FONTS", "Failed to persist font fallback to SD card");
+    }
   }
 #endif
   I18N.loadSettings();

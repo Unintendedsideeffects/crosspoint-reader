@@ -1,5 +1,6 @@
 #include "TimeSync.h"
 
+#include <Logging.h>
 #include <esp_sntp.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -57,7 +58,9 @@ bool syncTimeWithNtpLowMemory() {
       const std::time_t now = std::time(nullptr);
       if (now >= kMinValidTime) {
         SETTINGS.lastTimeSyncEpoch = static_cast<uint32_t>(now);
-        SETTINGS.saveToFile();
+        if (!SETTINGS.saveToFile()) {
+          LOG_WRN("TIMESYNC", "Failed to persist time sync epoch to SD card");
+        }
       }
       return isTimeValid();
     }
@@ -67,7 +70,9 @@ bool syncTimeWithNtpLowMemory() {
   if (isTimeValid()) {
     const std::time_t now = std::time(nullptr);
     SETTINGS.lastTimeSyncEpoch = static_cast<uint32_t>(now);
-    SETTINGS.saveToFile();
+    if (!SETTINGS.saveToFile()) {
+      LOG_WRN("TIMESYNC", "Failed to persist time sync epoch to SD card");
+    }
     return true;
   }
   return false;

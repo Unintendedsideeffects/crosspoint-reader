@@ -35,6 +35,8 @@ constexpr char expectedBoard[] = "esp32c3";
 constexpr char crosspointDataDir[] = "/.crosspoint";
 constexpr char factoryResetMarkerFile[] = "/.factory-reset-pending";
 constexpr uint32_t otaNoProgressTimeoutMs = 45000;
+constexpr uint8_t otaMaxAttempts = 3;
+constexpr uint32_t otaRetryBackoffBaseMs = 1000;
 
 bool markFactoryResetPending() {
   FsFile markerFile;
@@ -378,7 +380,9 @@ bool OtaUpdater::selectFeatureStoreBundleByIndex(size_t index) {
   // Persist selection
   strncpy(SETTINGS.selectedOtaBundle, entry.id.c_str(), sizeof(SETTINGS.selectedOtaBundle) - 1);
   SETTINGS.selectedOtaBundle[sizeof(SETTINGS.selectedOtaBundle) - 1] = '\0';
-  SETTINGS.saveToFile();
+  if (!SETTINGS.saveToFile()) {
+    LOG_WRN("OTA", "Failed to persist selected bundle ID to SD card");
+  }
 
   return true;
 }
@@ -449,10 +453,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     return UPDATE_OLDER_ERROR;
   }
 
-  esp_https_ota_handle_t ota_handle = NULL;
   esp_err_t esp_err;
-  /* Signal for OtaUpdateActivity */
-  render = false;
 
   esp_http_client_config_t client_config = {
       .url = otaUrl.c_str(),
@@ -478,85 +479,149 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     ~WifiPsRestore() { esp_wifi_set_ps(WIFI_PS_MIN_MODEM); }
   } wifiPsRestore;
 
-  auto abortOta = [&](const OtaUpdaterError code, const String& message) {
-    lastError = message;
-    if (ota_handle != NULL) {
-      const esp_err_t abortErr = esp_https_ota_abort(ota_handle);
-      if (abortErr != ESP_OK) {
-        LOG_WRN("OTA", "esp_https_ota_abort failed: %s", esp_err_to_name(abortErr));
+  OtaUpdaterError finalError = INTERNAL_UPDATE_ERROR;
+  String finalMessage = "Update failed";
+
+  for (uint8_t attempt = 1; attempt <= otaMaxAttempts; ++attempt) {
+    esp_https_ota_handle_t ota_handle = NULL;
+    bool attemptFailed = false;
+    bool attemptRetryable = false;
+    OtaUpdaterError attemptError = INTERNAL_UPDATE_ERROR;
+    String attemptMessage;
+
+    auto abortOta = [&]() {
+      if (ota_handle != NULL) {
+        const esp_err_t abortErr = esp_https_ota_abort(ota_handle);
+        if (abortErr != ESP_OK) {
+          LOG_WRN("OTA", "esp_https_ota_abort failed: %s", esp_err_to_name(abortErr));
+        }
+        ota_handle = NULL;
       }
+    };
+
+    auto canRetry = [&]() { return attempt < otaMaxAttempts && WiFi.status() == WL_CONNECTED; };
+
+    processedSize = 0;
+    esp_err = esp_https_ota_begin(&ota_config, &ota_handle);
+    if (esp_err != ESP_OK) {
+      LOG_ERR("OTA", "HTTP OTA Begin failed (attempt %u/%u): %s", static_cast<unsigned int>(attempt),
+              static_cast<unsigned int>(otaMaxAttempts), esp_err_to_name(esp_err));
+      attemptFailed = true;
+      attemptError = INTERNAL_UPDATE_ERROR;
+      attemptMessage = "Failed to start OTA session";
+      attemptRetryable = canRetry();
+    }
+
+    if (!attemptFailed) {
+      size_t lastProgressBytes = 0;
+      unsigned long lastProgressAt = millis();
+
+      do {
+        if (WiFi.status() != WL_CONNECTED) {
+          LOG_ERR("OTA", "WiFi disconnected during OTA");
+          attemptFailed = true;
+          attemptError = HTTP_ERROR;
+          attemptMessage = "WiFi disconnected during update";
+          attemptRetryable = false;
+          abortOta();
+          break;
+        }
+
+        esp_err = esp_https_ota_perform(ota_handle);
+        processedSize = esp_https_ota_get_image_len_read(ota_handle);
+        if (processedSize > lastProgressBytes) {
+          lastProgressBytes = processedSize;
+          lastProgressAt = millis();
+        } else if (esp_err == ESP_ERR_HTTPS_OTA_IN_PROGRESS && (millis() - lastProgressAt) > otaNoProgressTimeoutMs) {
+          LOG_ERR("OTA", "OTA stalled for >%lu ms without progress",
+                  static_cast<unsigned long>(otaNoProgressTimeoutMs));
+          attemptFailed = true;
+          attemptError = HTTP_ERROR;
+          attemptMessage = "Update stalled; check network and retry";
+          attemptRetryable = canRetry();
+          abortOta();
+          break;
+        }
+
+        /* Signal for OtaUpdateActivity */
+        render = true;
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+      } while (esp_err == ESP_ERR_HTTPS_OTA_IN_PROGRESS);
+    }
+
+    if (!attemptFailed && esp_err != ESP_OK) {
+      LOG_ERR("OTA", "esp_https_ota_perform failed (attempt %u/%u): %s", static_cast<unsigned int>(attempt),
+              static_cast<unsigned int>(otaMaxAttempts), esp_err_to_name(esp_err));
+      attemptFailed = true;
+      attemptError = HTTP_ERROR;
+      attemptMessage = "Update download failed";
+      attemptRetryable = canRetry();
+      abortOta();
+    }
+
+    if (!attemptFailed && !esp_https_ota_is_complete_data_received(ota_handle)) {
+      LOG_ERR("OTA", "OTA image incomplete on attempt %u/%u", static_cast<unsigned int>(attempt),
+              static_cast<unsigned int>(otaMaxAttempts));
+      attemptFailed = true;
+      attemptError = INTERNAL_UPDATE_ERROR;
+      attemptMessage = "Incomplete update data received";
+      attemptRetryable = canRetry();
+      abortOta();
+    }
+
+    if (!attemptFailed) {
+      esp_err = esp_https_ota_finish(ota_handle);
       ota_handle = NULL;
-    }
-    return code;
-  };
-
-  esp_err = esp_https_ota_begin(&ota_config, &ota_handle);
-  if (esp_err != ESP_OK) {
-    LOG_DBG("OTA", "HTTP OTA Begin Failed: %s", esp_err_to_name(esp_err));
-    lastError = "Failed to start OTA session";
-    return INTERNAL_UPDATE_ERROR;
-  }
-
-  size_t lastProgressBytes = 0;
-  unsigned long lastProgressAt = millis();
-
-  do {
-    if (WiFi.status() != WL_CONNECTED) {
-      LOG_ERR("OTA", "WiFi disconnected during OTA");
-      return abortOta(HTTP_ERROR, "WiFi disconnected during update");
+      if (esp_err != ESP_OK) {
+        LOG_ERR("OTA", "esp_https_ota_finish failed: %s", esp_err_to_name(esp_err));
+        attemptFailed = true;
+        attemptError = INTERNAL_UPDATE_ERROR;
+        attemptMessage = "Failed to finalize update";
+        attemptRetryable = false;
+      }
     }
 
-    esp_err = esp_https_ota_perform(ota_handle);
-    processedSize = esp_https_ota_get_image_len_read(ota_handle);
-    if (processedSize > lastProgressBytes) {
-      lastProgressBytes = processedSize;
-      lastProgressAt = millis();
-    } else if (esp_err == ESP_ERR_HTTPS_OTA_IN_PROGRESS && (millis() - lastProgressAt) > otaNoProgressTimeoutMs) {
-      LOG_ERR("OTA", "OTA stalled for >%lu ms without progress", static_cast<unsigned long>(otaNoProgressTimeoutMs));
-      return abortOta(HTTP_ERROR, "Update stalled; check network and retry");
+    if (!attemptFailed) {
+      LOG_INF("OTA", "Update completed");
+
+      // Persist installed bundle info
+      if (!selectedBundleId.isEmpty()) {
+        strncpy(SETTINGS.installedOtaBundle, selectedBundleId.c_str(), sizeof(SETTINGS.installedOtaBundle) - 1);
+        SETTINGS.installedOtaBundle[sizeof(SETTINGS.installedOtaBundle) - 1] = '\0';
+        strncpy(SETTINGS.installedOtaFeatureFlags, selectedFeatureFlags.c_str(),
+                sizeof(SETTINGS.installedOtaFeatureFlags) - 1);
+        SETTINGS.installedOtaFeatureFlags[sizeof(SETTINGS.installedOtaFeatureFlags) - 1] = '\0';
+        if (!SETTINGS.saveToFile()) {
+          LOG_WRN("OTA", "Failed to persist installed bundle metadata to SD card");
+        }
+      }
+
+      // Write the deferred factory-reset sentinel so boot picks it up on next cold start.
+      // The flash itself already succeeded; log a warning if the marker write fails rather than
+      // returning an error that would prevent the activity from signalling reboot to the user.
+      if (factoryResetOnInstall && !markFactoryResetPending()) {
+        LOG_WRN("OTA", "Factory reset marker write failed — data wipe will NOT occur on next boot");
+      }
+
+      return OK;
     }
 
-    /* Sent signal to  OtaUpdateActivity */
-    render = true;
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  } while (esp_err == ESP_ERR_HTTPS_OTA_IN_PROGRESS);
+    finalError = attemptError;
+    finalMessage = attemptMessage;
+    lastError = attemptMessage;
 
-  if (esp_err != ESP_OK) {
-    LOG_ERR("OTA", "esp_https_ota_perform Failed: %s", esp_err_to_name(esp_err));
-    return abortOta(HTTP_ERROR, "Update download failed");
+    if (!attemptRetryable) {
+      return attemptError;
+    }
+
+    const uint32_t backoffMs = otaRetryBackoffBaseMs << (attempt - 1);
+    LOG_WRN("OTA", "Retrying OTA in %lu ms (next attempt %u/%u): %s", static_cast<unsigned long>(backoffMs),
+            static_cast<unsigned int>(attempt + 1), static_cast<unsigned int>(otaMaxAttempts), attemptMessage.c_str());
+    vTaskDelay(backoffMs / portTICK_PERIOD_MS);
   }
 
-  if (!esp_https_ota_is_complete_data_received(ota_handle)) {
-    LOG_ERR("OTA", "OTA image incomplete; aborting install");
-    return abortOta(INTERNAL_UPDATE_ERROR, "Incomplete update data received");
+  if (lastError.isEmpty()) {
+    lastError = finalMessage;
   }
-
-  esp_err = esp_https_ota_finish(ota_handle);
-  ota_handle = NULL;
-  if (esp_err != ESP_OK) {
-    LOG_ERR("OTA", "esp_https_ota_finish Failed: %s", esp_err_to_name(esp_err));
-    lastError = "Failed to finalize update";
-    return INTERNAL_UPDATE_ERROR;
-  }
-
-  LOG_INF("OTA", "Update completed");
-
-  // Persist installed bundle info
-  if (!selectedBundleId.isEmpty()) {
-    strncpy(SETTINGS.installedOtaBundle, selectedBundleId.c_str(), sizeof(SETTINGS.installedOtaBundle) - 1);
-    SETTINGS.installedOtaBundle[sizeof(SETTINGS.installedOtaBundle) - 1] = '\0';
-    strncpy(SETTINGS.installedOtaFeatureFlags, selectedFeatureFlags.c_str(),
-            sizeof(SETTINGS.installedOtaFeatureFlags) - 1);
-    SETTINGS.installedOtaFeatureFlags[sizeof(SETTINGS.installedOtaFeatureFlags) - 1] = '\0';
-    SETTINGS.saveToFile();
-  }
-
-  // Write the deferred factory-reset sentinel so boot picks it up on next cold start.
-  // The flash itself already succeeded; log a warning if the marker write fails rather than
-  // returning an error that would prevent the activity from signalling reboot to the user.
-  if (factoryResetOnInstall && !markFactoryResetPending()) {
-    LOG_WRN("OTA", "Factory reset marker write failed — data wipe will NOT occur on next boot");
-  }
-
-  return OK;
+  return finalError;
 }

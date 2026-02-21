@@ -102,7 +102,9 @@ void SettingsActivity::loop() {
   }
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    SETTINGS.saveToFile();
+    if (!SETTINGS.saveToFile()) {
+      LOG_WRN("SETTINGS", "Failed to persist settings to SD card");
+    }
     onGoHome();
     return;
   }
@@ -307,7 +309,9 @@ void SettingsActivity::toggleCurrentSetting() {
 
   SETTINGS.enforceButtonLayoutConstraints();
   renderer.setDarkMode(SETTINGS.darkMode);
-  SETTINGS.saveToFile();
+  if (!SETTINGS.saveToFile()) {
+    LOG_WRN("SETTINGS", "Failed to persist settings to SD card");
+  }
 }
 
 void SettingsActivity::render(Activity::RenderLock&&) {
