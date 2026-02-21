@@ -263,7 +263,7 @@ FEATURE_METADATA = {
     'web_pokedex_plugin': FeatureMetadata(
         implemented=True,
         stable=True,
-        requires=[],
+        requires=['image_sleep'],
         conflicts=[],
         recommends=[]
     ),
@@ -291,7 +291,7 @@ FEATURE_METADATA = {
     'lyra_theme': FeatureMetadata(
         implemented=True,
         stable=True,
-        requires=[],
+        requires=['home_media_picker'],
         conflicts=[],
         recommends=[]
     ),
@@ -319,14 +319,14 @@ FEATURE_METADATA = {
     'visual_cover_picker': FeatureMetadata(
         implemented=True,
         stable=True,
-        requires=[],
+        requires=['home_media_picker'],
         conflicts=[],
         recommends=[]
     ),
     'ble_wifi_provisioning': FeatureMetadata(
         implemented=True,
         stable=True,
-        requires=[],
+        requires=['web_wifi_setup'],
         conflicts=[],
         recommends=[]
     ),

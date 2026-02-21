@@ -16,8 +16,13 @@
  */
 class FeatureManifest {
  public:
-  // Compile-time feature detection (constexpr for zero runtime cost)
-  static constexpr bool hasExtendedFonts() { return ENABLE_EXTENDED_FONTS != 0; }
+  // Compile-time feature detection (constexpr for zero runtime cost).
+  // Aggregate helper: true if any bundled font family is included.
+  static constexpr bool hasAnyBundledFontFamily() {
+    return ENABLE_BOOKERLY_FONTS != 0 || ENABLE_NOTOSANS_FONTS != 0 || ENABLE_OPENDYSLEXIC_FONTS != 0;
+  }
+  // Legacy aggregate alias kept for API compatibility with existing tooling.
+  static constexpr bool hasExtendedFonts() { return hasAnyBundledFontFamily(); }
   static constexpr bool hasBookerlyFonts() { return ENABLE_BOOKERLY_FONTS != 0; }
   static constexpr bool hasNotoSansFonts() { return ENABLE_NOTOSANS_FONTS != 0; }
   static constexpr bool hasOpenDyslexicFonts() { return ENABLE_OPENDYSLEXIC_FONTS != 0; }
@@ -48,10 +53,10 @@ class FeatureManifest {
    * Useful for debugging and capacity planning.
    */
   static constexpr int enabledFeatureCount() {
-    return hasExtendedFonts() + hasBookerlyFonts() + hasNotoSansFonts() + hasOpenDyslexicFonts() + hasImageSleep() +
-           hasBookImages() + hasMarkdown() + hasIntegrations() + hasKOReaderSync() + hasCalibreSync() +
-           hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin() + hasEpubSupport() + hasHyphenation() +
-           hasXtcSupport() + hasLyraTheme() + hasOtaUpdates() + hasTodoPlanner() + hasDarkMode() +
+    return hasAnyBundledFontFamily() + hasBookerlyFonts() + hasNotoSansFonts() + hasOpenDyslexicFonts() +
+           hasImageSleep() + hasBookImages() + hasMarkdown() + hasIntegrations() + hasKOReaderSync() +
+           hasCalibreSync() + hasBackgroundServer() + hasHomeMediaPicker() + hasWebPokedexPlugin() + hasEpubSupport() +
+           hasHyphenation() + hasXtcSupport() + hasLyraTheme() + hasOtaUpdates() + hasTodoPlanner() + hasDarkMode() +
            hasVisualCoverPicker() + hasBleWifiProvisioning() + hasUserFonts() + hasWebWifiSetup() + hasUsbMassStorage();
   }
 
@@ -71,7 +76,7 @@ class FeatureManifest {
       }
     };
 
-    addFeature(hasExtendedFonts(), "extended_fonts");
+    addFeature(hasAnyBundledFontFamily(), "extended_fonts");
     addFeature(hasBookerlyFonts(), "bookerly_fonts");
     addFeature(hasNotoSansFonts(), "notosans_fonts");
     addFeature(hasOpenDyslexicFonts(), "opendyslexic_fonts");
@@ -106,7 +111,7 @@ class FeatureManifest {
    */
   static String toJson() {
     String json = "{";
-    json += "\"extended_fonts\":" + String(hasExtendedFonts() ? "true" : "false");
+    json += "\"extended_fonts\":" + String(hasAnyBundledFontFamily() ? "true" : "false");
     json += ",\"bookerly_fonts\":" + String(hasBookerlyFonts() ? "true" : "false");
     json += ",\"notosans_fonts\":" + String(hasNotoSansFonts() ? "true" : "false");
     json += ",\"opendyslexic_fonts\":" + String(hasOpenDyslexicFonts() ? "true" : "false");
@@ -141,7 +146,7 @@ class FeatureManifest {
    */
   static void printToSerial() {
     LOG_INF("FEATURES", "CrossPoint Reader build configuration:");
-    LOG_INF("FEATURES", "  Extended Fonts:    %s", hasExtendedFonts() ? "ENABLED " : "DISABLED");
+    LOG_INF("FEATURES", "  Extended Fonts:    %s", hasAnyBundledFontFamily() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  Bookerly Fonts:    %s", hasBookerlyFonts() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  NotoSans Fonts:    %s", hasNotoSansFonts() ? "ENABLED " : "DISABLED");
     LOG_INF("FEATURES", "  OpenDyslexic:      %s", hasOpenDyslexicFonts() ? "ENABLED " : "DISABLED");
