@@ -4,6 +4,7 @@
 #include <FeatureManifest.h>
 #include <HalStorage.h>
 #include <Logging.h>
+#include <WiFi.h>
 
 #include <cstring>
 
@@ -33,6 +34,7 @@ constexpr char featureStoreCatalogUrl[] = FEATURE_STORE_CATALOG_URL;
 constexpr char expectedBoard[] = "esp32c3";
 constexpr char crosspointDataDir[] = "/.crosspoint";
 constexpr char factoryResetMarkerFile[] = "/.factory-reset-pending";
+constexpr uint32_t otaNoProgressTimeoutMs = 45000;
 
 bool markFactoryResetPending() {
   FsFile markerFile;
@@ -438,7 +440,12 @@ bool OtaUpdater::isUpdateNewer() const {
 const std::string& OtaUpdater::getLatestVersion() const { return latestVersion; }
 
 OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
+  lastError.clear();
+  processedSize = 0;
+  render = false;
+
   if (!isUpdateNewer()) {
+    lastError = "No newer update available";
     return UPDATE_OLDER_ERROR;
   }
 
@@ -471,15 +478,44 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     ~WifiPsRestore() { esp_wifi_set_ps(WIFI_PS_MIN_MODEM); }
   } wifiPsRestore;
 
+  auto abortOta = [&](const OtaUpdaterError code, const String& message) {
+    lastError = message;
+    if (ota_handle != NULL) {
+      const esp_err_t abortErr = esp_https_ota_abort(ota_handle);
+      if (abortErr != ESP_OK) {
+        LOG_WRN("OTA", "esp_https_ota_abort failed: %s", esp_err_to_name(abortErr));
+      }
+      ota_handle = NULL;
+    }
+    return code;
+  };
+
   esp_err = esp_https_ota_begin(&ota_config, &ota_handle);
   if (esp_err != ESP_OK) {
     LOG_DBG("OTA", "HTTP OTA Begin Failed: %s", esp_err_to_name(esp_err));
+    lastError = "Failed to start OTA session";
     return INTERNAL_UPDATE_ERROR;
   }
 
+  size_t lastProgressBytes = 0;
+  unsigned long lastProgressAt = millis();
+
   do {
+    if (WiFi.status() != WL_CONNECTED) {
+      LOG_ERR("OTA", "WiFi disconnected during OTA");
+      return abortOta(HTTP_ERROR, "WiFi disconnected during update");
+    }
+
     esp_err = esp_https_ota_perform(ota_handle);
     processedSize = esp_https_ota_get_image_len_read(ota_handle);
+    if (processedSize > lastProgressBytes) {
+      lastProgressBytes = processedSize;
+      lastProgressAt = millis();
+    } else if (esp_err == ESP_ERR_HTTPS_OTA_IN_PROGRESS && (millis() - lastProgressAt) > otaNoProgressTimeoutMs) {
+      LOG_ERR("OTA", "OTA stalled for >%lu ms without progress", static_cast<unsigned long>(otaNoProgressTimeoutMs));
+      return abortOta(HTTP_ERROR, "Update stalled; check network and retry");
+    }
+
     /* Sent signal to  OtaUpdateActivity */
     render = true;
     vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -487,19 +523,19 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
 
   if (esp_err != ESP_OK) {
     LOG_ERR("OTA", "esp_https_ota_perform Failed: %s", esp_err_to_name(esp_err));
-    esp_https_ota_finish(ota_handle);
-    return HTTP_ERROR;
+    return abortOta(HTTP_ERROR, "Update download failed");
   }
 
   if (!esp_https_ota_is_complete_data_received(ota_handle)) {
-    LOG_ERR("OTA", "esp_https_ota_is_complete_data_received Failed: %s", esp_err_to_name(esp_err));
-    esp_https_ota_finish(ota_handle);
-    return INTERNAL_UPDATE_ERROR;
+    LOG_ERR("OTA", "OTA image incomplete; aborting install");
+    return abortOta(INTERNAL_UPDATE_ERROR, "Incomplete update data received");
   }
 
   esp_err = esp_https_ota_finish(ota_handle);
+  ota_handle = NULL;
   if (esp_err != ESP_OK) {
     LOG_ERR("OTA", "esp_https_ota_finish Failed: %s", esp_err_to_name(esp_err));
+    lastError = "Failed to finalize update";
     return INTERNAL_UPDATE_ERROR;
   }
 

@@ -1996,7 +1996,13 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       String requestedPath = PathUtils::urlDecode(msg.substring(secondColon + 1));
       size_t requestedSize = 0;
       if (!parseStrictSize(msg.substring(firstColon + 1, secondColon), requestedSize)) {
-        wsServer->sendTXT(num, "ERROR:Invalid size");
+        wsServer->sendTXT(num, "ERROR:Invalid size (1..512MB)");
+        return;
+      }
+      if (requestedSize > WS_UPLOAD_MAX_BYTES) {
+        LOG_WRN("WS", "Rejected upload with declared size %u bytes (max %u)", static_cast<unsigned int>(requestedSize),
+                static_cast<unsigned int>(WS_UPLOAD_MAX_BYTES));
+        wsServer->sendTXT(num, "ERROR:Declared size exceeds limit");
         return;
       }
 

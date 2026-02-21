@@ -99,10 +99,12 @@ void testInputValidation() {
   assert(InputValidation::parseStrictPositiveSize("1", 1, 100, parsed) && parsed == 1);
   assert(InputValidation::parseStrictPositiveSize("512", 3, 512, parsed) && parsed == 512);
   assert(InputValidation::parseStrictPositiveSize("0010", 4, 100, parsed) && parsed == 10);
+  assert(InputValidation::parseStrictPositiveSize("536870912", 9, 536870912ULL, parsed) && parsed == 536870912ULL);
 
   assert(!InputValidation::parseStrictPositiveSize("", 0, 100, parsed));
   assert(!InputValidation::parseStrictPositiveSize("0", 1, 100, parsed));
   assert(!InputValidation::parseStrictPositiveSize("101", 3, 100, parsed));
+  assert(!InputValidation::parseStrictPositiveSize("536870913", 9, 536870912ULL, parsed));
   assert(!InputValidation::parseStrictPositiveSize("12a", 3, 100, parsed));
   assert(!InputValidation::parseStrictPositiveSize(nullptr, 0, 100, parsed));
 
