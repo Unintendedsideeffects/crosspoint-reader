@@ -32,7 +32,6 @@ constexpr char resetChannelUrl[] =
 #endif
 constexpr char featureStoreCatalogUrl[] = FEATURE_STORE_CATALOG_URL;
 constexpr char expectedBoard[] = "esp32c3";
-constexpr char crosspointDataDir[] = "/.crosspoint";
 constexpr char factoryResetMarkerFile[] = "/.factory-reset-pending";
 constexpr uint32_t otaNoProgressTimeoutMs = 45000;
 constexpr uint8_t otaMaxAttempts = 3;
@@ -52,28 +51,6 @@ bool markFactoryResetPending() {
   }
 
   LOG_INF("OTA", "Factory reset marker created: %s", factoryResetMarkerFile);
-  return true;
-}
-
-bool wipeCrossPointData() {
-  bool removed = true;
-  bool ensuredDir = true;
-  {
-    SpiBusMutex::Guard guard;
-    if (Storage.exists(crosspointDataDir)) {
-      removed = Storage.removeDir(crosspointDataDir);
-    }
-    if (!Storage.exists(crosspointDataDir)) {
-      ensuredDir = Storage.mkdir(crosspointDataDir);
-    }
-  }
-
-  if (!removed || !ensuredDir) {
-    LOG_ERR("OTA", "Factory reset wipe failed (removed=%d, ensuredDir=%d)", removed, ensuredDir);
-    return false;
-  }
-
-  LOG_INF("OTA", "Factory reset wipe completed");
   return true;
 }
 
@@ -600,7 +577,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
       // The flash itself already succeeded; log a warning if the marker write fails rather than
       // returning an error that would prevent the activity from signalling reboot to the user.
       if (factoryResetOnInstall && !markFactoryResetPending()) {
-        LOG_WRN("OTA", "Factory reset marker write failed — data wipe will NOT occur on next boot");
+        LOG_WRN("OTA", "Factory reset marker write failed — reset will NOT occur on next boot");
       }
 
       return OK;

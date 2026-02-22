@@ -37,6 +37,7 @@
 #include "network/BackgroundWebServer.h"
 #include "util/ButtonNavigator.h"
 #include "util/DateUtils.h"
+#include "util/FactoryResetUtils.h"
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 #include "KOReaderCredentialStore.h"
@@ -218,24 +219,17 @@ void applyPendingFactoryReset() {
 
   LOG_INF("RESET", "Pending factory reset marker detected");
 
-  bool removed = true;
-  if (Storage.exists(kCrossPointDataDir)) {
-    removed = Storage.removeDir(kCrossPointDataDir);
-  }
-  const bool ensuredDir = Storage.exists(kCrossPointDataDir) || Storage.mkdir(kCrossPointDataDir);
-
-  if (!removed || !ensuredDir) {
-    LOG_ERR("RESET", "Failed to wipe CrossPoint data (removed=%d, ensuredDir=%d). Retrying on next boot.", (int)removed,
-            (int)ensuredDir);
+  if (!FactoryResetUtils::resetCrossPointMetadataPreservingContent()) {
+    LOG_ERR("RESET", "Failed to reset CrossPoint metadata/cache. Retrying on next boot.");
     return;
   }
 
   if (!Storage.remove(kFactoryResetMarkerFile)) {
-    LOG_ERR("RESET", "Wipe completed, but marker removal failed: %s", kFactoryResetMarkerFile);
+    LOG_ERR("RESET", "Metadata reset completed, but marker removal failed: %s", kFactoryResetMarkerFile);
     return;
   }
 
-  LOG_INF("RESET", "Factory reset completed from pending marker");
+  LOG_INF("RESET", "Factory reset completed from pending marker (cache cleared, user files preserved)");
 }
 }  // namespace
 

@@ -2,17 +2,15 @@
 
 #include <Arduino.h>
 #include <GfxRenderer.h>
-#include <HalStorage.h>
-#include <HardwareSerial.h>
+#include <Logging.h>
 
 #include "MappedInputManager.h"
-#include "SpiBusMutex.h"
 #include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "util/FactoryResetUtils.h"
 
 namespace {
-constexpr char CROSSPOINT_DIR[] = "/.crosspoint";
 constexpr unsigned long RESTART_DELAY_MS = 1500;
 }  // namespace
 
@@ -34,11 +32,11 @@ void FactoryResetActivity::renderScreen() {
   renderer.drawCenteredText(UI_12_FONT_ID, 15, "Factory Reset", true, EpdFontFamily::BOLD);
 
   if (state == WARNING) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 90, "This will erase all CrossPoint data.", true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 55, "Settings, WiFi, reading state,", true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 25, "sync credentials, and cache", true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 5, "will be reset.", true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 45, "Books on the SD card are kept.", true,
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 90, "This will reset metadata", true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 55, "and clear reading cache.", true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, "Settings, WiFi, and sync", true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, "credentials will be reset.", true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 45, "Books, images, and notes are kept.", true,
                               EpdFontFamily::BOLD);
 
     const auto labels = mappedInput.mapLabels("« Cancel", "Reset", "", "");
@@ -72,24 +70,10 @@ void FactoryResetActivity::renderScreen() {
 }
 
 bool FactoryResetActivity::performFactoryReset() {
-  LOG_INF("FACTORY_RESET", "Resetting %s", CROSSPOINT_DIR);
+  LOG_INF("FACTORY_RESET", "Resetting CrossPoint metadata and caches (user files preserved)");
 
-  bool removed = true;
-  bool ensuredDir = true;
-  {
-    SpiBusMutex::Guard guard;
-
-    if (Storage.exists(CROSSPOINT_DIR)) {
-      removed = Storage.removeDir(CROSSPOINT_DIR);
-    }
-
-    if (!Storage.exists(CROSSPOINT_DIR)) {
-      ensuredDir = Storage.mkdir(CROSSPOINT_DIR);
-    }
-  }
-
-  if (!removed || !ensuredDir) {
-    LOG_ERR("FACTORY_RESET", "Failed (removed=%d, ensuredDir=%d)", removed, ensuredDir);
+  if (!FactoryResetUtils::resetCrossPointMetadataPreservingContent()) {
+    LOG_ERR("FACTORY_RESET", "Metadata/cache reset failed");
     return false;
   }
 
