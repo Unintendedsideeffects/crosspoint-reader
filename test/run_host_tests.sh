@@ -17,12 +17,15 @@ g++ -std=c++20 -O2 \
   -I"$ROOT_DIR/lib/md4c" \
   -I"$ROOT_DIR/lib/Serialization" \
   -I"$ROOT_DIR/include" \
+  -I"$ROOT_DIR/src" \
+  -I"$ROOT_DIR/.pio/libdeps/default/ArduinoJson/src" \
   "$ROOT_DIR/test/HostTests.cpp" \
   "$ROOT_DIR/lib/FsHelpers/FsHelpers.cpp" \
   "$ROOT_DIR/lib/Markdown/MarkdownParser.cpp" \
   "$ROOT_DIR/src/util/InputValidation.cpp" \
   "$ROOT_DIR/src/util/PathUtils.cpp" \
   "$ROOT_DIR/src/CrossPointSettings.cpp" \
+  "$ROOT_DIR/test/mock/JsonSettingsIO.cpp" \
   "$BUILD_DIR/md4c.o" \
   "$BUILD_DIR/entity.o" \
   -o "$BUILD_DIR/HostTests"

@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "String.h"
+
 // ── In-memory FsFile ─────────────────────────────────────────────────────
 class FsFile {
  public:
@@ -70,8 +72,30 @@ class HalStorage {
     return openFileForRead(tag, path.c_str(), file);
   }
 
+  String readFile(const char* path) {
+    auto it = files_.find(path);
+    if (it == files_.end() || it->second->empty()) return String();
+    return String(std::string(reinterpret_cast<const char*>(it->second->data()), it->second->size()).c_str());
+  }
+
+  bool writeFile(const char* path, const String& content) {
+    const char* s = content.c_str();
+    const size_t len = std::strlen(s);
+    auto buf = std::make_shared<std::vector<uint8_t>>(s, s + len);
+    files_[path] = buf;
+    return true;
+  }
+
+  bool rename(const char* oldPath, const char* newPath) {
+    auto it = files_.find(oldPath);
+    if (it == files_.end()) return false;
+    files_[newPath] = std::move(it->second);
+    files_.erase(it);
+    return true;
+  }
+
   // Unused in tests but referenced by CrossPointSettings.h surface
-  bool exists(const char*) { return false; }
+  bool exists(const char* path) { return files_.count(path) > 0; }
   bool remove(const char*) { return true; }
 
   static HalStorage& getInstance() {

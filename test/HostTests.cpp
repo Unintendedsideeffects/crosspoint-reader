@@ -165,12 +165,9 @@ void testInputValidation() {
 // 38  frontButtonLeft   (remap)
 // 39  frontButtonRight  (remap)
 //
-// NOTE: Because the break check fires right after reading field 39
-// (settingsRead==fileSettingsCount==39 triggers break before frontButtonMappingRead
-// is set), the explicit remap fields are always overridden by
-// applyLegacyFrontButtonLayout(frontButtonLayout) on every load.
-// The test therefore asserts the values that applyFrontButtonLayoutPreset produces
-// for the saved frontButtonLayout, not the explicit remap bytes in the file.
+// NOTE: The JSON format saves and restores the explicit per-button remap fields
+// directly. The test pre-applies the LEFT_RIGHT_BACK_CONFIRM preset values before
+// saving so the assertions verify the correct round-trip of a custom mapping.
 //
 // NOT persisted: fadingFix, embeddedStyle, darkMode (runtime-only fields).
 
@@ -192,9 +189,13 @@ void testSettingsRoundTrip() {
   s.textAntiAliasing = 0;
   s.shortPwrBtn = CrossPointSettings::SLEEP;
   s.orientation = CrossPointSettings::LANDSCAPE_CW;
-  // Use LEFT_RIGHT_BACK_CONFIRM as the legacy layout preset.
-  // After load, applyLegacyFrontButtonLayout will set the remap to match this preset.
+  // Use LEFT_RIGHT_BACK_CONFIRM as the layout preset and apply the matching remap.
+  // The JSON format saves and restores the explicit per-button mapping directly.
   s.frontButtonLayout = CrossPointSettings::LEFT_RIGHT_BACK_CONFIRM;
+  s.frontButtonBack = CrossPointSettings::FRONT_HW_LEFT;
+  s.frontButtonConfirm = CrossPointSettings::FRONT_HW_RIGHT;
+  s.frontButtonLeft = CrossPointSettings::FRONT_HW_BACK;
+  s.frontButtonRight = CrossPointSettings::FRONT_HW_CONFIRM;
   s.sideButtonLayout = CrossPointSettings::NEXT_PREV;
   s.fontFamily = CrossPointSettings::NOTOSANS;
   s.fontSize = CrossPointSettings::LARGE;
