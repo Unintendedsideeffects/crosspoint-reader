@@ -83,6 +83,9 @@ class MySerialImpl : public Print {
   static MySerialImpl instance;
 };
 
+#ifdef Serial
+#undef Serial
+#endif
 #define Serial MySerialImpl::instance
 
 #endif
