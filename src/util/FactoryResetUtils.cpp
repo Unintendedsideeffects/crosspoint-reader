@@ -3,6 +3,7 @@
 #include <HalStorage.h>
 #include <Logging.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -23,13 +24,11 @@ constexpr const char* kMetadataFilesToRemove[] = {
 constexpr const char* kCacheDirectoryPrefixes[] = {"epub_", "xtc_", "txt_", "md_"};
 
 bool hasCachePrefix(const char* name) {
-  for (const char* prefix : kCacheDirectoryPrefixes) {
-    const size_t len = strlen(prefix);
-    if (strncmp(name, prefix, len) == 0) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(std::begin(kCacheDirectoryPrefixes), std::end(kCacheDirectoryPrefixes),
+                     [name](const char* prefix) {
+                       const size_t len = strlen(prefix);
+                       return strncmp(name, prefix, len) == 0;
+                     });
 }
 }  // namespace
 
