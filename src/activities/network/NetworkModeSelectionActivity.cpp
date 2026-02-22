@@ -35,7 +35,7 @@ void NetworkModeSelectionActivity::onEnter() {
   updateRequired = true;
 
   xTaskCreate(&NetworkModeSelectionActivity::taskTrampoline, "NetworkModeTask",
-              2048,               // Stack size
+              8192,               // Stack size - must match standard render tasks; 2048 is too small for EPD render
               this,               // Parameters
               1,                  // Priority
               &displayTaskHandle  // Task handle

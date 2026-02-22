@@ -141,8 +141,14 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
 
     exitActivity();
 
-    // Sync time via NTP now that WiFi is connected
-    TimeSync::syncTimeWithNtpLowMemory();
+    // Sync time via NTP in a background task — syncTimeWithNtpLowMemory() blocks up to 3s
+    // and accesses the SD card (SETTINGS.saveToFile), so run it off the main task.
+    xTaskCreate(
+        [](void*) {
+          TimeSync::syncTimeWithNtpLowMemory();
+          vTaskDelete(nullptr);
+        },
+        "TimeSyncTask", 4096, nullptr, 1, nullptr);
 
     // Start mDNS for hostname resolution
     if (MDNS.begin(HOSTNAME)) {
