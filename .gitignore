@@ -20,6 +20,7 @@ partitions.bin
 .pio-codex*/
 .worktrees/
 platformio-custom.ini
+platformio.local.ini
 .pio-ci-sim/
 
 .pio-size-*/
