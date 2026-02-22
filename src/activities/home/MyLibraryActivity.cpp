@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <utility>
 
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
@@ -20,6 +21,23 @@
 namespace {
 // Timing thresholds
 constexpr unsigned long GO_HOME_MS = 1000;
+
+std::string fallbackTitleFromPath(const std::string& path) {
+  std::string title = path;
+  const size_t lastSlash = title.find_last_of('/');
+  if (lastSlash != std::string::npos) {
+    title = title.substr(lastSlash + 1);
+  }
+
+  if (StringUtils::checkFileExtension(title, ".xtch")) {
+    title.resize(title.length() - 5);
+  } else if (StringUtils::checkFileExtension(title, ".epub") || StringUtils::checkFileExtension(title, ".xtc") ||
+             StringUtils::checkFileExtension(title, ".txt") || StringUtils::checkFileExtension(title, ".md")) {
+    title.resize(title.length() - 4);
+  }
+
+  return title;
+}
 
 void sortFileList(std::vector<std::string>& strs) {
   std::sort(begin(strs), end(strs), [](const std::string& str1, const std::string& str2) {
@@ -108,6 +126,22 @@ void MyLibraryActivity::loadFiles() {
   sortFileList(files);
 }
 
+void MyLibraryActivity::loadRecentBooks() {
+  recentBooks.clear();
+  const auto& books = RECENT_BOOKS.getBooks();
+  recentBooks.reserve(books.size());
+  for (const auto& book : books) {
+    if (!Storage.exists(book.path.c_str())) {
+      continue;
+    }
+    auto normalized = book;
+    if (normalized.title.empty()) {
+      normalized.title = fallbackTitleFromPath(normalized.path);
+    }
+    recentBooks.push_back(std::move(normalized));
+  }
+}
+
 size_t MyLibraryActivity::findEntry(const std::string& name) const {
   for (size_t i = 0; i < files.size(); i++) {
     if (files[i] == name) return i;
@@ -127,14 +161,43 @@ int MyLibraryActivity::getPageItems() const {
 void MyLibraryActivity::onEnter() {
   Activity::onEnter();
 
+  std::string restoreRecentPath;
+  std::string restoreFileName;
+
+  if (currentTab == Tab::Recent) {
+    if (!basepath.empty() && basepath != "/") {
+      restoreRecentPath = basepath;
+    }
+    basepath = "/";
+  } else if (currentTab == Tab::Files && basepath != "/" && !basepath.empty() && basepath.back() != '/') {
+    const auto slash = basepath.find_last_of('/');
+    if (slash != std::string::npos) {
+      restoreFileName = basepath.substr(slash + 1);
+      basepath = (slash == 0) ? "/" : basepath.substr(0, slash);
+    }
+  }
+
+  loadRecentBooks();
   loadFiles();
+
   selectorIndex = 0;
+  if (currentTab == Tab::Recent && !restoreRecentPath.empty()) {
+    for (size_t i = 0; i < recentBooks.size(); ++i) {
+      if (recentBooks[i].path == restoreRecentPath) {
+        selectorIndex = i;
+        break;
+      }
+    }
+  } else if (currentTab == Tab::Files && !restoreFileName.empty()) {
+    selectorIndex = findEntry(restoreFileName);
+  }
 
   requestUpdate();
 }
 
 void MyLibraryActivity::onExit() {
   Activity::onExit();
+  recentBooks.clear();
   files.clear();
 }
 
