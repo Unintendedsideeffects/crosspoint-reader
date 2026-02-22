@@ -100,4 +100,8 @@ jobs:
           git add scripts/generate_build_config.py docs/configurator/index.html
           git diff --cached --quiet && exit 0
           git commit -m "chore: update feature sizes from nightly measurements [skip ci]"
-          git push
+          for attempt in 1 2 3; do
+            git push && break
+            echo "Push attempt $attempt failed, rebasing on remote..."
+            git pull --rebase origin ${{ github.ref_name }}
+          done
