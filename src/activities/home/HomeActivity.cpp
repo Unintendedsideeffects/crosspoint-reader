@@ -25,10 +25,13 @@
 #include "util/StringUtils.h"
 
 int HomeActivity::getMenuItemCount() const {
-  int count = 4;  // My Library, TODO, File transfer, Settings
+  int count = 3;  // My Library, File transfer, Settings
   if (hasContinueReading) count++;
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
   if (hasOpdsUrl) count++;
+#endif
+#if ENABLE_TODO_PLANNER
+  count++;
 #endif
   return count;
 }
@@ -66,7 +69,11 @@ void HomeActivity::rebuildMenuLayout() {
 #else
   menuOpdsIndex = -1;
 #endif
+#if ENABLE_TODO_PLANNER
   menuTodoIndex = idx++;
+#else
+  menuTodoIndex = -1;
+#endif
   menuFileTransferIndex = idx++;
   menuSettingsIndex = idx++;
   menuItemCount = idx;
@@ -207,9 +214,11 @@ std::string HomeActivity::getMenuItemLabel(const int index) const {
   if (index == menuOpdsIndex) {
     return "OPDS Browser";
   }
+#if ENABLE_TODO_PLANNER
   if (index == menuTodoIndex) {
     return "TODO";
   }
+#endif
   if (index == menuFileTransferIndex) {
     return "File Transfer";
   }
@@ -455,7 +464,9 @@ void HomeActivity::loop() {
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
     const int opdsLibraryIdx = hasOpdsUrl ? idx++ : -1;
 #endif
+#if ENABLE_TODO_PLANNER
     const int todoIdx = idx++;
+#endif
     const int fileTransferIdx = idx++;
     const int settingsIdx = idx;
 
@@ -467,8 +478,10 @@ void HomeActivity::loop() {
     } else if (selectorIndex == opdsLibraryIdx) {
       onOpdsBrowserOpen();
 #endif
+#if ENABLE_TODO_PLANNER
     } else if (selectorIndex == todoIdx) {
       onTodoOpen();
+#endif
     } else if (selectorIndex == fileTransferIdx) {
       onFileTransferOpen();
     } else if (selectorIndex == settingsIdx) {
@@ -504,8 +517,10 @@ void HomeActivity::render(Activity::RenderLock&& lock) {
     menuIcons.push_back(Library);
   }
 #endif
+#if ENABLE_TODO_PLANNER
   menuLabels.push_back("TODO");
   menuIcons.push_back(Text);
+#endif
   menuLabels.push_back("File Transfer");
   menuIcons.push_back(Transfer);
   menuLabels.push_back("Settings");
@@ -713,7 +728,11 @@ void HomeActivity::render(Activity::RenderLock&& lock) {
   int menuTileHeight = 45;
   int menuSpacing = 10;
 
-  std::vector<const char*> labels_text = {"My Library", "TODO", "File Transfer", "Settings"};
+  std::vector<const char*> labels_text = {"My Library",
+#if ENABLE_TODO_PLANNER
+                                          "TODO",
+#endif
+                                          "File Transfer", "Settings"};
   for (size_t i = 0; i < labels_text.size(); ++i) {
     int tileY = menuStartY + i * (menuTileHeight + menuSpacing);
     bool selected = (selectorIndex == (int)i + (hasContinueReading ? 1 : 0));
