@@ -2,6 +2,7 @@
 
 #include <FeatureFlags.h>
 #include <HalStorage.h>
+#include <JsonSettingsIO.h>
 #include <Logging.h>
 #include <Serialization.h>
 #if ENABLE_EPUB_SUPPORT
@@ -13,12 +14,13 @@
 
 #include <algorithm>
 
-#include "SpiBusMutex.h"
 #include "util/StringUtils.h"
 
 namespace {
 constexpr uint8_t RECENT_BOOKS_FILE_VERSION = 3;
-constexpr char RECENT_BOOKS_FILE[] = "/.crosspoint/recent.bin";
+constexpr char RECENT_BOOKS_FILE_BIN[] = "/.crosspoint/recent.bin";
+constexpr char RECENT_BOOKS_FILE_JSON[] = "/.crosspoint/recent.json";
+constexpr char RECENT_BOOKS_FILE_BAK[] = "/.crosspoint/recent.bin.bak";
 constexpr int MAX_RECENT_BOOKS = 10;
 }  // namespace
 
@@ -58,29 +60,8 @@ void RecentBooksStore::updateBook(const std::string& path, const std::string& ti
 }
 
 bool RecentBooksStore::saveToFile() const {
-  SpiBusMutex::Guard guard;
-  // Make sure the directory exists
   Storage.mkdir("/.crosspoint");
-
-  FsFile outputFile;
-  if (!Storage.openFileForWrite("RBS", RECENT_BOOKS_FILE, outputFile)) {
-    return false;
-  }
-
-  serialization::writePod(outputFile, RECENT_BOOKS_FILE_VERSION);
-  const uint8_t count = static_cast<uint8_t>(recentBooks.size());
-  serialization::writePod(outputFile, count);
-
-  for (const auto& book : recentBooks) {
-    serialization::writeString(outputFile, book.path);
-    serialization::writeString(outputFile, book.title);
-    serialization::writeString(outputFile, book.author);
-    serialization::writeString(outputFile, book.coverBmpPath);
-  }
-
-  outputFile.close();
-  LOG_DBG("RBS", "Recent books saved to file (%d entries)", count);
-  return true;
+  return JsonSettingsIO::saveRecentBooks(*this, RECENT_BOOKS_FILE_JSON);
 }
 
 RecentBook RecentBooksStore::getDataFromBook(std::string path) const {
@@ -118,9 +99,31 @@ RecentBook RecentBooksStore::getDataFromBook(std::string path) const {
 }
 
 bool RecentBooksStore::loadFromFile() {
-  SpiBusMutex::Guard guard;
+  // Try JSON first
+  if (Storage.exists(RECENT_BOOKS_FILE_JSON)) {
+    String json = Storage.readFile(RECENT_BOOKS_FILE_JSON);
+    if (!json.isEmpty()) {
+      return JsonSettingsIO::loadRecentBooks(*this, json.c_str());
+    }
+  }
+
+  // Fall back to binary migration
+  if (Storage.exists(RECENT_BOOKS_FILE_BIN)) {
+    if (loadFromBinaryFile()) {
+      if (saveToFile()) {
+        Storage.rename(RECENT_BOOKS_FILE_BIN, RECENT_BOOKS_FILE_BAK);
+        LOG_DBG("RBS", "Migrated recent.bin to recent.json");
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool RecentBooksStore::loadFromBinaryFile() {
   FsFile inputFile;
-  if (!Storage.openFileForRead("RBS", RECENT_BOOKS_FILE, inputFile)) {
+  if (!Storage.openFileForRead("RBS", RECENT_BOOKS_FILE_BIN, inputFile)) {
     return false;
   }
 
@@ -194,6 +197,6 @@ bool RecentBooksStore::loadFromFile() {
   }
 
   inputFile.close();
-  LOG_DBG("RBS", "Recent books loaded from file (%d entries)", recentBooks.size());
+  LOG_DBG("RBS", "Recent books loaded from binary file (%d entries)", recentBooks.size());
   return true;
 }

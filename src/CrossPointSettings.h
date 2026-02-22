@@ -230,12 +230,14 @@ class CrossPointSettings {
 
   bool saveToFile() const;
   bool loadFromFile();
+  static void validateFrontButtonMapping(CrossPointSettings& settings);
   void applyFrontButtonLayoutPreset(FRONT_BUTTON_LAYOUT layout);
   void enforceButtonLayoutConstraints();
 
  private:
   // Validate loaded settings and clamp to valid ranges
   void validateAndClamp();
+  bool loadFromBinaryFile();
   uint8_t writeSettings(FsFile& file, bool count_only = false) const;
 
  public:
