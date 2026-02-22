@@ -10,7 +10,6 @@
 #include "FeatureFlags.h"
 #include "fontIds.h"
 
-// Initialize the static instance
 CrossPointSettings CrossPointSettings::instance;
 
 bool readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
@@ -34,7 +33,6 @@ constexpr char SETTINGS_FILE_BIN[] = "/.crosspoint/settings.bin";
 constexpr char SETTINGS_FILE_JSON[] = "/.crosspoint/settings.json";
 constexpr char SETTINGS_FILE_BAK[] = "/.crosspoint/settings.bin.bak";
 
-// Convert legacy front button layout into explicit logical->hardware mapping.
 void applyLegacyFrontButtonLayout(CrossPointSettings& settings) {
   settings.applyFrontButtonLayoutPreset(
       static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(settings.frontButtonLayout));
@@ -63,7 +61,6 @@ bool CrossPointSettings::saveToFile() const {
 }
 
 bool CrossPointSettings::loadFromFile() {
-  // Try JSON first
   if (Storage.exists(SETTINGS_FILE_JSON)) {
     String json = Storage.readFile(SETTINGS_FILE_JSON);
     if (!json.isEmpty()) {
@@ -128,12 +125,9 @@ bool CrossPointSettings::loadFromBinaryFile() {
     fileSettingsCount = SETTINGS_COUNT;
   }
 
-  // load settings that exist (support older files with fewer fields)
   uint8_t settingsRead = 0;
-  // Track whether remap fields were present in the settings file.
   bool frontButtonMappingRead = false;
   do {
-    // Keep legacy values (COVER/BLANK/COVER_CUSTOM) for migration in validateAndClamp().
     serialization::readPod(inputFile, sleepScreen);
     if (++settingsRead >= fileSettingsCount) break;
     serialization::readPod(inputFile, extraParagraphSpacing);
@@ -241,7 +235,6 @@ bool CrossPointSettings::loadFromBinaryFile() {
       if (++settingsRead >= fileSettingsCount) break;
     }
 
-    // Front button remap fields (v4+ append-only extension).
     const bool backRead = readAndValidate(inputFile, frontButtonBack, FRONT_BUTTON_HARDWARE_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
     const bool confirmRead = readAndValidate(inputFile, frontButtonConfirm, FRONT_BUTTON_HARDWARE_COUNT);
@@ -290,8 +283,6 @@ void CrossPointSettings::applyFrontButtonLayoutPreset(const FRONT_BUTTON_LAYOUT 
     case LEFT_LEFT_RIGHT_RIGHT:
     case BACK_CONFIRM_LEFT_RIGHT:
     default:
-      // LEFT_LEFT_RIGHT_RIGHT uses dedicated runtime behavior in MappedInputManager.
-      // Keep the underlying one-to-one mapping in default hardware order.
       frontButtonBack = FRONT_HW_BACK;
       frontButtonConfirm = FRONT_HW_CONFIRM;
       frontButtonLeft = FRONT_HW_LEFT;
@@ -301,14 +292,12 @@ void CrossPointSettings::applyFrontButtonLayoutPreset(const FRONT_BUTTON_LAYOUT 
 }
 
 void CrossPointSettings::enforceButtonLayoutConstraints() {
-  // In dual-side mode, short power taps are reserved for Confirm/Back emulation.
   if (frontButtonLayout == LEFT_LEFT_RIGHT_RIGHT) {
     shortPwrBtn = SELECT;
   }
 }
 
 void CrossPointSettings::validateAndClamp() {
-  // Enum bounds - clamp to valid range, reset to default if out of bounds
   if (sleepScreen == COVER || sleepScreen == COVER_CUSTOM) {
     sleepScreen = CUSTOM;
   } else if (sleepScreen == BLANK) {
@@ -343,13 +332,9 @@ void CrossPointSettings::validateAndClamp() {
   if (todoFallbackCover > 1) todoFallbackCover = 0;
   if (releaseChannel >= RELEASE_CHANNEL_COUNT) releaseChannel = RELEASE_STABLE;
 
-  // Range values
-  // timeZoneOffset: 0 = UTC-12, 12 = UTC+0, 26 = UTC+14
-  if (timeZoneOffset > 26) timeZoneOffset = 12;  // Reset to UTC+0
-  // screenMargin: valid range 5-40
+  if (timeZoneOffset > 26) timeZoneOffset = 12;
   if (screenMargin < 5 || screenMargin > 40) screenMargin = 5;
 
-  // Boolean values - normalize to 0 or 1
   extraParagraphSpacing = extraParagraphSpacing ? 1 : 0;
   textAntiAliasing = textAntiAliasing ? 1 : 0;
   hyphenationEnabled = hyphenationEnabled ? 1 : 0;
@@ -448,7 +433,6 @@ int CrossPointSettings::getReaderFontId() const {
   return BOOKERLY_14_FONT_ID;
 #else
   uint8_t effectiveFamily = fontFamily;
-  // Remap families that are not compiled in to the nearest available one.
 #if !ENABLE_OPENDYSLEXIC_FONTS
   if (effectiveFamily == OPENDYSLEXIC) effectiveFamily = NOTOSANS;
 #endif
