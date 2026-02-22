@@ -125,9 +125,47 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
 
   const int yPos = y + font->getFontData()->ascender;
   int xpos = x;
+  int lastBaseX = x;
+  int lastBaseY = yPos;
+  int lastBaseAdvance = 0;
+  int lastBaseTop = 0;
+  bool hasBaseGlyph = false;
+  constexpr int MIN_COMBINING_GAP_PX = 1;
 
   uint32_t cp;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
+    if (utf8IsCombiningMark(cp) && hasBaseGlyph) {
+      const EpdGlyph* combiningGlyph = font->getGlyph(cp);
+      if (!combiningGlyph) {
+        combiningGlyph = font->getGlyph(REPLACEMENT_GLYPH);
+      }
+
+      int raiseBy = 0;
+      if (combiningGlyph) {
+        const int currentGap = combiningGlyph->top - combiningGlyph->height - lastBaseTop;
+        if (currentGap < MIN_COMBINING_GAP_PX) {
+          raiseBy = MIN_COMBINING_GAP_PX - currentGap;
+        }
+      }
+
+      int combiningX = lastBaseX + lastBaseAdvance / 2;
+      int combiningY = lastBaseY - raiseBy;
+      renderChar(*font, cp, &combiningX, &combiningY, black);
+      continue;
+    }
+
+    const EpdGlyph* glyph = font->getGlyph(cp);
+    if (!glyph) {
+      glyph = font->getGlyph(REPLACEMENT_GLYPH);
+    }
+    if (!utf8IsCombiningMark(cp)) {
+      lastBaseX = xpos;
+      lastBaseY = yPos;
+      lastBaseAdvance = glyph ? glyph->advanceX : 0;
+      lastBaseTop = glyph ? glyph->top : 0;
+      hasBaseGlyph = true;
+    }
+
     renderChar(*font, cp, &xpos, &yPos, black);
   }
 }
@@ -822,8 +860,16 @@ int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, const EpdFo
   uint32_t cp;
   int width = 0;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
-    const EpdGlyph* g = font->getGlyph(cp);
-    if (g) width += g->advanceX;
+    if (utf8IsCombiningMark(cp)) {
+      continue;
+    }
+    const EpdGlyph* glyph = font->getGlyph(cp);
+    if (!glyph) {
+      glyph = font->getGlyph(REPLACEMENT_GLYPH);
+    }
+    if (glyph) {
+      width += glyph->advanceX;
+    }
   }
   return width;
 }
@@ -912,9 +958,66 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
 
   // For 90° clockwise rotation:
   // Original (glyphX, glyphY) -> Rotated (glyphY, -glyphX)
-  // Text reads from bottom to top
+  // Text reads from bottom to top.
+  int xPos = x;
+  int yPos = y;
+  int lastBaseX = x;
+  int lastBaseY = y;
+  int lastBaseAdvance = 0;
+  int lastBaseTop = 0;
+  bool hasBaseGlyph = false;
+  constexpr int MIN_COMBINING_GAP_PX = 1;
 
-  int yPos = y;  // Current Y position (decreases as we draw characters)
+  const auto drawGlyphRotated = [&](const EpdGlyph* glyph, const int baseX, const int baseY) {
+    if (!glyph) {
+      return;
+    }
+
+    const int is2Bit = font->getFontData()->is2Bit;
+    const uint32_t offset = glyph->dataOffset;
+    const uint8_t width = glyph->width;
+    const uint8_t height = glyph->height;
+    const int left = glyph->left;
+    const int top = glyph->top;
+
+    const uint8_t* bitmap = &font->getFontData()->bitmap[offset];
+    if (bitmap == nullptr) {
+      return;
+    }
+
+    for (int glyphY = 0; glyphY < height; glyphY++) {
+      for (int glyphX = 0; glyphX < width; glyphX++) {
+        const int pixelPosition = glyphY * width + glyphX;
+
+        // 90° clockwise rotation transformation:
+        // screenX = x + (ascender - top + glyphY)
+        // screenY = yPos - (left + glyphX)
+        const int screenX = baseX + (font->getFontData()->ascender - top + glyphY);
+        const int screenY = baseY - left - glyphX;
+
+        if (is2Bit) {
+          const uint8_t byte = bitmap[pixelPosition / 4];
+          const uint8_t bit_index = (3 - pixelPosition % 4) * 2;
+          const uint8_t bmpVal = 3 - (byte >> bit_index) & 0x3;
+
+          if (renderMode == BW && bmpVal < 3) {
+            drawPixel(screenX, screenY, black);
+          } else if (renderMode == GRAYSCALE_MSB && (bmpVal == 1 || bmpVal == 2)) {
+            drawPixel(screenX, screenY, false);
+          } else if (renderMode == GRAYSCALE_LSB && bmpVal == 1) {
+            drawPixel(screenX, screenY, false);
+          }
+        } else {
+          const uint8_t byte = bitmap[pixelPosition / 8];
+          const uint8_t bit_index = 7 - (pixelPosition % 8);
+
+          if ((byte >> bit_index) & 1) {
+            drawPixel(screenX, screenY, black);
+          }
+        }
+      }
+    }
+  };
 
   uint32_t cp;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
@@ -926,52 +1029,29 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
       continue;
     }
 
-    const int is2Bit = font->getFontData()->is2Bit;
-    const uint32_t offset = glyph->dataOffset;
-    const uint8_t width = glyph->width;
-    const uint8_t height = glyph->height;
-    const int left = glyph->left;
-    const int top = glyph->top;
-
-    const uint8_t* bitmap = &font->getFontData()->bitmap[offset];
-
-    if (bitmap != nullptr) {
-      for (int glyphY = 0; glyphY < height; glyphY++) {
-        for (int glyphX = 0; glyphX < width; glyphX++) {
-          const int pixelPosition = glyphY * width + glyphX;
-
-          // 90° clockwise rotation transformation:
-          // screenX = x + (ascender - top + glyphY)
-          // screenY = yPos - (left + glyphX)
-          const int screenX = x + (font->getFontData()->ascender - top + glyphY);
-          const int screenY = yPos - left - glyphX;
-
-          if (is2Bit) {
-            const uint8_t byte = bitmap[pixelPosition / 4];
-            const uint8_t bit_index = (3 - pixelPosition % 4) * 2;
-            const uint8_t bmpVal = 3 - (byte >> bit_index) & 0x3;
-
-            if (renderMode == BW && bmpVal < 3) {
-              drawPixel(screenX, screenY, black);
-            } else if (renderMode == GRAYSCALE_MSB && (bmpVal == 1 || bmpVal == 2)) {
-              drawPixel(screenX, screenY, false);
-            } else if (renderMode == GRAYSCALE_LSB && bmpVal == 1) {
-              drawPixel(screenX, screenY, false);
-            }
-          } else {
-            const uint8_t byte = bitmap[pixelPosition / 8];
-            const uint8_t bit_index = 7 - (pixelPosition % 8);
-
-            if ((byte >> bit_index) & 1) {
-              drawPixel(screenX, screenY, black);
-            }
-          }
-        }
+    const bool isCombining = utf8IsCombiningMark(cp);
+    int drawX = xPos;
+    int drawY = yPos;
+    if (isCombining && hasBaseGlyph) {
+      int raiseBy = 0;
+      const int currentGap = glyph->top - glyph->height - lastBaseTop;
+      if (currentGap < MIN_COMBINING_GAP_PX) {
+        raiseBy = MIN_COMBINING_GAP_PX - currentGap;
       }
+      drawX = lastBaseX - raiseBy;
+      drawY = lastBaseY - lastBaseAdvance / 2;
     }
+    drawGlyphRotated(glyph, drawX, drawY);
 
-    // Move to next character position (going up, so decrease Y)
-    yPos -= glyph->advanceX;
+    if (!isCombining) {
+      lastBaseX = xPos;
+      lastBaseY = yPos;
+      lastBaseAdvance = glyph->advanceX;
+      lastBaseTop = glyph->top;
+      hasBaseGlyph = true;
+      // Move to next character position (going up, so decrease Y).
+      yPos -= glyph->advanceX;
+    }
   }
 }
 
@@ -1096,9 +1176,11 @@ void GfxRenderer::renderChar(const IEpdFont& font, const uint32_t cp, int* x, co
   // no glyph?
   if (!glyph) {
     LOG_WRN("GFX", "Missing glyph U+%04lX; advancing cursor", static_cast<unsigned long>(cp));
-    // Advance by space width as a reasonable fallback so subsequent glyphs aren't stacked
-    const EpdGlyph* spaceGlyph = font.getGlyph(' ');
-    *x += spaceGlyph ? spaceGlyph->advanceX : 8;
+    // Advance by space width as a reasonable fallback so subsequent glyphs aren't stacked.
+    if (!utf8IsCombiningMark(cp)) {
+      const EpdGlyph* spaceGlyph = font.getGlyph(' ');
+      *x += spaceGlyph ? spaceGlyph->advanceX : 8;
+    }
     return;
   }
 
@@ -1149,7 +1231,9 @@ void GfxRenderer::renderChar(const IEpdFont& font, const uint32_t cp, int* x, co
     }
   }
 
-  *x += glyph->advanceX;
+  if (!utf8IsCombiningMark(cp)) {
+    *x += glyph->advanceX;
+  }
 }
 
 void GfxRenderer::getOrientedViewableTRBL(int* outTop, int* outRight, int* outBottom, int* outLeft) const {
