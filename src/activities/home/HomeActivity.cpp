@@ -487,38 +487,37 @@ void HomeActivity::render(Activity::RenderLock&& lock) {
   bool bufferRestored = coverBufferStored && restoreCoverBuffer();
   // If we are using the new media picker UI, use its specialized rendering
 #if ENABLE_HOME_MEDIA_PICKER
-  GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, metrics.homeCoverHeight), recentBooks, selectedBookIndex,
+  GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, metrics.homeCoverTileHeight), recentBooks, selectedBookIndex,
                           coverRendered, coverBufferStored, bufferRestored, [this]() { return storeCoverBuffer(); });
 
-  // Calculate menu layout
-  const int menuTileWidth = (pageWidth - 40);
-  const int menuTileHeight = 45;
-  const int menuSpacing = 10;
-  const int menuStartY = metrics.homeCoverHeight + 20;
-
-  std::vector<const char*> menuItems;
-  menuItems.push_back(recentBooks.empty() ? "Open Book (empty)" : "Open Book");
-  menuItems.push_back("My Library");
+  std::vector<std::string> menuLabels;
+  std::vector<UIIcon> menuIcons;
+  menuLabels.reserve(6);
+  menuIcons.reserve(6);
+  menuLabels.push_back(recentBooks.empty() ? "Open Book (empty)" : "Open Book");
+  menuIcons.push_back(Book);
+  menuLabels.push_back("My Library");
+  menuIcons.push_back(Folder);
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-  if (hasOpdsUrl) menuItems.push_back("OPDS Browser");
-#endif
-  menuItems.push_back("TODO");
-  menuItems.push_back("File Transfer");
-  menuItems.push_back("Settings");
-
-  for (size_t i = 0; i < menuItems.size(); ++i) {
-    const int tileY = menuStartY + i * (menuTileHeight + menuSpacing);
-    const bool selected = (static_cast<int>(i) == selectedMenuIndex);
-
-    if (selected) {
-      renderer.fillRect(20, tileY, menuTileWidth, menuTileHeight);
-    } else {
-      renderer.drawRect(20, tileY, menuTileWidth, menuTileHeight);
-    }
-
-    renderer.drawCenteredText(UI_10_FONT_ID, tileY + (menuTileHeight - renderer.getLineHeight(UI_10_FONT_ID)) / 2,
-                              menuItems[i], !selected);
+  if (hasOpdsUrl) {
+    menuLabels.push_back("OPDS Browser");
+    menuIcons.push_back(Library);
   }
+#endif
+  menuLabels.push_back("TODO");
+  menuIcons.push_back(Text);
+  menuLabels.push_back("File Transfer");
+  menuIcons.push_back(Transfer);
+  menuLabels.push_back("Settings");
+  menuIcons.push_back(Settings);
+
+  GUI.drawButtonMenu(
+      renderer,
+      Rect{0, metrics.homeCoverTileHeight + metrics.verticalSpacing, pageWidth,
+           pageHeight - (metrics.homeCoverTileHeight + metrics.verticalSpacing * 2 + metrics.buttonHintsHeight)},
+      static_cast<int>(menuLabels.size()), selectedMenuIndex,
+      [&menuLabels](const int index) { return menuLabels[index]; },
+      [&menuIcons](const int index) { return menuIcons[index]; });
 
   const auto labels = mappedInput.mapLabels("", "Select", "Up", "Down");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

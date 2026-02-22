@@ -18,16 +18,7 @@
 #include "util/StringUtils.h"
 
 namespace {
-// Layout constants
-constexpr int TAB_BAR_Y = 15;
-constexpr int CONTENT_START_Y = 60;
-constexpr int LINE_HEIGHT = 30;
-constexpr int RECENTS_LINE_HEIGHT = 65;  // Increased for two-line items
-constexpr int LEFT_MARGIN = 20;
-constexpr int RIGHT_MARGIN = 40;  // Extra space for scroll indicator
-
 // Timing thresholds
-constexpr int SKIP_PAGE_MS = 700;
 constexpr unsigned long GO_HOME_MS = 1000;
 
 void sortFileList(std::vector<std::string>& strs) {
@@ -127,7 +118,8 @@ size_t MyLibraryActivity::findEntry(const std::string& name) const {
 int MyLibraryActivity::getPageItems() const {
   auto metrics = UITheme::getInstance().getMetrics();
   const int contentHeight = renderer.getScreenHeight() - metrics.topPadding - metrics.headerHeight -
-                            metrics.verticalSpacing - metrics.buttonHintsHeight - metrics.verticalSpacing;
+                            metrics.tabBarHeight - metrics.verticalSpacing - metrics.buttonHintsHeight -
+                            metrics.verticalSpacing;
   const int rowHeight = (currentTab == Tab::Recent) ? metrics.listWithSubtitleRowHeight : metrics.listRowHeight;
   return std::max(1, contentHeight / rowHeight);
 }
@@ -269,17 +261,20 @@ void MyLibraryActivity::render(Activity::RenderLock&& lock) {
   const auto pageWidth = renderer.getScreenWidth();
   auto metrics = UITheme::getInstance().getMetrics();
 
-  // Draw tab bar
-  std::vector<ScreenComponents::TabInfo> tabs = {
-      {"Recent", currentTab == Tab::Recent},
-      {"Files", currentTab == Tab::Files},
-  };
-  ScreenComponents::drawTabBar(renderer, TAB_BAR_Y, tabs);
-
   auto folderName = basepath == "/" ? tr(STR_SD_CARD) : basepath.substr(basepath.rfind('/') + 1).c_str();
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, folderName);
 
-  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  std::vector<TabInfo> tabs = {
+      {"Recent", currentTab == Tab::Recent},
+      {"Files", currentTab == Tab::Files},
+  };
+  GUI.drawTabBar(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight}, tabs,
+                 false);
+
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing;
+  const int contentHeight =
+      renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+
   if (getCurrentItemCount() == 0) {
     renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, tr(STR_NO_BOOKS_FOUND));
   } else {
@@ -288,16 +283,16 @@ void MyLibraryActivity::render(Activity::RenderLock&& lock) {
       renderGrid();
     } else {
       if (currentTab == Tab::Recent) {
-        renderRecentTab();
+        renderRecentTab(contentTop, contentHeight);
       } else {
-        renderFilesTab();
+        renderFilesTab(contentTop, contentHeight);
       }
     }
 #else
     if (currentTab == Tab::Recent) {
-      renderRecentTab();
+      renderRecentTab(contentTop, contentHeight);
     } else {
-      renderFilesTab();
+      renderFilesTab(contentTop, contentHeight);
     }
 #endif
   }
@@ -310,88 +305,48 @@ void MyLibraryActivity::render(Activity::RenderLock&& lock) {
   renderer.displayBuffer();
 }
 
-void MyLibraryActivity::renderRecentTab() const {
+void MyLibraryActivity::renderRecentTab(int contentTop, int contentHeight) const {
   const auto pageWidth = renderer.getScreenWidth();
-  const int pageItems = getPageItems();
   const int bookCount = static_cast<int>(recentBooks.size());
 
-  if (bookCount == 0) {
-    renderer.drawText(UI_10_FONT_ID, LEFT_MARGIN, CONTENT_START_Y, "No recent books");
-    return;
-  }
-
-  const auto pageStartIndex = selectorIndex / pageItems * pageItems;
-
-  // Draw selection highlight
-  renderer.fillRect(0, CONTENT_START_Y + (selectorIndex % pageItems) * RECENTS_LINE_HEIGHT - 2,
-                    pageWidth - RIGHT_MARGIN, RECENTS_LINE_HEIGHT);
-
-  // Draw items
-  for (int i = pageStartIndex; i < bookCount && i < pageStartIndex + pageItems; i++) {
-    const auto& book = recentBooks[i];
-    const int y = CONTENT_START_Y + (i % pageItems) * RECENTS_LINE_HEIGHT;
-
-    // Line 1: Title
-    std::string title = book.title;
-    if (title.empty()) {
-      // Fallback for older entries or files without metadata
-      title = book.path;
-      const size_t lastSlash = title.find_last_of('/');
-      if (lastSlash != std::string::npos) {
-        title = title.substr(lastSlash + 1);
-      }
-      const size_t dot = title.find_last_of('.');
-      if (dot != std::string::npos) {
-        title.resize(dot);
-      }
-    }
-    auto truncatedTitle = renderer.truncatedText(UI_12_FONT_ID, title.c_str(), pageWidth - LEFT_MARGIN - RIGHT_MARGIN);
-    renderer.drawText(UI_12_FONT_ID, LEFT_MARGIN, y + 2, truncatedTitle.c_str(), i != selectorIndex);
-
-    // Line 2: Author
-    if (!book.author.empty()) {
-      auto truncatedAuthor =
-          renderer.truncatedText(UI_10_FONT_ID, book.author.c_str(), pageWidth - LEFT_MARGIN - RIGHT_MARGIN);
-      renderer.drawText(UI_10_FONT_ID, LEFT_MARGIN, y + 32, truncatedAuthor.c_str(), i != selectorIndex);
-    }
-  }
+  GUI.drawList(
+      renderer, Rect{0, contentTop, pageWidth, contentHeight}, bookCount, selectorIndex,
+      [this](int index) {
+        const auto& book = recentBooks[index];
+        if (!book.title.empty()) return book.title;
+        std::string title = book.path;
+        const size_t lastSlash = title.find_last_of('/');
+        if (lastSlash != std::string::npos) title = title.substr(lastSlash + 1);
+        const size_t dot = title.find_last_of('.');
+        if (dot != std::string::npos) title.resize(dot);
+        return title;
+      },
+      [this](int index) { return recentBooks[index].author; },
+      [this](int index) { return UITheme::getFileIcon(recentBooks[index].path); });
 }
 
-void MyLibraryActivity::renderFilesTab() const {
+void MyLibraryActivity::renderFilesTab(int contentTop, int contentHeight) const {
   const auto pageWidth = renderer.getScreenWidth();
-  const int pageItems = getPageItems();
   const int fileCount = static_cast<int>(files.size());
 
-  if (fileCount == 0) {
-    renderer.drawText(UI_10_FONT_ID, LEFT_MARGIN, CONTENT_START_Y, "No books found");
-    return;
-  }
-
-  const auto pageStartIndex = selectorIndex / pageItems * pageItems;
-
-  // Draw selection highlight
-  renderer.fillRect(0, CONTENT_START_Y + (selectorIndex % pageItems) * LINE_HEIGHT - 2, pageWidth - RIGHT_MARGIN,
-                    LINE_HEIGHT);
-
-  // Draw items
-  for (int i = pageStartIndex; i < fileCount && i < pageStartIndex + pageItems; i++) {
-    auto item = renderer.truncatedText(UI_10_FONT_ID, files[i].c_str(), pageWidth - LEFT_MARGIN - RIGHT_MARGIN);
-    renderer.drawText(UI_10_FONT_ID, LEFT_MARGIN, CONTENT_START_Y + (i % pageItems) * LINE_HEIGHT, item.c_str(),
-                      i != selectorIndex);
-  }
+  GUI.drawList(
+      renderer, Rect{0, contentTop, pageWidth, contentHeight}, fileCount, selectorIndex,
+      [this](int index) { return files[index]; }, nullptr,
+      [this](int index) { return UITheme::getFileIcon(files[index]); });
 }
 
 #if ENABLE_VISUAL_COVER_PICKER
 
 MyLibraryActivity::GridMetrics MyLibraryActivity::getGridMetrics() const {
   const int pageWidth = renderer.getScreenWidth();
+  auto metrics = UITheme::getInstance().getMetrics();
   GridMetrics m;
   m.cols = 3;
   m.rows = 2;
   m.paddingX = 20;
   m.paddingY = 20;
   m.startX = 30;
-  m.startY = CONTENT_START_Y + 10;
+  m.startY = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing + 10;
   const int availableWidth = pageWidth - m.startX * 2;
   m.thumbWidth = (availableWidth - (m.cols - 1) * m.paddingX) / m.cols;
   m.thumbHeight = (m.thumbWidth * 3) / 2;  // 2:3 aspect ratio

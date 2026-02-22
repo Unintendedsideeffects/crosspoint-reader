@@ -36,8 +36,8 @@ class MyLibraryActivity final : public Activity {
   size_t findEntry(const std::string& name) const;
 
   // Rendering
-  void renderRecentTab() const;
-  void renderFilesTab() const;
+  void renderRecentTab(int contentTop, int contentHeight) const;
+  void renderFilesTab(int contentTop, int contentHeight) const;
 #if ENABLE_VISUAL_COVER_PICKER
   void renderGrid() const;
   void extractCovers();

@@ -332,6 +332,11 @@ void CrossPointSettings::validateAndClamp() {
   if (todoFallbackCover > 1) todoFallbackCover = 0;
   if (releaseChannel >= RELEASE_CHANNEL_COUNT) releaseChannel = RELEASE_STABLE;
 
+  if (uiTheme > LYRA_EXTENDED) uiTheme = LYRA;
+#if !ENABLE_LYRA_THEME
+  uiTheme = CLASSIC;
+#endif
+
   if (timeZoneOffset > 26) timeZoneOffset = 12;
   if (screenMargin < 5 || screenMargin > 40) screenMargin = 5;
 
