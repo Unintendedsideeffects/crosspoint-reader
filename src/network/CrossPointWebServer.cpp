@@ -1295,112 +1295,131 @@ void CrossPointWebServer::handleMove() const {
 }
 
 void CrossPointWebServer::handleDelete() const {
-  // Get path from form data
-  if (!server->hasArg("path")) {
-    server->send(400, "text/plain", "Missing path");
+  if (!server->hasArg("paths") && !server->hasArg("path")) {
+    server->send(400, "text/plain", "Missing path(s)");
     return;
   }
 
-  String itemPath = PathUtils::urlDecode(server->arg("path"));
-  const String itemType = server->hasArg("type") ? server->arg("type") : "file";
+  bool allSuccess = true;
+  String failedItems;
+  size_t processed = 0;
 
-  // Validate path against traversal attacks
-  if (!PathUtils::isValidSdPath(itemPath)) {
-    LOG_WRN("WEB", "Path validation failed for delete: %s", itemPath.c_str());
-    server->send(400, "text/plain", "Invalid path");
-    return;
-  }
+  auto processPath = [&](String itemPath) {
+    itemPath = PathUtils::urlDecode(itemPath);
+    if (!itemPath.startsWith("/")) {
+      itemPath = "/" + itemPath;
+    }
 
-  // Normalize before root checks so variants like "//" are treated as root.
-  itemPath = PathUtils::normalizePath(itemPath);
-
-  // Validate path
-  if (itemPath == "/") {
-    server->send(400, "text/plain", "Cannot delete root directory");
-    return;
-  }
-  if (pathContainsProtectedItem(itemPath)) {
-    LOG_DBG("WEB", "Delete rejected - protected path: %s", itemPath.c_str());
-    server->send(403, "text/plain", "Cannot delete protected items");
-    return;
-  }
-
-  // Security check: prevent deletion of protected items
-  const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
-
-  // Check if item starts with a dot (hidden/system file)
-  if (itemName.startsWith(".")) {
-    LOG_DBG("WEB", "Delete rejected - hidden/system item: %s", itemPath.c_str());
-    server->send(403, "text/plain", "Cannot delete system files");
-    return;
-  }
-
-  // Check against explicitly protected items
-  for (size_t i = 0; i < HIDDEN_ITEMS_COUNT; i++) {
-    if (itemName.equals(HIDDEN_ITEMS[i])) {
-      LOG_DBG("WEB", "Delete rejected - protected item: %s", itemPath.c_str());
-      server->send(403, "text/plain", "Cannot delete protected items");
+    if (!PathUtils::isValidSdPath(itemPath)) {
+      failedItems += itemPath + " (invalid path); ";
+      allSuccess = false;
       return;
     }
-  }
 
-  // Check if item exists (guarded to close TOCTOU window with concurrent SD tasks).
-  // Result captured outside the guard so server->send is not called while holding the SPI mutex.
-  bool itemExists = false;
-  {
-    SpiBusMutex::Guard guard;
-    itemExists = Storage.exists(itemPath.c_str());
-  }
-  if (!itemExists) {
-    LOG_DBG("WEB", "Delete failed - item not found: %s", itemPath.c_str());
-    server->send(404, "text/plain", "Item not found");
-    return;
-  }
+    itemPath = PathUtils::normalizePath(itemPath);
+    if (itemPath.isEmpty() || itemPath == "/") {
+      failedItems += itemPath + " (cannot delete root); ";
+      allSuccess = false;
+      return;
+    }
 
-  LOG_DBG("WEB", "Attempting to delete %s: %s", itemType.c_str(), itemPath.c_str());
+    if (pathContainsProtectedItem(itemPath)) {
+      failedItems += itemPath + " (protected path); ";
+      allSuccess = false;
+      return;
+    }
 
-  bool success = false;
+    bool itemExists = false;
+    {
+      SpiBusMutex::Guard guard;
+      itemExists = Storage.exists(itemPath.c_str());
+    }
+    if (!itemExists) {
+      failedItems += itemPath + " (not found); ";
+      allSuccess = false;
+      return;
+    }
 
-  if (itemType == "folder") {
-    // For folders, try to remove (will fail if not empty).
-    // Capture result inside the guard; send response after releasing the SPI mutex.
+    bool success = false;
+    bool isDirectory = false;
     bool folderNotEmpty = false;
     {
       SpiBusMutex::Guard guard;
-      FsFile dir = Storage.open(itemPath.c_str());
-      if (dir && dir.isDirectory()) {
-        // Check if folder is empty
-        FsFile entry = dir.openNextFile();
+      FsFile file = Storage.open(itemPath.c_str());
+      if (file && file.isDirectory()) {
+        isDirectory = true;
+        FsFile entry = file.openNextFile();
         if (entry) {
           entry.close();
           folderNotEmpty = true;
         }
-        dir.close();
+        file.close();
+        if (!folderNotEmpty) {
+          success = Storage.rmdir(itemPath.c_str());
+        }
+      } else {
+        if (file) {
+          file.close();
+        }
+        success = Storage.remove(itemPath.c_str());
       }
     }
+
     if (folderNotEmpty) {
-      LOG_WRN("WEB", "Delete failed - folder not empty: %s", itemPath.c_str());
-      server->send(400, "text/plain", "Folder is not empty. Delete contents first.");
+      failedItems += itemPath + " (folder not empty); ";
+      allSuccess = false;
       return;
     }
-    {
-      SpiBusMutex::Guard guard;
-      success = Storage.rmdir(itemPath.c_str());
+
+    if (!success) {
+      failedItems += itemPath + " (deletion failed); ";
+      allSuccess = false;
+      return;
+    }
+
+    clearEpubCacheIfNeeded(itemPath);
+    invalidateSleepCacheIfNeeded(itemPath);
+    LOG_DBG("WEB", "Deleted %s: %s", isDirectory ? "folder" : "file", itemPath.c_str());
+  };
+
+  if (server->hasArg("paths")) {
+    JsonDocument doc;
+    const String pathsArg = server->arg("paths");
+    const DeserializationError error = deserializeJson(doc, pathsArg);
+    if (error) {
+      server->send(400, "text/plain", "Invalid paths format");
+      return;
+    }
+
+    JsonArray paths = doc.as<JsonArray>();
+    if (paths.isNull() || paths.size() == 0) {
+      server->send(400, "text/plain", "No paths provided");
+      return;
+    }
+
+    for (const auto& p : paths) {
+      processPath(p.as<String>());
+      processed++;
     }
   } else {
-    // For files, use remove
-    {
-      SpiBusMutex::Guard guard;
-      success = Storage.remove(itemPath.c_str());
-    }
+    processPath(server->arg("path"));
+    processed = 1;
   }
 
-  if (success) {
-    LOG_DBG("WEB", "Successfully deleted: %s", itemPath.c_str());
+  if (processed == 0) {
+    server->send(400, "text/plain", "No paths provided");
+    return;
+  }
+
+  if (!allSuccess) {
+    server->send(500, "text/plain", "Failed to delete some items: " + failedItems);
+    return;
+  }
+
+  if (processed == 1) {
     server->send(200, "text/plain", "Deleted successfully");
   } else {
-    LOG_ERR("WEB", "Failed to delete: %s", itemPath.c_str());
-    server->send(500, "text/plain", "Failed to delete item");
+    server->send(200, "text/plain", "All items deleted successfully");
   }
 }
 
