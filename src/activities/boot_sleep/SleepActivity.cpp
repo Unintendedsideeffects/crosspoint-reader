@@ -273,9 +273,11 @@ void SleepActivity::renderCustomSleepScreen() const {
         Bitmap bitmap(file, true);
         if (bitmap.parseHeaders() == BmpReaderError::Ok) {
           renderBitmapSleepScreen(bitmap);
+          file.close();
           return;
         }
         LOG_ERR("SLP", "Invalid BMP: %s", filename.c_str());
+        file.close();
       }
     } else {
       // Use new PNG/JPEG rendering path
@@ -295,8 +297,10 @@ void SleepActivity::renderCustomSleepScreen() const {
           if (bitmap.parseHeaders() == BmpReaderError::Ok) {
             LOG_INF("SLP", "Loading: %s", sleepImagePath);
             renderBitmapSleepScreen(bitmap);
+            file.close();
             return;
           }
+          file.close();
         }
       } else {
         const ImageToFramebufferDecoder* decoder = ImageDecoderFactory::getDecoder(sleepImagePath);
