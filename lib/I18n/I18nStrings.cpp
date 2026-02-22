@@ -41,6 +41,9 @@ const char* const LANGUAGE_NAMES[] = {
     "n\xC4"
     "\x83"
     "",
+    "Catal\xC3"
+    "\xA0"
+    "",
 };
 
 // Character sets for each language
@@ -352,6 +355,31 @@ const char* const CHARACTER_SETS[] = {
     "\xC5"
     "\xA3"
     "",  // Română
+    " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWX[\\]abcdefghijklmnopqrstuvwxyz|\xC2"
+    "\xAB"
+    "\xC2"
+    "\xB7"
+    "\xC3"
+    "\x92"
+    "\xC3"
+    "\xA0"
+    "\xC3"
+    "\xA7"
+    "\xC3"
+    "\xA8"
+    "\xC3"
+    "\xA9"
+    "\xC3"
+    "\xAD"
+    "\xC3"
+    "\xAF"
+    "\xC3"
+    "\xB2"
+    "\xC3"
+    "\xB3"
+    "\xC3"
+    "\xBC"
+    "",  // Català
 };
 
 namespace i18n_strings {
@@ -15005,6 +15033,636 @@ const char* const STRINGS_RO[] = {
     "Background Server on Charge",
 };
 
+const char* const STRINGS_CA[] = {
+    "CrossPoint",
+    "ARRENCANT",
+    "ENTRANT EN REP\xC3"
+    "\x92"
+    "S",
+    "Entrant en rep\xC3"
+    "\xB2"
+    "s",
+    "Explora fitxers",
+    "Transfer\xC3"
+    "\xA8"
+    "ncia",
+    "Configuraci\xC3"
+    "\xB3"
+    "",
+    "Biblioteca del Calibre",
+    "Continua llegint",
+    "Cap llibre obert",
+    "Inicia la lectura a continuaci\xC3"
+    "\xB3"
+    "",
+    "Llibres",
+    "No s'ha trobat cap llibre",
+    "Selecciona el cap\xC3"
+    "\xAD"
+    "tol",
+    "Sense cap\xC3"
+    "\xAD"
+    "tols",
+    "Final del llibre",
+    "Cap\xC3"
+    "\xAD"
+    "tol buit",
+    "S'est\xC3"
+    "\xA0"
+    " indexant",
+    "Error de mem\xC3"
+    "\xB2"
+    "ria",
+    "Error en carregar la p\xC3"
+    "\xA0"
+    "gina",
+    "Fitxer buit",
+    "Fora de l\xC3"
+    "\xAD"
+    "mits",
+    "S'est\xC3"
+    "\xA0"
+    " carregant...",
+    "S'est\xC3"
+    "\xA0"
+    " carregant",
+    "No s'ha pogut carregar l'XTC",
+    "No s'ha pogut carregar el TXT",
+    "No s'ha pogut carregar l'EPUB",
+    "Error de targeta SD",
+    "Xarxes WiFi",
+    "No s'han trobat xarxes",
+    "%zu xarxes trobades",
+    "S'est\xC3"
+    "\xA0"
+    " escanejant...",
+    "S'est\xC3"
+    "\xA0"
+    " connectant...",
+    "S'ha connectat!",
+    "Error de connexi\xC3"
+    "\xB3"
+    "",
+    "S'ha esgotat el temps de connexi\xC3"
+    "\xB3"
+    "",
+    "Voleu oblidar aquesta xarxa?",
+    "Voleu desar la contrasenya per a la propera vegada?",
+    "Voleu suprimir la contrasenya desada?",
+    "Premeu OK per tornar a escanejar",
+    "Premeu qualsevol bot\xC3"
+    "\xB3"
+    " per continuar",
+    "ESQUERRA/DRETA: Selecciona | OK: Confirma",
+    "Com voleu connectar-vos?",
+    "Uneix-te a una xarxa",
+    "Crea un punt d'acc\xC3"
+    "\xA9"
+    "s",
+    "Connecta't a una xarxa WiFi existent",
+    "Crea una xarxa WiFi per unir-s'hi",
+    "S'est\xC3"
+    "\xA0"
+    " iniciant el punt d'acc\xC3"
+    "\xA9"
+    "s...",
+    "Mode de punt d'acc\xC3"
+    "\xA9"
+    "s",
+    "Connecteu el dispositiu a aquesta xarxa WiFi",
+    "Obriu aquest URL al navegador",
+    "o http://",
+    "o escanegeu el codi QR amb el tel\xC3"
+    "\xA8"
+    "fon:",
+    "Calibre sense fils",
+    "URL web del Calibre",
+    "Connecta com a dispositiu sense fils",
+    "* = Encriptat | + = Desat",
+    "Adre\xC3"
+    "\xA7"
+    "a MAC:",
+    "S'est\xC3"
+    "\xA0"
+    " comprovant el WiFi...",
+    "Introdu\xC3"
+    "\xAF"
+    "u la contrasenya WiFi",
+    "Introdu\xC3"
+    "\xAF"
+    "u el text",
+    "a ",
+    "S'est\xC3"
+    "\xA0"
+    " descobrint el Calibre...",
+    "S'est\xC3"
+    "\xA0"
+    " connectant a ",
+    "S'ha connectat a ",
+    "S'estan esperant les ordres...",
+    "(La connexi\xC3"
+    "\xB3"
+    " ha fallat, s'est\xC3"
+    "\xA0"
+    " tornant a intentar)",
+    "Calibre desconnectat",
+    "S'est\xC3"
+    "\xA0"
+    " esperant la transfer\xC3"
+    "\xA8"
+    "ncia...",
+    "Si la transfer\xC3"
+    "\xA8"
+    "ncia falla, activeu\n'Ignora l'espai lliure' a la configuraci\xC3"
+    "\xB3"
+    " del\nconnector SmartDevice a Calibre.",
+    "S'est\xC3"
+    "\xA0"
+    " rebent: ",
+    "S'ha rebut: ",
+    "S'est\xC3"
+    "\xA0"
+    " esperant m\xC3"
+    "\xA9"
+    "s...",
+    "No s'ha pogut crear el fitxer",
+    "Contrasenya requerida",
+    "Transfer\xC3"
+    "\xA8"
+    "ncia interrompuda",
+    "1) Instal\xC2"
+    "\xB7"
+    "leu el connector CrossPoint Reader",
+    "2) Estigueu a la mateixa xarxa WiFi",
+    "3) A Calibre: \"Envia a un dispositiu\"",
+    "\"Mantingueu aquesta pantalla oberta mentre s'envia\"",
+    "Visualitzaci\xC3"
+    "\xB3"
+    "",
+    "Lector",
+    "Controls",
+    "Sistema",
+    "Pantalla de rep\xC3"
+    "\xB2"
+    "s",
+    "Mode de pantalla de rep\xC3"
+    "\xB2"
+    "s",
+    "Barra d'estat",
+    "Oculta el % de bateria",
+    "Espaiat de par\xC3"
+    "\xA0"
+    "graf extra",
+    "Antiali\xC3"
+    "\xA0"
+    "sing del text",
+    "Clic curt del bot\xC3"
+    "\xB3"
+    " d'engegada",
+    "Orientaci\xC3"
+    "\xB3"
+    " de lectura",
+    "Disposici\xC3"
+    "\xB3"
+    " dels botons frontals",
+    "Disposici\xC3"
+    "\xB3"
+    " botons laterals",
+    "Pressi\xC3"
+    "\xB3"
+    " llarga omet el cap\xC3"
+    "\xAD"
+    "tol",
+    "Tipus de lletra",
+    "Tipus de lletra extern",
+    "Tipus de lletra",
+    "Tipus de lletra (UI)",
+    "Mida de la lletra (UI)",
+    "Interlineat del lector",
+    "Espaiat de la lletra ASCII",
+    "Espaiat del d\xC3"
+    "\xAD"
+    "git ASCII",
+    "Espaiat CJK",
+    "Mode de color",
+    "Marge de pantalla del lector",
+    "Alineaci\xC3"
+    "\xB3"
+    " de par\xC3"
+    "\xA0"
+    "grafs del lector",
+    "Partici\xC3"
+    "\xB3"
+    " de mots",
+    "Temps per entrar en rep\xC3"
+    "\xB2"
+    "s",
+    "Freq\xC3"
+    "\xBC"
+    "\xC3"
+    "\xA8"
+    "ncia de refresc",
+    "Configuraci\xC3"
+    "\xB3"
+    " del Calibre",
+    "Sincronitzaci\xC3"
+    "\xB3"
+    " del KOReader",
+    "Comprova si hi ha actualitzacions",
+    "Idioma",
+    "Selecciona un fons de pantalla",
+    "Factory Reset",
+    "Esborra la mem\xC3"
+    "\xB2"
+    "ria cau de lectura",
+    "Calibre",
+    "Nom d'usuari",
+    "Contrasenya",
+    "URL del servidor de sincronitzaci\xC3"
+    "\xB3"
+    "",
+    "Coincid\xC3"
+    "\xA8"
+    "ncia de documents",
+    "Autentica",
+    "Nom d'usuari del KOReader",
+    "Contrasenya del KOReader",
+    "Nom de fitxer",
+    "Binari",
+    "Estableix les credencials primer",
+    "Connexi\xC3"
+    "\xB3"
+    " WiFi fallida",
+    "S'est\xC3"
+    "\xA0"
+    " autenticant...",
+    "Autenticaci\xC3"
+    "\xB3"
+    " correcta!",
+    "Autenticaci\xC3"
+    "\xB3"
+    " del KOReader",
+    "La sincronitzaci\xC3"
+    "\xB3"
+    " del KOReader est\xC3"
+    "\xA0"
+    " preparada per utilitzar-se",
+    "Autenticaci\xC3"
+    "\xB3"
+    " fallida",
+    "Fet",
+    "Aix\xC3"
+    "\xB2"
+    " esborrar\xC3"
+    "\xA0"
+    " totes les dades de lectura de la mem\xC3"
+    "\xB2"
+    "ria cau.",
+    "Es perdr\xC3"
+    "\xA0"
+    " tot el progr\xC3"
+    "\xA9"
+    "s de lectura!",
+    "Els llibres hauran de ser reindexats",
+    "quan s'obrin de nou.",
+    "S'est\xC3"
+    "\xA0"
+    " esborrant la mem\xC3"
+    "\xB2"
+    "ria cau...",
+    "Mem\xC3"
+    "\xB2"
+    "ria cau esborrada",
+    "elements suprimits",
+    "ha fallat",
+    "No s'ha pogut esborrar la mem\xC3"
+    "\xB2"
+    "ria cau",
+    "Comprova la sortida en s\xC3"
+    "\xA8"
+    "rie per obtenir detalls",
+    "Fosc",
+    "Clar",
+    "Personalitzat",
+    "Image Source",
+    "Pokedex",
+    "All",
+    "Portada",
+    "Cap",
+    "Ajustar",
+    "Retallar",
+    "Sense progr\xC3"
+    "\xA9"
+    "s",
+    "Completa",
+    "Mai",
+    "Al lector",
+    "Sempre",
+    "Ignora",
+    "Dormir",
+    "Canvi de p\xC3"
+    "\xA0"
+    "gina",
+    "Vertical",
+    "Horitzontal horari",
+    "Invertit",
+    "Horitzontal antihorari",
+    "Enr, Cnfrm, Esq, Dreta",
+    "Esq, Dreta, Enr, Cnfrm",
+    "Esq, Enr, Cnfrm, Dreta",
+    "Anterior/Seg\xC3"
+    "\xBC"
+    "ent",
+    "Seg\xC3"
+    "\xBC"
+    "ent/Anterior",
+    "Bookerly",
+    "Noto Sans",
+    "Open Dyslexic",
+    "Petita",
+    "Mitjana",
+    "Gran",
+    "Molt gran",
+    "Estret",
+    "Normal",
+    "Ample",
+    "Justificat",
+    "Esquerra",
+    "Centre",
+    "Dreta",
+    "1 min",
+    "5 min",
+    "10 min",
+    "15 min",
+    "30 min",
+    "1 p\xC3"
+    "\xA0"
+    "gina",
+    "5 p\xC3"
+    "\xA0"
+    "gines",
+    "10 p\xC3"
+    "\xA0"
+    "gines",
+    "15 p\xC3"
+    "\xA0"
+    "gines",
+    "30 p\xC3"
+    "\xA0"
+    "gines",
+    "Actualitza",
+    "S'est\xC3"
+    "\xA0"
+    " comprovant si hi ha actualitzacions...",
+    "Nova actualitzaci\xC3"
+    "\xB3"
+    " disponible!",
+    "Versi\xC3"
+    "\xB3"
+    " actual: ",
+    "Nova versi\xC3"
+    "\xB3"
+    ": ",
+    "S'est\xC3"
+    "\xA0"
+    " actualitzant...",
+    "No hi ha actualitzacions disponibles",
+    "Ha fallat l'actualitzaci\xC3"
+    "\xB3"
+    "",
+    "Actualitzaci\xC3"
+    "\xB3"
+    " completada",
+    "Premeu i manteniu premut el bot\xC3"
+    "\xB3"
+    " d'encesa per tornar a engegar",
+    "Tipus de lletra extern",
+    "Integrat (desactivat)",
+    "No s'ha trobat cap entrada",
+    "S'est\xC3"
+    "\xA0"
+    " baixant...",
+    "Ha fallat la baixada",
+    "Error:",
+    "Sense nom",
+    "No s'ha configurat cap URL de servidor",
+    "Ha fallat l'obtenci\xC3"
+    "\xB3"
+    " del feed",
+    "Ha fallat l'an\xC3"
+    "\xA0"
+    "lisi del feed",
+    "Xarxa: ",
+    "Adre\xC3"
+    "\xA7"
+    "a IP: ",
+    "o escanegeu el codi QR amb el tel\xC3"
+    "\xA8"
+    "fon per connectar el WiFi.",
+    "Error: Fallada general",
+    "Error: No s'ha trobat la xarxa",
+    "Error: temps de connexi\xC3"
+    "\xB3"
+    " esgotat",
+    "Targeta SD",
+    "\xC2"
+    "\xAB"
+    " Enrere",
+    "\xC2"
+    "\xAB"
+    " Surt",
+    "\xC2"
+    "\xAB"
+    " Inici",
+    "\xC2"
+    "\xAB"
+    " Desa",
+    "Selecciona",
+    "Canvia",
+    "Confirma",
+    "Cancel\xC2"
+    "\xB7"
+    "la",
+    "Connecta",
+    "Obre",
+    "Descarrega",
+    "Nou intent",
+    "S\xC3"
+    "\xAD"
+    "",
+    "No",
+    "ON",
+    "OFF",
+    "Establert",
+    "No establert",
+    "Esquerra",
+    "Dreta",
+    "Amunt",
+    "Avall",
+    "MAJS",
+    "majs",
+    "OK",
+    "[ON]",
+    "Filtre de pantalla de rep\xC3"
+    "\xB2"
+    "s",
+    "Contrast",
+    "Amb percentatge",
+    "Amb progr\xC3"
+    "\xA9"
+    "s llibre",
+    "Nom\xC3"
+    "\xA9"
+    "s progr\xC3"
+    "\xA9"
+    "s llibre",
+    "Amb progr\xC3"
+    "\xA9"
+    "s cap\xC3"
+    "\xAD"
+    "tol",
+    "Tema de la interf\xC3"
+    "\xAD"
+    "cie",
+    "Cl\xC3"
+    "\xA0"
+    "ssic",
+    "Lyra",
+    "Lyra Ampliat",
+    "Correcci\xC3"
+    "\xB3"
+    " de l'esva\xC3"
+    "\xAF"
+    "ment pel sol",
+    "Reassigna els botons frontals",
+    "Navegador OPDS",
+    "Portada + Personalitzat",
+    "Recents",
+    "Llibres recents",
+    "No hi ha llibres recents",
+    "Usa les transfer\xC3"
+    "\xA8"
+    "ncies sense fils de Calibre",
+    "Voleu suprimir la contrasenya desada?",
+    "Oblida",
+    "S'est\xC3"
+    "\xA0"
+    " iniciant el Calibre...",
+    "Configura",
+    "Estat",
+    "Esborra",
+    "Per defecte",
+    "Premeu un bot\xC3"
+    "\xB3"
+    " frontal per a cada rol",
+    "No assignat",
+    "Ja assignat",
+    "Bot\xC3"
+    "\xB3"
+    " lateral Amunt: Restableix la disposici\xC3"
+    "\xB3"
+    " per defecte",
+    "Bot\xC3"
+    "\xB3"
+    " lateral Avall: Cancel\xC2"
+    "\xB7"
+    "la la reassignaci\xC3"
+    "\xB3"
+    "",
+    "Enrere (1r bot\xC3"
+    "\xB3"
+    ")",
+    "Confirma (2n bot\xC3"
+    "\xB3"
+    ")",
+    "Esquerra (3r bot\xC3"
+    "\xB3"
+    ")",
+    "Dreta (4t bot\xC3"
+    "\xB3"
+    ")",
+    "Ves al %",
+    "Ves a l'inici",
+    "Sincronitza el progr\xC3"
+    "\xA9"
+    "s",
+    "Esborra la mem\xC3"
+    "\xB2"
+    "ria cau del llibre",
+    "Cap\xC3"
+    "\xAD"
+    "tol: ",
+    " p\xC3"
+    "\xA0"
+    "gines  |  ",
+    "Llibre: ",
+    "maj",
+    "MAJ",
+    "BLOCA",
+    "Per al Calibre, afegiu /opds a la URL",
+    "Esquerra/Dreta: 1% Amunt/Avall: 10%",
+    "S'est\xC3"
+    "\xA0"
+    " sincronitzant el temps...",
+    "S'est\xC3"
+    "\xA0"
+    " calculant el hash del document...",
+    "No s'ha pogut calcular el hash del document",
+    "S'est\xC3"
+    "\xA0"
+    " obtenint el progr\xC3"
+    "\xA9"
+    "s remot...",
+    "S'est\xC3"
+    "\xA0"
+    " pujant el progr\xC3"
+    "\xA9"
+    "s...",
+    "No s'han configurat credencials",
+    "Configureu el compte de KOReader a la configuraci\xC3"
+    "\xB3"
+    "",
+    "S'ha trobat progr\xC3"
+    "\xA9"
+    "s!",
+    "Remot:",
+    "Local:",
+    "P\xC3"
+    "\xA0"
+    "gina %d, %.2f%% total",
+    "P\xC3"
+    "\xA0"
+    "gina %d/%d, %.2f%% total",
+    "  De: %s",
+    "Aplica el progr\xC3"
+    "\xA9"
+    "s remot",
+    "Puja el progr\xC3"
+    "\xA9"
+    "s local",
+    "No s'ha trobat progr\xC3"
+    "\xA9"
+    "s remot",
+    "Voleu pujar la posici\xC3"
+    "\xB3"
+    " actual?",
+    "Progr\xC3"
+    "\xA9"
+    "s pujat!",
+    "Sincronitzaci\xC3"
+    "\xB3"
+    " fallida",
+    "Secci\xC3"
+    "\xB3"
+    " ",
+    "Puja",
+    "Estil del llibre",
+    "Estil incrustat",
+    "URL del servidor OPDS",
+    "Dark Mode",
+    "Background Server on Charge",
+};
+
 }  // namespace i18n_strings
 
 // Compile-time validation of array sizes
@@ -15035,3 +15693,6 @@ static_assert(sizeof(i18n_strings::STRINGS_SV) / sizeof(i18n_strings::STRINGS_SV
 static_assert(sizeof(i18n_strings::STRINGS_RO) / sizeof(i18n_strings::STRINGS_RO[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_RO size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_CA) / sizeof(i18n_strings::STRINGS_CA[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_CA size mismatch");

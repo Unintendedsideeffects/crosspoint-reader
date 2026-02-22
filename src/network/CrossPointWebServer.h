@@ -4,12 +4,25 @@
 #include <HalStorage.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
+
+#if __has_include(<NetworkUdp.h>)
+#include <NetworkUdp.h>
+#define CROSSPOINT_HAS_NETWORKUDP 1
+using CrossPointUdpType = NetworkUDP;
+#else
 #include <WiFiUdp.h>
+#define CROSSPOINT_HAS_NETWORKUDP 0
+using CrossPointUdpType = WiFiUDP;
+#endif
 
 #include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
+
+#if CROSSPOINT_HAS_NETWORKUDP
+#include "WebDAVHandler.h"
+#endif
 
 // Structure to hold file information
 struct FileInfo {
@@ -54,11 +67,14 @@ class CrossPointWebServer {
  private:
   std::unique_ptr<WebServer> server = nullptr;
   std::unique_ptr<WebSocketsServer> wsServer = nullptr;
+#if CROSSPOINT_HAS_NETWORKUDP
+  WebDAVHandler davHandler;
+#endif
   bool running = false;
   bool apMode = false;  // true when running in AP mode, false for STA mode
   uint16_t port = 80;
   uint16_t wsPort = 81;  // WebSocket port
-  WiFiUDP udp;
+  CrossPointUdpType udp;
   bool udpActive = false;
 
   // WebSocket upload state
