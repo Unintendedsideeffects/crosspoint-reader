@@ -24,6 +24,7 @@ class HomeActivity final : public Activity {
 
   bool recentsLoading = false;
   bool recentsLoaded = false;
+  bool inButtonGrid = false;
   bool firstRenderDone = false;
   bool hasOpdsUrl = false;
   bool hasCoverImage = false;

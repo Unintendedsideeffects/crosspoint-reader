@@ -332,7 +332,7 @@ void CrossPointSettings::validateAndClamp() {
   if (todoFallbackCover > 1) todoFallbackCover = 0;
   if (releaseChannel >= RELEASE_CHANNEL_COUNT) releaseChannel = RELEASE_STABLE;
 
-  if (uiTheme > LYRA_EXTENDED) uiTheme = LYRA;
+  if (uiTheme > FORK_DRIFT) uiTheme = LYRA;
 #if !ENABLE_LYRA_THEME
   uiTheme = CLASSIC;
 #endif

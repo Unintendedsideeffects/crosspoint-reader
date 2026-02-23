@@ -794,6 +794,7 @@ const char* const STRINGS_EN[] = {
     "Classic",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "Sunlight Fading Fix",
     "Remap Front Buttons",
     "OPDS Browser",
@@ -1319,6 +1320,7 @@ const char* const STRINGS_ES[] = {
     "sico",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "Correcci\xC3"
     "\xB3"
     "n de desvastado por sol",
@@ -2097,6 +2099,7 @@ const char* const STRINGS_FR[] = {
     "Classique",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "Am\xC3"
     "\xA9"
     "lioration de la lisibilit\xC3"
@@ -2658,6 +2661,7 @@ const char* const STRINGS_DE[] = {
     "Klassisch",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "Anti-Verblassen",
     "Vordere Tasten belegen",
     "OPDS-Browser",
@@ -4020,6 +4024,7 @@ const char* const STRINGS_CZ[] = {
     "",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "Oprava blednut\xC3"
     "\xAD"
     " na slunci",
@@ -4885,6 +4890,7 @@ const char* const STRINGS_PO[] = {
     "ssico",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "Ajuste desbotamento ao sol",
     "Remapear bot\xC3"
     "\xB5"
@@ -11487,6 +11493,7 @@ const char* const STRINGS_RU[] = {
     "",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "\xD0"
     "\x9A"
     "\xD0"
@@ -14041,6 +14048,7 @@ const char* const STRINGS_SV[] = {
     "Klassisk",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "Fix f\xC3"
     "\xB6"
     "r solskensmattning",
@@ -14993,6 +15001,7 @@ const char* const STRINGS_RO[] = {
     "Clasic",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "Corec\xC5"
     "\xA3"
     "ie estompare lumin\xC4"
@@ -15671,6 +15680,7 @@ const char* const STRINGS_CA[] = {
     "ssic",
     "Lyra",
     "Lyra Ampliat",
+    "Fork Drift",
     "Correcci\xC3"
     "\xB3"
     " de l'esva\xC3"
@@ -23243,6 +23253,7 @@ const char* const STRINGS_UK[] = {
     "",
     "Lyra",
     "Lyra Extended",
+    "Fork Drift",
     "\xD0"
     "\x92"
     "\xD0"

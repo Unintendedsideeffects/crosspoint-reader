@@ -159,7 +159,7 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   s.lastTimeSyncEpoch = doc["lastTimeSyncEpoch"] | (uint32_t)0;
   s.releaseChannel =
       clamp(doc["releaseChannel"] | (uint8_t)S::RELEASE_STABLE, S::RELEASE_CHANNEL_COUNT, S::RELEASE_STABLE);
-  s.uiTheme = clamp(doc["uiTheme"] | (uint8_t)S::LYRA, static_cast<uint8_t>(S::LYRA_EXTENDED + 1), S::LYRA);
+  s.uiTheme = clamp(doc["uiTheme"] | (uint8_t)S::LYRA, static_cast<uint8_t>(S::FORK_DRIFT + 1), S::LYRA);
   s.fadingFix = doc["fadingFix"] | (uint8_t)0;
   s.darkMode = doc["darkMode"] | (uint8_t)0;
   s.embeddedStyle = doc["embeddedStyle"] | (uint8_t)1;

@@ -46,7 +46,8 @@ inline std::vector<SettingInfo> getSettingsList() {
           StrId::STR_UI_THEME,
           [] {
 #if ENABLE_LYRA_THEME
-            return std::vector<StrId>{StrId::STR_THEME_CLASSIC, StrId::STR_THEME_LYRA, StrId::STR_THEME_LYRA_EXTENDED};
+            return std::vector<StrId>{StrId::STR_THEME_CLASSIC, StrId::STR_THEME_LYRA, StrId::STR_THEME_LYRA_EXTENDED,
+                                      StrId::STR_THEME_FORK_DRIFT};
 #else
             return std::vector<StrId>{StrId::STR_THEME_CLASSIC};
 #endif

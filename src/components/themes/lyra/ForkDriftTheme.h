@@ -1,0 +1,46 @@
+#pragma once
+
+#include "components/themes/lyra/LyraTheme.h"
+
+class GfxRenderer;
+
+namespace ForkDriftMetrics {
+constexpr ThemeMetrics values = {.batteryWidth = 16,
+                                 .batteryHeight = 12,
+                                 .topPadding = 5,
+                                 .batteryBarHeight = 40,
+                                 .headerHeight = 84,
+                                 .verticalSpacing = 16,
+                                 .contentSidePadding = 20,
+                                 .listRowHeight = 40,
+                                 .listWithSubtitleRowHeight = 60,
+                                 .menuRowHeight = 64,
+                                 .menuSpacing = 8,
+                                 .tabSpacing = 8,
+                                 .tabBarHeight = 40,
+                                 .scrollBarWidth = 4,
+                                 .scrollBarRightOffset = 5,
+                                 .homeTopPadding = 56,
+                                 .homeCoverHeight = 120,
+                                 .homeCoverTileHeight = 380,
+                                 .homeRecentBooksCount = 6,
+                                 .buttonHintsHeight = 40,
+                                 .sideButtonHintsWidth = 30,
+                                 .progressBarHeight = 16,
+                                 .bookProgressBarHeight = 4,
+                                 .keyboardKeyWidth = 31,
+                                 .keyboardKeyHeight = 50,
+                                 .keyboardKeySpacing = 0,
+                                 .keyboardBottomAligned = true,
+                                 .keyboardCenteredText = true};
+}
+
+class ForkDriftTheme : public LyraTheme {
+ public:
+  void drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
+                           const int selectorIndex, bool& coverRendered, bool& coverBufferStored, bool& bufferRestored,
+                           std::function<bool()> storeCoverBuffer) const override;
+  void drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,
+                      const std::function<std::string(int index)>& buttonLabel,
+                      const std::function<UIIcon(int index)>& rowIcon) const override;
+};

@@ -61,6 +61,17 @@ std::string HomeActivity::fallbackAuthor(const RecentBook& book) {
 }
 
 void HomeActivity::rebuildMenuLayout() {
+  const bool forkDrift = SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT;
+  if (forkDrift) {
+    menuOpenBookIndex = -1;
+    menuMyLibraryIndex = 0;
+    menuOpdsIndex = -1;
+    menuTodoIndex = 1;
+    menuFileTransferIndex = 2;
+    menuSettingsIndex = 3;
+    menuItemCount = 4;
+    return;
+  }
   int idx = 0;
   menuOpenBookIndex = idx++;
   menuMyLibraryIndex = idx++;
@@ -259,6 +270,7 @@ void HomeActivity::onEnter() {
   loadRecentBooks();
   rebuildMenuLayout();
   selectedMenuIndex = 0;
+  inButtonGrid = (SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT && recentBooks.empty());
   hasContinueReading = !recentBooks.empty();
   selectorIndex = 0;
 
@@ -394,52 +406,140 @@ void HomeActivity::loop() {
   const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
   const bool upPressed = mappedInput.wasPressed(MappedInputManager::Button::Up);
   const bool downPressed = mappedInput.wasPressed(MappedInputManager::Button::Down);
+  const bool forkDrift = SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT;
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    if (selectedMenuIndex == menuOpenBookIndex) {
-      openSelectedBook();
-      return;
-    }
-    if (selectedMenuIndex == menuMyLibraryIndex) {
-      onMyLibraryOpen();
-      return;
-    }
-    if (selectedMenuIndex == menuOpdsIndex) {
-      onOpdsBrowserOpen();
-      return;
-    }
-    if (selectedMenuIndex == menuTodoIndex) {
-      onTodoOpen();
-      return;
-    }
-    if (selectedMenuIndex == menuFileTransferIndex) {
-      onFileTransferOpen();
-      return;
-    }
-    if (selectedMenuIndex == menuSettingsIndex) {
-      onSettingsOpen();
-      return;
+    if (forkDrift) {
+      if (inButtonGrid) {
+        if (selectedMenuIndex == menuMyLibraryIndex) {
+          onMyLibraryOpen();
+          return;
+        }
+        if (selectedMenuIndex == menuTodoIndex) {
+          onTodoOpen();
+          return;
+        }
+        if (selectedMenuIndex == menuFileTransferIndex) {
+          onFileTransferOpen();
+          return;
+        }
+        if (selectedMenuIndex == menuSettingsIndex) {
+          onSettingsOpen();
+          return;
+        }
+      } else if (!recentBooks.empty()) {
+        openSelectedBook();
+        return;
+      }
+    } else {
+      if (selectedMenuIndex == menuOpenBookIndex) {
+        openSelectedBook();
+        return;
+      }
+      if (selectedMenuIndex == menuMyLibraryIndex) {
+        onMyLibraryOpen();
+        return;
+      }
+      if (selectedMenuIndex == menuOpdsIndex) {
+        onOpdsBrowserOpen();
+        return;
+      }
+      if (selectedMenuIndex == menuTodoIndex) {
+        onTodoOpen();
+        return;
+      }
+      if (selectedMenuIndex == menuFileTransferIndex) {
+        onFileTransferOpen();
+        return;
+      }
+      if (selectedMenuIndex == menuSettingsIndex) {
+        onSettingsOpen();
+        return;
+      }
     }
   }
 
-  if (!recentBooks.empty()) {
+  if (forkDrift) {
+    constexpr int coverCols = 3;
+    constexpr int coverRows = 2;
     const int bookCount = static_cast<int>(recentBooks.size());
-    if (leftPressed) {
-      selectedBookIndex = (selectedBookIndex + bookCount - 1) % bookCount;
-      requestUpdate();
-    } else if (rightPressed) {
-      selectedBookIndex = (selectedBookIndex + 1) % bookCount;
-      requestUpdate();
-    }
-  }
 
-  if (menuItemCount > 0) {
-    if (upPressed) {
-      selectedMenuIndex = (selectedMenuIndex + menuItemCount - 1) % menuItemCount;
-      requestUpdate();
-    } else if (downPressed) {
-      selectedMenuIndex = (selectedMenuIndex + 1) % menuItemCount;
-      requestUpdate();
+    if (inButtonGrid) {
+      constexpr int btnCols = 2;
+      constexpr int btnRows = 2;
+      if (leftPressed || rightPressed) {
+        int col = selectedMenuIndex % btnCols;
+        int row = selectedMenuIndex / btnCols;
+        if (leftPressed)
+          col = (col + btnCols - 1) % btnCols;
+        else
+          col = (col + 1) % btnCols;
+        selectedMenuIndex = row * btnCols + col;
+        requestUpdate();
+      }
+      if (upPressed) {
+        int row = selectedMenuIndex / 2;
+        if (row == 0) {
+          inButtonGrid = false;
+          selectedBookIndex = std::min(selectedBookIndex, bookCount - 1);
+          selectedBookIndex = std::max(0, selectedBookIndex);
+        } else {
+          selectedMenuIndex -= 2;
+          requestUpdate();
+        }
+      } else if (downPressed) {
+        int row = selectedMenuIndex / 2;
+        if (row < btnRows - 1) {
+          selectedMenuIndex += 2;
+          requestUpdate();
+        }
+      }
+    } else {
+      if (bookCount > 0 && (leftPressed || rightPressed || upPressed || downPressed)) {
+        int col = selectedBookIndex % coverCols;
+        int row = selectedBookIndex / coverCols;
+        if (leftPressed)
+          col = (col + coverCols - 1) % coverCols;
+        else if (rightPressed)
+          col = (col + 1) % coverCols;
+        else if (upPressed)
+          row = (row + coverRows - 1) % coverRows;
+        else if (downPressed) {
+          if (row < coverRows - 1)
+            row++;
+          else {
+            inButtonGrid = true;
+            selectedMenuIndex = 0;
+          }
+        }
+        if (!inButtonGrid) {
+          selectedBookIndex = std::min(row * coverCols + col, bookCount - 1);
+          selectedBookIndex = std::max(0, selectedBookIndex);
+          requestUpdate();
+        }
+      }
+      if (inButtonGrid) requestUpdate();
+    }
+  } else {
+    if (!recentBooks.empty()) {
+      const int bookCount = static_cast<int>(recentBooks.size());
+      if (leftPressed) {
+        selectedBookIndex = (selectedBookIndex + bookCount - 1) % bookCount;
+        requestUpdate();
+      } else if (rightPressed) {
+        selectedBookIndex = (selectedBookIndex + 1) % bookCount;
+        requestUpdate();
+      }
+    }
+
+    if (menuItemCount > 0) {
+      if (upPressed) {
+        selectedMenuIndex = (selectedMenuIndex + menuItemCount - 1) % menuItemCount;
+        requestUpdate();
+      } else if (downPressed) {
+        selectedMenuIndex = (selectedMenuIndex + 1) % menuItemCount;
+        requestUpdate();
+      }
     }
   }
 #else
@@ -500,38 +600,53 @@ void HomeActivity::render(Activity::RenderLock&& lock) {
   bool bufferRestored = coverBufferStored && restoreCoverBuffer();
   // If we are using the new media picker UI, use its specialized rendering
 #if ENABLE_HOME_MEDIA_PICKER
-  GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, metrics.homeCoverTileHeight), recentBooks, selectedBookIndex,
+  const bool forkDrift = SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT;
+  const int coverSelector = forkDrift && inButtonGrid ? -1 : selectedBookIndex;
+  const int menuSelector = forkDrift && !inButtonGrid ? -1 : selectedMenuIndex;
+
+  GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, metrics.homeCoverTileHeight), recentBooks, coverSelector,
                           coverRendered, coverBufferStored, bufferRestored, [this]() { return storeCoverBuffer(); });
 
   std::vector<std::string> menuLabels;
   std::vector<UIIcon> menuIcons;
   menuLabels.reserve(6);
   menuIcons.reserve(6);
-  menuLabels.push_back(recentBooks.empty() ? "Open Book (empty)" : "Open Book");
-  menuIcons.push_back(Book);
-  menuLabels.push_back("My Library");
-  menuIcons.push_back(Folder);
+
+  if (forkDrift) {
+    menuLabels.push_back("Library");
+    menuIcons.push_back(Folder);
+    menuLabels.push_back("Agenda");
+    menuIcons.push_back(Text);
+    menuLabels.push_back("File Manager");
+    menuIcons.push_back(Transfer);
+    menuLabels.push_back("Settings");
+    menuIcons.push_back(Settings);
+  } else {
+    menuLabels.push_back(recentBooks.empty() ? "Open Book (empty)" : "Open Book");
+    menuIcons.push_back(Book);
+    menuLabels.push_back("My Library");
+    menuIcons.push_back(Folder);
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-  if (hasOpdsUrl) {
-    menuLabels.push_back("OPDS Browser");
-    menuIcons.push_back(Library);
-  }
+    if (hasOpdsUrl) {
+      menuLabels.push_back("OPDS Browser");
+      menuIcons.push_back(Library);
+    }
 #endif
 #if ENABLE_TODO_PLANNER
-  menuLabels.push_back("TODO");
-  menuIcons.push_back(Text);
+    menuLabels.push_back("TODO");
+    menuIcons.push_back(Text);
 #endif
-  menuLabels.push_back("File Transfer");
-  menuIcons.push_back(Transfer);
-  menuLabels.push_back("Settings");
-  menuIcons.push_back(Settings);
+    menuLabels.push_back("File Transfer");
+    menuIcons.push_back(Transfer);
+    menuLabels.push_back("Settings");
+    menuIcons.push_back(Settings);
+  }
 
   GUI.drawButtonMenu(
       renderer,
       Rect{0, metrics.homeCoverTileHeight + metrics.verticalSpacing, pageWidth,
            pageHeight - (metrics.homeCoverTileHeight + metrics.verticalSpacing * 2 + metrics.buttonHintsHeight)},
-      static_cast<int>(menuLabels.size()), selectedMenuIndex,
-      [&menuLabels](const int index) { return menuLabels[index]; },
+      static_cast<int>(menuLabels.size()), menuSelector, [&menuLabels](const int index) { return menuLabels[index]; },
       [&menuIcons](const int index) { return menuIcons[index]; });
 
   const auto labels = mappedInput.mapLabels("", "Select", "Up", "Down");
