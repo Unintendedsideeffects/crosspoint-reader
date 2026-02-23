@@ -758,8 +758,11 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   renderer.storeBwBuffer();
 
   // Grayscale rendering - only for fonts that include grayscale glyph data.
+  // Skipped in dark mode: the EPD grayscale LUT assumes a normal-polarity starting state;
+  // after a dark-mode BW refresh the pixel polarity is inverted, which confuses the waveform
+  // and produces ghosting artefacts.
   const int fontId = SETTINGS.getReaderFontId();
-  if (SETTINGS.textAntiAliasing && renderer.fontSupportsGrayscale(fontId)) {
+  if (SETTINGS.textAntiAliasing && !renderer.isDarkMode() && renderer.fontSupportsGrayscale(fontId)) {
     renderer.clearScreen(0x00);
     renderer.setRenderMode(GfxRenderer::GRAYSCALE_LSB);
     page->render(renderer, fontId, orientedMarginLeft, orientedMarginTop);

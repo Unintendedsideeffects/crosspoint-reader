@@ -411,7 +411,9 @@ void MarkdownReaderActivity::renderContents(std::unique_ptr<Page> page, int orie
 
   renderer.storeBwBuffer();
 
-  if (SETTINGS.textAntiAliasing) {
+  // Grayscale antialiasing is skipped in dark mode for the same reason as EpubReaderActivity:
+  // the EPD grayscale LUT is polarity-dependent and produces ghosting after a dark-mode BW refresh.
+  if (SETTINGS.textAntiAliasing && !renderer.isDarkMode()) {
     renderer.clearScreen(0x00);
     renderer.setRenderMode(GfxRenderer::GRAYSCALE_LSB);
     page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
