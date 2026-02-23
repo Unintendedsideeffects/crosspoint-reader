@@ -25,7 +25,7 @@ FEATURES = {
     'bookerly_fonts': Feature(
         name='Bookerly Fonts',
         flag='ENABLE_BOOKERLY_FONTS',
-        size_kb=537,
+        size_kb=530,
         description='12/16/18pt Bookerly family'
     ),
     'notosans_fonts': Feature(
@@ -37,7 +37,7 @@ FEATURES = {
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
-        size_kb=1883,
+        size_kb=1876,
         description='Optional OpenDyslexic 8/10/12/14pt family (requires Bookerly + Noto Sans)'
     ),
     'image_sleep': Feature(
@@ -121,7 +121,7 @@ FEATURES = {
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=242,
+        size_kb=243,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
@@ -511,7 +511,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 1.77  # Lean profile size baseline (measured)
+    base_size_mb = 1.78  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
