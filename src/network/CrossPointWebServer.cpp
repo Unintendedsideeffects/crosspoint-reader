@@ -17,6 +17,9 @@
 #include "CrossPointSettings.h"
 #include "FeatureManifest.h"
 #include "RecentBooksStore.h"
+#if ENABLE_OTA_UPDATES
+#include "network/OtaUpdater.h"
+#endif
 #include "SettingsList.h"
 #include "SpiBusMutex.h"
 #if ENABLE_USER_FONTS
@@ -174,6 +177,9 @@ void CrossPointWebServer::begin() {
   // API endpoints for web UI (recent books, cover images)
   server->on("/api/recent", HTTP_GET, [this] { handleRecentBooks(); });
   server->on("/api/cover", HTTP_GET, [this] { handleCover(); });
+#if ENABLE_OTA_UPDATES
+  server->on("/api/ota/check", HTTP_POST, [this] { handleOtaCheck(); });
+#endif
 
   server->onNotFound([this] { handleNotFound(); });
   LOG_DBG("WEB", "[MEM] Free heap after route setup: %d bytes", ESP.getFreeHeap());
@@ -2270,5 +2276,33 @@ void CrossPointWebServer::handleWifiForget() const {
   } else {
     server->send(400, "text/plain", "SSID required");
   }
+}
+#endif
+
+#if ENABLE_OTA_UPDATES
+void CrossPointWebServer::handleOtaCheck() {
+  OtaUpdater updater;
+  const auto res = updater.checkForUpdate();
+
+  JsonDocument doc;
+  doc["currentVersion"] = CROSSPOINT_VERSION;
+  doc["errorCode"] = static_cast<int>(res);
+
+  if (res == OtaUpdater::OK) {
+    doc["available"] = updater.isUpdateNewer();
+    doc["latestVersion"] = updater.getLatestVersion().c_str();
+    if (updater.isUpdateNewer()) {
+      doc["message"] = "Update available. Install from device Settings.";
+    } else {
+      doc["message"] = "Already on latest version.";
+    }
+  } else {
+    doc["available"] = false;
+    doc["message"] = updater.getLastError().length() > 0 ? updater.getLastError().c_str() : "Update check failed";
+  }
+
+  String json;
+  serializeJson(doc, json);
+  server->send(200, "application/json", json);
 }
 #endif

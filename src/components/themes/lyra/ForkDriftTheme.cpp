@@ -50,7 +50,6 @@ void ForkDriftTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const
   const int tileWidth = (rect.width - 2 * pad) / gridCols;
   const int tileHeight = rect.height / gridRows;
   const int coverHeight = ForkDriftMetrics::values.homeCoverHeight;
-  const int textAreaHeight = tileHeight - coverHeight - hPadding;
   const bool hasBooks = !recentBooks.empty();
   const int maxCells = gridCols * gridRows;
 

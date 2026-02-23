@@ -151,4 +151,8 @@ class CrossPointWebServer {
   void handleWifiConnect() const;
   void handleWifiForget() const;
 #endif
+
+#if ENABLE_OTA_UPDATES
+  void handleOtaCheck();
+#endif
 };

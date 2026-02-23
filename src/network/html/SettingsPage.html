@@ -286,6 +286,14 @@
     </div>
   </div>
 
+  <div class="card" id="ota-container" style="display:none;">
+    <h2>Firmware Update</h2>
+    <div id="ota-status" style="font-size:0.8em; color:var(--gray-4); margin-bottom:10px;">Check for firmware updates</div>
+    <div style="text-align: center; margin-top: 10px;">
+      <button class="save-btn" style="padding: 8px 20px; font-size: 0.8em;" onclick="checkForUpdates()" id="otaCheckBtn">Check for Updates</button>
+    </div>
+  </div>
+
   <div class="card" id="wifi-container" style="display:none;">
     <h2>WiFi Setup</h2>
     <div id="wifi-networks">
@@ -403,6 +411,9 @@
         const features = await featResponse.json();
         if (features.web_wifi_setup) {
           document.getElementById('wifi-container').style.display = 'block';
+        }
+        if (features.ota_updates) {
+          document.getElementById('ota-container').style.display = 'block';
         }
         if (features.user_fonts) {
           document.getElementById('fontUploadCard').style.display = 'block';
@@ -567,6 +578,36 @@
     } catch (e) {
       showMessage("Error: " + e.message, true);
     }
+  }
+
+  async function checkForUpdates() {
+    const btn = document.getElementById('otaCheckBtn');
+    const status = document.getElementById('ota-status');
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    status.textContent = 'Checking for updates...';
+    status.style.color = 'var(--gray-4)';
+
+    try {
+      const response = await fetch('/api/ota/check', { method: 'POST' });
+      const result = await response.json();
+
+      if (result.available) {
+        status.textContent = 'Update available: ' + (result.latestVersion || '') + '. ' + (result.message || '');
+        status.style.color = 'var(--black)';
+      } else if (result.message) {
+        status.textContent = result.message;
+        status.style.color = result.errorCode ? 'var(--gray-2)' : 'var(--gray-4)';
+      } else {
+        status.textContent = 'Current: ' + (result.currentVersion || '') + '. ' + (result.message || 'No update');
+        status.style.color = 'var(--gray-4)';
+      }
+    } catch (e) {
+      status.textContent = 'Check failed: ' + e.message;
+      status.style.color = 'var(--gray-2)';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Check for Updates';
   }
 
   async function forgetWifi(ssid) {

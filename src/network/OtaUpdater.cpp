@@ -240,7 +240,11 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   filter["assets"][0]["browser_download_url"] = true;
   filter["assets"][0]["size"] = true;
 
-  const auto res = fetchReleaseJson(releaseUrl, doc, filter);
+  auto res = fetchReleaseJson(releaseUrl, doc, filter);
+  if (res != OK && releaseUrl == releaseChannelUrl && releaseChannelUrl != latestChannelUrl) {
+    LOG_WRN("OTA", "Release channel unavailable, falling back to latest");
+    res = fetchReleaseJson(latestChannelUrl, doc, filter);
+  }
   if (res != OK) {
     return res;
   }
