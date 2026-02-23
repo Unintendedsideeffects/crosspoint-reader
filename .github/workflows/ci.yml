@@ -12,13 +12,13 @@ jobs:
   clang-format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
@@ -37,13 +37,13 @@ jobs:
   feature-sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v4
@@ -59,7 +59,7 @@ jobs:
   host-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -69,13 +69,13 @@ jobs:
   hardware-patterns:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Check hardware coding patterns
         run: python3 scripts/check_hardware_patterns.py
@@ -83,13 +83,13 @@ jobs:
   cppcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
@@ -108,13 +108,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
@@ -154,7 +154,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload firmware.bin artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: firmware.bin
           path: .pio/build/default/firmware.bin
