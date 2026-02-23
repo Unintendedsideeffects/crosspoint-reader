@@ -55,7 +55,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=283,
+        size_kb=284,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -67,13 +67,13 @@ FEATURES = {
     'koreader_sync': Feature(
         name='KOReader Sync',
         flag='ENABLE_KOREADER_SYNC',
-        size_kb=156,
+        size_kb=155,
         description='Sync reading progress with KOReader'
     ),
     'calibre_sync': Feature(
         name='Calibre Sync',
         flag='ENABLE_CALIBRE_SYNC',
-        size_kb=240,
+        size_kb=239,
         description='Calibre OPDS browser and metadata sync settings'
     ),
     'background_server': Feature(
@@ -115,13 +115,13 @@ FEATURES = {
     'lyra_theme': Feature(
         name='Lyra Theme',
         flag='ENABLE_LYRA_THEME',
-        size_kb=0,
+        size_kb=13,
         description='Alternative UI theme with refined spacing and layout'
     ),
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=240,
+        size_kb=239,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
@@ -139,13 +139,13 @@ FEATURES = {
     'visual_cover_picker': Feature(
         name='Visual Covers',
         flag='ENABLE_VISUAL_COVER_PICKER',
-        size_kb=145,
+        size_kb=148,
         description='Grid-based book explorer with thumbnails'
     ),
     'ble_wifi_provisioning': Feature(
         name='BLE WiFi Provisioning',
         flag='ENABLE_BLE_WIFI_PROVISIONING',
-        size_kb=675,
+        size_kb=674,
         description='Initial WiFi setup via Bluetooth LE'
     ),
     'user_fonts': Feature(
@@ -510,7 +510,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 1.73  # Lean profile size baseline (measured)
+    base_size_mb = 1.75  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
