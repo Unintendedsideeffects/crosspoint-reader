@@ -582,29 +582,45 @@
 
   async function checkForUpdates() {
     const btn = document.getElementById('otaCheckBtn');
-    const status = document.getElementById('ota-status');
+    const statusEl = document.getElementById('ota-status');
     btn.disabled = true;
     btn.textContent = 'Checking...';
-    status.textContent = 'Checking for updates...';
-    status.style.color = 'var(--gray-4)';
+    statusEl.textContent = 'Starting update check...';
+    statusEl.style.color = 'var(--gray-4)';
 
     try {
-      const response = await fetch('/api/ota/check', { method: 'POST' });
-      const result = await response.json();
+      await fetch('/api/ota/check', { method: 'POST' });
 
-      if (result.available) {
-        status.textContent = 'Update available: ' + (result.latestVersion || '') + '. ' + (result.message || '');
-        status.style.color = 'var(--black)';
-      } else if (result.message) {
-        status.textContent = result.message;
-        status.style.color = result.errorCode ? 'var(--gray-2)' : 'var(--gray-4)';
-      } else {
-        status.textContent = 'Current: ' + (result.currentVersion || '') + '. ' + (result.message || 'No update');
-        status.style.color = 'var(--gray-4)';
+      let attempts = 0;
+      const maxAttempts = 30;
+      while (attempts < maxAttempts) {
+        await new Promise(function(r) { setTimeout(r, 1000); });
+        const poll = await fetch('/api/ota/check');
+        const result = await poll.json();
+        if (result.status === 'checking') {
+          statusEl.textContent = 'Checking... (' + (attempts + 1) + 's)';
+          attempts++;
+          continue;
+        }
+        if (result.available) {
+          statusEl.textContent = 'Update available: ' + (result.latestVersion || '') + '. ' + (result.message || '');
+          statusEl.style.color = 'var(--black)';
+        } else if (result.errorCode) {
+          statusEl.textContent = result.message || 'Check failed';
+          statusEl.style.color = 'var(--gray-2)';
+        } else {
+          statusEl.textContent = result.message || 'Already on latest version.';
+          statusEl.style.color = 'var(--gray-4)';
+        }
+        break;
+      }
+      if (attempts >= maxAttempts) {
+        statusEl.textContent = 'Check timed out. Try again.';
+        statusEl.style.color = 'var(--gray-2)';
       }
     } catch (e) {
-      status.textContent = 'Check failed: ' + e.message;
-      status.style.color = 'var(--gray-2)';
+      statusEl.textContent = 'Error: ' + e.message;
+      statusEl.style.color = 'var(--gray-2)';
     }
     btn.disabled = false;
     btn.textContent = 'Check for Updates';

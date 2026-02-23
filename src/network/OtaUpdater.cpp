@@ -133,6 +133,7 @@ OtaUpdater::OtaUpdaterError fetchReleaseJson(const char* url, JsonDocument& doc,
 
   esp_http_client_config_t client_config = {
       .url = url,
+      .timeout_ms = 15000,
       .event_handler = event_handler,
       .buffer_size = 8192,
       .buffer_size_tx = 8192,

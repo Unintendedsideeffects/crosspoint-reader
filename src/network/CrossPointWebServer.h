@@ -153,6 +153,7 @@ class CrossPointWebServer {
 #endif
 
 #if ENABLE_OTA_UPDATES
-  void handleOtaCheck();
+  void handleOtaCheckPost();
+  void handleOtaCheckGet() const;
 #endif
 };

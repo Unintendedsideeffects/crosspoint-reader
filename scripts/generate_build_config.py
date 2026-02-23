@@ -455,6 +455,7 @@ PROFILES = {
             'lyra_theme': True,
             'ota_updates': True,
             'background_server': True,
+            'web_wifi_setup': True,
             'home_media_picker': True,
             'dark_mode': True,
             'user_fonts': True,

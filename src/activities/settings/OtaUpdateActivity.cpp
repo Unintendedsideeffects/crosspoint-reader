@@ -16,6 +16,90 @@ void OtaUpdateActivity::taskTrampoline(void* param) {
   self->displayTaskLoop();
 }
 
+void OtaUpdateActivity::otaWorkerTrampoline(void* param) {
+  auto* self = static_cast<OtaUpdateActivity*>(param);
+  self->otaWorkerLoop();
+}
+
+void OtaUpdateActivity::dispatchWorker(OtaWorkerCmd cmd) {
+  workerCmd.store(cmd);
+  if (otaWorkerTaskHandle) {
+    xTaskNotify(otaWorkerTaskHandle, 1, eIncrement);
+  }
+}
+
+void OtaUpdateActivity::otaWorkerLoop() {
+  while (!workerExitRequested.load()) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    if (workerExitRequested.load()) break;
+
+    const auto cmd = workerCmd.exchange(OtaWorkerCmd::NONE);
+
+    if (cmd == OtaWorkerCmd::LOAD_CATALOG) {
+      const bool catalogLoaded = updater.loadFeatureStoreCatalog() && updater.hasFeatureStoreCatalog();
+
+      if (catalogLoaded) {
+        LOG_INF("OTA", "Feature store catalog loaded, %d bundles", (int)updater.getFeatureStoreEntries().size());
+        selectedBundleIndex = 0;
+        usingFeatureStore = true;
+        xSemaphoreTake(renderingMutex, portMAX_DELAY);
+        state = SELECTING_FEATURE_STORE_BUNDLE;
+        xSemaphoreGive(renderingMutex);
+      } else {
+        LOG_WRN("OTA", "Feature store unavailable, falling back to channel OTA");
+        usingFeatureStore = false;
+        xSemaphoreTake(renderingMutex, portMAX_DELAY);
+        state = CHECKING_FOR_UPDATE;
+        xSemaphoreGive(renderingMutex);
+        updateRequired = true;
+
+        const auto res = updater.checkForUpdate();
+        xSemaphoreTake(renderingMutex, portMAX_DELAY);
+        if (res != OtaUpdater::OK) {
+          LOG_ERR("OTA", "Update check failed: %d", res);
+          state = FAILED;
+        } else if (!updater.isUpdateNewer()) {
+          LOG_INF("OTA", "No new update available");
+          state = NO_UPDATE;
+        } else {
+          state = WAITING_CONFIRMATION;
+        }
+        xSemaphoreGive(renderingMutex);
+      }
+      updateRequired = true;
+    }
+
+    if (cmd == OtaWorkerCmd::CHECK_UPDATE) {
+      const auto res = updater.checkForUpdate();
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      if (res != OtaUpdater::OK) {
+        LOG_ERR("OTA", "Update check failed: %d", res);
+        state = FAILED;
+      } else {
+        state = WAITING_CONFIRMATION;
+      }
+      xSemaphoreGive(renderingMutex);
+      updateRequired = true;
+    }
+
+    if (cmd == OtaWorkerCmd::INSTALL_UPDATE) {
+      const auto res = updater.installUpdate();
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      if (res != OtaUpdater::OK) {
+        LOG_ERR("OTA", "Update install failed: %d", res);
+        state = FAILED;
+      } else {
+        state = FINISHED;
+      }
+      xSemaphoreGive(renderingMutex);
+      updateRequired = true;
+    }
+  }
+
+  workerHasExited.store(true);
+  vTaskDelete(nullptr);
+}
+
 void OtaUpdateActivity::onWifiSelectionComplete(const bool success) {
   exitActivity();
 
@@ -25,57 +109,14 @@ void OtaUpdateActivity::onWifiSelectionComplete(const bool success) {
     return;
   }
 
-  LOG_INF("OTA", "WiFi connected, loading feature store catalog");
+  LOG_INF("OTA", "WiFi connected, dispatching OTA catalog load to worker");
 
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   state = LOADING_FEATURE_STORE;
   xSemaphoreGive(renderingMutex);
   updateRequired = true;
-  vTaskDelay(10 / portTICK_PERIOD_MS);
 
-  if (updater.loadFeatureStoreCatalog() && updater.hasFeatureStoreCatalog()) {
-    LOG_INF("OTA", "Feature store catalog loaded, %d bundles", (int)updater.getFeatureStoreEntries().size());
-    selectedBundleIndex = 0;
-    usingFeatureStore = true;
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = SELECTING_FEATURE_STORE_BUNDLE;
-    xSemaphoreGive(renderingMutex);
-    updateRequired = true;
-    return;
-  }
-
-  // Fall through to channel-based OTA
-  LOG_WRN("OTA", "Feature store unavailable, falling back to channel OTA");
-  usingFeatureStore = false;
-
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  state = CHECKING_FOR_UPDATE;
-  xSemaphoreGive(renderingMutex);
-  updateRequired = true;
-  vTaskDelay(10 / portTICK_PERIOD_MS);
-  const auto res = updater.checkForUpdate();
-  if (res != OtaUpdater::OK) {
-    LOG_ERR("OTA", "Update check failed: %d", res);
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = FAILED;
-    xSemaphoreGive(renderingMutex);
-    updateRequired = true;
-    return;
-  }
-
-  if (!updater.isUpdateNewer()) {
-    LOG_INF("OTA", "No new update available");
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = NO_UPDATE;
-    xSemaphoreGive(renderingMutex);
-    updateRequired = true;
-    return;
-  }
-
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  state = WAITING_CONFIRMATION;
-  xSemaphoreGive(renderingMutex);
-  updateRequired = true;
+  dispatchWorker(OtaWorkerCmd::LOAD_CATALOG);
 }
 
 void OtaUpdateActivity::onEnter() {
@@ -83,12 +124,22 @@ void OtaUpdateActivity::onEnter() {
 
   exitTaskRequested.store(false);
   taskHasExited.store(false);
+  workerExitRequested.store(false);
+  workerHasExited.store(false);
+  workerCmd.store(OtaWorkerCmd::NONE);
 
   xTaskCreate(&OtaUpdateActivity::taskTrampoline, "OtaUpdateActivityTask",
-              2048,               // Stack size
+              4096,               // Stack size
               this,               // Parameters
               1,                  // Priority
               &displayTaskHandle  // Task handle
+  );
+
+  xTaskCreate(&OtaUpdateActivity::otaWorkerTrampoline, "OtaWorkerTask",
+              4096,                 // Stack size — HTTP + JSON parsing needs headroom
+              this,                 // Parameters
+              1,                    // Priority
+              &otaWorkerTaskHandle  // Task handle
   );
 
   // Turn on WiFi immediately
@@ -104,11 +155,27 @@ void OtaUpdateActivity::onEnter() {
 void OtaUpdateActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
-  // Turn off wifi
+  // Turn off wifi — this causes any in-progress HTTP in the worker to fail quickly
   WiFi.disconnect(false);  // false = don't erase credentials, send disconnect frame
-  delay(100);              // Allow disconnect frame to be sent
+  delay(100);
   WiFi.mode(WIFI_OFF);
-  delay(100);  // Allow WiFi hardware to fully power down
+  delay(100);
+
+  // Give the worker longer to exit — WiFi going down causes in-flight HTTP to
+  // fail, but esp_https_ota abort + cleanup can take a few seconds.
+  workerExitRequested.store(true);
+  if (otaWorkerTaskHandle) {
+    xTaskNotify(otaWorkerTaskHandle, 1, eIncrement);
+    constexpr int workerExitTimeoutMs = 20000;
+    constexpr int pollMs = 10;
+    for (int waited = 0; !workerHasExited.load() && waited < workerExitTimeoutMs; waited += pollMs) {
+      vTaskDelay(pdMS_TO_TICKS(pollMs));
+    }
+    if (!workerHasExited.load()) {
+      vTaskDelete(otaWorkerTaskHandle);
+    }
+    otaWorkerTaskHandle = nullptr;
+  }
 
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
 }
@@ -302,23 +369,8 @@ void OtaUpdateActivity::loop() {
         state = CHECKING_FOR_UPDATE;
         xSemaphoreGive(renderingMutex);
         updateRequired = true;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-
-        const auto res = updater.checkForUpdate();
-        if (res != OtaUpdater::OK) {
-          xSemaphoreTake(renderingMutex, portMAX_DELAY);
-          state = FAILED;
-          xSemaphoreGive(renderingMutex);
-          updateRequired = true;
-          return;
-        }
-
-        xSemaphoreTake(renderingMutex, portMAX_DELAY);
-        state = WAITING_CONFIRMATION;
-        xSemaphoreGive(renderingMutex);
-        updateRequired = true;
+        dispatchWorker(OtaWorkerCmd::CHECK_UPDATE);
       } else {
-        // Incompatible bundle selected
         xSemaphoreTake(renderingMutex, portMAX_DELAY);
         state = FAILED;
         xSemaphoreGive(renderingMutex);
@@ -336,27 +388,12 @@ void OtaUpdateActivity::loop() {
 
   if (state == WAITING_CONFIRMATION) {
     if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-      LOG_INF("OTA", "New update available, starting download...");
+      LOG_INF("OTA", "User confirmed update, dispatching install to worker");
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       state = UPDATE_IN_PROGRESS;
       xSemaphoreGive(renderingMutex);
       updateRequired = true;
-      vTaskDelay(10 / portTICK_PERIOD_MS);
-      const auto res = updater.installUpdate();
-
-      if (res != OtaUpdater::OK) {
-        LOG_ERR("OTA", "Update failed: %d", res);
-        xSemaphoreTake(renderingMutex, portMAX_DELAY);
-        state = FAILED;
-        xSemaphoreGive(renderingMutex);
-        updateRequired = true;
-        return;
-      }
-
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      state = FINISHED;
-      xSemaphoreGive(renderingMutex);
-      updateRequired = true;
+      dispatchWorker(OtaWorkerCmd::INSTALL_UPDATE);
     }
 
     if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {

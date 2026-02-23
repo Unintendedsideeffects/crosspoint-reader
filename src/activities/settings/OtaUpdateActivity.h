@@ -26,10 +26,18 @@ class OtaUpdateActivity : public ActivityWithSubactivity {
   // Can't initialize this to 0 or the first render doesn't happen
   static constexpr unsigned int UNINITIALIZED_PERCENTAGE = 111;
 
+  enum class OtaWorkerCmd { NONE, LOAD_CATALOG, CHECK_UPDATE, INSTALL_UPDATE };
+
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
   std::atomic<bool> updateRequired{false};
+
+  TaskHandle_t otaWorkerTaskHandle = nullptr;
+  std::atomic<bool> workerExitRequested{false};
+  std::atomic<bool> workerHasExited{false};
+  std::atomic<OtaWorkerCmd> workerCmd{OtaWorkerCmd::NONE};
+
   const std::function<void()> goBack;
   State state = WIFI_SELECTION;
   unsigned int lastUpdaterPercentage = UNINITIALIZED_PERCENTAGE;
@@ -41,6 +49,9 @@ class OtaUpdateActivity : public ActivityWithSubactivity {
   static void taskTrampoline(void* param);
   void displayTaskLoop();
   void render();
+  static void otaWorkerTrampoline(void* param);
+  void otaWorkerLoop();
+  void dispatchWorker(OtaWorkerCmd cmd);
 
  public:
   explicit OtaUpdateActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,

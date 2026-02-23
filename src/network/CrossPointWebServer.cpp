@@ -178,7 +178,8 @@ void CrossPointWebServer::begin() {
   server->on("/api/recent", HTTP_GET, [this] { handleRecentBooks(); });
   server->on("/api/cover", HTTP_GET, [this] { handleCover(); });
 #if ENABLE_OTA_UPDATES
-  server->on("/api/ota/check", HTTP_POST, [this] { handleOtaCheck(); });
+  server->on("/api/ota/check", HTTP_POST, [this] { handleOtaCheckPost(); });
+  server->on("/api/ota/check", HTTP_GET, [this] { handleOtaCheckGet(); });
 #endif
 
   server->onNotFound([this] { handleNotFound(); });
@@ -2280,25 +2281,83 @@ void CrossPointWebServer::handleWifiForget() const {
 #endif
 
 #if ENABLE_OTA_UPDATES
-void CrossPointWebServer::handleOtaCheck() {
-  OtaUpdater updater;
-  const auto res = updater.checkForUpdate();
+namespace {
+enum class OtaWebCheckStatus { IDLE, CHECKING, DONE };
+struct OtaWebCheckState {
+  std::atomic<OtaWebCheckStatus> status{OtaWebCheckStatus::IDLE};
+  bool available = false;
+  std::string latestVersion;
+  std::string message;
+  int errorCode = 0;
+};
+OtaWebCheckState otaWebState;
+
+void otaWebCheckTask(void* param) {
+  auto* updater = static_cast<OtaUpdater*>(param);
+  const auto res = updater->checkForUpdate();
+
+  otaWebState.errorCode = static_cast<int>(res);
+  if (res == OtaUpdater::OK) {
+    otaWebState.available = updater->isUpdateNewer();
+    otaWebState.latestVersion = updater->getLatestVersion();
+    otaWebState.message =
+        otaWebState.available ? "Update available. Install from device Settings." : "Already on latest version.";
+  } else {
+    otaWebState.available = false;
+    const String& err = updater->getLastError();
+    otaWebState.message = err.length() > 0 ? err.c_str() : "Update check failed";
+  }
+
+  otaWebState.status.store(OtaWebCheckStatus::DONE, std::memory_order_release);
+  delete updater;
+  vTaskDelete(nullptr);
+}
+}  // namespace
+
+void CrossPointWebServer::handleOtaCheckPost() {
+  if (WiFi.status() != WL_CONNECTED) {
+    server->send(503, "application/json", "{\"status\":\"error\",\"message\":\"Not connected to WiFi\"}");
+    return;
+  }
+
+  if (otaWebState.status.load(std::memory_order_acquire) == OtaWebCheckStatus::CHECKING) {
+    server->send(200, "application/json", "{\"status\":\"checking\"}");
+    return;
+  }
+
+  otaWebState.available = false;
+  otaWebState.latestVersion.clear();
+  otaWebState.message = "Checking...";
+  otaWebState.errorCode = 0;
+  otaWebState.status.store(OtaWebCheckStatus::CHECKING, std::memory_order_release);
+
+  auto* updater = new OtaUpdater();
+  if (xTaskCreate(otaWebCheckTask, "OtaWebCheckTask", 4096, updater, 1, nullptr) != pdPASS) {
+    delete updater;
+    otaWebState.status.store(OtaWebCheckStatus::IDLE, std::memory_order_release);
+    server->send(500, "application/json", "{\"status\":\"error\",\"message\":\"Failed to start task\"}");
+    return;
+  }
+
+  server->send(202, "application/json", "{\"status\":\"checking\"}");
+}
+
+void CrossPointWebServer::handleOtaCheckGet() const {
+  const auto status = otaWebState.status.load(std::memory_order_acquire);
 
   JsonDocument doc;
   doc["currentVersion"] = CROSSPOINT_VERSION;
-  doc["errorCode"] = static_cast<int>(res);
 
-  if (res == OtaUpdater::OK) {
-    doc["available"] = updater.isUpdateNewer();
-    doc["latestVersion"] = updater.getLatestVersion().c_str();
-    if (updater.isUpdateNewer()) {
-      doc["message"] = "Update available. Install from device Settings.";
-    } else {
-      doc["message"] = "Already on latest version.";
-    }
+  if (status == OtaWebCheckStatus::CHECKING) {
+    doc["status"] = "checking";
+  } else if (status == OtaWebCheckStatus::DONE) {
+    doc["status"] = "done";
+    doc["available"] = otaWebState.available;
+    doc["latestVersion"] = otaWebState.latestVersion.c_str();
+    doc["message"] = otaWebState.message.c_str();
+    doc["errorCode"] = otaWebState.errorCode;
   } else {
-    doc["available"] = false;
-    doc["message"] = updater.getLastError().length() > 0 ? updater.getLastError().c_str() : "Update check failed";
+    doc["status"] = "idle";
   }
 
   String json;
