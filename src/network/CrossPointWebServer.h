@@ -20,10 +20,6 @@ using CrossPointUdpType = WiFiUDP;
 #include <string>
 #include <vector>
 
-#if CROSSPOINT_HAS_NETWORKUDP
-#include "WebDAVHandler.h"
-#endif
-
 // Structure to hold file information
 struct FileInfo {
   String name;
@@ -67,9 +63,6 @@ class CrossPointWebServer {
  private:
   std::unique_ptr<WebServer> server = nullptr;
   std::unique_ptr<WebSocketsServer> wsServer = nullptr;
-#if CROSSPOINT_HAS_NETWORKUDP
-  WebDAVHandler davHandler;
-#endif
   bool running = false;
   bool apMode = false;  // true when running in AP mode, false for STA mode
   uint16_t port = 80;
