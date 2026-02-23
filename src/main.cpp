@@ -38,6 +38,9 @@
 #include "util/ButtonNavigator.h"
 #include "util/DateUtils.h"
 #include "util/FactoryResetUtils.h"
+#if ENABLE_USB_MASS_STORAGE
+#include "UsbSerialProtocol.h"
+#endif
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 #include "KOReaderCredentialStore.h"
@@ -172,6 +175,7 @@ enum class UsbMscSessionState { Idle, Prompt, Active };
 
 UsbMscSessionState usbMscSessionState = UsbMscSessionState::Idle;
 bool usbConnectedLast = false;
+UsbSerialProtocol usbSerialProtocol;
 bool usbMscScreenNeedsRedraw = false;
 bool usbMscRemountPending = false;
 
@@ -200,6 +204,7 @@ void enterUsbMscSession() {
   exitActivity();
   Storage.mkdir(kCrossPointDataDir);
   Storage.writeFile(kUsbMscSessionMarkerFile, "1");
+  usbSerialProtocol.reset();
   usbMscSessionState = UsbMscSessionState::Active;
   usbMscScreenNeedsRedraw = true;
 }
@@ -621,7 +626,7 @@ void loop() {
   }
 
   if (usbMscSessionState == UsbMscSessionState::Active) {
-    backgroundServer.loop(usbConnected, false);
+    usbSerialProtocol.loop();
     if (!usbConnected) {
       exitUsbMscSession();
     } else if (usbMscScreenNeedsRedraw) {
