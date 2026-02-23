@@ -163,7 +163,7 @@ FEATURES = {
     'usb_mass_storage': Feature(
         name='USB Mass Storage',
         flag='ENABLE_USB_MASS_STORAGE',
-        size_kb=1,
+        size_kb=14,
         description='On-device prompt for USB SD card access as mass storage'
     ),
 }
