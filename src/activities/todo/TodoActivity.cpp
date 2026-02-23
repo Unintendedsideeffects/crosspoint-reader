@@ -148,7 +148,7 @@ void TodoActivity::loadTasks() {
     return;
   }
 
-  FsFile file = Storage.open(filePath.c_str(), FILE_READ);
+  FsFile file = Storage.open(filePath.c_str(), O_RDONLY);
   if (!file) {
     return;
   }
