@@ -114,10 +114,8 @@ void CrossPointWebServerActivity::onNetworkModeSelected(const NetworkMode mode) 
   exitActivity();
 
   if (mode == NetworkMode::JOIN_NETWORK || mode == NetworkMode::CONNECT_CALIBRE) {
-    // STA mode - launch WiFi selection
-    LOG_DBG("WEBACT", "Turning on WiFi (STA mode)...");
-    WiFi.mode(WIFI_STA);
-
+    // STA mode - launch WiFi selection.
+    // WiFi mode is set by WifiSelectionActivity (startWifiScan / attemptConnection).
     state = WebServerActivityState::WIFI_SELECTION;
     LOG_DBG("WEBACT", "Launching WifiSelectionActivity...");
     enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
@@ -299,8 +297,11 @@ void CrossPointWebServerActivity::updateUploadProgress() {
 
 void CrossPointWebServerActivity::loop() {
   if (subActivity) {
-    // Forward loop to subactivity
-    subActivity->loop();
+    // Use ActivityWithSubactivity::loop() so isLoopingSubActivity is set properly.
+    // This defers exitActivity()/enterNewActivity() calls that originate inside the
+    // subactivity's loop() until after it returns, avoiding UB and ensuring the
+    // pending-transition machinery (applyPendingSubActivityTransition) fires.
+    ActivityWithSubactivity::loop();
     return;
   }
 

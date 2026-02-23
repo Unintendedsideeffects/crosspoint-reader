@@ -43,8 +43,14 @@ void NetworkModeSelectionActivity::onEnter() {
 }
 
 void NetworkModeSelectionActivity::onExit() {
-  Activity::onExit();
+  // Signal the display task to stop *before* acquiring the rendering mutex.
+  // Without this, Activity::onExit() releases the mutex after deleting the render
+  // task, the display task then starts a fresh EPD refresh, and TaskShutdown has
+  // to wait up to ~2 s for that render to complete before exitTaskRequested is set.
+  exitTaskRequested.store(true);
+  updateRequired = false;
 
+  Activity::onExit();
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
 }
 
