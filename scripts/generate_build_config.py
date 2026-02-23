@@ -115,13 +115,13 @@ FEATURES = {
     'lyra_theme': Feature(
         name='Lyra Theme',
         flag='ENABLE_LYRA_THEME',
-        size_kb=13,
+        size_kb=16,
         description='Alternative UI theme with refined spacing and layout'
     ),
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=239,
+        size_kb=242,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
@@ -139,7 +139,7 @@ FEATURES = {
     'visual_cover_picker': Feature(
         name='Visual Covers',
         flag='ENABLE_VISUAL_COVER_PICKER',
-        size_kb=148,
+        size_kb=149,
         description='Grid-based book explorer with thumbnails'
     ),
     'ble_wifi_provisioning': Feature(
