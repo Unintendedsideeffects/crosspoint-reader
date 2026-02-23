@@ -1,11 +1,9 @@
 #include "PngToFramebufferConverter.h"
 
 #include <GfxRenderer.h>
-#include <HardwareSerial.h>
+#include <HalStorage.h>
 #include <Logging.h>
 #include <PNGdec.h>
-#include <SDCardManager.h>
-#include <SdFat.h>
 
 #include <cstdlib>
 #include <new>

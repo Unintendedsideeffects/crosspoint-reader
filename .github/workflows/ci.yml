@@ -91,16 +91,14 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
 
-      - name: Install dependencies
-        run: uv sync --frozen
-
-      - name: Ensure pip for PlatformIO
-        run: |
-          uv run python -m ensurepip --upgrade || true
-          uv run python -m pip --version
+      - name: Install PlatformIO Core
+        run: uv pip install --system -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.1.19.zip
 
       - name: Run cppcheck
         run: uv run pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high
@@ -116,16 +114,14 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
 
-      - name: Install dependencies
-        run: uv sync --frozen
-
-      - name: Ensure pip for PlatformIO
-        run: |
-          uv run python -m ensurepip --upgrade || true
-          uv run python -m pip --version
+      - name: Install PlatformIO Core
+        run: uv pip install --system -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.1.19.zip
 
       - name: Build CrossPoint
         run: |

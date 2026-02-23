@@ -1,10 +1,8 @@
 #include "JpegToFramebufferConverter.h"
 
 #include <GfxRenderer.h>
-#include <HardwareSerial.h>
+#include <HalStorage.h>
 #include <Logging.h>
-#include <SDCardManager.h>
-#include <SdFat.h>
 #include <picojpeg.h>
 
 #include "PixelCache.h"

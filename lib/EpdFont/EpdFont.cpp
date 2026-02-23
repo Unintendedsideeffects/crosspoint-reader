@@ -60,11 +60,6 @@ void EpdFont::getTextBounds(const char* string, const int startX, const int star
   uint32_t cp;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&string)))) {
     const EpdGlyph* glyph = getGlyph(cp);
-
-    if (!glyph) {
-      glyph = getGlyph(REPLACEMENT_GLYPH);
-    }
-
     if (!glyph) {
       if (!averageAdvanceComputed) {
         averageAdvanceX = computeAverageAdvanceX(data);
@@ -143,6 +138,8 @@ const EpdGlyph* EpdFont::getGlyph(const uint32_t cp) const {
       return &data->glyph[interval->offset + (cp - interval->first)];
     }
   }
-
+  if (cp != REPLACEMENT_GLYPH) {
+    return getGlyph(REPLACEMENT_GLYPH);
+  }
   return nullptr;
 }

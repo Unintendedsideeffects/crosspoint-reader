@@ -591,8 +591,8 @@ void HomeActivity::loop() {
 #endif
 }
 
-void HomeActivity::render(Activity::RenderLock&& lock) {
-  auto metrics = UITheme::getInstance().getMetrics();
+void HomeActivity::render(Activity::RenderLock&&) {
+  const auto& metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 

@@ -322,7 +322,8 @@ void MyLibraryActivity::render(Activity::RenderLock&& lock) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
-  auto metrics = UITheme::getInstance().getMetrics();
+  const auto pageHeight = renderer.getScreenHeight();
+  const auto& metrics = UITheme::getInstance().getMetrics();
 
   auto folderName = basepath == "/" ? tr(STR_SD_CARD) : basepath.substr(basepath.rfind('/') + 1).c_str();
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, folderName);
