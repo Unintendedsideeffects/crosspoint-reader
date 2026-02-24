@@ -139,7 +139,7 @@ FEATURES = {
     'visual_cover_picker': Feature(
         name='Visual Covers',
         flag='ENABLE_VISUAL_COVER_PICKER',
-        size_kb=149,
+        size_kb=147,
         description='Grid-based book explorer with thumbnails'
     ),
     'ble_wifi_provisioning': Feature(
