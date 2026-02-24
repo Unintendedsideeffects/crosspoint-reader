@@ -4,7 +4,7 @@ Firmware for the **Xteink X4** e-paper display reader (unaffiliated with Xteink)
 Built using **PlatformIO** and targeting the **ESP32-C3** microcontroller.
 
 This is the **`fork-drift`** branch. It tracks upstream while adding fork-specific capabilities (notably the web build configurator and modular feature profiles).
-
+[![Build](https://github.com/Unintendedsideeffects/crosspoint-reader/actions/workflows/build.yml/badge.svg?branch=fork-drift)](https://github.com/Unintendedsideeffects/crosspoint-reader/actions/workflows/build.yml)
 ![](./docs/images/cover.jpg)
 
 ## Build Configurator
