@@ -1,4 +1,5 @@
 #include <EpdFont.h>
+#include <FontDecompressor.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <SPI.h>
@@ -155,6 +156,12 @@ int main(int argc, char* argv[]) {
 
   GfxRenderer renderer(display);
   renderer.begin();
+  FontDecompressor fontDecompressor;
+  if (!fontDecompressor.init()) {
+    std::cerr << "failed to initialize FontDecompressor\n";
+    return 1;
+  }
+  renderer.setFontDecompressor(&fontDecompressor);
   installFonts(renderer);
 
   HalGPIO gpio;
