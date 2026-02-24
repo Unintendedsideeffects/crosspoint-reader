@@ -6,6 +6,21 @@
 #include <cassert>
 #include <cmath>
 
+const uint8_t* GfxRenderer::getGlyphBitmap(const EpdFontData* fontData, const EpdGlyph* glyph) const {
+  if (!fontData || !glyph) {
+    return nullptr;
+  }
+  if (fontData->groups != nullptr && fontData->groupCount > 0) {
+    if (!fontDecompressor) {
+      LOG_ERR("GFX", "Compressed font but no FontDecompressor set");
+      return nullptr;
+    }
+    const uint16_t glyphIndex = static_cast<uint16_t>(glyph - fontData->glyph);
+    return fontDecompressor->getBitmap(fontData, glyph, glyphIndex);
+  }
+  return &fontData->bitmap[glyph->dataOffset];
+}
+
 void GfxRenderer::begin() {
   frameBuffer = display.getFrameBuffer();
   if (!frameBuffer) {
@@ -973,15 +988,15 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
       return;
     }
 
-    const int is2Bit = font->getFontData()->is2Bit;
-    const uint32_t offset = glyph->dataOffset;
+    const EpdFontData* fontData = font->getFontData();
+    const int is2Bit = fontData->is2Bit;
     const uint8_t width = glyph->width;
     const uint8_t height = glyph->height;
     const int left = glyph->left;
     const int top = glyph->top;
 
-    const uint8_t* bitmap = &font->getFontData()->bitmap[offset];
-    if (bitmap == nullptr) {
+    const uint8_t* bitmap = getGlyphBitmap(fontData, glyph);
+    if (!bitmap) {
       return;
     }
 
@@ -992,7 +1007,7 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
         // 90° clockwise rotation transformation:
         // screenX = x + (ascender - top + glyphY)
         // screenY = yPos - (left + glyphX)
-        const int screenX = baseX + (font->getFontData()->ascender - top + glyphY);
+        const int screenX = baseX + (fontData->ascender - top + glyphY);
         const int screenY = baseY - left - glyphX;
 
         if (is2Bit) {
@@ -1184,15 +1199,13 @@ void GfxRenderer::renderChar(const IEpdFont& font, const uint32_t cp, int* x, co
     return;
   }
 
-  const int is2Bit = font.getFontData()->is2Bit;
-  const uint32_t offset = glyph->dataOffset;
+  const EpdFontData* fontData = font.getFontData();
+  const int is2Bit = fontData->is2Bit;
   const uint8_t width = glyph->width;
   const uint8_t height = glyph->height;
   const int left = glyph->left;
 
-  const uint8_t* bitmap = nullptr;
-  bitmap = &font.getFontData()->bitmap[offset];
-
+  const uint8_t* bitmap = getGlyphBitmap(fontData, glyph);
   if (bitmap != nullptr) {
     for (int glyphY = 0; glyphY < height; glyphY++) {
       const int screenY = *y - glyph->top + glyphY;

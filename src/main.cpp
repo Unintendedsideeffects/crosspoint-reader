@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <EpdFont.h>
+#include <FontDecompressor.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
@@ -54,6 +55,7 @@ HalDisplay display;
 HalGPIO gpio;
 MappedInputManager mappedInputManager(gpio);
 GfxRenderer renderer(display);
+FontDecompressor fontDecompressor;
 Activity* currentActivity;
 BackgroundWebServer& backgroundServer = BackgroundWebServer::getInstance();
 
@@ -412,6 +414,10 @@ void setupDisplayAndFonts() {
   display.begin();
   renderer.begin();
   LOG_DBG("MAIN", "Display initialized");
+  if (!fontDecompressor.init()) {
+    LOG_ERR("MAIN", "Font decompressor init failed");
+  }
+  renderer.setFontDecompressor(&fontDecompressor);
   renderer.insertFontFamily(BOOKERLY_14_FONT_ID, &bookerly14FontFamily);
 #if ENABLE_BOOKERLY_FONTS
   renderer.insertFontFamily(BOOKERLY_12_FONT_ID, &bookerly12FontFamily);
