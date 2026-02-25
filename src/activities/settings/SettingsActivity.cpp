@@ -3,27 +3,12 @@
 #include <GfxRenderer.h>
 #include <Logging.h>
 
-#include "ButtonRemapActivity.h"
-#include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
-#include "FactoryResetActivity.h"
-#include "FeatureFlags.h"
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-#include "CalibreSettingsActivity.h"
-#endif
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-#include "KOReaderSettingsActivity.h"
-#endif
-#include "LanguageSelectActivity.h"
 #include "MappedInputManager.h"
-#if ENABLE_OTA_UPDATES
-#include "OtaUpdateActivity.h"
-#endif
 #include "SettingsList.h"
-#include "UserFontManager.h"
 #include "activities/TaskShutdown.h"
-#include "activities/network/WifiSelectionActivity.h"
 #include "components/UITheme.h"
+#include "core/features/FeatureModules.h"
 #include "fontIds.h"
 
 const StrId SettingsActivity::categoryNames[categoryCount] = {StrId::STR_CAT_DISPLAY, StrId::STR_CAT_READER,
@@ -56,12 +41,20 @@ void SettingsActivity::onEnter() {
   controlsSettings.insert(controlsSettings.begin(),
                           SettingInfo::Action(StrId::STR_REMAP_FRONT_BUTTONS, SettingAction::RemapFrontButtons));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_WIFI_NETWORKS, SettingAction::Network));
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_KOREADER_SYNC, SettingAction::KOReaderSync));
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_OPDS_BROWSER, SettingAction::OPDSBrowser));
+  if (core::FeatureModules::supportsSettingAction(SettingAction::KOReaderSync)) {
+    systemSettings.push_back(SettingInfo::Action(StrId::STR_KOREADER_SYNC, SettingAction::KOReaderSync));
+  }
+  if (core::FeatureModules::supportsSettingAction(SettingAction::OPDSBrowser)) {
+    systemSettings.push_back(SettingInfo::Action(StrId::STR_OPDS_BROWSER, SettingAction::OPDSBrowser));
+  }
   systemSettings.push_back(SettingInfo::Action(StrId::STR_CLEAR_READING_CACHE, SettingAction::ClearCache));
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates));
+  if (core::FeatureModules::supportsSettingAction(SettingAction::CheckForUpdates)) {
+    systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates));
+  }
   systemSettings.push_back(SettingInfo::Action(StrId::STR_FACTORY_RESET, SettingAction::FactoryReset));
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
+  if (core::FeatureModules::supportsSettingAction(SettingAction::Language)) {
+    systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
+  }
 
   // Reset selection to first category
   selectedCategoryIndex = 0;
@@ -233,18 +226,9 @@ void SettingsActivity::toggleCurrentSetting() {
           static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(SETTINGS.frontButtonLayout));
     }
 
-#if ENABLE_USER_FONTS
     if (setting.valuePtr == &CrossPointSettings::fontFamily) {
-      auto& fontManager = UserFontManager::getInstance();
-      if (newValue == CrossPointSettings::USER_SD) {
-        if (!fontManager.loadFontFamily(SETTINGS.userFontPath)) {
-          SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-        }
-      } else {
-        fontManager.unloadCurrentFont();
-      }
+      core::FeatureModules::onFontFamilySettingChanged(newValue);
     }
-#endif
   } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
     const int8_t currentValue = SETTINGS.*(setting.valuePtr);
     if (currentValue + setting.valueRange.step > setting.valueRange.max) {
@@ -268,40 +252,10 @@ void SettingsActivity::toggleCurrentSetting() {
       requestUpdate();
     };
 
-    switch (setting.action) {
-      case SettingAction::RemapFrontButtons:
-        enterSubActivity(new ButtonRemapActivity(renderer, mappedInput, onComplete));
-        break;
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-      case SettingAction::KOReaderSync:
-        enterSubActivity(new KOReaderSettingsActivity(renderer, mappedInput, onComplete));
-        break;
-#endif
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-      case SettingAction::OPDSBrowser:
-        enterSubActivity(new CalibreSettingsActivity(renderer, mappedInput, onComplete));
-        break;
-#endif
-      case SettingAction::Network:
-        enterSubActivity(new WifiSelectionActivity(renderer, mappedInput, onCompleteBool, false));
-        break;
-      case SettingAction::ClearCache:
-        enterSubActivity(new ClearCacheActivity(renderer, mappedInput, onComplete));
-        break;
-      case SettingAction::FactoryReset:
-        enterSubActivity(new FactoryResetActivity(renderer, mappedInput, onComplete));
-        break;
-#if ENABLE_OTA_UPDATES
-      case SettingAction::CheckForUpdates:
-        enterSubActivity(new OtaUpdateActivity(renderer, mappedInput, onComplete));
-        break;
-      case SettingAction::Language:
-        enterSubActivity(new LanguageSelectActivity(renderer, mappedInput, onComplete));
-        break;
-#endif
-      case SettingAction::None:
-        // Do nothing
-        break;
+    Activity* subactivity = core::FeatureModules::createSettingsSubActivity(setting.action, renderer, mappedInput,
+                                                                            onComplete, onCompleteBool);
+    if (subactivity != nullptr) {
+      enterSubActivity(subactivity);
     }
   } else {
     return;

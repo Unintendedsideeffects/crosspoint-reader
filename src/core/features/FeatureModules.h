@@ -1,0 +1,39 @@
+#pragma once
+
+#include <Arduino.h>
+
+#include <functional>
+
+class Activity;
+class CrossPointWebServer;
+class GfxRenderer;
+class MappedInputManager;
+class WebServer;
+enum class SettingAction;
+
+namespace core {
+
+enum class WebOptionalRoute {
+  PokedexPluginPage,
+  UserFontsApi,
+  WebWifiSetupApi,
+  OtaApi,
+};
+
+class FeatureModules {
+ public:
+  static bool isEnabled(const char* featureKey);
+  static bool supportsSettingAction(SettingAction action);
+
+  static Activity* createSettingsSubActivity(SettingAction action, GfxRenderer& renderer,
+                                             MappedInputManager& mappedInput, const std::function<void()>& onComplete,
+                                             const std::function<void(bool)>& onCompleteBool);
+
+  static void onFontFamilySettingChanged(uint8_t newValue);
+  static void onWebSettingsApplied();
+  static void onUploadCompleted(const String& uploadPath, const String& uploadFileName);
+
+  static bool shouldRegisterWebRoute(WebOptionalRoute route);
+};
+
+}  // namespace core

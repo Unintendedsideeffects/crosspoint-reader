@@ -17,6 +17,7 @@
 #include "CrossPointSettings.h"
 #include "FeatureManifest.h"
 #include "RecentBooksStore.h"
+#include "core/features/FeatureModules.h"
 #if ENABLE_OTA_UPDATES
 #include "network/OtaUpdater.h"
 #endif
@@ -32,14 +33,12 @@
 #if ENABLE_WEB_POKEDEX_PLUGIN
 #include "html/PokedexPluginPageHtml.generated.h"
 #endif
+#include "activities/todo/TodoPlannerStorage.h"
 #include "html/SettingsPageHtml.generated.h"
 #include "util/DateUtils.h"
 #include "util/InputValidation.h"
 #include "util/PathUtils.h"
 #include "util/StringUtils.h"
-#if ENABLE_TODO_PLANNER
-#include "activities/todo/TodoPlannerStorage.h"
-#endif
 
 namespace {
 // Folders/files to hide from the web interface file browser
@@ -157,30 +156,30 @@ void CrossPointWebServer::begin() {
 
   // Settings endpoints
   server->on("/settings", HTTP_GET, [this] { handleSettingsPage(); });
-#if ENABLE_WEB_POKEDEX_PLUGIN
-  server->on("/plugins/pokedex", HTTP_GET, [this] { handlePokedexPluginPage(); });
-#endif
+  if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::PokedexPluginPage)) {
+    server->on("/plugins/pokedex", HTTP_GET, [this] { handlePokedexPluginPage(); });
+  }
   server->on("/api/settings", HTTP_GET, [this] { handleGetSettings(); });
   server->on("/api/settings", HTTP_POST, [this] { handlePostSettings(); });
-#if ENABLE_USER_FONTS
-  server->on("/api/user-fonts/rescan", HTTP_POST, [this] { handleRescanUserFonts(); });
-  server->on("/api/user-fonts/upload", HTTP_POST, [this] { handleFontUploadPost(); }, [this] { handleFontUpload(); });
-#endif
+  if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::UserFontsApi)) {
+    server->on("/api/user-fonts/rescan", HTTP_POST, [this] { handleRescanUserFonts(); });
+    server->on("/api/user-fonts/upload", HTTP_POST, [this] { handleFontUploadPost(); }, [this] { handleFontUpload(); });
+  }
 
   // WiFi endpoints
-#if ENABLE_WEB_WIFI_SETUP
-  server->on("/api/wifi/scan", HTTP_GET, [this] { handleWifiScan(); });
-  server->on("/api/wifi/connect", HTTP_POST, [this] { handleWifiConnect(); });
-  server->on("/api/wifi/forget", HTTP_POST, [this] { handleWifiForget(); });
-#endif
+  if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::WebWifiSetupApi)) {
+    server->on("/api/wifi/scan", HTTP_GET, [this] { handleWifiScan(); });
+    server->on("/api/wifi/connect", HTTP_POST, [this] { handleWifiConnect(); });
+    server->on("/api/wifi/forget", HTTP_POST, [this] { handleWifiForget(); });
+  }
 
   // API endpoints for web UI (recent books, cover images)
   server->on("/api/recent", HTTP_GET, [this] { handleRecentBooks(); });
   server->on("/api/cover", HTTP_GET, [this] { handleCover(); });
-#if ENABLE_OTA_UPDATES
-  server->on("/api/ota/check", HTTP_POST, [this] { handleOtaCheckPost(); });
-  server->on("/api/ota/check", HTTP_GET, [this] { handleOtaCheckGet(); });
-#endif
+  if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::OtaApi)) {
+    server->on("/api/ota/check", HTTP_POST, [this] { handleOtaCheckPost(); });
+    server->on("/api/ota/check", HTTP_GET, [this] { handleOtaCheckGet(); });
+  }
 
   server->onNotFound([this] { handleNotFound(); });
   LOG_DBG("WEB", "[MEM] Free heap after route setup: %d bytes", ESP.getFreeHeap());
@@ -399,10 +398,11 @@ void CrossPointWebServer::handleStatus() const {
 void CrossPointWebServer::handlePlugins() const { server->send(200, "application/json", FeatureManifest::toJson()); }
 
 void CrossPointWebServer::handleTodoEntry() {
-#if !ENABLE_TODO_PLANNER
-  server->send(404, "text/plain", "TODO planner disabled");
-  return;
-#else
+  if (!core::FeatureModules::isEnabled("todo_planner")) {
+    server->send(404, "text/plain", "TODO planner disabled");
+    return;
+  }
+
   if (!server->hasArg("text")) {
     server->send(400, "text/plain", "Missing text");
     return;
@@ -438,7 +438,8 @@ void CrossPointWebServer::handleTodoEntry() {
     SpiBusMutex::Guard guard;
     const bool markdownExists = Storage.exists(markdownPath.c_str());
     const bool textExists = Storage.exists(textPath.c_str());
-    targetPath = TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, markdownExists, textExists);
+    targetPath =
+        TodoPlannerStorage::dailyPath(today, core::FeatureModules::isEnabled("markdown"), markdownExists, textExists);
     if (!Storage.exists(dirPath.c_str())) {
       Storage.mkdir(dirPath.c_str());
     }
@@ -459,7 +460,6 @@ void CrossPointWebServer::handleTodoEntry() {
   }
 
   server->send(200, "application/json", "{\"ok\":true}");
-#endif
 }
 
 void CrossPointWebServer::scanFiles(const char* path, const std::function<void(FileInfo)>& callback) const {
@@ -956,13 +956,7 @@ void CrossPointWebServer::handleUpload() {
         filePath += uploadFileName;
         clearEpubCacheIfNeeded(filePath);
         invalidateSleepCacheIfNeeded(filePath);
-#if ENABLE_USER_FONTS
-        String normalizedUploadFileName = uploadFileName;
-        normalizedUploadFileName.toLowerCase();
-        if (uploadPath == "/fonts" && normalizedUploadFileName.endsWith(".cpf")) {
-          UserFontManager::getInstance().scanFonts();
-        }
-#endif
+        core::FeatureModules::onUploadCompleted(uploadPath, uploadFileName);
       }
     }
   } else if (upload.status == UPLOAD_FILE_ABORTED) {
@@ -1627,12 +1621,7 @@ void CrossPointWebServer::handlePostSettings() {
     }
   }
 
-#if ENABLE_USER_FONTS
-  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD &&
-      !UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath)) {
-    SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-  }
-#endif
+  core::FeatureModules::onWebSettingsApplied();
 
   SETTINGS.enforceButtonLayoutConstraints();
   if (!SETTINGS.saveToFile()) {
@@ -1643,8 +1632,13 @@ void CrossPointWebServer::handlePostSettings() {
   server->send(200, "text/plain", String("Applied ") + String(applied) + " setting(s)");
 }
 
-#if ENABLE_USER_FONTS
 void CrossPointWebServer::handleRescanUserFonts() {
+  if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::UserFontsApi)) {
+    server->send(404, "text/plain", "User font API disabled");
+    return;
+  }
+
+#if ENABLE_USER_FONTS
   auto& manager = UserFontManager::getInstance();
   manager.scanFonts();
 
@@ -1666,9 +1660,18 @@ void CrossPointWebServer::handleRescanUserFonts() {
   String output;
   serializeJson(response, output);
   server->send(200, "application/json", output);
+#else
+  server->send(404, "text/plain", "User font API disabled");
+#endif
 }
 
 void CrossPointWebServer::handleFontUpload() {
+  if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::UserFontsApi)) {
+    uploadError = "User font API disabled";
+    return;
+  }
+
+#if ENABLE_USER_FONTS
   esp_task_wdt_reset();
 
   if (!running || !server) return;
@@ -1776,9 +1779,18 @@ void CrossPointWebServer::handleFontUpload() {
     }
     uploadError = "Font upload aborted";
   }
+#else
+  uploadError = "User font API disabled";
+#endif
 }
 
 void CrossPointWebServer::handleFontUploadPost() {
+  if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::UserFontsApi)) {
+    server->send(404, "text/plain", "User font API disabled");
+    return;
+  }
+
+#if ENABLE_USER_FONTS
   if (!uploadSuccess) {
     const String error = uploadError.isEmpty() ? "Upload failed" : uploadError;
     server->send(400, "text/plain", error);
@@ -1795,8 +1807,10 @@ void CrossPointWebServer::handleFontUploadPost() {
   String output;
   serializeJson(response, output);
   server->send(200, "application/json", output);
-}
+#else
+  server->send(404, "text/plain", "User font API disabled");
 #endif
+}
 
 void CrossPointWebServer::handleRecentBooks() const {
   const auto& books = RECENT_BOOKS.getBooks();
@@ -2219,8 +2233,13 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
 
 #include "WifiCredentialStore.h"
 
-#if ENABLE_WEB_WIFI_SETUP
 void CrossPointWebServer::handleWifiScan() const {
+  if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::WebWifiSetupApi)) {
+    server->send(404, "text/plain", "WiFi setup API disabled");
+    return;
+  }
+
+#if ENABLE_WEB_WIFI_SETUP
   int n = WiFi.scanNetworks();
   JsonDocument doc;
   JsonArray array = doc.to<JsonArray>();
@@ -2237,9 +2256,18 @@ void CrossPointWebServer::handleWifiScan() const {
   String json;
   serializeJson(doc, json);
   server->send(200, "application/json", json);
+#else
+  server->send(404, "text/plain", "WiFi setup API disabled");
+#endif
 }
 
 void CrossPointWebServer::handleWifiConnect() const {
+  if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::WebWifiSetupApi)) {
+    server->send(404, "text/plain", "WiFi setup API disabled");
+    return;
+  }
+
+#if ENABLE_WEB_WIFI_SETUP
   if (!server->hasArg("plain")) {
     server->send(400, "text/plain", "Missing body");
     return;
@@ -2259,9 +2287,18 @@ void CrossPointWebServer::handleWifiConnect() const {
   WIFI_STORE.saveToFile();
 
   server->send(200, "text/plain", "WiFi credentials saved");
+#else
+  server->send(404, "text/plain", "WiFi setup API disabled");
+#endif
 }
 
 void CrossPointWebServer::handleWifiForget() const {
+  if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::WebWifiSetupApi)) {
+    server->send(404, "text/plain", "WiFi setup API disabled");
+    return;
+  }
+
+#if ENABLE_WEB_WIFI_SETUP
   if (!server->hasArg("plain")) {
     server->send(400, "text/plain", "Missing body");
     return;
@@ -2277,11 +2314,13 @@ void CrossPointWebServer::handleWifiForget() const {
   } else {
     server->send(400, "text/plain", "SSID required");
   }
-}
+#else
+  server->send(404, "text/plain", "WiFi setup API disabled");
 #endif
+}
 
-#if ENABLE_OTA_UPDATES
 namespace {
+#if ENABLE_OTA_UPDATES
 enum class OtaWebCheckStatus { IDLE, CHECKING, DONE };
 struct OtaWebCheckState {
   std::atomic<OtaWebCheckStatus> status{OtaWebCheckStatus::IDLE};
@@ -2312,9 +2351,16 @@ void otaWebCheckTask(void* param) {
   delete updater;
   vTaskDelete(nullptr);
 }
+#endif
 }  // namespace
 
 void CrossPointWebServer::handleOtaCheckPost() {
+  if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::OtaApi)) {
+    server->send(404, "application/json", "{\"status\":\"error\",\"message\":\"OTA API disabled\"}");
+    return;
+  }
+
+#if ENABLE_OTA_UPDATES
   if (WiFi.status() != WL_CONNECTED) {
     server->send(503, "application/json", "{\"status\":\"error\",\"message\":\"Not connected to WiFi\"}");
     return;
@@ -2340,9 +2386,18 @@ void CrossPointWebServer::handleOtaCheckPost() {
   }
 
   server->send(202, "application/json", "{\"status\":\"checking\"}");
+#else
+  server->send(404, "application/json", "{\"status\":\"error\",\"message\":\"OTA API disabled\"}");
+#endif
 }
 
 void CrossPointWebServer::handleOtaCheckGet() const {
+  if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::OtaApi)) {
+    server->send(404, "application/json", "{\"status\":\"error\",\"message\":\"OTA API disabled\"}");
+    return;
+  }
+
+#if ENABLE_OTA_UPDATES
   const auto status = otaWebState.status.load(std::memory_order_acquire);
 
   JsonDocument doc;
@@ -2363,5 +2418,7 @@ void CrossPointWebServer::handleOtaCheckGet() const {
   String json;
   serializeJson(doc, json);
   server->send(200, "application/json", json);
-}
+#else
+  server->send(404, "application/json", "{\"status\":\"error\",\"message\":\"OTA API disabled\"}");
 #endif
+}

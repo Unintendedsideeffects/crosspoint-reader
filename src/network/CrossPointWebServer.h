@@ -135,25 +135,19 @@ class CrossPointWebServer {
   void handlePokedexPluginPage() const;
   void handleGetSettings() const;
   void handlePostSettings();
-#if ENABLE_USER_FONTS
   void handleRescanUserFonts();
   void handleFontUpload();
   void handleFontUploadPost();
-#endif
 
   // API handlers for web UI
   void handleRecentBooks() const;
   void handleCover() const;
 
   // WiFi handlers
-#if ENABLE_WEB_WIFI_SETUP
   void handleWifiScan() const;
   void handleWifiConnect() const;
   void handleWifiForget() const;
-#endif
 
-#if ENABLE_OTA_UPDATES
   void handleOtaCheckPost();
   void handleOtaCheckGet() const;
-#endif
 };
