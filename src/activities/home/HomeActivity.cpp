@@ -22,6 +22,7 @@
 #include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "util/ForkDriftNavigation.h"
 #include "util/StringUtils.h"
 
 int HomeActivity::getMenuItemCount() const {
@@ -496,29 +497,16 @@ void HomeActivity::loop() {
       }
     } else {
       if (bookCount > 0 && (leftPressed || rightPressed || upPressed || downPressed)) {
-        int col = selectedBookIndex % coverCols;
-        int row = selectedBookIndex / coverCols;
-        if (leftPressed)
-          col = (col + coverCols - 1) % coverCols;
-        else if (rightPressed)
-          col = (col + 1) % coverCols;
-        else if (upPressed)
-          row = (row + coverRows - 1) % coverRows;
-        else if (downPressed) {
-          if (row < coverRows - 1)
-            row++;
-          else {
-            inButtonGrid = true;
-            selectedMenuIndex = 0;
-          }
+        const auto nav = ForkDriftNavigation::navigateCoverGrid(selectedBookIndex, bookCount, coverCols, coverRows,
+                                                                leftPressed, rightPressed, upPressed, downPressed);
+        if (nav.enterButtonGrid) {
+          inButtonGrid = true;
+          selectedMenuIndex = 0;
+        } else {
+          selectedBookIndex = nav.bookIndex;
         }
-        if (!inButtonGrid) {
-          selectedBookIndex = std::min(row * coverCols + col, bookCount - 1);
-          selectedBookIndex = std::max(0, selectedBookIndex);
-          requestUpdate();
-        }
+        requestUpdate();
       }
-      if (inButtonGrid) requestUpdate();
     }
   } else {
     if (!recentBooks.empty()) {

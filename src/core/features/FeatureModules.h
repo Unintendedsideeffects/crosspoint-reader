@@ -34,6 +34,18 @@ class FeatureModules {
   static void onUploadCompleted(const String& uploadPath, const String& uploadFileName);
 
   static bool shouldRegisterWebRoute(WebOptionalRoute route);
+
+  struct FontScanResult {
+    bool available;  // false when ENABLE_USER_FONTS is off
+    int familyCount;
+    bool activeLoaded;
+  };
+  /**
+   * Scan/reload the user-font library and (if a USER_SD font is selected)
+   * reload the active font family.  Returns metadata for building a JSON
+   * response without the caller needing to know about UserFontManager.
+   */
+  static FontScanResult onFontScanRequested();
 };
 
 }  // namespace core

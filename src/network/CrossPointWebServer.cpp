@@ -23,9 +23,6 @@
 #endif
 #include "SettingsList.h"
 #include "SpiBusMutex.h"
-#if ENABLE_USER_FONTS
-#include "UserFontManager.h"
-#endif
 #include "WebDAVHandler.h"
 #include "activities/boot_sleep/SleepActivity.h"
 #include "html/FilesPageHtml.generated.h"
@@ -1638,31 +1635,19 @@ void CrossPointWebServer::handleRescanUserFonts() {
     return;
   }
 
-#if ENABLE_USER_FONTS
-  auto& manager = UserFontManager::getInstance();
-  manager.scanFonts();
-
-  bool activeFontLoaded = true;
-  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
-    activeFontLoaded = manager.loadFontFamily(SETTINGS.userFontPath);
-    if (!activeFontLoaded) {
-      SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-      if (!SETTINGS.saveToFile()) {
-        LOG_WRN("WEB", "Failed to persist font fallback to SD card");
-      }
-    }
+  const auto result = core::FeatureModules::onFontScanRequested();
+  if (!result.available) {
+    server->send(404, "text/plain", "User font API disabled");
+    return;
   }
 
   JsonDocument response;
-  response["families"] = manager.getAvailableFonts().size();
-  response["activeLoaded"] = activeFontLoaded;
+  response["families"] = result.familyCount;
+  response["activeLoaded"] = result.activeLoaded;
 
   String output;
   serializeJson(response, output);
   server->send(200, "application/json", output);
-#else
-  server->send(404, "text/plain", "User font API disabled");
-#endif
 }
 
 void CrossPointWebServer::handleFontUpload() {
@@ -1790,26 +1775,21 @@ void CrossPointWebServer::handleFontUploadPost() {
     return;
   }
 
-#if ENABLE_USER_FONTS
   if (!uploadSuccess) {
     const String error = uploadError.isEmpty() ? "Upload failed" : uploadError;
     server->send(400, "text/plain", error);
     return;
   }
 
-  auto& manager = UserFontManager::getInstance();
-  manager.scanFonts();
+  const auto result = core::FeatureModules::onFontScanRequested();
 
   JsonDocument response;
   response["ok"] = true;
-  response["families"] = (int)manager.getAvailableFonts().size();
+  response["families"] = result.familyCount;
 
   String output;
   serializeJson(response, output);
   server->send(200, "application/json", output);
-#else
-  server->send(404, "text/plain", "User font API disabled");
-#endif
 }
 
 void CrossPointWebServer::handleRecentBooks() const {

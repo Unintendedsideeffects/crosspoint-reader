@@ -1,6 +1,7 @@
 #include "core/features/FeatureModules.h"
 
 #include <FeatureFlags.h>
+#include <Logging.h>
 
 #include "CrossPointSettings.h"
 #include "activities/network/WifiSelectionActivity.h"
@@ -133,6 +134,27 @@ void FeatureModules::onUploadCompleted(const String& uploadPath, const String& u
 #else
   (void)uploadPath;
   (void)uploadFileName;
+#endif
+}
+
+FeatureModules::FontScanResult FeatureModules::onFontScanRequested() {
+#if ENABLE_USER_FONTS
+  auto& fontManager = UserFontManager::getInstance();
+  fontManager.scanFonts();
+
+  bool activeLoaded = true;
+  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
+    activeLoaded = fontManager.loadFontFamily(SETTINGS.userFontPath);
+    if (!activeLoaded) {
+      SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
+      if (!SETTINGS.saveToFile()) {
+        LOG_WRN("FEATURES", "Failed to persist font fallback after rescan");
+      }
+    }
+  }
+  return {true, static_cast<int>(fontManager.getAvailableFonts().size()), activeLoaded};
+#else
+  return {false, 0, false};
 #endif
 }
 

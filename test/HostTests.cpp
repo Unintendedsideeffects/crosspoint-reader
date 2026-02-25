@@ -12,6 +12,7 @@
 #include "lib/Serialization/Serialization.h"
 #include "src/core/features/FeatureCatalog.h"
 #include "src/fontIds.h"
+#include "src/util/ForkDriftNavigation.h"
 #include "test/mock/Arduino.h"
 #include "test/mock/HalStorage.h"
 #include "test/mock/SpiBusMutex.h"
@@ -461,6 +462,104 @@ void testPathUtilsSecurity() {
   std::cout << "PathUtils security tests passed!" << std::endl;
 }
 
+void testForkDriftCoverNavigation() {
+  using ForkDriftNavigation::navigateCoverGrid;
+  std::cout << "Testing ForkDrift cover grid navigation..." << std::endl;
+
+  constexpr int cols = 3;
+  constexpr int rows = 2;
+
+  // ── Single-row: 1 book ────────────────────────────────────────────────
+  {
+    // Left/right wrap within the single book (stays at 0)
+    auto r = navigateCoverGrid(0, 1, cols, rows, true, false, false, false);
+    assert(r.bookIndex == 0 && !r.enterButtonGrid);
+    r = navigateCoverGrid(0, 1, cols, rows, false, true, false, false);
+    assert(r.bookIndex == 0 && !r.enterButtonGrid);
+    // Up from row 0 → button grid
+    r = navigateCoverGrid(0, 1, cols, rows, false, false, true, false);
+    assert(r.enterButtonGrid);
+    // Down → button grid (last row = row 0)
+    r = navigateCoverGrid(0, 1, cols, rows, false, false, false, true);
+    assert(r.enterButtonGrid);
+  }
+
+  // ── Single-row: 2 books ───────────────────────────────────────────────
+  {
+    // Right from 0 → 1
+    auto r = navigateCoverGrid(0, 2, cols, rows, false, true, false, false);
+    assert(r.bookIndex == 1 && !r.enterButtonGrid);
+    // Right from 1 wraps to 0
+    r = navigateCoverGrid(1, 2, cols, rows, false, true, false, false);
+    assert(r.bookIndex == 0 && !r.enterButtonGrid);
+    // Left from 0 wraps to 1
+    r = navigateCoverGrid(0, 2, cols, rows, true, false, false, false);
+    assert(r.bookIndex == 1 && !r.enterButtonGrid);
+    // Left from 1 → 0
+    r = navigateCoverGrid(1, 2, cols, rows, true, false, false, false);
+    assert(r.bookIndex == 0 && !r.enterButtonGrid);
+    // Up / Down → button grid
+    r = navigateCoverGrid(0, 2, cols, rows, false, false, true, false);
+    assert(r.enterButtonGrid);
+    r = navigateCoverGrid(1, 2, cols, rows, false, false, false, true);
+    assert(r.enterButtonGrid);
+  }
+
+  // ── Single-row: 3 books ───────────────────────────────────────────────
+  {
+    auto r = navigateCoverGrid(2, 3, cols, rows, false, true, false, false);
+    assert(r.bookIndex == 0 && !r.enterButtonGrid);  // wraps to start
+    r = navigateCoverGrid(0, 3, cols, rows, true, false, false, false);
+    assert(r.bookIndex == 2 && !r.enterButtonGrid);  // wraps to end
+    r = navigateCoverGrid(1, 3, cols, rows, false, false, false, true);
+    assert(r.enterButtonGrid);  // row 0 is last book row
+    r = navigateCoverGrid(1, 3, cols, rows, false, false, true, false);
+    assert(r.enterButtonGrid);  // row 0, up → button grid
+  }
+
+  // ── Two rows: 4 books ─────────────────────────────────────────────────
+  {
+    // Down from row 0 (book 0) → row 1 (book 3, clamped)
+    auto r = navigateCoverGrid(0, 4, cols, rows, false, false, false, true);
+    assert(r.bookIndex == 3 && !r.enterButtonGrid);
+    // Down from row 0 col 1 (book 1) → row 1 col 1 clamped to 3
+    r = navigateCoverGrid(1, 4, cols, rows, false, false, false, true);
+    assert(r.bookIndex == 3 && !r.enterButtonGrid);
+    // Down from row 1 (book 3) → button grid
+    r = navigateCoverGrid(3, 4, cols, rows, false, false, false, true);
+    assert(r.enterButtonGrid);
+    // Up from row 1 (book 3) → row 0 col 0 (book 0)
+    r = navigateCoverGrid(3, 4, cols, rows, false, false, true, false);
+    assert(r.bookIndex == 0 && !r.enterButtonGrid);
+    // Up from row 0 → button grid
+    r = navigateCoverGrid(2, 4, cols, rows, false, false, true, false);
+    assert(r.enterButtonGrid);
+    // Linear left/right wrap across rows
+    r = navigateCoverGrid(3, 4, cols, rows, false, true, false, false);
+    assert(r.bookIndex == 0 && !r.enterButtonGrid);  // 3+1 wraps to 0
+    r = navigateCoverGrid(0, 4, cols, rows, true, false, false, false);
+    assert(r.bookIndex == 3 && !r.enterButtonGrid);  // 0-1 wraps to 3
+  }
+
+  // ── Full grid: 6 books ────────────────────────────────────────────────
+  {
+    // Down from row 0 col 2 (book 2) → row 1 col 2 (book 5)
+    auto r = navigateCoverGrid(2, 6, cols, rows, false, false, false, true);
+    assert(r.bookIndex == 5 && !r.enterButtonGrid);
+    // Down from row 1 → button grid
+    r = navigateCoverGrid(4, 6, cols, rows, false, false, false, true);
+    assert(r.enterButtonGrid);
+    // Up from row 0 → button grid
+    r = navigateCoverGrid(1, 6, cols, rows, false, false, true, false);
+    assert(r.enterButtonGrid);
+    // Up from row 1 → row 0
+    r = navigateCoverGrid(5, 6, cols, rows, false, false, true, false);
+    assert(r.bookIndex == 2 && !r.enterButtonGrid);
+  }
+
+  std::cout << "ForkDrift cover grid navigation tests passed!" << std::endl;
+}
+
 int main() {
   testPathNormalisation();
   testMarkdownLimits();
@@ -470,6 +569,7 @@ int main() {
   testSettingsRoundTrip();
   testSettingsTruncatedLoad();
   testPathUtilsSecurity();
+  testForkDriftCoverNavigation();
   std::cout << "All Host Tests Passed!" << std::endl;
   return 0;
 }
