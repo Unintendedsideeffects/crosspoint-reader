@@ -21,6 +21,7 @@
 #include "SpiBusMutex.h"
 #include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
+#include "core/features/FeatureModules.h"
 #include "fontIds.h"
 #include "util/ForkDriftNavigation.h"
 #include "util/StringUtils.h"
@@ -28,12 +29,8 @@
 int HomeActivity::getMenuItemCount() const {
   int count = 3;  // My Library, File transfer, Settings
   if (hasContinueReading) count++;
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-  if (hasOpdsUrl) count++;
-#endif
-#if ENABLE_TODO_PLANNER
-  count++;
-#endif
+  if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) count++;
+  if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) count++;
   return count;
 }
 
@@ -65,27 +62,23 @@ void HomeActivity::rebuildMenuLayout() {
   const bool forkDrift = SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT;
   if (forkDrift) {
     menuOpenBookIndex = -1;
-    menuMyLibraryIndex = 0;
+    int idx = 0;
+    menuMyLibraryIndex = idx++;
     menuOpdsIndex = -1;
-    menuTodoIndex = 1;
-    menuFileTransferIndex = 2;
-    menuSettingsIndex = 3;
-    menuItemCount = 4;
+    menuTodoIndex =
+        core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false) ? idx++ : -1;
+    menuFileTransferIndex = idx++;
+    menuSettingsIndex = idx++;
+    menuItemCount = idx;
     return;
   }
   int idx = 0;
   menuOpenBookIndex = idx++;
   menuMyLibraryIndex = idx++;
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-  menuOpdsIndex = hasOpdsUrl ? idx++ : -1;
-#else
-  menuOpdsIndex = -1;
-#endif
-#if ENABLE_TODO_PLANNER
-  menuTodoIndex = idx++;
-#else
-  menuTodoIndex = -1;
-#endif
+  menuOpdsIndex =
+      core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl) ? idx++ : -1;
+  menuTodoIndex =
+      core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false) ? idx++ : -1;
   menuFileTransferIndex = idx++;
   menuSettingsIndex = idx++;
   menuItemCount = idx;
@@ -226,11 +219,9 @@ std::string HomeActivity::getMenuItemLabel(const int index) const {
   if (index == menuOpdsIndex) {
     return "OPDS Browser";
   }
-#if ENABLE_TODO_PLANNER
   if (index == menuTodoIndex) {
     return "TODO";
   }
-#endif
   if (index == menuFileTransferIndex) {
     return "File Transfer";
   }
@@ -549,12 +540,10 @@ void HomeActivity::loop() {
     int idx = 0;
     const int continueIdx = hasContinueReading ? idx++ : -1;
     const int myLibraryIdx = idx++;
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-    const int opdsLibraryIdx = hasOpdsUrl ? idx++ : -1;
-#endif
-#if ENABLE_TODO_PLANNER
-    const int todoIdx = idx++;
-#endif
+    const int opdsLibraryIdx =
+        core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl) ? idx++ : -1;
+    const int todoIdx =
+        core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false) ? idx++ : -1;
     const int fileTransferIdx = idx++;
     const int settingsIdx = idx;
 
@@ -562,14 +551,10 @@ void HomeActivity::loop() {
       onContinueReading();
     } else if (selectorIndex == myLibraryIdx) {
       onMyLibraryOpen();
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
     } else if (selectorIndex == opdsLibraryIdx) {
       onOpdsBrowserOpen();
-#endif
-#if ENABLE_TODO_PLANNER
     } else if (selectorIndex == todoIdx) {
       onTodoOpen();
-#endif
     } else if (selectorIndex == fileTransferIdx) {
       onFileTransferOpen();
     } else if (selectorIndex == settingsIdx) {
@@ -603,8 +588,10 @@ void HomeActivity::render(Activity::RenderLock&&) {
   if (forkDrift) {
     menuLabels.push_back("Library");
     menuIcons.push_back(Folder);
-    menuLabels.push_back("Agenda");
-    menuIcons.push_back(Text);
+    if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
+      menuLabels.push_back("Agenda");
+      menuIcons.push_back(Text);
+    }
     menuLabels.push_back("File Manager");
     menuIcons.push_back(Transfer);
     menuLabels.push_back("Settings");
@@ -614,16 +601,14 @@ void HomeActivity::render(Activity::RenderLock&&) {
     menuIcons.push_back(Book);
     menuLabels.push_back("My Library");
     menuIcons.push_back(Folder);
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-    if (hasOpdsUrl) {
+    if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) {
       menuLabels.push_back("OPDS Browser");
       menuIcons.push_back(Library);
     }
-#endif
-#if ENABLE_TODO_PLANNER
-    menuLabels.push_back("TODO");
-    menuIcons.push_back(Text);
-#endif
+    if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
+      menuLabels.push_back("TODO");
+      menuIcons.push_back(Text);
+    }
     menuLabels.push_back("File Transfer");
     menuIcons.push_back(Transfer);
     menuLabels.push_back("Settings");
@@ -831,11 +816,15 @@ void HomeActivity::render(Activity::RenderLock&&) {
   int menuTileHeight = 45;
   int menuSpacing = 10;
 
-  std::vector<const char*> labels_text = {"My Library",
-#if ENABLE_TODO_PLANNER
-                                          "TODO",
-#endif
-                                          "File Transfer", "Settings"};
+  std::vector<const char*> labels_text = {"My Library"};
+  if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) {
+    labels_text.push_back("OPDS Browser");
+  }
+  if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
+    labels_text.push_back("TODO");
+  }
+  labels_text.push_back("File Transfer");
+  labels_text.push_back("Settings");
   for (size_t i = 0; i < labels_text.size(); ++i) {
     int tileY = menuStartY + i * (menuTileHeight + menuSpacing);
     bool selected = (selectorIndex == (int)i + (hasContinueReading ? 1 : 0));

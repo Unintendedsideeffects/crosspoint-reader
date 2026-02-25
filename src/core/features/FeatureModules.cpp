@@ -158,6 +158,16 @@ FeatureModules::FontScanResult FeatureModules::onFontScanRequested() {
 #endif
 }
 
+bool FeatureModules::shouldExposeHomeAction(const HomeOptionalAction action, const bool hasOpdsUrl) {
+  switch (action) {
+    case HomeOptionalAction::OpdsBrowser:
+      return isEnabled("calibre_sync") && hasOpdsUrl;
+    case HomeOptionalAction::TodoPlanner:
+      return isEnabled("todo_planner");
+  }
+  return false;
+}
+
 bool FeatureModules::shouldRegisterWebRoute(const WebOptionalRoute route) {
   switch (route) {
     case WebOptionalRoute::PokedexPluginPage:

@@ -20,6 +20,11 @@ enum class WebOptionalRoute {
   OtaApi,
 };
 
+enum class HomeOptionalAction {
+  OpdsBrowser,
+  TodoPlanner,
+};
+
 class FeatureModules {
  public:
   static bool isEnabled(const char* featureKey);
@@ -34,6 +39,7 @@ class FeatureModules {
   static void onUploadCompleted(const String& uploadPath, const String& uploadFileName);
 
   static bool shouldRegisterWebRoute(WebOptionalRoute route);
+  static bool shouldExposeHomeAction(HomeOptionalAction action, bool hasOpdsUrl);
 
   struct FontScanResult {
     bool available;  // false when ENABLE_USER_FONTS is off

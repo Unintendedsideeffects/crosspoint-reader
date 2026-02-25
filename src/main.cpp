@@ -34,6 +34,7 @@
 #include "activities/util/FullScreenMessageActivity.h"
 #include "components/UITheme.h"
 #include "core/CoreBootstrap.h"
+#include "core/features/FeatureModules.h"
 #include "fontIds.h"
 #include "network/BackgroundWebServer.h"
 #include "util/ButtonNavigator.h"
@@ -310,9 +311,7 @@ void enterDeepSleep() {
 
 void onGoHome();
 void onGoToMyLibraryWithPath(const std::string& path, MyLibraryActivity::Tab fromTab);
-#if ENABLE_TODO_PLANNER
 void onGoToTodo();
-#endif
 void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
   exitActivity();
   enterNewActivity(
@@ -341,16 +340,21 @@ void onGoToMyLibraryWithPath(const std::string& path, MyLibraryActivity::Tab fro
 }
 
 void onGoToBrowser() {
+  const bool hasOpdsUrl = strlen(SETTINGS.opdsServerUrl) > 0;
+  if (!core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) {
+    return;
+  }
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
   exitActivity();
   enterNewActivity(new OpdsBookBrowserActivity(renderer, mappedInputManager, onGoHome));
-#else
-  return;
 #endif
 }
 
-#if ENABLE_TODO_PLANNER
 void onGoToTodo() {
+  if (!core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
+    return;
+  }
+#if ENABLE_TODO_PLANNER
   exitActivity();
 
   const std::string today = DateUtils::currentDate();
@@ -383,18 +387,13 @@ void onGoToTodo() {
   enterNewActivity(new TodoActivity(
       renderer, mappedInputManager,
       TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists), today, onGoHome));
-}
 #endif  // ENABLE_TODO_PLANNER
+}
 
 void onGoHome() {
   exitActivity();
-#if ENABLE_TODO_PLANNER
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
                                     onGoToFileTransfer, onGoToBrowser, onGoToTodo));
-#else
-  enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
-                                    onGoToFileTransfer, onGoToBrowser, [] {}));
-#endif
 }
 
 void setupDisplayAndFonts() {
