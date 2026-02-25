@@ -22,6 +22,7 @@ class TxtReaderActivity final : public ActivityWithSubactivity {
   bool updateRequired = false;
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;
+  bool backLongPressTriggered = false;
 
   // Streaming text reader - stores file offsets for each page
   std::vector<size_t> pageOffsets;  // File offset for start of each page

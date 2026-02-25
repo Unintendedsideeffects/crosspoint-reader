@@ -229,6 +229,10 @@ void EpubReaderActivity::loop() {
     return;
   }
 
+  if (renderInProgress.load()) {
+    return;
+  }
+
   // When long-press chapter skip is disabled, turn pages on press instead of release.
   const bool usePressForPageTurn = !SETTINGS.longPressChapterSkip;
   const bool prevTriggered = usePressForPageTurn ? (mappedInput.wasPressed(MappedInputManager::Button::PageBack) ||
@@ -558,7 +562,9 @@ void EpubReaderActivity::displayTaskLoop() {
         continue;
       }
       if (!exitTaskRequested.load()) {
+        renderInProgress = true;
         renderScreen();
+        renderInProgress = false;
       }
       xSemaphoreGive(renderingMutex);
     }

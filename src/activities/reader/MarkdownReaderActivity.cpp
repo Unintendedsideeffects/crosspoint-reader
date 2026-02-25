@@ -95,6 +95,10 @@ void MarkdownReaderActivity::loop() {
     return;
   }
 
+  if (isRenderPending()) {
+    return;
+  }
+
   // Long press for heading navigation (when enabled and AST is available)
   if (SETTINGS.longPressChapterSkip && astReady.load()) {
     constexpr unsigned long headingSkipMs = 500;

@@ -16,6 +16,7 @@ void Activity::renderTaskLoop() {
       render(std::move(lock));
     }
 
+    renderPending = false;
     TaskHandle_t waitingTask = pendingUpdateAckTask.exchange(nullptr);
     if (waitingTask) {
       xTaskNotify(waitingTask, 1, eIncrement);
@@ -48,6 +49,7 @@ void Activity::requestUpdate() {
   // Using direct notification to signal the render task to update
   // Increment counter so multiple rapid calls won't be lost
   if (renderTaskHandle) {
+    renderPending = true;
     xTaskNotify(renderTaskHandle, 1, eIncrement);
   }
 }

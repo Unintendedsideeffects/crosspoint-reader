@@ -107,6 +107,10 @@ void XtcReaderActivity::loop() {
     return;
   }
 
+  if (renderInProgress.load()) {
+    return;
+  }
+
   // When long-press chapter skip is disabled, turn pages on press instead of release.
   const bool usePressForPageTurn = !SETTINGS.longPressChapterSkip;
   const bool prevTriggered = usePressForPageTurn ? (mappedInput.wasPressed(MappedInputManager::Button::PageBack) ||
@@ -157,7 +161,9 @@ void XtcReaderActivity::displayTaskLoop() {
       updateRequired = false;
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       if (!exitTaskRequested.load()) {
+        renderInProgress = true;
         renderScreen();
+        renderInProgress = false;
       }
       xSemaphoreGive(renderingMutex);
     }

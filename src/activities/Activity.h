@@ -28,6 +28,11 @@ class Activity {
   // Mutex to protect rendering operations from being deleted mid-render
   SemaphoreHandle_t renderingMutex = nullptr;
 
+  bool isRenderPending() const { return renderPending.load(); }
+
+ private:
+  std::atomic<bool> renderPending{false};
+
  public:
   explicit Activity(std::string name, GfxRenderer& renderer, MappedInputManager& mappedInput)
       : name(std::move(name)), renderer(renderer), mappedInput(mappedInput), renderingMutex(xSemaphoreCreateMutex()) {

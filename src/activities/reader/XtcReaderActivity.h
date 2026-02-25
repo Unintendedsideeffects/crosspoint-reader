@@ -21,6 +21,7 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
   std::atomic<bool> taskHasExited{false};
+  std::atomic<bool> renderInProgress{false};
   uint32_t currentPage = 0;
   int pagesUntilFullRefresh = 0;
   std::atomic<bool> updateRequired{false};

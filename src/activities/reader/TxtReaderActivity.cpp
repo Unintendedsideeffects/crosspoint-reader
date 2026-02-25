@@ -29,6 +29,7 @@ constexpr uint8_t CACHE_VERSION = 2;          // Increment when cache format cha
 
 void TxtReaderActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
+  backLongPressTriggered = false;
 
   if (!txt) {
     return;
@@ -84,15 +85,24 @@ void TxtReaderActivity::loop() {
     return;
   }
 
-  // Long press BACK (1s+) goes to file selection
-  if (mappedInput.isPressed(MappedInputManager::Button::Back) && mappedInput.getHeldTime() >= goHomeMs) {
-    onGoBack();
-    return;
+  // Long press BACK (1s+) goes to file selection — guard prevents repeated calls
+  if (mappedInput.isPressed(MappedInputManager::Button::Back)) {
+    if (!backLongPressTriggered && mappedInput.getHeldTime() >= goHomeMs) {
+      backLongPressTriggered = true;
+      onGoBack();
+      return;
+    }
+  } else {
+    backLongPressTriggered = false;
   }
 
   // Short press BACK goes directly to home
   if (mappedInput.wasReleased(MappedInputManager::Button::Back) && mappedInput.getHeldTime() < goHomeMs) {
     onGoHome();
+    return;
+  }
+
+  if (isRenderPending()) {
     return;
   }
 

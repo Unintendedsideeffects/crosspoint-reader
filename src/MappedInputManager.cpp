@@ -7,6 +7,8 @@
 namespace {
 // Double-tap window for power button (Back action).
 // Lowering this reduces latency for single-tap Confirm action.
+// Intentional latency: a single tap fires Confirm only after this window expires
+// without a second tap. Wall-clock millis() is used so frame rate has no effect.
 constexpr unsigned long POWER_DOUBLE_TAP_MS = 250;
 
 using ButtonIndex = uint8_t;

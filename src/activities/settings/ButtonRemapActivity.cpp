@@ -65,6 +65,8 @@ void ButtonRemapActivity::loop() {
   }
 
   // Wait for a front button press to assign to the current role.
+  // Intentionally reads raw hardware indices — bypasses logical mapping so the user
+  // can press any physical button regardless of the current (pre-remap) assignment.
   const int pressedButton = mappedInput.getPressedFrontButton();
   if (pressedButton < 0) {
     return;
