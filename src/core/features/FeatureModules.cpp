@@ -32,6 +32,34 @@ namespace core {
 
 bool FeatureModules::isEnabled(const char* featureKey) { return FeatureCatalog::isEnabled(featureKey); }
 
+bool FeatureModules::hasCapability(const Capability capability) {
+  switch (capability) {
+    case Capability::BackgroundServer:
+      return isEnabled("background_server");
+    case Capability::CalibreSync:
+      return isEnabled("calibre_sync");
+    case Capability::DarkMode:
+      return isEnabled("dark_mode");
+    case Capability::KoreaderSync:
+      return isEnabled("koreader_sync");
+    case Capability::LyraTheme:
+      return isEnabled("lyra_theme");
+    case Capability::OtaUpdates:
+      return isEnabled("ota_updates");
+    case Capability::TodoPlanner:
+      return isEnabled("todo_planner");
+    case Capability::UsbMassStorage:
+      return isEnabled("usb_mass_storage");
+    case Capability::UserFonts:
+      return isEnabled("user_fonts");
+    case Capability::WebPokedexPlugin:
+      return isEnabled("web_pokedex_plugin");
+    case Capability::WebWifiSetup:
+      return isEnabled("web_wifi_setup");
+  }
+  return false;
+}
+
 bool FeatureModules::supportsSettingAction(const SettingAction action) {
   switch (action) {
     case SettingAction::RemapFrontButtons:
@@ -40,12 +68,12 @@ bool FeatureModules::supportsSettingAction(const SettingAction action) {
     case SettingAction::FactoryReset:
       return true;
     case SettingAction::KOReaderSync:
-      return isEnabled("koreader_sync");
+      return hasCapability(Capability::KoreaderSync);
     case SettingAction::OPDSBrowser:
-      return isEnabled("calibre_sync");
+      return hasCapability(Capability::CalibreSync);
     case SettingAction::CheckForUpdates:
     case SettingAction::Language:
-      return isEnabled("ota_updates");
+      return hasCapability(Capability::OtaUpdates);
     case SettingAction::None:
       return false;
   }
@@ -161,9 +189,9 @@ FeatureModules::FontScanResult FeatureModules::onFontScanRequested() {
 bool FeatureModules::shouldExposeHomeAction(const HomeOptionalAction action, const bool hasOpdsUrl) {
   switch (action) {
     case HomeOptionalAction::OpdsBrowser:
-      return isEnabled("calibre_sync") && hasOpdsUrl;
+      return hasCapability(Capability::CalibreSync) && hasOpdsUrl;
     case HomeOptionalAction::TodoPlanner:
-      return isEnabled("todo_planner");
+      return hasCapability(Capability::TodoPlanner);
   }
   return false;
 }
@@ -171,13 +199,13 @@ bool FeatureModules::shouldExposeHomeAction(const HomeOptionalAction action, con
 bool FeatureModules::shouldRegisterWebRoute(const WebOptionalRoute route) {
   switch (route) {
     case WebOptionalRoute::PokedexPluginPage:
-      return isEnabled("web_pokedex_plugin");
+      return hasCapability(Capability::WebPokedexPlugin);
     case WebOptionalRoute::UserFontsApi:
-      return isEnabled("user_fonts");
+      return hasCapability(Capability::UserFonts);
     case WebOptionalRoute::WebWifiSetupApi:
-      return isEnabled("web_wifi_setup");
+      return hasCapability(Capability::WebWifiSetup);
     case WebOptionalRoute::OtaApi:
-      return isEnabled("ota_updates");
+      return hasCapability(Capability::OtaUpdates);
   }
   return false;
 }

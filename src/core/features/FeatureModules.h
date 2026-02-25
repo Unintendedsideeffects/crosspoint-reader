@@ -25,9 +25,24 @@ enum class HomeOptionalAction {
   TodoPlanner,
 };
 
+enum class Capability {
+  BackgroundServer,
+  CalibreSync,
+  DarkMode,
+  KoreaderSync,
+  LyraTheme,
+  OtaUpdates,
+  TodoPlanner,
+  UsbMassStorage,
+  UserFonts,
+  WebPokedexPlugin,
+  WebWifiSetup,
+};
+
 class FeatureModules {
  public:
   static bool isEnabled(const char* featureKey);
+  static bool hasCapability(Capability capability);
   static bool supportsSettingAction(SettingAction action);
 
   static Activity* createSettingsSubActivity(SettingAction action, GfxRenderer& renderer,

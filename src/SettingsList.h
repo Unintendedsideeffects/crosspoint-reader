@@ -45,7 +45,7 @@ inline std::vector<SettingInfo> getSettingsList() {
       SettingInfo::DynamicEnum(
           StrId::STR_UI_THEME,
           [] {
-            if (core::FeatureModules::isEnabled("lyra_theme")) {
+            if (core::FeatureModules::hasCapability(core::Capability::LyraTheme)) {
               return std::vector<StrId>{StrId::STR_THEME_CLASSIC, StrId::STR_THEME_LYRA, StrId::STR_THEME_LYRA_EXTENDED,
                                         StrId::STR_THEME_FORK_DRIFT};
             }
@@ -104,17 +104,17 @@ inline std::vector<SettingInfo> getSettingsList() {
                         "sleepTimeout", StrId::STR_CAT_SYSTEM),
   };
 
-  if (core::FeatureModules::isEnabled("dark_mode")) {
+  if (core::FeatureModules::hasCapability(core::Capability::DarkMode)) {
     list.push_back(
         SettingInfo::Toggle(StrId::STR_DARK_MODE, &CrossPointSettings::darkMode, "darkMode", StrId::STR_CAT_DISPLAY));
   }
 
-  if (core::FeatureModules::isEnabled("usb_mass_storage")) {
+  if (core::FeatureModules::hasCapability(core::Capability::UsbMassStorage)) {
     list.push_back(SettingInfo::Toggle(StrId::STR_FILE_TRANSFER, &CrossPointSettings::usbMscPromptOnConnect,
                                        "usbMscPromptOnConnect", StrId::STR_CAT_SYSTEM));
   }
 
-  if (core::FeatureModules::isEnabled("background_server")) {
+  if (core::FeatureModules::hasCapability(core::Capability::BackgroundServer)) {
     list.push_back(SettingInfo::Toggle(StrId::STR_BACKGROUND_SERVER_ON_CHARGE,
                                        &CrossPointSettings::backgroundServerOnCharge, "backgroundServerOnCharge",
                                        StrId::STR_CAT_SYSTEM));
@@ -196,7 +196,7 @@ inline std::vector<SettingInfo> getSettingsList() {
   list.push_back(std::move(userFontPathSetting));
 #endif
 
-  if (core::FeatureModules::isEnabled("calibre_sync")) {
+  if (core::FeatureModules::hasCapability(core::Capability::CalibreSync)) {
     // --- OPDS Browser (web-only, uses CrossPointSettings char arrays) ---
     list.push_back(SettingInfo::String(StrId::STR_OPDS_SERVER_URL, SETTINGS.opdsServerUrl,
                                        sizeof(SETTINGS.opdsServerUrl), "opdsServerUrl", StrId::STR_OPDS_BROWSER));
