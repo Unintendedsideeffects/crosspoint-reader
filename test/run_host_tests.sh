@@ -22,6 +22,7 @@ g++ -std=c++20 -O2 \
   "$ROOT_DIR/test/HostTests.cpp" \
   "$ROOT_DIR/lib/FsHelpers/FsHelpers.cpp" \
   "$ROOT_DIR/lib/Markdown/MarkdownParser.cpp" \
+  "$ROOT_DIR/src/core/features/FeatureCatalog.cpp" \
   "$ROOT_DIR/src/util/InputValidation.cpp" \
   "$ROOT_DIR/src/util/PathUtils.cpp" \
   "$ROOT_DIR/src/CrossPointSettings.cpp" \

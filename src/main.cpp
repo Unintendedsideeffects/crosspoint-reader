@@ -15,10 +15,8 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
-#include "FeatureManifest.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
-#include "UserFontManager.h"
 #include "WifiCredentialStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
@@ -27,6 +25,7 @@
 #include "activities/network/CrossPointWebServerActivity.h"
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
+#include "core/features/FeatureLifecycle.h"
 #if ENABLE_TODO_PLANNER
 #include "activities/todo/TodoActivity.h"
 #include "activities/todo/TodoFallbackActivity.h"
@@ -34,6 +33,7 @@
 #endif
 #include "activities/util/FullScreenMessageActivity.h"
 #include "components/UITheme.h"
+#include "core/CoreBootstrap.h"
 #include "fontIds.h"
 #include "network/BackgroundWebServer.h"
 #include "util/ButtonNavigator.h"
@@ -41,10 +41,6 @@
 #include "util/FactoryResetUtils.h"
 #if ENABLE_USB_MASS_STORAGE
 #include "UsbSerialProtocol.h"
-#endif
-
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-#include "KOReaderCredentialStore.h"
 #endif
 
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
@@ -151,15 +147,6 @@ EpdFontFamily ui10FontFamily(&ui10RegularFont, &ui10BoldFont);
 EpdFont ui12RegularFont(&ubuntu_12_regular);
 EpdFont ui12BoldFont(&ubuntu_12_bold);
 EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
-
-#if ENABLE_USER_FONTS
-#include <SdFont.h>
-SdFont regularSdFont;
-SdFont boldSdFont;
-SdFont italicSdFont;
-SdFont boldItalicSdFont;
-EpdFontFamily userSdFontFamily(&regularSdFont, &boldSdFont, &italicSdFont, &boldItalicSdFont);
-#endif
 
 // measurement of power button press duration calibration value
 unsigned long t1 = 0;
@@ -440,9 +427,7 @@ void setupDisplayAndFonts() {
   renderer.insertFontFamily(UI_12_FONT_ID, &ui12FontFamily);
   renderer.insertFontFamily(SMALL_FONT_ID, &smallFontFamily);
 
-#if ENABLE_USER_FONTS
-  renderer.insertFontFamily(USER_SD_FONT_ID, &userSdFontFamily);
-#endif
+  core::FeatureLifecycle::onFontSetup(renderer);
 
   LOG_DBG("MAIN", "Fonts setup");
 }
@@ -453,18 +438,18 @@ void setup() {
   gpio.begin();
   powerManager.begin();
 
+  const bool usbConnectedAtBoot = gpio.isUsbConnected();
+
   // Only start serial if USB connected
-  if (gpio.isUsbConnected()) {
+  if (usbConnectedAtBoot) {
     Serial.begin(115200);
     // Wait up to 3 seconds for Serial to be ready to catch early logs
     unsigned long start = millis();
     while (!Serial && (millis() - start) < 3000) {
       delay(10);
     }
-
-    // Print feature configuration for debugging
-    FeatureManifest::printToSerial();
   }
+  core::CoreBootstrap::initializeFeatureSystem(usbConnectedAtBoot);
 
   // SD Card Initialization
   // We need 6 open files concurrently when parsing a new chapter
@@ -476,10 +461,7 @@ void setup() {
     return;
   }
 
-#if ENABLE_USER_FONTS
-  UserFontManager::setGlobalFonts(&regularSdFont, &boldSdFont, &italicSdFont, &boldItalicSdFont);
-  UserFontManager::getInstance().scanFonts();
-#endif
+  core::FeatureLifecycle::onStorageReady();
 
   applyPendingFactoryReset();
 #if ENABLE_USB_MASS_STORAGE
@@ -491,24 +473,10 @@ void setup() {
 #endif
 
   SETTINGS.loadFromFile();
-#if ENABLE_USER_FONTS
-  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD &&
-      !UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath)) {
-    SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-    if (!SETTINGS.saveToFile()) {
-      LOG_WRN("FONTS", "Failed to persist font fallback to SD card");
-    }
-  }
-#endif
+  core::FeatureLifecycle::onSettingsLoaded(renderer);
   I18N.loadSettings();
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-  KOREADER_STORE.loadFromFile();
-#endif
   WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
   UITheme::getInstance().reload();
-#if ENABLE_DARK_MODE
-  renderer.setDarkMode(SETTINGS.darkMode);
-#endif
   ButtonNavigator::setMappedInputManager(mappedInputManager);
 
   switch (gpio.getWakeupReason()) {

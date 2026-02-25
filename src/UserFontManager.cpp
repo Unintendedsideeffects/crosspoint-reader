@@ -20,17 +20,7 @@ bool hasSuffix(const std::string& value, const char* suffix) {
 }
 }  // namespace
 
-SdFont* UserFontManager::gRegular = nullptr;
-SdFont* UserFontManager::gBold = nullptr;
-SdFont* UserFontManager::gItalic = nullptr;
-SdFont* UserFontManager::gBoldItalic = nullptr;
-
-void UserFontManager::setGlobalFonts(SdFont* regular, SdFont* bold, SdFont* italic, SdFont* boldItalic) {
-  gRegular = regular;
-  gBold = bold;
-  gItalic = italic;
-  gBoldItalic = boldItalic;
-}
+UserFontManager::UserFontManager() : fontFamily(&regularFont, &boldFont, &italicFont, &boldItalicFont) {}
 
 void UserFontManager::scanFonts() {
   availableFonts.clear();
@@ -71,10 +61,10 @@ void UserFontManager::scanFonts() {
 }
 
 void UserFontManager::unloadCurrentFont() {
-  if (gRegular) gRegular->unload();
-  if (gBold) gBold->unload();
-  if (gItalic) gItalic->unload();
-  if (gBoldItalic) gBoldItalic->unload();
+  regularFont.unload();
+  boldFont.unload();
+  italicFont.unload();
+  boldItalicFont.unload();
   currentFontName = "";
 }
 
@@ -85,13 +75,11 @@ bool UserFontManager::loadFontFamily(const std::string& fontName) {
   const std::string basePath = "/fonts/" + fontName;
   std::string regularPath;
 
-  if (!gRegular) return false;
-
   const std::string canonicalRegular = basePath + "-Regular.cpf";
   const std::string fallbackRegular = basePath + ".cpf";
-  if (Storage.exists(canonicalRegular.c_str()) && gRegular->load(canonicalRegular)) {
+  if (Storage.exists(canonicalRegular.c_str()) && regularFont.load(canonicalRegular)) {
     regularPath = canonicalRegular;
-  } else if (Storage.exists(fallbackRegular.c_str()) && gRegular->load(fallbackRegular)) {
+  } else if (Storage.exists(fallbackRegular.c_str()) && regularFont.load(fallbackRegular)) {
     regularPath = fallbackRegular;
   }
 
@@ -100,18 +88,17 @@ bool UserFontManager::loadFontFamily(const std::string& fontName) {
     return false;
   }
 
-  auto loadStyleOrFallback = [&](SdFont* target, const std::string& stylePath) {
-    if (!target) return;
+  auto loadStyleOrFallback = [&](SdFont& target, const std::string& stylePath) {
     if (Storage.exists(stylePath.c_str())) {
-      if (target->load(stylePath)) return;
+      if (target.load(stylePath)) return;
       LOG_WRN("FONTS", "Failed loading style file, falling back to regular: %s", stylePath.c_str());
     }
-    target->load(regularPath);
+    target.load(regularPath);
   };
 
-  loadStyleOrFallback(gBold, basePath + "-Bold.cpf");
-  loadStyleOrFallback(gItalic, basePath + "-Italic.cpf");
-  loadStyleOrFallback(gBoldItalic, basePath + "-BoldItalic.cpf");
+  loadStyleOrFallback(boldFont, basePath + "-Bold.cpf");
+  loadStyleOrFallback(italicFont, basePath + "-Italic.cpf");
+  loadStyleOrFallback(boldItalicFont, basePath + "-BoldItalic.cpf");
 
   currentFontName = fontName;
   LOG_INF("FONTS", "Loaded font family: %s", fontName.c_str());

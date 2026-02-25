@@ -59,23 +59,54 @@ When disabled features are accessed, the system shows user-friendly errors:
 
 ### 4. Runtime Observability
 
-The `FeatureManifest` class provides compile-time feature detection:
+The core feature API (`core::FeatureCatalog`) provides runtime observability and
+dependency validation. `FeatureManifest` remains as a compatibility wrapper for
+existing call sites.
 
 ```cpp
-#include "FeatureManifest.h"
+#include "core/features/FeatureCatalog.h"
 
-if (FeatureManifest::hasMarkdown()) {
-  // Safe to use markdown features
+if (core::FeatureCatalog::isEnabled("markdown")) {
+  // Safe to use markdown-specific runtime paths
 }
 
-// Print configuration on boot
-FeatureManifest::printToSerial();
+// Validate dependency graph at startup
+String error;
+bool ok = core::FeatureCatalog::validate(&error);
 
 // Expose via web API (/api/plugins)
-String json = FeatureManifest::toJson();
+String json = core::FeatureCatalog::toJson();
 ```
 
-### 5. External Sleep App Hook
+### 5. Feature Startup Lifecycle
+
+Feature-specific startup behavior (user fonts, dark mode, integration credential
+stores) is centralized behind explicit lifecycle hooks rather than scattered as
+`#if ENABLE_X` blocks in `main.cpp`.
+
+```cpp
+#include "core/features/FeatureLifecycle.h"
+
+// After SD card mounted — features scan storage resources (font families, etc.)
+core::FeatureLifecycle::onStorageReady();
+
+// After settings loaded — features apply config to hardware/runtime state
+core::FeatureLifecycle::onSettingsLoaded(renderer);
+
+// During font setup — feature-provided font families are registered
+core::FeatureLifecycle::onFontSetup(renderer);
+```
+
+`main.cpp` calls each stage once in order; each hook internally gates its work
+behind compile-time feature flags so disabled features cost nothing.
+
+**Adding startup behavior for a new feature:**
+
+1. Add the feature's startup code inside the appropriate hook in
+   `src/core/features/FeatureLifecycle.cpp`, guarded by `#if ENABLE_MY_FEATURE`.
+2. No changes to `main.cpp` are required.
+
+### 6. External Sleep App Hook
 
 Sleep rendering has an extension point for future integrations (for example, TRMNL-like dashboards during sleep).
 

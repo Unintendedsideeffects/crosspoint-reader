@@ -10,6 +10,7 @@
 #include "lib/FsHelpers/FsHelpers.h"
 #include "lib/Markdown/MarkdownParser.h"
 #include "lib/Serialization/Serialization.h"
+#include "src/core/features/FeatureCatalog.h"
 #include "src/fontIds.h"
 #include "test/mock/Arduino.h"
 #include "test/mock/HalStorage.h"
@@ -120,6 +121,35 @@ void testInputValidation() {
   assert(!InputValidation::parseStrictPositiveSize(huge.c_str(), huge.size(), static_cast<size_t>(-1), parsed));
 
   std::cout << "Input validation hardening tests passed!" << std::endl;
+}
+
+void testFeatureCatalogApi() {
+  std::cout << "Testing core feature catalog API..." << std::endl;
+
+  size_t featureCount = 0;
+  const core::FeatureDescriptor* features = core::FeatureCatalog::all(featureCount);
+  assert(features != nullptr);
+  assert(featureCount == 25);
+  assert(core::FeatureCatalog::totalCount() == featureCount);
+
+  assert(core::FeatureCatalog::isEnabled("epub_support") == (ENABLE_EPUB_SUPPORT != 0));
+  assert(core::FeatureCatalog::isEnabled("home_media_picker") == (ENABLE_HOME_MEDIA_PICKER != 0));
+  assert(core::FeatureCatalog::isEnabled("missing_feature") == false);
+  assert(core::FeatureCatalog::find("missing_feature") == nullptr);
+
+  const String json = core::FeatureCatalog::toJson();
+  assert(!json.isEmpty());
+  assert(json.indexOf("\"epub_support\":") != -1);
+  assert(json.indexOf("\"todo_planner\":") != -1);
+
+  const String buildString = core::FeatureCatalog::buildString();
+  assert(!buildString.isEmpty());
+
+  String dependencyError;
+  assert(core::FeatureCatalog::validate(&dependencyError));
+  assert(dependencyError.isEmpty());
+
+  std::cout << "Core feature catalog API tests passed!" << std::endl;
 }
 
 // ── New tests ─────────────────────────────────────────────────────────────
@@ -436,6 +466,7 @@ int main() {
   testMarkdownLimits();
   testTodoPlannerStorageSelection();
   testInputValidation();
+  testFeatureCatalogApi();
   testSettingsRoundTrip();
   testSettingsTruncatedLoad();
   testPathUtilsSecurity();
