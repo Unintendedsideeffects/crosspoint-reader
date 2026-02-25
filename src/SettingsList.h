@@ -10,6 +10,7 @@
 #include "FeatureFlags.h"
 #include "UserFontManager.h"
 #include "activities/settings/SettingsActivity.h"
+#include "core/features/FeatureModules.h"
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 #include "KOReaderCredentialStore.h"
 #endif
@@ -44,19 +45,15 @@ inline std::vector<SettingInfo> getSettingsList() {
       SettingInfo::DynamicEnum(
           StrId::STR_UI_THEME,
           [] {
-#if ENABLE_LYRA_THEME
-            return std::vector<StrId>{StrId::STR_THEME_CLASSIC, StrId::STR_THEME_LYRA, StrId::STR_THEME_LYRA_EXTENDED,
-                                      StrId::STR_THEME_FORK_DRIFT};
-#else
+            if (core::FeatureModules::isEnabled("lyra_theme")) {
+              return std::vector<StrId>{StrId::STR_THEME_CLASSIC, StrId::STR_THEME_LYRA, StrId::STR_THEME_LYRA_EXTENDED,
+                                        StrId::STR_THEME_FORK_DRIFT};
+            }
             return std::vector<StrId>{StrId::STR_THEME_CLASSIC};
-#endif
           }(),
           [] { return SETTINGS.uiTheme; }, [](uint8_t v) { SETTINGS.uiTheme = v; }, "uiTheme", StrId::STR_CAT_DISPLAY),
       SettingInfo::Toggle(StrId::STR_SUNLIGHT_FADING_FIX, &CrossPointSettings::fadingFix, "fadingFix",
                           StrId::STR_CAT_DISPLAY),
-#if ENABLE_DARK_MODE
-      SettingInfo::Toggle(StrId::STR_DARK_MODE, &CrossPointSettings::darkMode, "darkMode", StrId::STR_CAT_DISPLAY),
-#endif
 
       // --- Reader ---
       SettingInfo::Enum(StrId::STR_FONT_FAMILY, &CrossPointSettings::fontFamily,
@@ -105,15 +102,23 @@ inline std::vector<SettingInfo> getSettingsList() {
       SettingInfo::Enum(StrId::STR_TIME_TO_SLEEP, &CrossPointSettings::sleepTimeout,
                         {StrId::STR_MIN_1, StrId::STR_MIN_5, StrId::STR_MIN_10, StrId::STR_MIN_15, StrId::STR_MIN_30},
                         "sleepTimeout", StrId::STR_CAT_SYSTEM),
-#if ENABLE_USB_MASS_STORAGE
-      SettingInfo::Toggle(StrId::STR_FILE_TRANSFER, &CrossPointSettings::usbMscPromptOnConnect, "usbMscPromptOnConnect",
-                          StrId::STR_CAT_SYSTEM),
-#endif
-#if ENABLE_BACKGROUND_SERVER
-      SettingInfo::Toggle(StrId::STR_BACKGROUND_SERVER_ON_CHARGE, &CrossPointSettings::backgroundServerOnCharge,
-                          "backgroundServerOnCharge", StrId::STR_CAT_SYSTEM),
-#endif
   };
+
+  if (core::FeatureModules::isEnabled("dark_mode")) {
+    list.push_back(
+        SettingInfo::Toggle(StrId::STR_DARK_MODE, &CrossPointSettings::darkMode, "darkMode", StrId::STR_CAT_DISPLAY));
+  }
+
+  if (core::FeatureModules::isEnabled("usb_mass_storage")) {
+    list.push_back(SettingInfo::Toggle(StrId::STR_FILE_TRANSFER, &CrossPointSettings::usbMscPromptOnConnect,
+                                       "usbMscPromptOnConnect", StrId::STR_CAT_SYSTEM));
+  }
+
+  if (core::FeatureModules::isEnabled("background_server")) {
+    list.push_back(SettingInfo::Toggle(StrId::STR_BACKGROUND_SERVER_ON_CHARGE,
+                                       &CrossPointSettings::backgroundServerOnCharge, "backgroundServerOnCharge",
+                                       StrId::STR_CAT_SYSTEM));
+  }
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   // --- KOReader Sync (web-only, uses KOReaderCredentialStore) ---
@@ -191,13 +196,15 @@ inline std::vector<SettingInfo> getSettingsList() {
   list.push_back(std::move(userFontPathSetting));
 #endif
 
-  // --- OPDS Browser (web-only, uses CrossPointSettings char arrays) ---
-  list.push_back(SettingInfo::String(StrId::STR_OPDS_SERVER_URL, SETTINGS.opdsServerUrl, sizeof(SETTINGS.opdsServerUrl),
-                                     "opdsServerUrl", StrId::STR_OPDS_BROWSER));
-  list.push_back(SettingInfo::String(StrId::STR_USERNAME, SETTINGS.opdsUsername, sizeof(SETTINGS.opdsUsername),
-                                     "opdsUsername", StrId::STR_OPDS_BROWSER));
-  list.push_back(SettingInfo::String(StrId::STR_PASSWORD, SETTINGS.opdsPassword, sizeof(SETTINGS.opdsPassword),
-                                     "opdsPassword", StrId::STR_OPDS_BROWSER));
+  if (core::FeatureModules::isEnabled("calibre_sync")) {
+    // --- OPDS Browser (web-only, uses CrossPointSettings char arrays) ---
+    list.push_back(SettingInfo::String(StrId::STR_OPDS_SERVER_URL, SETTINGS.opdsServerUrl,
+                                       sizeof(SETTINGS.opdsServerUrl), "opdsServerUrl", StrId::STR_OPDS_BROWSER));
+    list.push_back(SettingInfo::String(StrId::STR_USERNAME, SETTINGS.opdsUsername, sizeof(SETTINGS.opdsUsername),
+                                       "opdsUsername", StrId::STR_OPDS_BROWSER));
+    list.push_back(SettingInfo::String(StrId::STR_PASSWORD, SETTINGS.opdsPassword, sizeof(SETTINGS.opdsPassword),
+                                       "opdsPassword", StrId::STR_OPDS_BROWSER));
+  }
 
   return list;
 }
