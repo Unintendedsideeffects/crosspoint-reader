@@ -210,7 +210,7 @@ jobs:
             .pio/build/gh_latest/partitions.bin
           retention-days: 7
 
-  # ── Publish: update rolling latest channel (4 variants) on fork-drift push ─
+  # ── Publish: update rolling latest channel (5 variants + shared partitions) on fork-drift push ─
   publish-latest:
     needs: [build, build-latest]
     if: >-
@@ -243,14 +243,13 @@ jobs:
           set -euo pipefail
           mkdir -p channel
           cp artifacts/latest-standard/firmware.bin channel/crosspoint-standard.bin
-          cp artifacts/latest-standard/partitions.bin channel/crosspoint-standard-partitions.bin
+          cp artifacts/latest-standard/partitions.bin channel/crosspoint-partitions.bin
           cp artifacts/lean/firmware.bin channel/crosspoint-lean.bin
-          cp artifacts/lean/partitions.bin channel/crosspoint-lean-partitions.bin
           cp artifacts/full/firmware.bin channel/crosspoint-full.bin
-          cp artifacts/full/partitions.bin channel/crosspoint-full-partitions.bin
           # lean-reset intentionally reuses the lean profile firmware.
           cp artifacts/lean/firmware.bin channel/crosspoint-lean-reset.bin
-          cp artifacts/lean/partitions.bin channel/crosspoint-lean-reset-partitions.bin
+          # full-reset intentionally reuses the full profile firmware.
+          cp artifacts/full/firmware.bin channel/crosspoint-full-reset.bin
           ls -lh channel
 
       - name: Remove existing latest assets
@@ -308,31 +307,27 @@ jobs:
 
           # Lean firmware
           cp artifacts/firmware-lean/firmware.bin firmware-lean.bin
-          cp artifacts/firmware-lean/partitions.bin partitions-lean.bin
           cp firmware-lean.bin "crosspoint-${TAG}-lean.bin"
-          cp partitions-lean.bin "crosspoint-${TAG}-lean-partitions.bin"
 
           # Lean reset firmware (same payload as lean, separate distribution target)
           cp firmware-lean.bin firmware-lean-reset.bin
-          cp partitions-lean.bin partitions-lean-reset.bin
           cp firmware-lean-reset.bin "crosspoint-${TAG}-lean-reset.bin"
-          cp partitions-lean-reset.bin "crosspoint-${TAG}-lean-reset-partitions.bin"
 
           # Full firmware
           cp artifacts/firmware-full/firmware.bin firmware-full.bin
-          cp artifacts/firmware-full/partitions.bin partitions-full.bin
           cp firmware-full.bin "crosspoint-${TAG}-full.bin"
-          cp partitions-full.bin "crosspoint-${TAG}-full-partitions.bin"
+
+          # Full reset firmware (same payload as full, separate distribution target)
+          cp firmware-full.bin firmware-full-reset.bin
+          cp firmware-full-reset.bin "crosspoint-${TAG}-full-reset.bin"
 
           # Stable channel rolling assets (tag: stable)
           cp firmware.bin crosspoint-standard.bin
-          cp partitions.bin crosspoint-standard-partitions.bin
+          cp partitions.bin crosspoint-partitions.bin
           cp firmware-lean.bin crosspoint-lean.bin
-          cp partitions-lean.bin crosspoint-lean-partitions.bin
           cp firmware-full.bin crosspoint-full.bin
-          cp partitions-full.bin crosspoint-full-partitions.bin
           cp firmware-lean-reset.bin crosspoint-lean-reset.bin
-          cp partitions-lean-reset.bin crosspoint-lean-reset-partitions.bin
+          cp firmware-full-reset.bin crosspoint-full-reset.bin
 
           echo "Release assets:"
           ls -lh *.bin
@@ -344,19 +339,15 @@ jobs:
             firmware.bin
             partitions.bin
             firmware-lean.bin
-            partitions-lean.bin
             firmware-full.bin
-            partitions-full.bin
             firmware-lean-reset.bin
-            partitions-lean-reset.bin
+            firmware-full-reset.bin
             crosspoint-${{ github.ref_name }}.bin
             crosspoint-${{ github.ref_name }}-partitions.bin
             crosspoint-${{ github.ref_name }}-lean.bin
-            crosspoint-${{ github.ref_name }}-lean-partitions.bin
             crosspoint-${{ github.ref_name }}-full.bin
-            crosspoint-${{ github.ref_name }}-full-partitions.bin
             crosspoint-${{ github.ref_name }}-lean-reset.bin
-            crosspoint-${{ github.ref_name }}-lean-reset-partitions.bin
+            crosspoint-${{ github.ref_name }}-full-reset.bin
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -389,10 +380,8 @@ jobs:
           generate_release_notes: false
           files: |
             crosspoint-standard.bin
-            crosspoint-standard-partitions.bin
+            crosspoint-partitions.bin
             crosspoint-lean.bin
-            crosspoint-lean-partitions.bin
             crosspoint-full.bin
-            crosspoint-full-partitions.bin
             crosspoint-lean-reset.bin
-            crosspoint-lean-reset-partitions.bin
+            crosspoint-full-reset.bin

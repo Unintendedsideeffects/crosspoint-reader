@@ -88,12 +88,14 @@ Firmware is published as two rolling channel tags:
 - `latest` (auto-updated from green `fork-drift` pushes)
 - `stable` (updated on stable version tags)
 
-Each channel publishes four variants:
+Each channel publishes five firmware variants plus one shared partitions file:
 
-- `crosspoint-standard.bin` (+ `crosspoint-standard-partitions.bin`)
-- `crosspoint-lean.bin` (+ `crosspoint-lean-partitions.bin`)
-- `crosspoint-full.bin` (+ `crosspoint-full-partitions.bin`)
-- `crosspoint-lean-reset.bin` (+ `crosspoint-lean-reset-partitions.bin`)
+- `crosspoint-standard.bin`
+- `crosspoint-lean.bin`
+- `crosspoint-full.bin`
+- `crosspoint-lean-reset.bin`
+- `crosspoint-full-reset.bin`
+- `crosspoint-partitions.bin`
 
 ### Web (Specific Firmware Version)
 
