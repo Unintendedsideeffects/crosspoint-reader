@@ -48,10 +48,12 @@ void ForkDriftTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const
                                          bool& bufferRestored, std::function<bool()> storeCoverBuffer) const {
   const int pad = ForkDriftMetrics::values.contentSidePadding;
   const int tileWidth = (rect.width - 2 * pad) / gridCols;
-  const int tileHeight = rect.height / gridRows;
+  const int bookCount = static_cast<int>(recentBooks.size());
+  const int usedRows = bookCount > gridCols ? gridRows : 1;
+  const int maxCells = gridCols * usedRows;
+  const int tileHeight = rect.height / usedRows;
   const int coverHeight = ForkDriftMetrics::values.homeCoverHeight;
   const bool hasBooks = !recentBooks.empty();
-  const int maxCells = gridCols * gridRows;
 
   if (hasBooks) {
     if (!coverRendered) {

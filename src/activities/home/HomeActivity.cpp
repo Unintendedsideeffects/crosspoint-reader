@@ -401,8 +401,8 @@ void HomeActivity::loop() {
 
     if (forkDrift) {
       constexpr int coverCols = 3;
-      constexpr int coverRows = 2;
       const int bookCount = static_cast<int>(recentBooks.size());
+      const int coverRows = bookCount > 3 ? 2 : 1;
 
       if (inButtonGrid) {
         constexpr int btnCols = 2;
@@ -526,8 +526,12 @@ void HomeActivity::render(Activity::RenderLock&&) {
     const int coverSelector = forkDrift && inButtonGrid ? -1 : selectedBookIndex;
     const int menuSelector = forkDrift && !inButtonGrid ? -1 : selectedMenuIndex;
 
-    GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, metrics.homeCoverTileHeight), recentBooks, coverSelector,
-                            coverRendered, coverBufferStored, bufferRestored, [this]() { return storeCoverBuffer(); });
+    const int bookCountRender = static_cast<int>(recentBooks.size());
+    const int singleRowH = metrics.homeCoverTileHeight / 2;
+    const int coverTileH = forkDrift ? ((bookCountRender > 3 ? 2 : 1) * singleRowH) : metrics.homeCoverTileHeight;
+
+    GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, coverTileH), recentBooks, coverSelector, coverRendered,
+                            coverBufferStored, bufferRestored, [this]() { return storeCoverBuffer(); });
 
     std::vector<std::string> menuLabels;
     std::vector<UIIcon> menuIcons;
@@ -535,15 +539,15 @@ void HomeActivity::render(Activity::RenderLock&&) {
     menuIcons.reserve(6);
 
     if (forkDrift) {
-      menuLabels.push_back("Library");
+      menuLabels.push_back(tr(STR_BOOKS));
       menuIcons.push_back(Folder);
       if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
         menuLabels.push_back("Agenda");
         menuIcons.push_back(Text);
       }
-      menuLabels.push_back("File Manager");
+      menuLabels.push_back(tr(STR_FILE_TRANSFER));
       menuIcons.push_back(Transfer);
-      menuLabels.push_back("Settings");
+      menuLabels.push_back(tr(STR_SETTINGS_TITLE));
       menuIcons.push_back(Settings);
     } else {
       menuLabels.push_back(recentBooks.empty() ? "Open Book (empty)" : "Open Book");
@@ -566,12 +570,12 @@ void HomeActivity::render(Activity::RenderLock&&) {
 
     GUI.drawButtonMenu(
         renderer,
-        Rect{0, metrics.homeCoverTileHeight + metrics.verticalSpacing, pageWidth,
-             pageHeight - (metrics.homeCoverTileHeight + metrics.verticalSpacing * 2 + metrics.buttonHintsHeight)},
+        Rect{0, coverTileH + metrics.verticalSpacing, pageWidth,
+             pageHeight - (coverTileH + metrics.verticalSpacing * 2 + metrics.buttonHintsHeight)},
         static_cast<int>(menuLabels.size()), menuSelector, [&menuLabels](const int index) { return menuLabels[index]; },
         [&menuIcons](const int index) { return menuIcons[index]; });
 
-    const auto labels = mappedInput.mapLabels("", "Select", "Up", "Down");
+    const auto labels = mappedInput.mapLabels("", tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   } else {
     constexpr int margin = 20;
