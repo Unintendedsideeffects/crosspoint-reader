@@ -47,11 +47,27 @@ enum class Capability {
 
 class FeatureModules {
  public:
+  enum class ReaderOpenStatus {
+    Opened,
+    Unsupported,
+    LoadFailed,
+  };
+
+  struct ReaderOpenResult {
+    ReaderOpenStatus status = ReaderOpenStatus::LoadFailed;
+    Activity* activity = nullptr;
+    const char* logMessage = nullptr;
+    const char* uiMessage = nullptr;
+  };
+
   static bool isEnabled(const char* featureKey);
   static bool hasCapability(Capability capability);
   static String getBuildString();
   static String getFeatureMapJson();
   static bool supportsSettingAction(SettingAction action);
+  static ReaderOpenResult createReaderActivityForPath(
+      const std::string& path, GfxRenderer& renderer, MappedInputManager& mappedInput,
+      const std::function<void(const std::string&)>& onBackToLibraryPath, const std::function<void()>& onBackHome);
 
   static Activity* createSettingsSubActivity(SettingAction action, GfxRenderer& renderer,
                                              MappedInputManager& mappedInput, const std::function<void()>& onComplete,

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstring>
+#include <memory>
 #include <utility>
 
 #if ENABLE_EPUB_SUPPORT
@@ -13,18 +14,31 @@
 #endif
 
 #include "CrossPointSettings.h"
-#if ENABLE_EPUB_SUPPORT
 #include "SpiBusMutex.h"
-#endif
 #include "activities/network/WifiSelectionActivity.h"
+#if ENABLE_EPUB_SUPPORT
+#include "activities/reader/EpubReaderActivity.h"
+#endif
+#if ENABLE_MARKDOWN
+#include "activities/reader/MarkdownReaderActivity.h"
+#endif
+#include "activities/reader/TxtReaderActivity.h"
+#if ENABLE_XTC_SUPPORT
+#include "activities/reader/XtcReaderActivity.h"
+#endif
 #include "activities/settings/ButtonRemapActivity.h"
 #include "activities/settings/ClearCacheActivity.h"
 #include "activities/settings/FactoryResetActivity.h"
 #include "activities/settings/LanguageSelectActivity.h"
 #include "activities/settings/SettingsActivity.h"
 #include "core/features/FeatureCatalog.h"
-#if ENABLE_EPUB_SUPPORT
 #include "util/StringUtils.h"
+#if ENABLE_MARKDOWN
+#include "Markdown.h"
+#endif
+#include "Txt.h"
+#if ENABLE_XTC_SUPPORT
+#include "Xtc.h"
 #endif
 
 #if ENABLE_WEB_POKEDEX_PLUGIN
@@ -63,6 +77,84 @@ static_assert(PokedexPluginPageHtmlCompressedSize == sizeof(PokedexPluginPageHtm
 #endif
 
 namespace {
+bool isXtcDocumentPath(const std::string& path) {
+  return StringUtils::checkFileExtension(path, ".xtc") || StringUtils::checkFileExtension(path, ".xtch");
+}
+
+bool isTxtDocumentPath(const std::string& path) { return StringUtils::checkFileExtension(path, ".txt"); }
+
+bool isMarkdownDocumentPath(const std::string& path) { return StringUtils::checkFileExtension(path, ".md"); }
+
+#if ENABLE_EPUB_SUPPORT
+std::unique_ptr<Epub> loadEpubDocument(const std::string& path) {
+  SpiBusMutex::Guard guard;
+  if (!Storage.exists(path.c_str())) {
+    LOG_ERR("READER", "File does not exist: %s", path.c_str());
+    return nullptr;
+  }
+
+  auto epub = std::unique_ptr<Epub>(new Epub(path, "/.crosspoint"));
+  if (epub->load()) {
+    return epub;
+  }
+
+  LOG_ERR("READER", "Failed to load EPUB");
+  return nullptr;
+}
+#endif
+
+#if ENABLE_XTC_SUPPORT
+std::unique_ptr<Xtc> loadXtcDocument(const std::string& path) {
+  SpiBusMutex::Guard guard;
+  if (!Storage.exists(path.c_str())) {
+    LOG_ERR("READER", "File does not exist: %s", path.c_str());
+    return nullptr;
+  }
+
+  auto xtc = std::unique_ptr<Xtc>(new Xtc(path, "/.crosspoint"));
+  if (xtc->load()) {
+    return xtc;
+  }
+
+  LOG_ERR("READER", "Failed to load XTC");
+  return nullptr;
+}
+#endif
+
+std::unique_ptr<Txt> loadTxtDocument(const std::string& path) {
+  SpiBusMutex::Guard guard;
+  if (!Storage.exists(path.c_str())) {
+    LOG_ERR("READER", "File does not exist: %s", path.c_str());
+    return nullptr;
+  }
+
+  auto txt = std::unique_ptr<Txt>(new Txt(path, "/.crosspoint"));
+  if (txt->load()) {
+    return txt;
+  }
+
+  LOG_ERR("READER", "Failed to load TXT");
+  return nullptr;
+}
+
+#if ENABLE_MARKDOWN
+std::unique_ptr<Markdown> loadMarkdownDocument(const std::string& path) {
+  SpiBusMutex::Guard guard;
+  if (!Storage.exists(path.c_str())) {
+    LOG_ERR("READER", "File does not exist: %s", path.c_str());
+    return nullptr;
+  }
+
+  auto markdown = std::unique_ptr<Markdown>(new Markdown(path, "/.crosspoint"));
+  if (markdown->load()) {
+    return markdown;
+  }
+
+  LOG_ERR("READER", "Failed to load Markdown");
+  return nullptr;
+}
+#endif
+
 #if ENABLE_OTA_UPDATES
 enum class OtaWebCheckState { Idle, Checking, Done };
 
@@ -138,6 +230,108 @@ bool FeatureModules::hasCapability(const Capability capability) {
 String FeatureModules::getBuildString() { return FeatureCatalog::buildString(); }
 
 String FeatureModules::getFeatureMapJson() { return FeatureCatalog::toJson(); }
+
+FeatureModules::ReaderOpenResult FeatureModules::createReaderActivityForPath(
+    const std::string& path, GfxRenderer& renderer, MappedInputManager& mappedInput,
+    const std::function<void(const std::string&)>& onBackToLibraryPath, const std::function<void()>& onBackHome) {
+  if (path.empty()) {
+    return {};
+  }
+
+  if (isXtcDocumentPath(path)) {
+    if (!hasCapability(Capability::XtcSupport)) {
+      return {ReaderOpenStatus::Unsupported, nullptr, "XTC support disabled in this build",
+              "XTC support\nnot available\nin this build"};
+    }
+#if ENABLE_XTC_SUPPORT
+    auto xtc = loadXtcDocument(path);
+    if (!xtc) {
+      return {};
+    }
+
+    const std::string xtcPath = xtc->getPath();
+    return {
+        ReaderOpenStatus::Opened,
+        new XtcReaderActivity(
+            renderer, mappedInput, std::move(xtc), [onBackToLibraryPath, xtcPath] { onBackToLibraryPath(xtcPath); },
+            onBackHome),
+        nullptr,
+        nullptr,
+    };
+#else
+    return {ReaderOpenStatus::Unsupported, nullptr, "XTC support disabled in this build",
+            "XTC support\nnot available\nin this build"};
+#endif
+  }
+
+  if (isMarkdownDocumentPath(path)) {
+    if (!hasCapability(Capability::MarkdownSupport)) {
+      return {ReaderOpenStatus::Unsupported, nullptr, "Markdown support disabled in this build",
+              "Markdown support\nnot available\nin this build"};
+    }
+#if ENABLE_MARKDOWN
+    auto markdown = loadMarkdownDocument(path);
+    if (!markdown) {
+      return {};
+    }
+
+    const std::string markdownPath = markdown->getPath();
+    return {
+        ReaderOpenStatus::Opened,
+        new MarkdownReaderActivity(
+            renderer, mappedInput, std::move(markdown),
+            [onBackToLibraryPath, markdownPath] { onBackToLibraryPath(markdownPath); }, onBackHome),
+        nullptr,
+        nullptr,
+    };
+#else
+    return {ReaderOpenStatus::Unsupported, nullptr, "Markdown support disabled in this build",
+            "Markdown support\nnot available\nin this build"};
+#endif
+  }
+
+  if (isTxtDocumentPath(path)) {
+    auto txt = loadTxtDocument(path);
+    if (!txt) {
+      return {};
+    }
+
+    const std::string txtPath = txt->getPath();
+    return {
+        ReaderOpenStatus::Opened,
+        new TxtReaderActivity(
+            renderer, mappedInput, std::move(txt), [onBackToLibraryPath, txtPath] { onBackToLibraryPath(txtPath); },
+            onBackHome),
+        nullptr,
+        nullptr,
+    };
+  }
+
+  if (!hasCapability(Capability::EpubSupport)) {
+    return {ReaderOpenStatus::Unsupported, nullptr, "EPUB support disabled in this build",
+            "EPUB support\nnot available\nin this build"};
+  }
+
+#if ENABLE_EPUB_SUPPORT
+  auto epub = loadEpubDocument(path);
+  if (!epub) {
+    return {};
+  }
+
+  const std::string epubPath = epub->getPath();
+  return {
+      ReaderOpenStatus::Opened,
+      new EpubReaderActivity(
+          renderer, mappedInput, std::move(epub), [onBackToLibraryPath, epubPath] { onBackToLibraryPath(epubPath); },
+          onBackHome),
+      nullptr,
+      nullptr,
+  };
+#else
+  return {ReaderOpenStatus::Unsupported, nullptr, "EPUB support disabled in this build",
+          "EPUB support\nnot available\nin this build"};
+#endif
+}
 
 bool FeatureModules::supportsSettingAction(const SettingAction action) {
   switch (action) {
