@@ -11,9 +11,6 @@
 #include "UserFontManager.h"
 #include "activities/settings/SettingsActivity.h"
 #include "core/features/FeatureModules.h"
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-#include "KOReaderCredentialStore.h"
-#endif
 
 // Shared settings list used by both the device settings UI and the web settings API.
 // Each entry has a key (for JSON API) and category (for grouping).
@@ -120,38 +117,26 @@ inline std::vector<SettingInfo> getSettingsList() {
                                        StrId::STR_CAT_SYSTEM));
   }
 
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-  // --- KOReader Sync (web-only, uses KOReaderCredentialStore) ---
-  list.push_back(SettingInfo::DynamicString(
-      StrId::STR_KOREADER_USERNAME, [] { return KOREADER_STORE.getUsername(); },
-      [](const std::string& v) {
-        KOREADER_STORE.setCredentials(v, KOREADER_STORE.getPassword());
-        KOREADER_STORE.saveToFile();
-      },
-      "koUsername", StrId::STR_KOREADER_SYNC));
-  list.push_back(SettingInfo::DynamicString(
-      StrId::STR_KOREADER_PASSWORD, [] { return KOREADER_STORE.getPassword(); },
-      [](const std::string& v) {
-        KOREADER_STORE.setCredentials(KOREADER_STORE.getUsername(), v);
-        KOREADER_STORE.saveToFile();
-      },
-      "koPassword", StrId::STR_KOREADER_SYNC));
-  list.push_back(SettingInfo::DynamicString(
-      StrId::STR_SYNC_SERVER_URL, [] { return KOREADER_STORE.getServerUrl(); },
-      [](const std::string& v) {
-        KOREADER_STORE.setServerUrl(v);
-        KOREADER_STORE.saveToFile();
-      },
-      "koServerUrl", StrId::STR_KOREADER_SYNC));
-  list.push_back(SettingInfo::DynamicEnum(
-      StrId::STR_DOCUMENT_MATCHING, {StrId::STR_FILENAME, StrId::STR_BINARY},
-      [] { return static_cast<uint8_t>(KOREADER_STORE.getMatchMethod()); },
-      [](uint8_t v) {
-        KOREADER_STORE.setMatchMethod(static_cast<DocumentMatchMethod>(v));
-        KOREADER_STORE.saveToFile();
-      },
-      "koMatchMethod", StrId::STR_KOREADER_SYNC));
-#endif
+  if (core::FeatureModules::hasCapability(core::Capability::KoreaderSync)) {
+    // --- KOReader Sync (web-only, persisted via FeatureModules) ---
+    list.push_back(SettingInfo::DynamicString(
+        StrId::STR_KOREADER_USERNAME, [] { return core::FeatureModules::getKoreaderUsername(); },
+        [](const std::string& value) { core::FeatureModules::setKoreaderUsername(value); }, "koUsername",
+        StrId::STR_KOREADER_SYNC));
+    list.push_back(SettingInfo::DynamicString(
+        StrId::STR_KOREADER_PASSWORD, [] { return core::FeatureModules::getKoreaderPassword(); },
+        [](const std::string& value) { core::FeatureModules::setKoreaderPassword(value); }, "koPassword",
+        StrId::STR_KOREADER_SYNC));
+    list.push_back(SettingInfo::DynamicString(
+        StrId::STR_SYNC_SERVER_URL, [] { return core::FeatureModules::getKoreaderServerUrl(); },
+        [](const std::string& value) { core::FeatureModules::setKoreaderServerUrl(value); }, "koServerUrl",
+        StrId::STR_KOREADER_SYNC));
+    list.push_back(SettingInfo::DynamicEnum(
+        StrId::STR_DOCUMENT_MATCHING, {StrId::STR_FILENAME, StrId::STR_BINARY},
+        [] { return core::FeatureModules::getKoreaderMatchMethod(); },
+        [](uint8_t value) { core::FeatureModules::setKoreaderMatchMethod(value); }, "koMatchMethod",
+        StrId::STR_KOREADER_SYNC));
+  }
 
 #if ENABLE_USER_FONTS
   SettingInfo userFontPathSetting = SettingInfo::DynamicEnum(

@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include <functional>
+#include <string>
 
 class Activity;
 class CrossPointWebServer;
@@ -58,6 +59,15 @@ class FeatureModules {
 
   static bool shouldRegisterWebRoute(WebOptionalRoute route);
   static bool shouldExposeHomeAction(HomeOptionalAction action, bool hasOpdsUrl);
+
+  static std::string getKoreaderUsername();
+  static std::string getKoreaderPassword();
+  static std::string getKoreaderServerUrl();
+  static uint8_t getKoreaderMatchMethod();
+  static void setKoreaderUsername(const std::string& username);
+  static void setKoreaderPassword(const std::string& password);
+  static void setKoreaderServerUrl(const std::string& serverUrl);
+  static void setKoreaderMatchMethod(uint8_t method);
 
   struct FontScanResult {
     bool available;  // false when ENABLE_USER_FONTS is off

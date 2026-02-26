@@ -18,6 +18,7 @@
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 #include "activities/settings/KOReaderSettingsActivity.h"
+#include "lib/KOReaderSync/KOReaderCredentialStore.h"
 #endif
 
 #if ENABLE_OTA_UPDATES
@@ -132,6 +133,77 @@ Activity* FeatureModules::createSettingsSubActivity(const SettingAction action, 
   }
 
   return nullptr;
+}
+
+std::string FeatureModules::getKoreaderUsername() {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  return KOREADER_STORE.getUsername();
+#else
+  return "";
+#endif
+}
+
+std::string FeatureModules::getKoreaderPassword() {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  return KOREADER_STORE.getPassword();
+#else
+  return "";
+#endif
+}
+
+std::string FeatureModules::getKoreaderServerUrl() {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  return KOREADER_STORE.getServerUrl();
+#else
+  return "";
+#endif
+}
+
+uint8_t FeatureModules::getKoreaderMatchMethod() {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  return static_cast<uint8_t>(KOREADER_STORE.getMatchMethod());
+#else
+  return 0;
+#endif
+}
+
+void FeatureModules::setKoreaderUsername(const std::string& username) {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  KOREADER_STORE.setCredentials(username, KOREADER_STORE.getPassword());
+  KOREADER_STORE.saveToFile();
+#else
+  (void)username;
+#endif
+}
+
+void FeatureModules::setKoreaderPassword(const std::string& password) {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  KOREADER_STORE.setCredentials(KOREADER_STORE.getUsername(), password);
+  KOREADER_STORE.saveToFile();
+#else
+  (void)password;
+#endif
+}
+
+void FeatureModules::setKoreaderServerUrl(const std::string& serverUrl) {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  KOREADER_STORE.setServerUrl(serverUrl);
+  KOREADER_STORE.saveToFile();
+#else
+  (void)serverUrl;
+#endif
+}
+
+void FeatureModules::setKoreaderMatchMethod(const uint8_t method) {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  const auto selectedMethod = method == static_cast<uint8_t>(DocumentMatchMethod::BINARY)
+                                  ? DocumentMatchMethod::BINARY
+                                  : DocumentMatchMethod::FILENAME;
+  KOREADER_STORE.setMatchMethod(selectedMethod);
+  KOREADER_STORE.saveToFile();
+#else
+  (void)method;
+#endif
 }
 
 void FeatureModules::onFontFamilySettingChanged(const uint8_t newValue) {
