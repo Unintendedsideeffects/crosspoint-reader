@@ -1,6 +1,5 @@
 #include "MyLibraryActivity.h"
 
-#include <Epub.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <I18n.h>
@@ -15,6 +14,7 @@
 #include "SpiBusMutex.h"
 #include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
+#include "core/features/FeatureModules.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
 
@@ -114,9 +114,7 @@ void MyLibraryActivity::loadFiles() {
       files.emplace_back(std::string(name) + "/");
     } else {
       auto filename = std::string(name);
-      if (StringUtils::checkFileExtension(filename, ".epub") || StringUtils::checkFileExtension(filename, ".xtch") ||
-          StringUtils::checkFileExtension(filename, ".xtc") || StringUtils::checkFileExtension(filename, ".txt") ||
-          StringUtils::checkFileExtension(filename, ".md") || StringUtils::checkFileExtension(filename, ".bmp")) {
+      if (core::FeatureModules::isSupportedLibraryFile(filename)) {
         files.emplace_back(filename);
       }
     }
@@ -287,13 +285,12 @@ void MyLibraryActivity::loop() {
     return;
   }
 
-#if ENABLE_VISUAL_COVER_PICKER
-  if (mappedInput.getHeldTime() >= 500 && mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+  if (core::FeatureModules::hasCapability(core::Capability::VisualCoverPicker) && mappedInput.getHeldTime() >= 500 &&
+      mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     viewMode = (viewMode == ViewMode::List) ? ViewMode::Grid : ViewMode::List;
     requestUpdate();
     return;
   }
-#endif
 
   int listSize = static_cast<int>(itemCount);
 
@@ -341,8 +338,7 @@ void MyLibraryActivity::render(Activity::RenderLock&& lock) {
   if (getCurrentItemCount() == 0) {
     renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, tr(STR_NO_BOOKS_FOUND));
   } else {
-#if ENABLE_VISUAL_COVER_PICKER
-    if (viewMode == ViewMode::Grid) {
+    if (core::FeatureModules::hasCapability(core::Capability::VisualCoverPicker) && viewMode == ViewMode::Grid) {
       renderGrid();
     } else {
       if (currentTab == Tab::Recent) {
@@ -351,13 +347,6 @@ void MyLibraryActivity::render(Activity::RenderLock&& lock) {
         renderFilesTab(contentTop, contentHeight);
       }
     }
-#else
-    if (currentTab == Tab::Recent) {
-      renderRecentTab(contentTop, contentHeight);
-    } else {
-      renderFilesTab(contentTop, contentHeight);
-    }
-#endif
   }
 
   // Help text
@@ -397,8 +386,6 @@ void MyLibraryActivity::renderFilesTab(int contentTop, int contentHeight) const 
       [this](int index) { return files[index]; }, nullptr,
       [this](int index) { return UITheme::getFileIcon(files[index]); });
 }
-
-#if ENABLE_VISUAL_COVER_PICKER
 
 MyLibraryActivity::GridMetrics MyLibraryActivity::getGridMetrics() const {
   const int pageWidth = renderer.getScreenWidth();
@@ -485,40 +472,3 @@ bool MyLibraryActivity::drawCoverAt(const std::string& path, const int x, const 
   file.close();
   return ok;
 }
-
-void MyLibraryActivity::extractCovers() {
-  if (viewMode != ViewMode::Grid) return;
-  SpiBusMutex::Guard guard;
-
-  const auto m = getGridMetrics();
-  const int itemsPerPage = m.cols * m.rows;
-  const int itemCount = getCurrentItemCount();
-  const int pageStartIndex = selectorIndex / itemsPerPage * itemsPerPage;
-
-  for (int i = 0; i < itemsPerPage && (pageStartIndex + i) < itemCount; i++) {
-    const int idx = pageStartIndex + i;
-    std::string path;
-    if (currentTab == Tab::Recent) {
-      path = recentBooks[idx].path;
-    } else {
-      path = basepath + files[idx];
-    }
-
-    if (StringUtils::checkFileExtension(path, ".epub")) {
-      std::string cacheKey = "/.crosspoint/epub_" + std::to_string(std::hash<std::string>{}(path));
-      std::string thumbPath = cacheKey + "/thumb_" + std::to_string(m.thumbHeight) + ".bmp";
-
-      if (!Storage.exists(thumbPath.c_str())) {
-        LOG_DBG("LIB", "Generating thumb for %s", path.c_str());
-        Epub epub(path, "/.crosspoint");
-        // Load without CSS to save time/RAM
-        if (epub.load(true, true)) {
-          if (epub.generateThumbBmp(m.thumbHeight)) {
-            requestUpdate();
-          }
-        }
-      }
-    }
-  }
-}
-#endif

@@ -52,6 +52,12 @@ bool JsonSettingsIO::saveSettings(const CrossPointSettings& s, const char* path)
   doc["sleepScreenCoverMode"] = s.sleepScreenCoverMode;
   doc["sleepScreenCoverFilter"] = s.sleepScreenCoverFilter;
   doc["statusBar"] = s.statusBar;
+  doc["statusBarChapterPageCount"] = s.statusBarChapterPageCount;
+  doc["statusBarBookProgressPercentage"] = s.statusBarBookProgressPercentage;
+  doc["statusBarProgressBar"] = s.statusBarProgressBar;
+  doc["statusBarProgressBarThickness"] = s.statusBarProgressBarThickness;
+  doc["statusBarTitle"] = s.statusBarTitle;
+  doc["statusBarBattery"] = s.statusBarBattery;
   doc["extraParagraphSpacing"] = s.extraParagraphSpacing;
   doc["textAntiAliasing"] = s.textAntiAliasing;
   doc["shortPwrBtn"] = s.shortPwrBtn;
@@ -116,6 +122,19 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   s.sleepScreenCoverFilter =
       clamp(doc["sleepScreenCoverFilter"] | (uint8_t)S::NO_FILTER, S::SLEEP_SCREEN_COVER_FILTER_COUNT, S::NO_FILTER);
   s.statusBar = clamp(doc["statusBar"] | (uint8_t)S::FULL, S::STATUS_BAR_MODE_COUNT, S::FULL);
+  if (doc["statusBarChapterPageCount"].isNull()) {
+    applyLegacyStatusBarSettings(s);
+  } else {
+    s.statusBarChapterPageCount = doc["statusBarChapterPageCount"] | (uint8_t)1;
+    s.statusBarBookProgressPercentage = doc["statusBarBookProgressPercentage"] | (uint8_t)1;
+    s.statusBarProgressBar = clamp(doc["statusBarProgressBar"] | (uint8_t)S::HIDE_PROGRESS,
+                                   S::STATUS_BAR_PROGRESS_BAR_COUNT, S::HIDE_PROGRESS);
+    s.statusBarProgressBarThickness = clamp(doc["statusBarProgressBarThickness"] | (uint8_t)S::PROGRESS_BAR_NORMAL,
+                                            S::STATUS_BAR_PROGRESS_BAR_THICKNESS_COUNT, S::PROGRESS_BAR_NORMAL);
+    s.statusBarTitle =
+        clamp(doc["statusBarTitle"] | (uint8_t)S::CHAPTER_TITLE, S::STATUS_BAR_TITLE_COUNT, S::CHAPTER_TITLE);
+    s.statusBarBattery = doc["statusBarBattery"] | (uint8_t)1;
+  }
   s.extraParagraphSpacing = doc["extraParagraphSpacing"] | (uint8_t)1;
   s.textAntiAliasing = doc["textAntiAliasing"] | (uint8_t)1;
   s.shortPwrBtn = clamp(doc["shortPwrBtn"] | (uint8_t)S::IGNORE, S::SHORT_PWRBTN_COUNT, S::IGNORE);

@@ -148,8 +148,10 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
   constexpr int MIN_COMBINING_GAP_PX = 1;
 
   uint32_t cp;
+  uint32_t prevBaseCp = 0;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
-    if (utf8IsCombiningMark(cp) && hasBaseGlyph) {
+    const bool isCombining = utf8IsCombiningMark(cp);
+    if (isCombining && hasBaseGlyph) {
       const EpdGlyph* combiningGlyph = font->getGlyph(cp);
       if (!combiningGlyph) {
         combiningGlyph = font->getGlyph(REPLACEMENT_GLYPH);
@@ -169,16 +171,24 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
       continue;
     }
 
+    if (!isCombining) {
+      cp = font->applyLigatures(cp, text);
+      if (prevBaseCp != 0) {
+        xpos += font->getKerning(prevBaseCp, cp);
+      }
+    }
+
     const EpdGlyph* glyph = font->getGlyph(cp);
     if (!glyph) {
       glyph = font->getGlyph(REPLACEMENT_GLYPH);
     }
-    if (!utf8IsCombiningMark(cp)) {
+    if (!isCombining) {
       lastBaseX = xpos;
       lastBaseY = yPos;
       lastBaseAdvance = glyph ? glyph->advanceX : 0;
       lastBaseTop = glyph ? glyph->top : 0;
       hasBaseGlyph = true;
+      prevBaseCp = cp;
     }
 
     renderChar(*font, cp, &xpos, &yPos, black);
@@ -814,53 +824,53 @@ std::vector<std::string> GfxRenderer::wrappedText(const int fontId, const char* 
     return lines;
   }
 
-  std::vector<std::string> words;
-  std::string token;
-  for (const char* p = text; *p != '\0'; ++p) {
-    const char ch = *p;
-    if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') {
-      if (!token.empty()) {
-        words.push_back(token);
-        token.clear();
-      }
+  std::string remaining = text;
+  std::string currentLine;
+
+  while (!remaining.empty()) {
+    if (static_cast<int>(lines.size()) == maxLines - 1) {
+      const std::string lastContent = currentLine.empty() ? remaining : currentLine + " " + remaining;
+      lines.push_back(truncatedText(fontId, lastContent.c_str(), maxWidth, style));
+      return lines;
+    }
+
+    const size_t spacePos = remaining.find(' ');
+    std::string word;
+    if (spacePos == std::string::npos) {
+      word = remaining;
+      remaining.clear();
+    } else {
+      word = remaining.substr(0, spacePos);
+      remaining.erase(0, spacePos + 1);
+    }
+
+    const std::string testLine = currentLine.empty() ? word : currentLine + " " + word;
+    if (getTextWidth(fontId, testLine.c_str(), style) <= maxWidth) {
+      currentLine = testLine;
       continue;
     }
-    token.push_back(ch);
-  }
-  if (!token.empty()) {
-    words.push_back(token);
-  }
-  if (words.empty()) {
-    return lines;
-  }
 
-  size_t idx = 0;
-  while (idx < words.size() && static_cast<int>(lines.size()) < maxLines) {
-    std::string line = words[idx++];
-    if (getTextWidth(fontId, line.c_str(), style) > maxWidth) {
-      line = truncatedText(fontId, line.c_str(), maxWidth, style);
-    } else {
-      while (idx < words.size()) {
-        std::string candidate = line + " " + words[idx];
-        if (getTextWidth(fontId, candidate.c_str(), style) <= maxWidth) {
-          line = std::move(candidate);
-          ++idx;
-        } else {
-          break;
+    if (!currentLine.empty()) {
+      lines.push_back(currentLine);
+      if (getTextWidth(fontId, word.c_str(), style) > maxWidth) {
+        lines.push_back(truncatedText(fontId, word.c_str(), maxWidth, style));
+        currentLine.clear();
+        if (static_cast<int>(lines.size()) >= maxLines) {
+          return lines;
         }
+      } else {
+        currentLine = word;
+      }
+    } else {
+      lines.push_back(truncatedText(fontId, word.c_str(), maxWidth, style));
+      if (static_cast<int>(lines.size()) >= maxLines) {
+        break;
       }
     }
+  }
 
-    if (static_cast<int>(lines.size()) == maxLines - 1 && idx < words.size()) {
-      std::string remaining = line;
-      while (idx < words.size()) {
-        remaining += " ";
-        remaining += words[idx++];
-      }
-      line = truncatedText(fontId, remaining.c_str(), maxWidth, style);
-    }
-
-    lines.push_back(std::move(line));
+  if (!currentLine.empty() && static_cast<int>(lines.size()) < maxLines) {
+    lines.push_back(currentLine);
   }
 
   return lines;
@@ -914,22 +924,33 @@ int GfxRenderer::getSpaceWidth(const int fontId, const EpdFontFamily::Style styl
   return glyph ? glyph->advanceX : 0;
 }
 
-int8_t GfxRenderer::getKerning(const int fontId, const uint32_t leftCp, const uint32_t rightCp,
-                               const EpdFontFamily::Style style) const {
-  (void)fontId;
-  (void)leftCp;
-  (void)rightCp;
-  (void)style;
-  return 0;
-}
-
 int GfxRenderer::getSpaceKernAdjust(const int fontId, const uint32_t leftCp, const uint32_t rightCp,
                                     const EpdFontFamily::Style style) const {
-  (void)fontId;
-  (void)leftCp;
-  (void)rightCp;
-  (void)style;
-  return 0;
+  if (leftCp == 0 || rightCp == 0) {
+    return 0;
+  }
+
+  const auto fontFamilyIt = fontFamilyMap.find(fontId);
+  if (fontFamilyIt == fontFamilyMap.end() || fontFamilyIt->second == nullptr) {
+    return 0;
+  }
+
+  const EpdFontFamily& family = *fontFamilyIt->second;
+  return family.getKerning(leftCp, ' ', style) + family.getKerning(' ', rightCp, style);
+}
+
+int GfxRenderer::getKerning(const int fontId, const uint32_t leftCp, const uint32_t rightCp,
+                            const EpdFontFamily::Style style) const {
+  if (leftCp == 0 || rightCp == 0) {
+    return 0;
+  }
+
+  const auto fontFamilyIt = fontFamilyMap.find(fontId);
+  if (fontFamilyIt == fontFamilyMap.end() || fontFamilyIt->second == nullptr) {
+    return 0;
+  }
+
+  return fontFamilyIt->second->getKerning(leftCp, rightCp, style);
 }
 
 int GfxRenderer::getTextAdvanceX(const int fontId, const char* text) const {
@@ -950,17 +971,24 @@ int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, const EpdFo
   }
 
   uint32_t cp;
+  uint32_t prevCp = 0;
   int width = 0;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
-    if (utf8IsCombiningMark(cp)) {
-      continue;
+    const bool isCombining = utf8IsCombiningMark(cp);
+    if (!isCombining) {
+      cp = font->applyLigatures(cp, text);
+      if (prevCp != 0) {
+        width += font->getKerning(prevCp, cp);
+      }
     }
+
     const EpdGlyph* glyph = font->getGlyph(cp);
     if (!glyph) {
       glyph = font->getGlyph(REPLACEMENT_GLYPH);
     }
-    if (glyph) {
+    if (glyph && !isCombining) {
       width += glyph->advanceX;
+      prevCp = cp;
     }
   }
   return width;
@@ -1059,6 +1087,7 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
   int lastBaseTop = 0;
   bool hasBaseGlyph = false;
   constexpr int MIN_COMBINING_GAP_PX = 1;
+  uint32_t prevBaseCp = 0;
 
   const auto drawGlyphRotated = [&](const EpdGlyph* glyph, const int baseX, const int baseY) {
     if (!glyph) {
@@ -1113,6 +1142,14 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
 
   uint32_t cp;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
+    const bool isCombining = utf8IsCombiningMark(cp);
+    if (!isCombining) {
+      cp = font->applyLigatures(cp, text);
+      if (prevBaseCp != 0) {
+        yPos -= font->getKerning(prevBaseCp, cp);
+      }
+    }
+
     const EpdGlyph* glyph = font->getGlyph(cp);
     if (!glyph) {
       glyph = font->getGlyph(REPLACEMENT_GLYPH);
@@ -1121,7 +1158,6 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
       continue;
     }
 
-    const bool isCombining = utf8IsCombiningMark(cp);
     int drawX = xPos;
     int drawY = yPos;
     if (isCombining && hasBaseGlyph) {
@@ -1141,6 +1177,7 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
       lastBaseAdvance = glyph->advanceX;
       lastBaseTop = glyph->top;
       hasBaseGlyph = true;
+      prevBaseCp = cp;
       // Move to next character position (going up, so decrease Y).
       yPos -= glyph->advanceX;
     }

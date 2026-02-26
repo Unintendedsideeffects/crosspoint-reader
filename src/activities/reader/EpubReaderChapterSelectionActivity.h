@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "../ActivityWithSubactivity.h"
-#include "FeatureFlags.h"
 #include "util/ButtonNavigator.h"
 
 class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity {
@@ -40,10 +39,8 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   static void taskTrampoline(void* param);
   void displayTaskLoop();
   void renderScreen();
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   bool isSyncItem(int index) const;
   void launchSyncActivity();
-#endif
 
  public:
   explicit EpubReaderChapterSelectionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,

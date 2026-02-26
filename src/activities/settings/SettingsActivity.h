@@ -111,13 +111,15 @@ struct SettingInfo {
 
   static SettingInfo DynamicEnum(StrId nameId, std::vector<StrId> values, std::function<uint8_t()> getter,
                                  std::function<void(uint8_t)> setter, const char* key = nullptr,
-                                 StrId category = StrId::STR_NONE_OPT) {
+                                 StrId category = StrId::STR_NONE_OPT,
+                                 std::function<std::vector<std::string>()> dynamicValuesGetter = nullptr) {
     SettingInfo s;
     s.nameId = nameId;
     s.type = SettingType::ENUM;
     s.enumValues = std::move(values);
     s.valueGetter = std::move(getter);
     s.valueSetter = std::move(setter);
+    s.dynamicValuesGetter = std::move(dynamicValuesGetter);
     s.key = key;
     s.category = category;
     return s;

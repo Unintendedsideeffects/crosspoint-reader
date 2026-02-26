@@ -126,10 +126,10 @@ class GfxRenderer {
   void drawSideButtonHints(int fontId, const char* topBtn, const char* bottomBtn) const;
   int getSpaceWidth(int fontId) const;
   int getSpaceWidth(int fontId, EpdFontFamily::Style style) const;
-  int8_t getKerning(int fontId, uint32_t leftCp, uint32_t rightCp,
-                    EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
   int getSpaceKernAdjust(int fontId, uint32_t leftCp, uint32_t rightCp,
                          EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
+  int getKerning(int fontId, uint32_t leftCp, uint32_t rightCp,
+                 EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
   int getTextAdvanceX(int fontId, const char* text) const;
   int getTextAdvanceX(int fontId, const char* text, EpdFontFamily::Style style) const;
   int getFontAscenderSize(int fontId) const;

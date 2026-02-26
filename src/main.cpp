@@ -15,10 +15,9 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
-#include "FeatureManifest.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
-#include "UserFontManager.h"
+#include "UsbSerialProtocol.h"
 #include "WifiCredentialStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
@@ -27,29 +26,17 @@
 #include "activities/network/CrossPointWebServerActivity.h"
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
-#if ENABLE_TODO_PLANNER
-#include "activities/todo/TodoActivity.h"
-#include "activities/todo/TodoFallbackActivity.h"
 #include "activities/todo/TodoPlannerStorage.h"
-#endif
 #include "activities/util/FullScreenMessageActivity.h"
 #include "components/UITheme.h"
+#include "core/CoreBootstrap.h"
+#include "core/features/FeatureLifecycle.h"
+#include "core/features/FeatureModules.h"
 #include "fontIds.h"
 #include "network/BackgroundWebServer.h"
 #include "util/ButtonNavigator.h"
 #include "util/DateUtils.h"
 #include "util/FactoryResetUtils.h"
-#if ENABLE_USB_MASS_STORAGE
-#include "UsbSerialProtocol.h"
-#endif
-
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-#include "KOReaderCredentialStore.h"
-#endif
-
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-#include "activities/browser/OpdsBookBrowserActivity.h"
-#endif
 
 HalDisplay display;
 HalGPIO gpio;
@@ -152,15 +139,6 @@ EpdFont ui12RegularFont(&ubuntu_12_regular);
 EpdFont ui12BoldFont(&ubuntu_12_bold);
 EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
 
-#if ENABLE_USER_FONTS
-#include <SdFont.h>
-SdFont regularSdFont;
-SdFont boldSdFont;
-SdFont italicSdFont;
-SdFont boldItalicSdFont;
-EpdFontFamily userSdFontFamily(&regularSdFont, &boldSdFont, &italicSdFont, &boldItalicSdFont);
-#endif
-
 // measurement of power button press duration calibration value
 unsigned long t1 = 0;
 unsigned long t2 = 0;
@@ -170,7 +148,6 @@ void exitActivity();
 namespace {
 constexpr char kCrossPointDataDir[] = "/.crosspoint";
 constexpr char kFactoryResetMarkerFile[] = "/.factory-reset-pending";
-#if ENABLE_USB_MASS_STORAGE
 constexpr char kUsbMscSessionMarkerFile[] = "/.crosspoint/usb-msc-active";
 
 enum class UsbMscSessionState { Idle, Prompt, Active };
@@ -217,7 +194,6 @@ void exitUsbMscSession() {
   usbMscScreenNeedsRedraw = false;
   usbMscRemountPending = true;
 }
-#endif
 
 void applyPendingFactoryReset() {
   if (!Storage.exists(kFactoryResetMarkerFile)) {
@@ -323,9 +299,7 @@ void enterDeepSleep() {
 
 void onGoHome();
 void onGoToMyLibraryWithPath(const std::string& path, MyLibraryActivity::Tab fromTab);
-#if ENABLE_TODO_PLANNER
 void onGoToTodo();
-#endif
 void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fromTab) {
   exitActivity();
   enterNewActivity(
@@ -354,22 +328,36 @@ void onGoToMyLibraryWithPath(const std::string& path, MyLibraryActivity::Tab fro
 }
 
 void onGoToBrowser() {
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+  const bool hasOpdsUrl = strlen(SETTINGS.opdsServerUrl) > 0;
+  if (!core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) {
+    return;
+  }
+
+  Activity* activity = core::FeatureModules::createOpdsBrowserActivity(renderer, mappedInputManager, onGoHome);
+  if (!activity) {
+    return;
+  }
+
   exitActivity();
-  enterNewActivity(new OpdsBookBrowserActivity(renderer, mappedInputManager, onGoHome));
-#else
-  return;
-#endif
+  enterNewActivity(activity);
 }
 
-#if ENABLE_TODO_PLANNER
 void onGoToTodo() {
+  if (!core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
+    return;
+  }
+
   exitActivity();
 
   const std::string today = DateUtils::currentDate();
   if (today.empty()) {
-    // Fallback if date is not set
-    enterNewActivity(new TodoFallbackActivity(renderer, mappedInputManager, today, onGoHome));
+    Activity* fallbackActivity =
+        core::FeatureModules::createTodoFallbackActivity(renderer, mappedInputManager, today, onGoHome);
+    if (fallbackActivity) {
+      enterNewActivity(fallbackActivity);
+    } else {
+      onGoHome();
+    }
     return;
   }
 
@@ -378,9 +366,16 @@ void onGoToTodo() {
   const bool todoMdExists = Storage.exists(todoMdPath.c_str());
   const bool todoTxtExists = Storage.exists(todoTxtPath.c_str());
   if (todoMdExists || todoTxtExists) {
-    enterNewActivity(new TodoActivity(
+    Activity* todoActivity = core::FeatureModules::createTodoPlannerActivity(
         renderer, mappedInputManager,
-        TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists), today, onGoHome));
+        TodoPlannerStorage::dailyPath(today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport),
+                                      todoMdExists, todoTxtExists),
+        today, onGoHome);
+    if (todoActivity) {
+      enterNewActivity(todoActivity);
+    } else {
+      onGoHome();
+    }
     return;
   }
 
@@ -393,21 +388,22 @@ void onGoToTodo() {
   }
 
   // 3. Default: Create/Open new list
-  enterNewActivity(new TodoActivity(
+  Activity* todoActivity = core::FeatureModules::createTodoPlannerActivity(
       renderer, mappedInputManager,
-      TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists), today, onGoHome));
+      TodoPlannerStorage::dailyPath(today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport),
+                                    todoMdExists, todoTxtExists),
+      today, onGoHome);
+  if (todoActivity) {
+    enterNewActivity(todoActivity);
+  } else {
+    onGoHome();
+  }
 }
-#endif  // ENABLE_TODO_PLANNER
 
 void onGoHome() {
   exitActivity();
-#if ENABLE_TODO_PLANNER
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
                                     onGoToFileTransfer, onGoToBrowser, onGoToTodo));
-#else
-  enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
-                                    onGoToFileTransfer, onGoToBrowser, [] {}));
-#endif
 }
 
 void setupDisplayAndFonts() {
@@ -440,9 +436,7 @@ void setupDisplayAndFonts() {
   renderer.insertFontFamily(UI_12_FONT_ID, &ui12FontFamily);
   renderer.insertFontFamily(SMALL_FONT_ID, &smallFontFamily);
 
-#if ENABLE_USER_FONTS
-  renderer.insertFontFamily(USER_SD_FONT_ID, &userSdFontFamily);
-#endif
+  core::FeatureLifecycle::onFontSetup(renderer);
 
   LOG_DBG("MAIN", "Fonts setup");
 }
@@ -453,18 +447,18 @@ void setup() {
   gpio.begin();
   powerManager.begin();
 
+  const bool usbConnectedAtBoot = gpio.isUsbConnected();
+
   // Only start serial if USB connected
-  if (gpio.isUsbConnected()) {
+  if (usbConnectedAtBoot) {
     Serial.begin(115200);
     // Wait up to 3 seconds for Serial to be ready to catch early logs
     unsigned long start = millis();
     while (!Serial && (millis() - start) < 3000) {
       delay(10);
     }
-
-    // Print feature configuration for debugging
-    FeatureManifest::printToSerial();
   }
+  core::CoreBootstrap::initializeFeatureSystem(usbConnectedAtBoot);
 
   // SD Card Initialization
   // We need 6 open files concurrently when parsing a new chapter
@@ -476,39 +470,22 @@ void setup() {
     return;
   }
 
-#if ENABLE_USER_FONTS
-  UserFontManager::setGlobalFonts(&regularSdFont, &boldSdFont, &italicSdFont, &boldItalicSdFont);
-  UserFontManager::getInstance().scanFonts();
-#endif
+  core::FeatureLifecycle::onStorageReady();
 
   applyPendingFactoryReset();
-#if ENABLE_USB_MASS_STORAGE
-  usbConnectedLast = gpio.isUsbConnected();
-  if (Storage.exists(kUsbMscSessionMarkerFile)) {
-    LOG_WRN("USBMSC", "Detected stale USB MSC marker; recovering SD ownership");
-    Storage.remove(kUsbMscSessionMarkerFile);
-  }
-#endif
-
-  SETTINGS.loadFromFile();
-#if ENABLE_USER_FONTS
-  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD &&
-      !UserFontManager::getInstance().loadFontFamily(SETTINGS.userFontPath)) {
-    SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-    if (!SETTINGS.saveToFile()) {
-      LOG_WRN("FONTS", "Failed to persist font fallback to SD card");
+  if (core::FeatureModules::hasCapability(core::Capability::UsbMassStorage)) {
+    usbConnectedLast = gpio.isUsbConnected();
+    if (Storage.exists(kUsbMscSessionMarkerFile)) {
+      LOG_WRN("USBMSC", "Detected stale USB MSC marker; recovering SD ownership");
+      Storage.remove(kUsbMscSessionMarkerFile);
     }
   }
-#endif
+
+  SETTINGS.loadFromFile();
+  core::FeatureLifecycle::onSettingsLoaded(renderer);
   I18N.loadSettings();
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-  KOREADER_STORE.loadFromFile();
-#endif
   WIFI_STORE.loadFromFile();  // Load early to avoid SPI contention with background display tasks
   UITheme::getInstance().reload();
-#if ENABLE_DARK_MODE
-  renderer.setDarkMode(SETTINGS.darkMode);
-#endif
   ButtonNavigator::setMappedInputManager(mappedInputManager);
 
   switch (gpio.getWakeupReason()) {
@@ -586,76 +563,76 @@ void loop() {
     }
   }
 
-#if ENABLE_USB_MASS_STORAGE
-  const bool usbConnected = gpio.isUsbConnected();
+  const bool usbMscEnabled = core::FeatureModules::hasCapability(core::Capability::UsbMassStorage);
+  if (usbMscEnabled) {
+    const bool usbConnected = gpio.isUsbConnected();
 
-  if (usbMscRemountPending) {
-    usbMscRemountPending = false;
-    Storage.remove(kUsbMscSessionMarkerFile);
-    if (!Storage.begin()) {
-      LOG_ERR("USBMSC", "SD remount failed after USB MSC exit");
-      exitActivity();
-      enterNewActivity(
-          new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
+    if (usbMscRemountPending) {
+      usbMscRemountPending = false;
+      Storage.remove(kUsbMscSessionMarkerFile);
+      if (!Storage.begin()) {
+        LOG_ERR("USBMSC", "SD remount failed after USB MSC exit");
+        exitActivity();
+        enterNewActivity(
+            new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
+        return;
+      }
+      onGoHome();
+      usbConnectedLast = usbConnected;
       return;
     }
-    onGoHome();
-    usbConnectedLast = usbConnected;
-    return;
-  }
 
-  if (SETTINGS.usbMscPromptOnConnect && usbConnected && !usbConnectedLast &&
-      usbMscSessionState == UsbMscSessionState::Idle) {
-    usbMscSessionState = UsbMscSessionState::Prompt;
-    usbMscScreenNeedsRedraw = true;
-  }
+    if (SETTINGS.usbMscPromptOnConnect && usbConnected && !usbConnectedLast &&
+        usbMscSessionState == UsbMscSessionState::Idle) {
+      usbMscSessionState = UsbMscSessionState::Prompt;
+      usbMscScreenNeedsRedraw = true;
+    }
 
-  if (usbMscSessionState == UsbMscSessionState::Prompt) {
-    backgroundServer.loop(usbConnected, false);
-    if (!usbConnected) {
-      usbMscSessionState = UsbMscSessionState::Idle;
-      if (currentActivity) currentActivity->requestUpdate();
-    } else {
-      if (usbMscScreenNeedsRedraw) {
-        renderUsbMscPrompt();
-        usbMscScreenNeedsRedraw = false;
-      }
-      if (mappedInputManager.wasReleased(MappedInputManager::Button::Confirm)) {
-        enterUsbMscSession();
-      } else if (mappedInputManager.wasReleased(MappedInputManager::Button::Back)) {
+    if (usbMscSessionState == UsbMscSessionState::Prompt) {
+      backgroundServer.loop(usbConnected, false);
+      if (!usbConnected) {
         usbMscSessionState = UsbMscSessionState::Idle;
         if (currentActivity) currentActivity->requestUpdate();
+      } else {
+        if (usbMscScreenNeedsRedraw) {
+          renderUsbMscPrompt();
+          usbMscScreenNeedsRedraw = false;
+        }
+        if (mappedInputManager.wasReleased(MappedInputManager::Button::Confirm)) {
+          enterUsbMscSession();
+        } else if (mappedInputManager.wasReleased(MappedInputManager::Button::Back)) {
+          usbMscSessionState = UsbMscSessionState::Idle;
+          if (currentActivity) currentActivity->requestUpdate();
+        }
       }
+      usbConnectedLast = usbConnected;
+      delay(20);
+      return;
     }
+
+    if (usbMscSessionState == UsbMscSessionState::Active) {
+      usbSerialProtocol.loop();
+      if (!usbConnected) {
+        exitUsbMscSession();
+      } else if (usbMscScreenNeedsRedraw) {
+        renderUsbMscLockedScreen();
+        usbMscScreenNeedsRedraw = false;
+      }
+      usbConnectedLast = usbConnected;
+      delay(20);
+      return;
+    }
+
     usbConnectedLast = usbConnected;
-    delay(20);
-    return;
   }
 
-  if (usbMscSessionState == UsbMscSessionState::Active) {
-    usbSerialProtocol.loop();
-    if (!usbConnected) {
-      exitUsbMscSession();
-    } else if (usbMscScreenNeedsRedraw) {
-      renderUsbMscLockedScreen();
-      usbMscScreenNeedsRedraw = false;
-    }
-    usbConnectedLast = usbConnected;
-    delay(20);
-    return;
-  }
-
-  usbConnectedLast = usbConnected;
-#endif
-
-#if ENABLE_BACKGROUND_SERVER
   {
     const bool usbConn = gpio.isUsbConnected();
     const bool activityBlocksBackgroundServer = currentActivity && currentActivity->blocksBackgroundServer();
-    const bool allowRun = SETTINGS.backgroundServerOnCharge && usbConn && !activityBlocksBackgroundServer;
+    const bool allowRun = core::FeatureModules::hasCapability(core::Capability::BackgroundServer) &&
+                          SETTINGS.backgroundServerOnCharge && usbConn && !activityBlocksBackgroundServer;
     backgroundServer.loop(usbConn, allowRun);
   }
-#endif
 
   // Check for any user activity (button press or release) or active background work
   static unsigned long lastActivityTime = millis();

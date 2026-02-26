@@ -3,6 +3,7 @@
 #include <FeatureFlags.h>
 #if ENABLE_USER_FONTS
 
+#include <EpdFontFamily.h>
 #include <SdFont.h>
 
 #include <string>
@@ -15,24 +16,32 @@ class UserFontManager {
     return instance;
   }
 
+  void ensureScanned();
   void scanFonts();
+  void invalidateCache();
   const std::vector<std::string>& getAvailableFonts() const { return availableFonts; }
 
   bool loadFontFamily(const std::string& fontName);
   void unloadCurrentFont();
 
-  // Accessors for global SdFonts (defined in main.cpp)
-  static void setGlobalFonts(SdFont* regular, SdFont* bold, SdFont* italic, SdFont* boldItalic);
+  // Returns the font family backed by this manager's owned SdFont objects.
+  // The returned pointer remains valid for the lifetime of the singleton.
+  EpdFontFamily* getFontFamily() { return &fontFamily; }
 
  private:
-  UserFontManager() = default;
+  UserFontManager();
+
   std::vector<std::string> availableFonts;
   std::string currentFontName;
+  bool fontsScanned = false;
 
-  static SdFont* gRegular;
-  static SdFont* gBold;
-  static SdFont* gItalic;
-  static SdFont* gBoldItalic;
+  // SdFont objects must be declared before fontFamily so they are
+  // initialized first and their addresses are stable for the initializer list.
+  SdFont regularFont;
+  SdFont boldFont;
+  SdFont italicFont;
+  SdFont boldItalicFont;
+  EpdFontFamily fontFamily;
 };
 
 #endif
