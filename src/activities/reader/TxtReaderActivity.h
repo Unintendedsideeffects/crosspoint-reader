@@ -33,15 +33,19 @@ class TxtReaderActivity final : public ActivityWithSubactivity {
 
   // Cached settings for cache validation (different fonts/margins require re-indexing)
   int cachedFontId = 0;
-  int cachedScreenMargin = 0;
+  uint8_t cachedScreenMargin = 0;
   uint8_t cachedParagraphAlignment = CrossPointSettings::LEFT_ALIGN;
+  int cachedOrientedMarginTop = 0;
+  int cachedOrientedMarginRight = 0;
+  int cachedOrientedMarginBottom = 0;
+  int cachedOrientedMarginLeft = 0;
 
   static void taskTrampoline(void* param);
   void displayTaskLoop();
   bool waitForRenderingMutex();
   void renderScreen();
   void renderPage();
-  void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
+  void renderStatusBar() const;
 
   void initializeReader();
   bool loadPageAtOffset(size_t offset, std::vector<std::string>& outLines, size_t& nextOffset);
