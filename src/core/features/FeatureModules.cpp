@@ -4,6 +4,7 @@
 #include <Logging.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 
 #if ENABLE_EPUB_SUPPORT
@@ -40,6 +41,7 @@
 
 #if ENABLE_OTA_UPDATES
 #include "activities/settings/OtaUpdateActivity.h"
+#include "network/OtaUpdater.h"
 #endif
 
 #if ENABLE_USER_FONTS
@@ -52,6 +54,43 @@ namespace core {
 static_assert(PokedexPluginPageHtmlCompressedSize == sizeof(PokedexPluginPageHtml),
               "Pokedex page compressed size mismatch");
 #endif
+
+namespace {
+#if ENABLE_OTA_UPDATES
+enum class OtaWebCheckState { Idle, Checking, Done };
+
+struct OtaWebCheckData {
+  std::atomic<OtaWebCheckState> state{OtaWebCheckState::Idle};
+  bool available = false;
+  std::string latestVersion;
+  std::string message;
+  int errorCode = 0;
+};
+
+OtaWebCheckData otaWebCheckData;
+
+void otaWebCheckTask(void* param) {
+  auto* updater = static_cast<OtaUpdater*>(param);
+  const auto result = updater->checkForUpdate();
+
+  otaWebCheckData.errorCode = static_cast<int>(result);
+  if (result == OtaUpdater::OK) {
+    otaWebCheckData.available = updater->isUpdateNewer();
+    otaWebCheckData.latestVersion = updater->getLatestVersion();
+    otaWebCheckData.message =
+        otaWebCheckData.available ? "Update available. Install from device Settings." : "Already on latest version.";
+  } else {
+    otaWebCheckData.available = false;
+    const String& error = updater->getLastError();
+    otaWebCheckData.message = error.length() > 0 ? error.c_str() : "Update check failed";
+  }
+
+  otaWebCheckData.state.store(OtaWebCheckState::Done, std::memory_order_release);
+  delete updater;
+  vTaskDelete(nullptr);
+}
+#endif
+}  // namespace
 
 bool FeatureModules::isEnabled(const char* featureKey) { return FeatureCatalog::isEnabled(featureKey); }
 
@@ -359,6 +398,48 @@ FeatureModules::WebCompressedPayload FeatureModules::getPokedexPluginPagePayload
   return {true, PokedexPluginPageHtml, PokedexPluginPageHtmlCompressedSize};
 #else
   return {false, nullptr, 0};
+#endif
+}
+
+FeatureModules::OtaWebStartResult FeatureModules::startOtaWebCheck() {
+#if ENABLE_OTA_UPDATES
+  if (otaWebCheckData.state.load(std::memory_order_acquire) == OtaWebCheckState::Checking) {
+    return OtaWebStartResult::AlreadyChecking;
+  }
+
+  otaWebCheckData.available = false;
+  otaWebCheckData.latestVersion.clear();
+  otaWebCheckData.message = "Checking...";
+  otaWebCheckData.errorCode = 0;
+  otaWebCheckData.state.store(OtaWebCheckState::Checking, std::memory_order_release);
+
+  auto* updater = new OtaUpdater();
+  if (xTaskCreate(otaWebCheckTask, "OtaWebCheckTask", 4096, updater, 1, nullptr) != pdPASS) {
+    delete updater;
+    otaWebCheckData.state.store(OtaWebCheckState::Idle, std::memory_order_release);
+    return OtaWebStartResult::StartTaskFailed;
+  }
+
+  return OtaWebStartResult::Started;
+#else
+  return OtaWebStartResult::Disabled;
+#endif
+}
+
+FeatureModules::OtaWebCheckSnapshot FeatureModules::getOtaWebCheckSnapshot() {
+#if ENABLE_OTA_UPDATES
+  OtaWebCheckSnapshot snapshot;
+  const OtaWebCheckState state = otaWebCheckData.state.load(std::memory_order_acquire);
+  snapshot.status = state == OtaWebCheckState::Checking
+                        ? OtaWebCheckStatus::Checking
+                        : (state == OtaWebCheckState::Done ? OtaWebCheckStatus::Done : OtaWebCheckStatus::Idle);
+  snapshot.available = otaWebCheckData.available;
+  snapshot.latestVersion = otaWebCheckData.latestVersion;
+  snapshot.message = otaWebCheckData.message;
+  snapshot.errorCode = otaWebCheckData.errorCode;
+  return snapshot;
+#else
+  return {};
 #endif
 }
 

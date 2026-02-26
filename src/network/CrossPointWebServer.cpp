@@ -14,15 +14,12 @@
 #include "CrossPointSettings.h"
 #include "FeatureManifest.h"
 #include "RecentBooksStore.h"
-#include "core/features/FeatureModules.h"
-#if ENABLE_OTA_UPDATES
-#include "network/OtaUpdater.h"
-#endif
 #include "SettingsList.h"
 #include "SpiBusMutex.h"
 #include "WebDAVHandler.h"
 #include "activities/boot_sleep/SleepActivity.h"
 #include "activities/todo/TodoPlannerStorage.h"
+#include "core/features/FeatureModules.h"
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
 #include "html/SettingsPageHtml.generated.h"
@@ -2249,76 +2246,31 @@ void CrossPointWebServer::handleWifiForget() const {
   }
 }
 
-namespace {
-#if ENABLE_OTA_UPDATES
-enum class OtaWebCheckStatus { IDLE, CHECKING, DONE };
-struct OtaWebCheckState {
-  std::atomic<OtaWebCheckStatus> status{OtaWebCheckStatus::IDLE};
-  bool available = false;
-  std::string latestVersion;
-  std::string message;
-  int errorCode = 0;
-};
-OtaWebCheckState otaWebState;
-
-void otaWebCheckTask(void* param) {
-  auto* updater = static_cast<OtaUpdater*>(param);
-  const auto res = updater->checkForUpdate();
-
-  otaWebState.errorCode = static_cast<int>(res);
-  if (res == OtaUpdater::OK) {
-    otaWebState.available = updater->isUpdateNewer();
-    otaWebState.latestVersion = updater->getLatestVersion();
-    otaWebState.message =
-        otaWebState.available ? "Update available. Install from device Settings." : "Already on latest version.";
-  } else {
-    otaWebState.available = false;
-    const String& err = updater->getLastError();
-    otaWebState.message = err.length() > 0 ? err.c_str() : "Update check failed";
-  }
-
-  otaWebState.status.store(OtaWebCheckStatus::DONE, std::memory_order_release);
-  delete updater;
-  vTaskDelete(nullptr);
-}
-#endif
-}  // namespace
-
 void CrossPointWebServer::handleOtaCheckPost() {
   if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::OtaApi)) {
     server->send(404, "application/json", "{\"status\":\"error\",\"message\":\"OTA API disabled\"}");
     return;
   }
 
-#if ENABLE_OTA_UPDATES
   if (WiFi.status() != WL_CONNECTED) {
     server->send(503, "application/json", "{\"status\":\"error\",\"message\":\"Not connected to WiFi\"}");
     return;
   }
 
-  if (otaWebState.status.load(std::memory_order_acquire) == OtaWebCheckStatus::CHECKING) {
-    server->send(200, "application/json", "{\"status\":\"checking\"}");
-    return;
+  switch (core::FeatureModules::startOtaWebCheck()) {
+    case core::FeatureModules::OtaWebStartResult::AlreadyChecking:
+      server->send(200, "application/json", "{\"status\":\"checking\"}");
+      return;
+    case core::FeatureModules::OtaWebStartResult::Started:
+      server->send(202, "application/json", "{\"status\":\"checking\"}");
+      return;
+    case core::FeatureModules::OtaWebStartResult::StartTaskFailed:
+      server->send(500, "application/json", "{\"status\":\"error\",\"message\":\"Failed to start task\"}");
+      return;
+    case core::FeatureModules::OtaWebStartResult::Disabled:
+      server->send(404, "application/json", "{\"status\":\"error\",\"message\":\"OTA API disabled\"}");
+      return;
   }
-
-  otaWebState.available = false;
-  otaWebState.latestVersion.clear();
-  otaWebState.message = "Checking...";
-  otaWebState.errorCode = 0;
-  otaWebState.status.store(OtaWebCheckStatus::CHECKING, std::memory_order_release);
-
-  auto* updater = new OtaUpdater();
-  if (xTaskCreate(otaWebCheckTask, "OtaWebCheckTask", 4096, updater, 1, nullptr) != pdPASS) {
-    delete updater;
-    otaWebState.status.store(OtaWebCheckStatus::IDLE, std::memory_order_release);
-    server->send(500, "application/json", "{\"status\":\"error\",\"message\":\"Failed to start task\"}");
-    return;
-  }
-
-  server->send(202, "application/json", "{\"status\":\"checking\"}");
-#else
-  server->send(404, "application/json", "{\"status\":\"error\",\"message\":\"OTA API disabled\"}");
-#endif
 }
 
 void CrossPointWebServer::handleOtaCheckGet() const {
@@ -2327,20 +2279,23 @@ void CrossPointWebServer::handleOtaCheckGet() const {
     return;
   }
 
-#if ENABLE_OTA_UPDATES
-  const auto status = otaWebState.status.load(std::memory_order_acquire);
+  const core::FeatureModules::OtaWebCheckSnapshot status = core::FeatureModules::getOtaWebCheckSnapshot();
+  if (status.status == core::FeatureModules::OtaWebCheckStatus::Disabled) {
+    server->send(404, "application/json", "{\"status\":\"error\",\"message\":\"OTA API disabled\"}");
+    return;
+  }
 
   JsonDocument doc;
   doc["currentVersion"] = CROSSPOINT_VERSION;
 
-  if (status == OtaWebCheckStatus::CHECKING) {
+  if (status.status == core::FeatureModules::OtaWebCheckStatus::Checking) {
     doc["status"] = "checking";
-  } else if (status == OtaWebCheckStatus::DONE) {
+  } else if (status.status == core::FeatureModules::OtaWebCheckStatus::Done) {
     doc["status"] = "done";
-    doc["available"] = otaWebState.available;
-    doc["latestVersion"] = otaWebState.latestVersion.c_str();
-    doc["message"] = otaWebState.message.c_str();
-    doc["errorCode"] = otaWebState.errorCode;
+    doc["available"] = status.available;
+    doc["latestVersion"] = status.latestVersion.c_str();
+    doc["message"] = status.message.c_str();
+    doc["errorCode"] = status.errorCode;
   } else {
     doc["status"] = "idle";
   }
@@ -2348,7 +2303,4 @@ void CrossPointWebServer::handleOtaCheckGet() const {
   String json;
   serializeJson(doc, json);
   server->send(200, "application/json", json);
-#else
-  server->send(404, "application/json", "{\"status\":\"error\",\"message\":\"OTA API disabled\"}");
-#endif
 }

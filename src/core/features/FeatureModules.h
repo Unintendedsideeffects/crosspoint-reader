@@ -88,7 +88,31 @@ class FeatureModules {
     size_t compressedSize;
   };
 
+  enum class OtaWebStartResult {
+    Disabled,
+    Started,
+    AlreadyChecking,
+    StartTaskFailed,
+  };
+
+  enum class OtaWebCheckStatus {
+    Disabled,
+    Idle,
+    Checking,
+    Done,
+  };
+
+  struct OtaWebCheckSnapshot {
+    OtaWebCheckStatus status = OtaWebCheckStatus::Disabled;
+    bool available = false;
+    std::string latestVersion;
+    std::string message;
+    int errorCode = 0;
+  };
+
   static WebCompressedPayload getPokedexPluginPagePayload();
+  static OtaWebStartResult startOtaWebCheck();
+  static OtaWebCheckSnapshot getOtaWebCheckSnapshot();
 
   /**
    * Scan/reload the user-font library and (if a USER_SD font is selected)
