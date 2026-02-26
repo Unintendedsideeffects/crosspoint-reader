@@ -371,7 +371,9 @@ void onGoToTodo() {
   if (todoMdExists || todoTxtExists) {
     enterNewActivity(new TodoActivity(
         renderer, mappedInputManager,
-        TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists), today, onGoHome));
+        TodoPlannerStorage::dailyPath(today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport),
+                                      todoMdExists, todoTxtExists),
+        today, onGoHome));
     return;
   }
 
@@ -386,7 +388,9 @@ void onGoToTodo() {
   // 3. Default: Create/Open new list
   enterNewActivity(new TodoActivity(
       renderer, mappedInputManager,
-      TodoPlannerStorage::dailyPath(today, ENABLE_MARKDOWN != 0, todoMdExists, todoTxtExists), today, onGoHome));
+      TodoPlannerStorage::dailyPath(today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport),
+                                    todoMdExists, todoTxtExists),
+      today, onGoHome));
 #endif  // ENABLE_TODO_PLANNER
 }
 
@@ -615,14 +619,13 @@ void loop() {
   usbConnectedLast = usbConnected;
 #endif
 
-#if ENABLE_BACKGROUND_SERVER
   {
     const bool usbConn = gpio.isUsbConnected();
     const bool activityBlocksBackgroundServer = currentActivity && currentActivity->blocksBackgroundServer();
-    const bool allowRun = SETTINGS.backgroundServerOnCharge && usbConn && !activityBlocksBackgroundServer;
+    const bool allowRun = core::FeatureModules::hasCapability(core::Capability::BackgroundServer) &&
+                          SETTINGS.backgroundServerOnCharge && usbConn && !activityBlocksBackgroundServer;
     backgroundServer.loop(usbConn, allowRun);
   }
-#endif
 
   // Check for any user activity (button press or release) or active background work
   static unsigned long lastActivityTime = millis();
