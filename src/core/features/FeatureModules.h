@@ -30,6 +30,7 @@ enum class HomeOptionalAction {
 
 enum class Capability {
   BackgroundServer,
+  BleWifiProvisioning,
   CalibreSync,
   DarkMode,
   EpubSupport,

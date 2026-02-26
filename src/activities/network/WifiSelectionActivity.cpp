@@ -12,6 +12,7 @@
 #include "activities/TaskShutdown.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
+#include "core/features/FeatureModules.h"
 #include "fontIds.h"
 
 void WifiSelectionActivity::onEnter() {
@@ -200,12 +201,13 @@ void WifiSelectionActivity::selectNetwork(const int index) {
 }
 
 void WifiSelectionActivity::startBleProvisioning() {
-#if !ENABLE_BLE_WIFI_PROVISIONING
-  connectionError = "BLE provisioning disabled";
-  state = WifiSelectionState::CONNECTION_FAILED;
-  requestUpdate();
-  return;
-#else
+  if (!core::FeatureModules::hasCapability(core::Capability::BleWifiProvisioning)) {
+    connectionError = "BLE provisioning disabled";
+    state = WifiSelectionState::CONNECTION_FAILED;
+    requestUpdate();
+    return;
+  }
+
   bleProvisioner.stop();
   WiFi.scanDelete();
   WiFi.mode(WIFI_OFF);
@@ -224,13 +226,13 @@ void WifiSelectionActivity::startBleProvisioning() {
   selectedRequiresPassword = false;
   usedSavedPassword = false;
   requestUpdate();
-#endif
 }
 
 void WifiSelectionActivity::checkBleProvisioning() {
-#if !ENABLE_BLE_WIFI_PROVISIONING
-  return;
-#else
+  if (!core::FeatureModules::hasCapability(core::Capability::BleWifiProvisioning)) {
+    return;
+  }
+
   std::string bleSsid;
   std::string blePassword;
   if (!bleProvisioner.takeCredentials(bleSsid, blePassword)) {
@@ -252,7 +254,6 @@ void WifiSelectionActivity::checkBleProvisioning() {
 
   LOG_DBG("WIFI", "Received BLE credentials for %s", selectedSSID.c_str());
   attemptConnection();
-#endif
 }
 
 void WifiSelectionActivity::attemptConnection() {
@@ -493,10 +494,10 @@ void WifiSelectionActivity::loop() {
         requestUpdate();
         return;
       }
-#if ENABLE_BLE_WIFI_PROVISIONING
-      startBleProvisioning();
-      return;
-#endif
+      if (core::FeatureModules::hasCapability(core::Capability::BleWifiProvisioning)) {
+        startBleProvisioning();
+        return;
+      }
     }
 
     // Handle navigation
@@ -657,12 +658,13 @@ void WifiSelectionActivity::renderNetworkList() const {
 }
 
 void WifiSelectionActivity::renderBleProvisioning() const {
-#if !ENABLE_BLE_WIFI_PROVISIONING
-  renderer.drawCenteredText(UI_12_FONT_ID, 200, "BLE disabled in this build", true, EpdFontFamily::BOLD);
-  const auto labels = mappedInput.mapLabels("« Back", "", "", "");
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-  return;
-#else
+  if (!core::FeatureModules::hasCapability(core::Capability::BleWifiProvisioning)) {
+    renderer.drawCenteredText(UI_12_FONT_ID, 200, "BLE disabled in this build", true, EpdFontFamily::BOLD);
+    const auto labels = mappedInput.mapLabels("« Back", "", "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    return;
+  }
+
   const auto pageHeight = renderer.getScreenHeight();
   const auto top = (pageHeight - 120) / 2;
 
@@ -679,7 +681,6 @@ void WifiSelectionActivity::renderBleProvisioning() const {
 
   const auto labels = mappedInput.mapLabels("« Cancel", "Restart", "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-#endif
 }
 
 void WifiSelectionActivity::renderConnecting() const {

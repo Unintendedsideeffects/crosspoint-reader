@@ -207,6 +207,8 @@ bool FeatureModules::hasCapability(const Capability capability) {
   switch (capability) {
     case Capability::BackgroundServer:
       return isEnabled("background_server");
+    case Capability::BleWifiProvisioning:
+      return isEnabled("ble_wifi_provisioning");
     case Capability::CalibreSync:
       return isEnabled("calibre_sync");
     case Capability::DarkMode:
