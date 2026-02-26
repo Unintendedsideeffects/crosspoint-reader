@@ -807,6 +807,65 @@ std::string GfxRenderer::truncatedText(const int fontId, const char* text, const
   return item.empty() ? ellipsis : item + ellipsis;
 }
 
+std::vector<std::string> GfxRenderer::wrappedText(const int fontId, const char* text, const int maxWidth,
+                                                  const int maxLines, const EpdFontFamily::Style style) const {
+  std::vector<std::string> lines;
+  if (!text || maxWidth <= 0 || maxLines <= 0) {
+    return lines;
+  }
+
+  std::vector<std::string> words;
+  std::string token;
+  for (const char* p = text; *p != '\0'; ++p) {
+    const char ch = *p;
+    if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') {
+      if (!token.empty()) {
+        words.push_back(token);
+        token.clear();
+      }
+      continue;
+    }
+    token.push_back(ch);
+  }
+  if (!token.empty()) {
+    words.push_back(token);
+  }
+  if (words.empty()) {
+    return lines;
+  }
+
+  size_t idx = 0;
+  while (idx < words.size() && static_cast<int>(lines.size()) < maxLines) {
+    std::string line = words[idx++];
+    if (getTextWidth(fontId, line.c_str(), style) > maxWidth) {
+      line = truncatedText(fontId, line.c_str(), maxWidth, style);
+    } else {
+      while (idx < words.size()) {
+        std::string candidate = line + " " + words[idx];
+        if (getTextWidth(fontId, candidate.c_str(), style) <= maxWidth) {
+          line = std::move(candidate);
+          ++idx;
+        } else {
+          break;
+        }
+      }
+    }
+
+    if (static_cast<int>(lines.size()) == maxLines - 1 && idx < words.size()) {
+      std::string remaining = line;
+      while (idx < words.size()) {
+        remaining += " ";
+        remaining += words[idx++];
+      }
+      line = truncatedText(fontId, remaining.c_str(), maxWidth, style);
+    }
+
+    lines.push_back(std::move(line));
+  }
+
+  return lines;
+}
+
 // Note: Internal driver treats screen in command orientation; this library exposes a logical orientation
 int GfxRenderer::getScreenWidth() const {
   switch (orientation) {
@@ -853,6 +912,24 @@ int GfxRenderer::getSpaceWidth(const int fontId, const EpdFontFamily::Style styl
 
   const EpdGlyph* glyph = font->getGlyph(' ');
   return glyph ? glyph->advanceX : 0;
+}
+
+int8_t GfxRenderer::getKerning(const int fontId, const uint32_t leftCp, const uint32_t rightCp,
+                               const EpdFontFamily::Style style) const {
+  (void)fontId;
+  (void)leftCp;
+  (void)rightCp;
+  (void)style;
+  return 0;
+}
+
+int GfxRenderer::getSpaceKernAdjust(const int fontId, const uint32_t leftCp, const uint32_t rightCp,
+                                    const EpdFontFamily::Style style) const {
+  (void)fontId;
+  (void)leftCp;
+  (void)rightCp;
+  (void)style;
+  return 0;
 }
 
 int GfxRenderer::getTextAdvanceX(const int fontId, const char* text) const {

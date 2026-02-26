@@ -626,7 +626,7 @@ void EpubReaderActivity::renderScreen() {
                                  SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::ONLY_BOOK_PROGRESS_BAR ||
                                  SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::CHAPTER_PROGRESS_BAR;
     orientedMarginBottom += statusBarMargin - SETTINGS.screenMargin +
-                            (showProgressBar ? (metrics.bookProgressBarHeight + progressBarMarginTop) : 0);
+                            (showProgressBar ? (metrics.progressBarHeight + progressBarMarginTop) : 0);
   }
 
   if (!section) {
@@ -843,14 +843,14 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
 
   if (showBookProgressBar) {
     // Draw progress bar at the very bottom of the screen, from edge to edge of viewable area
-    GUI.drawReadingProgressBar(renderer, static_cast<size_t>(bookProgress));
+    ScreenComponents::drawBookProgressBar(renderer, static_cast<size_t>(bookProgress));
   }
 
   if (showChapterProgressBar) {
     // Draw chapter progress bar at the very bottom of the screen, from edge to edge of viewable area
     const float chapterProgress =
         (section->pageCount > 0) ? (static_cast<float>(section->currentPage + 1) / section->pageCount) * 100 : 0;
-    GUI.drawReadingProgressBar(renderer, static_cast<size_t>(chapterProgress));
+    ScreenComponents::drawBookProgressBar(renderer, static_cast<size_t>(chapterProgress));
   }
 
   if (showBattery) {

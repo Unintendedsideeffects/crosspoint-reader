@@ -5,6 +5,7 @@
 #include <HalDisplay.h>
 
 #include <map>
+#include <vector>
 
 #include "Bitmap.h"
 
@@ -125,12 +126,18 @@ class GfxRenderer {
   void drawSideButtonHints(int fontId, const char* topBtn, const char* bottomBtn) const;
   int getSpaceWidth(int fontId) const;
   int getSpaceWidth(int fontId, EpdFontFamily::Style style) const;
+  int8_t getKerning(int fontId, uint32_t leftCp, uint32_t rightCp,
+                    EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
+  int getSpaceKernAdjust(int fontId, uint32_t leftCp, uint32_t rightCp,
+                         EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
   int getTextAdvanceX(int fontId, const char* text) const;
   int getTextAdvanceX(int fontId, const char* text, EpdFontFamily::Style style) const;
   int getFontAscenderSize(int fontId) const;
   int getLineHeight(int fontId) const;
   std::string truncatedText(int fontId, const char* text, int maxWidth,
                             EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
+  std::vector<std::string> wrappedText(int fontId, const char* text, int maxWidth, int maxLines,
+                                       EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
 
   // Helper for drawing rotated text (90 degrees clockwise, for side buttons)
   void drawTextRotated90CW(int fontId, int x, int y, const char* text, bool black = true,
