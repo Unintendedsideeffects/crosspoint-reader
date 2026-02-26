@@ -497,7 +497,6 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       const int currentPage = section ? section->currentPage : 0;
       const int totalPages = section ? section->pageCount : 0;
-      exitActivity();
       Activity* syncActivity = core::FeatureModules::createKoreaderSyncActivity(
           renderer, mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
           [this]() {
@@ -514,6 +513,7 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
             pendingSubactivityExit = true;
           });
       if (syncActivity != nullptr) {
+        exitActivity();
         enterNewActivity(syncActivity);
       }
       xSemaphoreGive(renderingMutex);

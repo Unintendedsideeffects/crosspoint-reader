@@ -59,6 +59,9 @@ class FeatureModules {
   };
 
   struct ReaderOpenResult {
+    // When status == Opened, activity is a newly allocated raw Activity* and ownership
+    // transfers to the caller, which is responsible for handing it off or deleting it.
+    // For all non-Opened statuses, activity stays nullptr.
     ReaderOpenStatus status = ReaderOpenStatus::LoadFailed;
     Activity* activity = nullptr;
     const char* logMessage = nullptr;
@@ -122,10 +125,11 @@ class FeatureModules {
   static std::string getKoreaderPassword();
   static std::string getKoreaderServerUrl();
   static uint8_t getKoreaderMatchMethod();
-  static void setKoreaderUsername(const std::string& username);
-  static void setKoreaderPassword(const std::string& password);
-  static void setKoreaderServerUrl(const std::string& serverUrl);
-  static void setKoreaderMatchMethod(uint8_t method);
+  static void setKoreaderUsername(const std::string& username, bool save = true);
+  static void setKoreaderPassword(const std::string& password, bool save = true);
+  static void setKoreaderServerUrl(const std::string& serverUrl, bool save = true);
+  static void setKoreaderMatchMethod(uint8_t method, bool save = true);
+  static void saveKoreaderSettings();
   static std::vector<std::string> getUserFontFamilies();
   static uint8_t getSelectedUserFontFamilyIndex();
   static void setSelectedUserFontFamilyIndex(uint8_t index);

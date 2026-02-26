@@ -5,9 +5,9 @@
 namespace core {
 
 struct FeatureSystemStatus {
-  bool initialized;
-  bool dependencyGraphValid;
-  String validationError;
+  bool initialized = false;
+  bool dependencyGraphValid = false;
+  String validationError = "";
 };
 
 class CoreBootstrap {

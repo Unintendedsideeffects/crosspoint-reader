@@ -1538,6 +1538,7 @@ void CrossPointWebServer::handlePostSettings() {
 
   auto settings = getSettingsList();
   int applied = 0;
+  bool updatedKoreaderSettings = false;
 
   for (auto& s : settings) {
     if (!s.key) continue;
@@ -1550,6 +1551,7 @@ void CrossPointWebServer::handlePostSettings() {
           SETTINGS.*(s.valuePtr) = val;
         }
         applied++;
+        updatedKoreaderSettings = updatedKoreaderSettings || (s.category == StrId::STR_KOREADER_SYNC);
         break;
       }
       case SettingType::ENUM: {
@@ -1566,6 +1568,7 @@ void CrossPointWebServer::handlePostSettings() {
             s.valueSetter(static_cast<uint8_t>(val));
           }
           applied++;
+          updatedKoreaderSettings = updatedKoreaderSettings || (s.category == StrId::STR_KOREADER_SYNC);
         }
         break;
       }
@@ -1576,6 +1579,7 @@ void CrossPointWebServer::handlePostSettings() {
             SETTINGS.*(s.valuePtr) = static_cast<uint8_t>(val);
           }
           applied++;
+          updatedKoreaderSettings = updatedKoreaderSettings || (s.category == StrId::STR_KOREADER_SYNC);
         }
         break;
       }
@@ -1588,6 +1592,7 @@ void CrossPointWebServer::handlePostSettings() {
           s.stringPtr[s.stringMaxLen - 1] = '\0';
         }
         applied++;
+        updatedKoreaderSettings = updatedKoreaderSettings || (s.category == StrId::STR_KOREADER_SYNC);
         break;
       }
       default:
@@ -1596,6 +1601,9 @@ void CrossPointWebServer::handlePostSettings() {
   }
 
   core::FeatureModules::onWebSettingsApplied();
+  if (updatedKoreaderSettings) {
+    core::FeatureModules::saveKoreaderSettings();
+  }
 
   SETTINGS.enforceButtonLayoutConstraints();
   if (!SETTINGS.saveToFile()) {
@@ -1607,11 +1615,6 @@ void CrossPointWebServer::handlePostSettings() {
 }
 
 void CrossPointWebServer::handleRescanUserFonts() {
-  if (!core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::UserFontsApi)) {
-    server->send(404, "text/plain", "User font API disabled");
-    return;
-  }
-
   const auto result = core::FeatureModules::onFontScanRequested();
   if (!result.available) {
     server->send(404, "text/plain", "User font API disabled");

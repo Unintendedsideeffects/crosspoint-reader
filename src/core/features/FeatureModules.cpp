@@ -424,7 +424,10 @@ FeatureModules::RecentBookDataResult FeatureModules::resolveRecentBookData(const
     }
 #if ENABLE_EPUB_SUPPORT
     Epub epub(path, "/.crosspoint");
-    epub.load(false);
+    // Match resolveHomeCardData behavior: only expose metadata when the file loaded.
+    if (!epub.load(false)) {
+      return result;
+    }
     result.title = epub.getTitle();
     result.author = epub.getAuthor();
     result.coverPath = epub.getThumbBmpPath();
@@ -668,42 +671,60 @@ uint8_t FeatureModules::getKoreaderMatchMethod() {
 #endif
 }
 
-void FeatureModules::setKoreaderUsername(const std::string& username) {
+void FeatureModules::setKoreaderUsername(const std::string& username, const bool save) {
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.setCredentials(username, KOREADER_STORE.getPassword());
-  KOREADER_STORE.saveToFile();
+  if (save) {
+    KOREADER_STORE.saveToFile();
+  }
 #else
   (void)username;
+  (void)save;
 #endif
 }
 
-void FeatureModules::setKoreaderPassword(const std::string& password) {
+void FeatureModules::setKoreaderPassword(const std::string& password, const bool save) {
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.setCredentials(KOREADER_STORE.getUsername(), password);
-  KOREADER_STORE.saveToFile();
+  if (save) {
+    KOREADER_STORE.saveToFile();
+  }
 #else
   (void)password;
+  (void)save;
 #endif
 }
 
-void FeatureModules::setKoreaderServerUrl(const std::string& serverUrl) {
+void FeatureModules::setKoreaderServerUrl(const std::string& serverUrl, const bool save) {
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   KOREADER_STORE.setServerUrl(serverUrl);
-  KOREADER_STORE.saveToFile();
+  if (save) {
+    KOREADER_STORE.saveToFile();
+  }
 #else
   (void)serverUrl;
+  (void)save;
 #endif
 }
 
-void FeatureModules::setKoreaderMatchMethod(const uint8_t method) {
+void FeatureModules::setKoreaderMatchMethod(const uint8_t method, const bool save) {
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
   const auto selectedMethod = method == static_cast<uint8_t>(DocumentMatchMethod::BINARY)
                                   ? DocumentMatchMethod::BINARY
                                   : DocumentMatchMethod::FILENAME;
   KOREADER_STORE.setMatchMethod(selectedMethod);
-  KOREADER_STORE.saveToFile();
+  if (save) {
+    KOREADER_STORE.saveToFile();
+  }
 #else
   (void)method;
+  (void)save;
+#endif
+}
+
+void FeatureModules::saveKoreaderSettings() {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  KOREADER_STORE.saveToFile();
 #endif
 }
 

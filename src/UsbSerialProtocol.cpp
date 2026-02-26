@@ -41,6 +41,12 @@ static void buildSettingsDoc(JsonDocument& doc) {
   doc["sleepScreenCoverMode"] = s.sleepScreenCoverMode;
   doc["sleepScreenCoverFilter"] = s.sleepScreenCoverFilter;
   doc["statusBar"] = s.statusBar;
+  doc["statusBarChapterPageCount"] = s.statusBarChapterPageCount;
+  doc["statusBarBookProgressPercentage"] = s.statusBarBookProgressPercentage;
+  doc["statusBarProgressBar"] = s.statusBarProgressBar;
+  doc["statusBarProgressBarThickness"] = s.statusBarProgressBarThickness;
+  doc["statusBarTitle"] = s.statusBarTitle;
+  doc["statusBarBattery"] = s.statusBarBattery;
   doc["extraParagraphSpacing"] = s.extraParagraphSpacing;
   doc["textAntiAliasing"] = s.textAntiAliasing;
   doc["shortPwrBtn"] = s.shortPwrBtn;

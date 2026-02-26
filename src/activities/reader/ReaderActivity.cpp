@@ -78,6 +78,4 @@ void ReaderActivity::onEnter() {
       onGoBack();
       return;
   }
-
-  onGoBack();
 }

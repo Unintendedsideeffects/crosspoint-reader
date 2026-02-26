@@ -24,10 +24,21 @@ inline std::vector<SettingInfo> getSettingsList() {
       SettingInfo::Enum(StrId::STR_SLEEP_COVER_FILTER, &CrossPointSettings::sleepScreenCoverFilter,
                         {StrId::STR_NONE_OPT, StrId::STR_FILTER_CONTRAST, StrId::STR_INVERTED},
                         "sleepScreenCoverFilter", StrId::STR_CAT_DISPLAY),
-      SettingInfo::Enum(StrId::STR_STATUS_BAR, &CrossPointSettings::statusBar,
-                        {StrId::STR_NONE_OPT, StrId::STR_NO_PROGRESS, StrId::STR_FULL_OPT,
-                         StrId::STR_BOOK_PROGRESS_PERCENTAGE, StrId::STR_PROGRESS_BAR, StrId::STR_CHAPTER_PAGE_COUNT},
-                        "statusBar", StrId::STR_CAT_DISPLAY),
+      SettingInfo::Toggle(StrId::STR_CHAPTER_PAGE_COUNT, &CrossPointSettings::statusBarChapterPageCount,
+                          "statusBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR),
+      SettingInfo::Toggle(StrId::STR_BOOK_PROGRESS_PERCENTAGE, &CrossPointSettings::statusBarBookProgressPercentage,
+                          "statusBarBookProgressPercentage", StrId::STR_CUSTOMISE_STATUS_BAR),
+      SettingInfo::Enum(StrId::STR_PROGRESS_BAR, &CrossPointSettings::statusBarProgressBar,
+                        {StrId::STR_BOOK, StrId::STR_CHAPTER, StrId::STR_HIDE}, "statusBarProgressBar",
+                        StrId::STR_CUSTOMISE_STATUS_BAR),
+      SettingInfo::Enum(StrId::STR_PROGRESS_BAR_THICKNESS, &CrossPointSettings::statusBarProgressBarThickness,
+                        {StrId::STR_PROGRESS_BAR_THIN, StrId::STR_PROGRESS_BAR_MEDIUM, StrId::STR_PROGRESS_BAR_THICK},
+                        "statusBarProgressBarThickness", StrId::STR_CUSTOMISE_STATUS_BAR),
+      SettingInfo::Enum(StrId::STR_TITLE, &CrossPointSettings::statusBarTitle,
+                        {StrId::STR_BOOK, StrId::STR_CHAPTER, StrId::STR_HIDE}, "statusBarTitle",
+                        StrId::STR_CUSTOMISE_STATUS_BAR),
+      SettingInfo::Toggle(StrId::STR_BATTERY, &CrossPointSettings::statusBarBattery, "statusBarBattery",
+                          StrId::STR_CUSTOMISE_STATUS_BAR),
       SettingInfo::Enum(StrId::STR_HIDE_BATTERY, &CrossPointSettings::hideBatteryPercentage,
                         {StrId::STR_NEVER, StrId::STR_IN_READER, StrId::STR_ALWAYS}, "hideBatteryPercentage",
                         StrId::STR_CAT_DISPLAY),
@@ -118,34 +129,34 @@ inline std::vector<SettingInfo> getSettingsList() {
     // --- KOReader Sync (web-only, persisted via FeatureModules) ---
     list.push_back(SettingInfo::DynamicString(
         StrId::STR_KOREADER_USERNAME, [] { return core::FeatureModules::getKoreaderUsername(); },
-        [](const std::string& value) { core::FeatureModules::setKoreaderUsername(value); }, "koUsername",
+        [](const std::string& value) { core::FeatureModules::setKoreaderUsername(value, false); }, "koUsername",
         StrId::STR_KOREADER_SYNC));
     list.push_back(SettingInfo::DynamicString(
         StrId::STR_KOREADER_PASSWORD, [] { return core::FeatureModules::getKoreaderPassword(); },
-        [](const std::string& value) { core::FeatureModules::setKoreaderPassword(value); }, "koPassword",
+        [](const std::string& value) { core::FeatureModules::setKoreaderPassword(value, false); }, "koPassword",
         StrId::STR_KOREADER_SYNC));
     list.push_back(SettingInfo::DynamicString(
         StrId::STR_SYNC_SERVER_URL, [] { return core::FeatureModules::getKoreaderServerUrl(); },
-        [](const std::string& value) { core::FeatureModules::setKoreaderServerUrl(value); }, "koServerUrl",
+        [](const std::string& value) { core::FeatureModules::setKoreaderServerUrl(value, false); }, "koServerUrl",
         StrId::STR_KOREADER_SYNC));
     list.push_back(SettingInfo::DynamicEnum(
         StrId::STR_DOCUMENT_MATCHING, {StrId::STR_FILENAME, StrId::STR_BINARY},
         [] { return core::FeatureModules::getKoreaderMatchMethod(); },
-        [](uint8_t value) { core::FeatureModules::setKoreaderMatchMethod(value); }, "koMatchMethod",
+        [](uint8_t value) { core::FeatureModules::setKoreaderMatchMethod(value, false); }, "koMatchMethod",
         StrId::STR_KOREADER_SYNC));
   }
 
   if (core::FeatureModules::hasCapability(core::Capability::UserFonts)) {
-    SettingInfo userFontPathSetting = SettingInfo::DynamicEnum(
+    list.push_back(SettingInfo::DynamicEnum(
         StrId::STR_EXTERNAL_FONT, {}, [] { return core::FeatureModules::getSelectedUserFontFamilyIndex(); },
         [](uint8_t value) { core::FeatureModules::setSelectedUserFontFamilyIndex(value); }, "userFontPath",
-        StrId::STR_CAT_READER);
-    userFontPathSetting.dynamicValuesGetter = [] { return core::FeatureModules::getUserFontFamilies(); };
-    list.push_back(std::move(userFontPathSetting));
+        StrId::STR_CAT_READER, [] { return core::FeatureModules::getUserFontFamilies(); }));
   }
 
   if (core::FeatureModules::hasCapability(core::Capability::CalibreSync)) {
-    // --- OPDS Browser (web-only, uses CrossPointSettings char arrays) ---
+    // OPDS intentionally binds directly to SETTINGS char arrays because SettingInfo::String
+    // edits in-place mutable storage; unlike KOReader credentials, OPDS persistence remains
+    // owned by CrossPointSettings/JsonSettingsIO.
     list.push_back(SettingInfo::String(StrId::STR_OPDS_SERVER_URL, SETTINGS.opdsServerUrl,
                                        sizeof(SETTINGS.opdsServerUrl), "opdsServerUrl", StrId::STR_OPDS_BROWSER));
     list.push_back(SettingInfo::String(StrId::STR_USERNAME, SETTINGS.opdsUsername, sizeof(SETTINGS.opdsUsername),

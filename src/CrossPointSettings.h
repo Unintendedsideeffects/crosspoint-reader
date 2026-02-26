@@ -51,8 +51,6 @@ class CrossPointSettings {
     CHAPTER_PROGRESS_BAR = 5,
     STATUS_BAR_MODE_COUNT
   };
-  // New granular status-bar controls used by themed status-bar rendering.
-  // Kept alongside STATUS_BAR_MODE for backward compatibility with legacy UI flows.
   enum STATUS_BAR_PROGRESS_BAR {
     BOOK_PROGRESS = 0,
     CHAPTER_PROGRESS = 1,
@@ -162,9 +160,8 @@ class CrossPointSettings {
   uint8_t sleepScreenCoverFilter = NO_FILTER;
   // Sleep screen custom-image source
   uint8_t sleepScreenSource = SLEEP_SOURCE_SLEEP;
-  // Status bar settings
+  // Status bar settings (statusBar retained for migration only)
   uint8_t statusBar = FULL;
-  // Granular status bar settings (new path)
   uint8_t statusBarChapterPageCount = 1;
   uint8_t statusBarBookProgressPercentage = 1;
   uint8_t statusBarProgressBar = HIDE_PROGRESS;
@@ -267,6 +264,9 @@ class CrossPointSettings {
   int getRefreshFrequency() const;
   int getTimeZoneOffsetSeconds() const;
 };
+
+// Shared legacy migration helper used by both binary and JSON settings loaders.
+void applyLegacyStatusBarSettings(CrossPointSettings& settings);
 
 // Helper macro to access settings
 #define SETTINGS CrossPointSettings::getInstance()

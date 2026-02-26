@@ -6,7 +6,7 @@ namespace ForkDriftNavigation {
 
 CoverNavResult navigateCoverGrid(int selectedIndex, int bookCount, int cols, int /*rows*/, bool left, bool right,
                                  bool up, bool down) {
-  if (bookCount <= 0) return {0, false};
+  if (bookCount <= 0 || cols <= 0) return {0, false};
 
   // Clamp incoming index to valid range
   selectedIndex = std::max(0, std::min(selectedIndex, bookCount - 1));

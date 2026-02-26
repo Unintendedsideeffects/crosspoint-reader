@@ -4,6 +4,7 @@
 #include <Logging.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 
 namespace core {
@@ -68,6 +69,51 @@ String joinDependencies(const char* const* dependencies, const size_t count, con
   return result;
 }
 
+String escapeJsonString(const char* input) {
+  if (input == nullptr) {
+    return "";
+  }
+
+  String escaped;
+  for (const char* p = input; *p != '\0'; ++p) {
+    const unsigned char ch = static_cast<unsigned char>(*p);
+    switch (ch) {
+      case '\"':
+        escaped += "\\\"";
+        break;
+      case '\\':
+        escaped += "\\\\";
+        break;
+      case '\b':
+        escaped += "\\b";
+        break;
+      case '\f':
+        escaped += "\\f";
+        break;
+      case '\n':
+        escaped += "\\n";
+        break;
+      case '\r':
+        escaped += "\\r";
+        break;
+      case '\t':
+        escaped += "\\t";
+        break;
+      default:
+        if (ch < 0x20) {
+          char buffer[7];
+          snprintf(buffer, sizeof(buffer), "\\u%04x", ch);
+          escaped += buffer;
+        } else {
+          escaped += static_cast<char>(ch);
+        }
+        break;
+    }
+  }
+
+  return escaped;
+}
+
 }  // namespace
 
 const FeatureDescriptor* FeatureCatalog::all(size_t& count) {
@@ -120,7 +166,7 @@ String FeatureCatalog::toJson() {
       json += ",";
     }
     json += "\"";
-    json += kFeatureCatalog[i].key;
+    json += escapeJsonString(kFeatureCatalog[i].key);
     json += "\":";
     json += kFeatureCatalog[i].enabled ? "true" : "false";
   }

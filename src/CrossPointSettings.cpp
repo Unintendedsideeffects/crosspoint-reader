@@ -38,6 +38,54 @@ void applyLegacyFrontButtonLayout(CrossPointSettings& settings) {
       static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(settings.frontButtonLayout));
 }
 
+void applyLegacyStatusBarSettings(CrossPointSettings& settings) {
+  switch (static_cast<CrossPointSettings::STATUS_BAR_MODE>(settings.statusBar)) {
+    case CrossPointSettings::NONE:
+      settings.statusBarChapterPageCount = 0;
+      settings.statusBarBookProgressPercentage = 0;
+      settings.statusBarProgressBar = CrossPointSettings::HIDE_PROGRESS;
+      settings.statusBarTitle = CrossPointSettings::HIDE_TITLE;
+      settings.statusBarBattery = 0;
+      break;
+    case CrossPointSettings::NO_PROGRESS:
+      settings.statusBarChapterPageCount = 0;
+      settings.statusBarBookProgressPercentage = 0;
+      settings.statusBarProgressBar = CrossPointSettings::HIDE_PROGRESS;
+      settings.statusBarTitle = CrossPointSettings::CHAPTER_TITLE;
+      settings.statusBarBattery = 1;
+      break;
+    case CrossPointSettings::BOOK_PROGRESS_BAR:
+      settings.statusBarChapterPageCount = 1;
+      settings.statusBarBookProgressPercentage = 0;
+      settings.statusBarProgressBar = CrossPointSettings::BOOK_PROGRESS;
+      settings.statusBarTitle = CrossPointSettings::CHAPTER_TITLE;
+      settings.statusBarBattery = 1;
+      break;
+    case CrossPointSettings::ONLY_BOOK_PROGRESS_BAR:
+      settings.statusBarChapterPageCount = 1;
+      settings.statusBarBookProgressPercentage = 0;
+      settings.statusBarProgressBar = CrossPointSettings::BOOK_PROGRESS;
+      settings.statusBarTitle = CrossPointSettings::HIDE_TITLE;
+      settings.statusBarBattery = 0;
+      break;
+    case CrossPointSettings::CHAPTER_PROGRESS_BAR:
+      settings.statusBarChapterPageCount = 0;
+      settings.statusBarBookProgressPercentage = 1;
+      settings.statusBarProgressBar = CrossPointSettings::CHAPTER_PROGRESS;
+      settings.statusBarTitle = CrossPointSettings::CHAPTER_TITLE;
+      settings.statusBarBattery = 1;
+      break;
+    case CrossPointSettings::FULL:
+    default:
+      settings.statusBarChapterPageCount = 1;
+      settings.statusBarBookProgressPercentage = 1;
+      settings.statusBarProgressBar = CrossPointSettings::HIDE_PROGRESS;
+      settings.statusBarTitle = CrossPointSettings::CHAPTER_TITLE;
+      settings.statusBarBattery = 1;
+      break;
+  }
+}
+
 }  // namespace
 
 void CrossPointSettings::validateFrontButtonMapping(CrossPointSettings& settings) {
@@ -253,6 +301,9 @@ bool CrossPointSettings::loadFromBinaryFile() {
     applyLegacyFrontButtonLayout(*this);
   }
 
+  // Binary settings only carry the legacy statusBar enum.
+  applyLegacyStatusBarSettings(*this);
+
   validateAndClamp();
   inputFile.close();
   LOG_DBG("CPS", "Settings loaded from binary file");
@@ -309,6 +360,11 @@ void CrossPointSettings::validateAndClamp() {
   if (sleepScreenCoverMode > CROP) sleepScreenCoverMode = FIT;
   if (sleepScreenSource >= SLEEP_SCREEN_SOURCE_COUNT) sleepScreenSource = SLEEP_SOURCE_SLEEP;
   if (statusBar >= STATUS_BAR_MODE_COUNT) statusBar = FULL;
+  if (statusBarProgressBar >= STATUS_BAR_PROGRESS_BAR_COUNT) statusBarProgressBar = HIDE_PROGRESS;
+  if (statusBarProgressBarThickness >= STATUS_BAR_PROGRESS_BAR_THICKNESS_COUNT) {
+    statusBarProgressBarThickness = PROGRESS_BAR_NORMAL;
+  }
+  if (statusBarTitle >= STATUS_BAR_TITLE_COUNT) statusBarTitle = CHAPTER_TITLE;
   if (orientation > LANDSCAPE_CCW) orientation = PORTRAIT;
   if (frontButtonLayout > LEFT_LEFT_RIGHT_RIGHT) frontButtonLayout = BACK_CONFIRM_LEFT_RIGHT;
   if (sideButtonLayout > NEXT_PREV) sideButtonLayout = PREV_NEXT;
@@ -345,6 +401,9 @@ void CrossPointSettings::validateAndClamp() {
   textAntiAliasing = textAntiAliasing ? 1 : 0;
   hyphenationEnabled = hyphenationEnabled ? 1 : 0;
   longPressChapterSkip = longPressChapterSkip ? 1 : 0;
+  statusBarChapterPageCount = statusBarChapterPageCount ? 1 : 0;
+  statusBarBookProgressPercentage = statusBarBookProgressPercentage ? 1 : 0;
+  statusBarBattery = statusBarBattery ? 1 : 0;
   backgroundServerOnCharge = backgroundServerOnCharge ? 1 : 0;
   usbMscPromptOnConnect = usbMscPromptOnConnect ? 1 : 0;
 

@@ -86,6 +86,10 @@ const char* const LANGUAGE_NAMES[] = {
     "\xD1"
     "\x8F"
     "",
+    "Italiano",
+    "Polski",
+    "Suomi",
+    "Dansk",
 };
 
 // Character sets for each language
@@ -238,7 +242,7 @@ const char* const CHARACTER_SETS[] = {
     "\x80"
     "\x91"
     "",  // Português (Brasil)
-    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvxyz|\xC2"
+    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvwxyz|\xC2"
     "\xAB"
     "\xC2"
     "\xBB"
@@ -396,6 +400,10 @@ const char* const CHARACTER_SETS[] = {
     "\x9F"
     "\xC5"
     "\xA3"
+    "\xC8"
+    "\x99"
+    "\xC8"
+    "\x9B"
     "",  // Română
     " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWX[\\]abcdefghijklmnopqrstuvwxyz|\xC2"
     "\xAB"
@@ -422,7 +430,7 @@ const char* const CHARACTER_SETS[] = {
     "\xC3"
     "\xBC"
     "",  // Català
-    " !\"%'()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[\\]abcdefghiklmnoprstuvxyz|\xC2"
+    " !\"%'()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[\\]abcdefghiklmnoprstuvwxyz|\xC2"
     "\xAB"
     "\xD0"
     "\x86"
@@ -543,7 +551,7 @@ const char* const CHARACTER_SETS[] = {
     "\xD1"
     "\x97"
     "",  // Українська
-    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvxyz|\xC2"
+    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvwxyz|\xC2"
     "\xAB"
     "\xC2"
     "\xBB"
@@ -662,6 +670,76 @@ const char* const CHARACTER_SETS[] = {
     "\xD1"
     "\x9E"
     "",  // Беларуская
+    " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWX[\\]abcdefghiklmnopqrstuvwxyz|\xC2"
+    "\xAB"
+    "\xC2"
+    "\xB0"
+    "\xC3"
+    "\x80"
+    "\xC3"
+    "\xA0"
+    "\xC3"
+    "\xA8"
+    "\xC3"
+    "\xAC"
+    "\xC3"
+    "\xB9"
+    "\xE2"
+    "\x86"
+    "\xBA"
+    "\xE2"
+    "\x86"
+    "\xBB"
+    "",  // Italiano
+    " !\"%'()*+,./012345:=?ABCDEFGHIJKLMNOPQRSTUWXZ[\\]abcdefghijklmnoprstuvwxyz|\xC2"
+    "\xAB"
+    "\xC3"
+    "\xB3"
+    "\xC4"
+    "\x85"
+    "\xC4"
+    "\x87"
+    "\xC4"
+    "\x99"
+    "\xC5"
+    "\x81"
+    "\xC5"
+    "\x82"
+    "\xC5"
+    "\x84"
+    "\xC5"
+    "\x9A"
+    "\xC5"
+    "\x9B"
+    "\xC5"
+    "\xBA"
+    "\xC5"
+    "\xBC"
+    "",  // Polski
+    " !\"%'()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUVWXY[\\]abcdefghijklmnoprstuvwxyz|\xC2"
+    "\xAB"
+    "\xC3"
+    "\x84"
+    "\xC3"
+    "\xA4"
+    "\xC3"
+    "\xB6"
+    "",  // Suomi
+    " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWX[\\]abcdefghijklmnoprstuvwxyz|\xC2"
+    "\xAB"
+    "\xC3"
+    "\x85"
+    "\xC3"
+    "\x86"
+    "\xC3"
+    "\x98"
+    "\xC3"
+    "\xA5"
+    "\xC3"
+    "\xA6"
+    "\xC3"
+    "\xB8"
+    "",  // Dansk
 };
 
 namespace i18n_strings {
@@ -766,7 +844,7 @@ const char* const STRINGS_EN[] = {
     "External Reader Font",
     "Reader Font",
     "UI Font",
-    "UI Font Size",
+    "Reader Font Size",
     "Reader Line Spacing",
     "ASCII Letter Spacing",
     "ASCII Digit Spacing",
@@ -912,6 +990,8 @@ const char* const STRINGS_EN[] = {
     "Retry",
     "Yes",
     "No",
+    "Show",
+    "Hide",
     "ON",
     "OFF",
     "Set",
@@ -926,10 +1006,21 @@ const char* const STRINGS_EN[] = {
     "[ON]",
     "Sleep Screen Cover Filter",
     "Contrast",
-    "Full w/ Percentage",
-    "Full w/ Book Bar",
-    "Book Bar Only",
-    "Full w/ Chapter Bar",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "UI Theme",
     "Classic",
     "Lyra",
@@ -963,6 +1054,7 @@ const char* const STRINGS_EN[] = {
     "Go Home",
     "Sync Progress",
     "Delete Book Cache",
+    "Show page as QR",
     "Chapter: ",
     " pages  |  ",
     "Book: ",
@@ -1430,6 +1522,8 @@ const char* const STRINGS_ES[] = {
     "\xAD"
     "",
     "No",
+    "Show",
+    "Hide",
     "ENCENDIDO",
     "APAGADO",
     "Configurar",
@@ -1448,12 +1542,21 @@ const char* const STRINGS_ES[] = {
     "\xB3"
     "n de la pantalla",
     "Contraste",
-    "Completa con porcentaje",
-    "Completa con progreso del libro",
-    "Solo progreso del libro",
-    "Completa con progreso de cap\xC3"
-    "\xAD"
-    "tulos",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "Estilo de pantalla",
     "Cl\xC3"
     "\xA1"
@@ -1523,6 +1626,7 @@ const char* const STRINGS_ES[] = {
     "\xB3"
     "n",
     "Borrar cache del libro",
+    "Show page as QR",
     "Cap\xC3"
     "\xAD"
     "tulo:",
@@ -2202,6 +2306,8 @@ const char* const STRINGS_FR[] = {
     "essayer",
     "Oui",
     "Non",
+    "Show",
+    "Hide",
     "ON",
     "OFF",
     "D\xC3"
@@ -2220,16 +2326,21 @@ const char* const STRINGS_FR[] = {
     "[ON]",
     "Filtre affichage veille",
     "Contraste",
-    "Compl\xC3"
-    "\xA8"
-    "te + %",
-    "Compl\xC3"
-    "\xA8"
-    "te + barre livre",
-    "Barre livre",
-    "Compl\xC3"
-    "\xA8"
-    "te + barre chapitre",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "Th\xC3"
     "\xA8"
     "me de l\xE2"
@@ -2319,6 +2430,7 @@ const char* const STRINGS_FR[] = {
     "accueil",
     "Synchroniser la progression",
     "Supprimer le cache du livre",
+    "Show page as QR",
     "Chapitre : ",
     " pages  |  ",
     "Livre : ",
@@ -2779,6 +2891,8 @@ const char* const STRINGS_DE[] = {
     "Wiederh.",
     "Ja",
     "Nein",
+    "Show",
+    "Hide",
     "An",
     "Aus",
     "Gesetzt",
@@ -2793,10 +2907,21 @@ const char* const STRINGS_DE[] = {
     "[AN]",
     "Standby-Coverfilter",
     "Kontrast",
-    "Komplett + Prozent",
-    "Komplett + Buch",
-    "Nur Buch",
-    "Komplett + Kapitel",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "System-Design",
     "Klassisch",
     "Lyra",
@@ -2845,6 +2970,7 @@ const char* const STRINGS_DE[] = {
     "Zum Anfang",
     "Fortschritt synchronisieren",
     "Buch-Cache leeren",
+    "Show page as QR",
     "Kapitel:",
     " Seiten  |  ",
     "Buch: ",
@@ -2894,7 +3020,7 @@ const char* const STRINGS_DE[] = {
     "Background Server on Charge",
 };
 
-const char* const STRINGS_CZ[] = {
+const char* const STRINGS_CS[] = {
     "CrossPoint",
     "SPU\xC5"
     "\xA0"
@@ -4122,6 +4248,8 @@ const char* const STRINGS_CZ[] = {
     "Zkusit znovu",
     "Ano",
     "Ne",
+    "Show",
+    "Hide",
     "ZAP",
     "VYP",
     "Nastavit",
@@ -4144,16 +4272,21 @@ const char* const STRINGS_CZ[] = {
     "\xA1"
     "nku",
     "Kontrast",
-    "Pln\xC3"
-    "\xBD"
-    " s procenty",
-    "Pln\xC3"
-    "\xBD"
-    " s pruhem knih",
-    "Pouze pruh knih",
-    "Pln\xC3"
-    "\xA1"
-    " s pruhem kapitol",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "\xC5"
     "\xA0"
     "ablona rozhran\xC3"
@@ -4361,6 +4494,7 @@ const char* const STRINGS_CZ[] = {
     "\xC5"
     "\xA5"
     " knihy",
+    "Show page as QR",
     "Kapitola:",
     "str\xC3"
     "\xA1"
@@ -5000,6 +5134,8 @@ const char* const STRINGS_PO[] = {
     "N\xC3"
     "\xA3"
     "o",
+    "Show",
+    "Hide",
     "LIG.",
     "DESL.",
     "Definir",
@@ -5016,14 +5152,21 @@ const char* const STRINGS_PO[] = {
     "[LIGADO]",
     "Filtro capa tela repouso",
     "Contraste",
-    "Completa c/ porcentagem",
-    "Completa c/ barra livro",
-    "S\xC3"
-    "\xB3"
-    " barra do livro",
-    "Completa c/ barra cap\xC3"
-    "\xAD"
-    "tulo",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "Tema da interface",
     "Cl\xC3"
     "\xA1"
@@ -5111,6 +5254,7 @@ const char* const STRINGS_PO[] = {
     "cio",
     "Sincronizar progresso",
     "Excluir cache do livro",
+    "Show page as QR",
     "Cap\xC3"
     "\xAD"
     "tulo:",
@@ -11329,6 +11473,8 @@ const char* const STRINGS_RU[] = {
     "\xD1"
     "\x82"
     "",
+    "Show",
+    "Hide",
     "\xD0"
     "\x92"
     "\xD0"
@@ -11497,118 +11643,21 @@ const char* const STRINGS_RU[] = {
     "\xD1"
     "\x82"
     "",
-    "\xD0"
-    "\x9F"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    "\xD1"
-    "\x8F"
-    " + %",
-    "\xD0"
-    "\x9F"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    "\xD1"
-    "\x8F"
-    " + \xD1"
-    "\x88"
-    "\xD0"
-    "\xBA"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB0"
-    " \xD0"
-    "\xBA"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB8"
-    "\xD0"
-    "\xB3"
-    "\xD0"
-    "\xB8"
-    "",
-    "\xD0"
-    "\xA2"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xBB"
-    "\xD1"
-    "\x8C"
-    "\xD0"
-    "\xBA"
-    "\xD0"
-    "\xBE"
-    " \xD1"
-    "\x88"
-    "\xD0"
-    "\xBA"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB0"
-    " \xD0"
-    "\xBA"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB8"
-    "\xD0"
-    "\xB3"
-    "\xD0"
-    "\xB8"
-    "",
-    "\xD0"
-    "\x9F"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    "\xD1"
-    "\x8F"
-    " + \xD1"
-    "\x88"
-    "\xD0"
-    "\xBA"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB0"
-    " \xD0"
-    "\xB3"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xB2"
-    "\xD1"
-    "\x8B"
-    "",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "\xD0"
     "\xA2"
     "\xD0"
@@ -12600,6 +12649,7 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB8"
     "",
+    "Show page as QR",
     "\xD0"
     "\x93"
     "\xD0"
@@ -14180,6 +14230,8 @@ const char* const STRINGS_SV[] = {
     "k igen",
     "Ja",
     "Nej",
+    "Show",
+    "Hide",
     "P\xC3"
     "\x85"
     "",
@@ -14208,10 +14260,21 @@ const char* const STRINGS_SV[] = {
     "\xA4"
     "rmens omslagsfilter",
     "Kontrast",
-    "Full w/ Procent",
-    "Full w/ Boklist",
-    "Boklist enbart",
-    "Full w/ Kapitellist",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "Anv\xC3"
     "\xA4"
     "ndargr\xC3"
@@ -14304,6 +14367,7 @@ const char* const STRINGS_SV[] = {
     " Hem",
     "Synkroniseringsframsteg",
     "Radera bokcache",
+    "Show page as QR",
     "Kapitel:",
     " sidor  |  ",
     "Bok:",
@@ -15149,6 +15213,12 @@ const char* const STRINGS_RO[] = {
     "ncercare",
     "Da",
     "Nu",
+    "Afi\xC8"
+    "\x99"
+    "eaz\xC4"
+    "\x83"
+    "",
+    "Ascunde",
     "Pornit",
     "Oprit",
     "Setare",
@@ -15165,10 +15235,39 @@ const char* const STRINGS_RO[] = {
     "[ON]",
     "Filtru ecran de repaus",
     "Contrast",
-    "Complet cu procentaj",
-    "Complet cu bara de carte",
-    "Doar bara de carte",
-    "Complet cu bara de capitol",
+    "Customiza\xC5"
+    "\xA3"
+    "i bara de stare",
+    "Num\xC4"
+    "\x83"
+    "r de pagini \xC3"
+    "\xAE"
+    "n capitol",
+    "Progres carte procentual",
+    "Bar\xC4"
+    "\x83"
+    " de progres",
+    "Grosime bar\xC4"
+    "\x83"
+    " de progres",
+    "Sub\xC5"
+    "\xA3"
+    "ire",
+    "Medie",
+    "Groas\xC4"
+    "\x83"
+    "",
+    "Carte",
+    "Capitol",
+    "Capitolul 21",
+    "Titlul c\xC4"
+    "\x83"
+    "r\xC5"
+    "\xA3"
+    "ii",
+    "Previzualizare",
+    "Titlu",
+    "Baterie",
     "Tema UI",
     "Clasic",
     "Lyra",
@@ -15254,7 +15353,12 @@ const char* const STRINGS_RO[] = {
     "r\xC5"
     "\xA3"
     "i",
-    "Capitol: ",
+    "Afi\xC8"
+    "\x99"
+    "a\xC8"
+    "\x9B"
+    "i pagina ca cod QR",
+    "Chapter: ",
     " pagini  |  ",
     "Carte: ",
     "shift",
@@ -15814,6 +15918,8 @@ const char* const STRINGS_CA[] = {
     "\xAD"
     "",
     "No",
+    "Show",
+    "Hide",
     "ON",
     "OFF",
     "Establert",
@@ -15830,20 +15936,21 @@ const char* const STRINGS_CA[] = {
     "\xB2"
     "s",
     "Contrast",
-    "Amb percentatge",
-    "Amb progr\xC3"
-    "\xA9"
-    "s llibre",
-    "Nom\xC3"
-    "\xA9"
-    "s progr\xC3"
-    "\xA9"
-    "s llibre",
-    "Amb progr\xC3"
-    "\xA9"
-    "s cap\xC3"
-    "\xAD"
-    "tol",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "Tema de la interf\xC3"
     "\xAD"
     "cie",
@@ -15913,6 +16020,7 @@ const char* const STRINGS_CA[] = {
     "Esborra la mem\xC3"
     "\xB2"
     "ria cau del llibre",
+    "Show page as QR",
     "Cap\xC3"
     "\xAD"
     "tol: ",
@@ -23015,6 +23123,8 @@ const char* const STRINGS_UK[] = {
     "\xD1"
     "\x96"
     "",
+    "Show",
+    "Hide",
     "\xD0"
     "\xA3"
     "\xD0"
@@ -23225,158 +23335,21 @@ const char* const STRINGS_UK[] = {
     "\xD1"
     "\x82"
     "",
-    "\xD0"
-    "\x9F"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB2"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    " \xD0"
-    "\xB7"
-    " \xD0"
-    "\xB2"
-    "\xD1"
-    "\x96"
-    "\xD0"
-    "\xB4"
-    "\xD1"
-    "\x81"
-    "\xD0"
-    "\xBE"
-    "\xD1"
-    "\x82"
-    "\xD0"
-    "\xBA"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBC"
-    "\xD0"
-    "\xB8"
-    "",
-    "\xD0"
-    "\x9F"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB2"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    " \xD0"
-    "\xB7"
-    " \xD0"
-    "\xBF"
-    "\xD1"
-    "\x80"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB3"
-    "\xD1"
-    "\x80"
-    "\xD0"
-    "\xB5"
-    "\xD1"
-    "\x81"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xBC"
-    " \xD0"
-    "\xBA"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB8"
-    "\xD0"
-    "\xB3"
-    "\xD0"
-    "\xB8"
-    "",
-    "\xD0"
-    "\xA2"
-    "\xD1"
-    "\x96"
-    "\xD0"
-    "\xBB"
-    "\xD1"
-    "\x8C"
-    "\xD0"
-    "\xBA"
-    "\xD0"
-    "\xB8"
-    " \xD0"
-    "\xBF"
-    "\xD1"
-    "\x80"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB3"
-    "\xD1"
-    "\x80"
-    "\xD0"
-    "\xB5"
-    "\xD1"
-    "\x81"
-    " \xD0"
-    "\xBA"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB8"
-    "\xD0"
-    "\xB3"
-    "\xD0"
-    "\xB8"
-    "",
-    "\xD0"
-    "\x9F"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB2"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    " \xD0"
-    "\xB7"
-    " \xD0"
-    "\xBF"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB5"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xBB"
-    "\xD1"
-    "\x8E"
-    " \xD1"
-    "\x80"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB7"
-    "\xD0"
-    "\xB4"
-    "\xD1"
-    "\x96"
-    "\xD0"
-    "\xBB"
-    "\xD1"
-    "\x83"
-    "",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "\xD0"
     "\xA2"
     "\xD0"
@@ -24442,6 +24415,7 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\xB8"
     "",
+    "Show page as QR",
     "\xD0"
     "\xA0"
     "\xD0"
@@ -31728,6 +31702,8 @@ const char* const STRINGS_BE[] = {
     "\xD0"
     "\xB5"
     "",
+    "Show",
+    "Hide",
     "\xD0"
     "\xA3"
     "\xD0"
@@ -31896,124 +31872,21 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x82"
     "",
-    "\xD0"
-    "\x9F"
-    "\xD0"
-    "\xBE"
-    "\xD1"
-    "\x9E"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    "\xD1"
-    "\x8F"
-    " + %",
-    "\xD0"
-    "\x9F"
-    "\xD0"
-    "\xBE"
-    "\xD1"
-    "\x9E"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    "\xD1"
-    "\x8F"
-    " + \xD1"
-    "\x88"
-    "\xD0"
-    "\xBA"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB0"
-    " \xD0"
-    "\xBA"
-    "\xD0"
-    "\xBD"
-    "\xD1"
-    "\x96"
-    "\xD0"
-    "\xB3"
-    "\xD1"
-    "\x96"
-    "",
-    "\xD0"
-    "\xA2"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xBB"
-    "\xD1"
-    "\x8C"
-    "\xD0"
-    "\xBA"
-    "\xD1"
-    "\x96"
-    " \xD1"
-    "\x88"
-    "\xD0"
-    "\xBA"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB0"
-    " \xD0"
-    "\xBA"
-    "\xD0"
-    "\xBD"
-    "\xD1"
-    "\x96"
-    "\xD0"
-    "\xB3"
-    "\xD1"
-    "\x96"
-    "",
-    "\xD0"
-    "\x9F"
-    "\xD0"
-    "\xBE"
-    "\xD1"
-    "\x9E"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    "\xD1"
-    "\x8F"
-    " + \xD1"
-    "\x88"
-    "\xD0"
-    "\xBA"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB0"
-    " \xD1"
-    "\x80"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xB7"
-    "\xD0"
-    "\xB4"
-    "\xD0"
-    "\xB7"
-    "\xD0"
-    "\xB5"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB0"
-    "",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
     "\xD0"
     "\xA2"
     "\xD1"
@@ -33005,6 +32878,7 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x96"
     "",
+    "Show page as QR",
     "\xD0"
     "\xA0"
     "\xD0"
@@ -33941,6 +33815,2855 @@ const char* const STRINGS_BE[] = {
     "Background Server on Charge",
 };
 
+const char* const STRINGS_IT[] = {
+    "CrossPoint",
+    "AVVIO IN CORSO",
+    "MODALIT\xC3"
+    "\x80"
+    " SLEEP",
+    "Modalit\xC3"
+    "\xA0"
+    " Sleep",
+    "Sfoglia file",
+    "Trasferimento file",
+    "Impostazioni",
+    "Libreria Calibre",
+    "Continua a leggere",
+    "Nessun libro aperto",
+    "Inizia a leggere di seguito",
+    "Libri",
+    "Nessun libro trovato",
+    "Seleziona capitolo",
+    "Nessun capitolo",
+    "Fine del libro",
+    "Capitolo vuoto",
+    "Indicizzazione",
+    "Errore di memoria",
+    "Errore di caricamento pagina",
+    "File vuoto",
+    "Fuori dai limiti",
+    "Caricamento in corso...",
+    "Caricamento",
+    "Impossibile caricare XTC",
+    "Impossibile caricare TXT",
+    "Impossibile caricare EPUB",
+    "Errore della scheda SD",
+    "Reti WiFi",
+    "Nessuna rete trovata",
+    "%zu reti trovate",
+    "Scansione...",
+    "Connessione in corso...",
+    "Connesso!",
+    "Connessione fallita",
+    "Timeout di connessione",
+    "Dimenticare la rete?",
+    "Salvare la password per la prossima volta?",
+    "Rimuovere la password salvata?",
+    "Premi OK per scansionare di nuovo",
+    "Premi un pulsante qualsiasi per continuare",
+    "SINISTRA/DESTRA: Seleziona | OK: Conferma",
+    "Cosa desideri fare?",
+    "Connettiti a una rete",
+    "Crea Hotspot",
+    "Connettiti a una rete WiFi esistente",
+    "Crea una rete WiFi a cui altri possono unirsi",
+    "Avvio Hotspot in corso...",
+    "Modalit\xC3"
+    "\xA0"
+    " Hotspot",
+    "Connetti il tuo dispositivo a questa rete WiFi",
+    "Apri questo URL nel tuo browser",
+    "o http://",
+    "o scansiona il codice QR con il tuo telefono:",
+    "Calibre Wireless",
+    "URL Web Calibre",
+    "Connetti come dispositivo wireless",
+    "* = Criptata | + = Salvata",
+    "Indirizzo MAC:",
+    "Controllo WiFi in corso...",
+    "Inserisci password WiFi",
+    "Inserisci testo",
+    "a ",
+    "Ricerca Calibre in corso...",
+    "Connessione a ",
+    "Connesso a ",
+    "In attesa di comandi...",
+    "(Connessione fallita, nuovo tentativo)",
+    "Calibre disconnesso",
+    "In attesa di trasferimento...",
+    "Se il trasferimento fallisce, abilita\n'Ignora spazio libero' nelle impostazioni\ndel plugin SmartDevice di "
+    "Calibre.",
+    "Ricezione in corso: ",
+    "Ricevuto: ",
+    "In attesa di altro...",
+    "Impossibile creare il file",
+    "Password richiesta",
+    "Trasferimento interrotto",
+    "1) Installa il plugin CrossPoint Reader",
+    "2) Assicurati di essere sulla stessa rete WiFi",
+    "3) In Calibre: \"Invia al dispositivo\"",
+    "\"Tieni questa schermata aperta durante l'invio\"",
+    "Schermo",
+    "Lettore",
+    "Controlli",
+    "Sistema",
+    "Schermata di sospensione",
+    "Modalit\xC3"
+    "\xA0"
+    " copertina in sleep",
+    "Barra di stato",
+    "Nascondi % batteria",
+    "Spaziatura extra paragrafi",
+    "Anti-Aliasing testo",
+    "Pressione breve tasto accensione",
+    "Orientamento di lettura",
+    "Layout pulsanti frontali",
+    "Layout pulsanti laterali (lettore)",
+    "Pressione lunga salta capitolo",
+    "Famiglia di font del lettore",
+    "Font esterno lettore",
+    "Font cinese lettore",
+    "Font UI",
+    "Dimensione font UI",
+    "Interlinea lettore",
+    "Spaziatura lettere ASCII",
+    "Spaziatura cifre ASCII",
+    "Spaziatura CJK",
+    "Modalit\xC3"
+    "\xA0"
+    " colore",
+    "Margine schermo lettore",
+    "Allineamento paragrafo lettore",
+    "Sillabazione",
+    "Tempo prima di sospensione",
+    "Frequenza di aggiornamento",
+    "Impostazioni Calibre",
+    "Sincronizzazione KOReader",
+    "Cerca aggiornamenti",
+    "Lingua",
+    "Seleziona sfondo",
+    "Factory Reset",
+    "Svuota cache di lettura",
+    "Calibre",
+    "Nome utente",
+    "Password",
+    "URL server di sincronizzazione",
+    "Corrispondenza documenti",
+    "Autentica",
+    "Nome utente KOReader",
+    "Password KOReader",
+    "Nome file",
+    "Binario",
+    "Imposta prima le credenziali",
+    "Connessione WiFi fallita",
+    "Autenticazione in corso...",
+    "Autenticazione completata con successo!",
+    "Autenticazione KOReader",
+    "La sincronizzazione KOReader \xC3"
+    "\xA8"
+    " pronta",
+    "Autenticazione fallita",
+    "Fatto",
+    "Verranno cancellati tutti i dati in cache dei libri.",
+    "I progressi di lettura andranno persi!",
+    "I libri dovranno essere re-indicizzati",
+    "quando aperti di nuovo.",
+    "Svuotamento cache in corso...",
+    "Cache svuotata",
+    "elementi rimossi",
+    "fallito",
+    "Impossibile svuotare la cache",
+    "Controlla l'output seriale per i dettagli",
+    "Scuro",
+    "Chiaro",
+    "Personalizzato",
+    "Image Source",
+    "Pokedex",
+    "All",
+    "Copertina",
+    "Nessuno",
+    "Adatta",
+    "Ritaglia",
+    "Nessun progresso",
+    "Intero",
+    "Mai",
+    "Nel lettore",
+    "Sempre",
+    "Ignora",
+    "Sospendi",
+    "Volta pagina",
+    "Verticale",
+    "Orizzontale \xE2"
+    "\x86"
+    "\xBB"
+    "",
+    "Invertito",
+    "Orizzontale \xE2"
+    "\x86"
+    "\xBA"
+    "",
+    "Indtr, Conf, Sin, Des",
+    "Sin, Des, Indtr, Conf",
+    "Sin, Indtr, Conf, Des",
+    "Prec/Succ",
+    "Succ/Prec",
+    "Bookerly",
+    "Noto Sans",
+    "Open Dyslexic",
+    "Piccolo",
+    "Medio",
+    "Grande",
+    "X Grande",
+    "Stretto",
+    "Normale",
+    "Largo",
+    "Giustificato",
+    "Sinist.",
+    "Centrato",
+    "Dest.",
+    "1 min",
+    "5 min",
+    "10 min",
+    "15 min",
+    "30 min",
+    "1 pagina",
+    "5 pagine",
+    "10 pagine",
+    "15 pagine",
+    "30 pagine",
+    "Aggiorna",
+    "Ricerca aggiornamenti...",
+    "Nuovo aggiornamento disponibile!",
+    "Versione attuale: ",
+    "Nuova versione: ",
+    "Aggiornamento in corso...",
+    "Nessun aggiornamento disponibile",
+    "Aggiornamento fallito",
+    "Aggiornamento completato",
+    "Tenere premuto il pulsante d'accensione per riaccendere",
+    "Font esterno",
+    "Integrato (Disabilitato)",
+    "Nessuna voce trovata",
+    "Download in corso...",
+    "Download fallito",
+    "Errore:",
+    "Senza nome",
+    "Nessun URL del server configurato",
+    "Recupero feed fallito",
+    "Parsing feed fallito",
+    "Rete: ",
+    "Indirizzo IP: ",
+    "o scansiona il codice QR con lo smartphone per connetterti al WiFi.",
+    "Errore: Fallimento generico",
+    "Errore: Rete non trovata",
+    "Errore: Timeout di connessione",
+    "Scheda SD",
+    "\xC2"
+    "\xAB"
+    " Indietro",
+    "\xC2"
+    "\xAB"
+    " Esci",
+    "\xC2"
+    "\xAB"
+    " Home",
+    "\xC2"
+    "\xAB"
+    " Salva",
+    "Seleziona",
+    "Attiva/Disattiva",
+    "Conferma",
+    "Annulla",
+    "Connetti",
+    "Apri",
+    "Scarica",
+    "Riprova",
+    "S\xC3"
+    "\xAC"
+    "",
+    "No",
+    "Show",
+    "Hide",
+    "ON",
+    "OFF",
+    "Imposta",
+    "Non impostato",
+    "Sinist.",
+    "Dest.",
+    "Su",
+    "Gi\xC3"
+    "\xB9"
+    "",
+    "MAIUSC",
+    "maiusc",
+    "OK",
+    "[ON]",
+    "Filtro copertina modalit\xC3"
+    "\xA0"
+    " sleep",
+    "Contrasto",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
+    "Tema UI",
+    "Classico",
+    "Lyra",
+    "Lyra Esteso",
+    "Fork Drift",
+    "Fix Sbiadimento da Luce Solare",
+    "Rimappa Pulsanti Frontali",
+    "Browser OPDS",
+    "Copertina + Personalizzato",
+    "Recenti",
+    "Libri Recenti",
+    "Nessun libro recente",
+    "Usa i trasferimenti wireless del dispositivo di Calibre",
+    "Dimenticare la rete e rimuovere la password salvata?",
+    "Dimentica",
+    "Avvio Calibre in corso...",
+    "Configurazione",
+    "Stato",
+    "Pulisci",
+    "Predefinito",
+    "Premi un pulsante frontale per ogni funzione",
+    "Non assegnato",
+    "Gi\xC3"
+    "\xA0"
+    " assegnato",
+    "Pulsante laterale Su: Ripristina layout predefinito",
+    "Pulsante laterale Gi\xC3"
+    "\xB9"
+    ": Annulla mappatura",
+    "Indietro (1\xC2"
+    "\xB0"
+    " pulsante)",
+    "Conferma (2\xC2"
+    "\xB0"
+    " pulsante)",
+    "Sinistra (3\xC2"
+    "\xB0"
+    " pulsante)",
+    "Destra (4\xC2"
+    "\xB0"
+    " pulsante)",
+    "Vai al %",
+    "Vai alla Home",
+    "Sincronizza Progressi",
+    "Elimina Cache Libro",
+    "Show page as QR",
+    "Capitolo: ",
+    " pagine  |  ",
+    "Libro: ",
+    "maiusc",
+    "MAIUSC",
+    "BLOCC",
+    "Per Calibre, aggiungi /opds all'URL",
+    "Sinistra/Destra: 1%  Su/Gi\xC3"
+    "\xB9"
+    ": 10%",
+    "Sincronizzazione orario...",
+    "Calcolo dell'hash del documento...",
+    "Impossibile calcolare hash del documento",
+    "Recupero progressi remoti...",
+    "Caricamento progressi...",
+    "Nessuna credenziale configurata",
+    "Configura account KOReader nelle Impostazioni",
+    "Progressi trovati!",
+    "Remoto:",
+    "Locale:",
+    "Pagina %d, %.2f%% in totale",
+    "Pagina %d/%d, %.2f%% in totale",
+    "  Da: %s",
+    "Applica progressi remoti",
+    "Carica progressi locali",
+    "Nessun progresso remoto trovato",
+    "Caricare la posizione attuale?",
+    "Progressi caricati!",
+    "Sincronizzazione fallita",
+    "Sezione ",
+    "Carica",
+    "Stile del Libro",
+    "Stile Integrato",
+    "URL del Server OPDS",
+    "Dark Mode",
+    "Background Server on Charge",
+};
+
+const char* const STRINGS_PL[] = {
+    "CrossPoint",
+    "Bootowanie",
+    "U\xC5"
+    "\x9B"
+    "pienie",
+    "Przechodz\xC4"
+    "\x99"
+    " w stan u\xC5"
+    "\x9B"
+    "pienia",
+    "Przegl\xC4"
+    "\x85"
+    "daj pliki",
+    "Transfer plik\xC3"
+    "\xB3"
+    "w",
+    "Ustawienia",
+    "Biblioteka Calibre",
+    "Wzn\xC3"
+    "\xB3"
+    "w czytanie",
+    "Brak otwartych ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ek",
+    "Zacznij czyta\xC4"
+    "\x87"
+    "",
+    "Ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ki",
+    "Nie znaleziono ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ek",
+    "Wybierz rozdzia\xC5"
+    "\x82"
+    "",
+    "Brak rozdzia\xC5"
+    "\x82"
+    "\xC3"
+    "\xB3"
+    "w",
+    "Koniec ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ki",
+    "Pusty rozdzia\xC5"
+    "\x82"
+    "",
+    "Indeksowanie",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d pami\xC4"
+    "\x99"
+    "ci",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d \xC5"
+    "\x82"
+    "adowania strony",
+    "Pusty plik",
+    "Poza granicami",
+    "\xC5"
+    "\x81"
+    "adowanie...",
+    "\xC5"
+    "\x81"
+    "adowanie",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d przy \xC5"
+    "\x82"
+    "adowaniu XTC",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d przy \xC5"
+    "\x82"
+    "adowaniu TXT",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d przy \xC5"
+    "\x82"
+    "adowaniu EPUB",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d karty SD",
+    "Sieci WiFi",
+    "Nie znaleziono sieci",
+    "Znaleziono %zu sieci",
+    "Skanowanie...",
+    "\xC5"
+    "\x81"
+    "\xC4"
+    "\x85"
+    "czenie...",
+    "Po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czono!",
+    "Po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czenie nieudane",
+    "Przekroczenie limitu czasu po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czenia",
+    "Zapomnie\xC4"
+    "\x87"
+    " sie\xC4"
+    "\x87"
+    "?",
+    "Zapisa\xC4"
+    "\x87"
+    " has\xC5"
+    "\x82"
+    "o na przysz\xC5"
+    "\x82"
+    "o\xC5"
+    "\x9B"
+    "\xC4"
+    "\x87"
+    "?",
+    "Usun\xC4"
+    "\x85"
+    "\xC4"
+    "\x87"
+    " zapisane has\xC5"
+    "\x82"
+    "o?",
+    "Naci\xC5"
+    "\x9B"
+    "nij OK aby skanowa\xC4"
+    "\x87"
+    " ponownie",
+    "Naci\xC5"
+    "\x9B"
+    "nij dowolny przycisk aby kontynuowa\xC4"
+    "\x87"
+    "",
+    "LEWO/PRAWO: Wybierz | OK: Potwierd\xC5"
+    "\xBA"
+    "",
+    "Chcia\xC5"
+    "\x82"
+    "by\xC5"
+    "\x9B"
+    " si\xC4"
+    "\x99"
+    " po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czy\xC4"
+    "\x87"
+    "?",
+    "Do\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "cz do sieci",
+    "Stw\xC3"
+    "\xB3"
+    "rz Hotspot",
+    "Pod\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "cz do istniej\xC4"
+    "\x85"
+    "cej sieci WiFi",
+    "Stw\xC3"
+    "\xB3"
+    "rz sie\xC4"
+    "\x87"
+    " WiFi do kt\xC3"
+    "\xB3"
+    "rej pod\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czy\xC4"
+    "\x87"
+    " mog\xC4"
+    "\x85"
+    " si\xC4"
+    "\x99"
+    " inni",
+    "Startowanie Hotspot'a...",
+    "Tryb Hotspot",
+    "Pod\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "cz swoje urz\xC4"
+    "\x85"
+    "dzenie do tej sieci WiFi",
+    "Otw\xC3"
+    "\xB3"
+    "rz ten URL w przegl\xC4"
+    "\x85"
+    "darce",
+    "albo http://",
+    "albo zeskanuj kod QR telefonem:",
+    "Bezprzewodowe po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czenie z Calibre",
+    "Calibre Web URL",
+    "Pod\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "cz si\xC4"
+    "\x99"
+    " jako urz\xC4"
+    "\x85"
+    "dzenie bezprzewodowe",
+    "* = Zaszyfrowane | + = Zapisane",
+    "Adres MAC:",
+    "Sprawdzanie WiFi...",
+    "Wprowad\xC5"
+    "\xBA"
+    " has\xC5"
+    "\x82"
+    "o WiFi",
+    "Wprowad\xC5"
+    "\xBA"
+    " tekst",
+    "do ",
+    "Odkrywanie Calibre...",
+    "\xC5"
+    "\x81"
+    "\xC4"
+    "\x85"
+    "czenie do ",
+    "Pod\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czony do ",
+    "Oczekiwanie na komendy...",
+    "(Po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czenie nieudane, ponawiam)",
+    "Calibre roz\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czone",
+    "Oczekiwanie na transfer...",
+    "Je\xC5"
+    "\x9B"
+    "li transfer si\xC4"
+    "\x99"
+    " nie powiedzie, w\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "cz\n'Ignoruj wolne miejsce' w ustawieniach pluginu Calibre's\nSmartDevice.",
+    "Odbieranie: ",
+    "Odebrano: ",
+    "Oczekiwanie na wi\xC4"
+    "\x99"
+    "cej...",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d tworzenia pliku",
+    "Wymagane has\xC5"
+    "\x82"
+    "o",
+    "Transfer przerwany",
+    "1) Zainstaluj plugin CrossPoint Reader",
+    "2) B\xC4"
+    "\x85"
+    "d\xC5"
+    "\xBA"
+    " w tej samej sieci WiFi",
+    "3) W Calibre: \"Wy\xC5"
+    "\x9B"
+    "lij do urz\xC4"
+    "\x85"
+    "dzenia\"",
+    "\"Zostaw ten ekran podczas wysy\xC5"
+    "\x82"
+    "ania\"",
+    "Wy\xC5"
+    "\x9B"
+    "wietlacz",
+    "Czytnik",
+    "Sterowanie",
+    "System",
+    "Wygaszacz ekranu",
+    "Tryb ekranu u\xC5"
+    "\x9B"
+    "pienia z ok\xC5"
+    "\x82"
+    "adk\xC4"
+    "\x85"
+    "",
+    "Status Bar",
+    "Ukryj % baterii",
+    "Dodatkowe odst\xC4"
+    "\x99"
+    "py paragraf\xC3"
+    "\xB3"
+    "w",
+    "Wyg\xC5"
+    "\x82"
+    "adzanie tekstu",
+    "Kr\xC3"
+    "\xB3"
+    "tkie naci\xC5"
+    "\x9B"
+    "ni\xC4"
+    "\x99"
+    "cie przycisku zasilania",
+    "Uk\xC5"
+    "\x82"
+    "ad czytania",
+    "Uk\xC5"
+    "\x82"
+    "ad przednich przycisk\xC3"
+    "\xB3"
+    "w",
+    "Uk\xC5"
+    "\x82"
+    "ad przycisk\xC3"
+    "\xB3"
+    "w bocznych(czytnik)",
+    "Przytrzymaj aby przeskoczy\xC4"
+    "\x87"
+    " rozdzia\xC5"
+    "\x82"
+    "",
+    "Czcionka",
+    "Zewn\xC4"
+    "\x99"
+    "trzna czcionka czytnika",
+    "Czcionka czytnika",
+    "Czcionka UI",
+    "Rozmiar czcionki UI",
+    "Odst\xC4"
+    "\x99"
+    "py mi\xC4"
+    "\x99"
+    "dzy wierszami",
+    "Odst\xC4"
+    "\x99"
+    "py liter ASCII",
+    "Odst\xC4"
+    "\x99"
+    "py cyfr ASCII",
+    "Odst\xC4"
+    "\x99"
+    "py CJK",
+    "Tryb koloru",
+    "Marginesy ekranu",
+    "Wyjustowanie paragraf\xC3"
+    "\xB3"
+    "w",
+    "Dzielenie wyraz\xC3"
+    "\xB3"
+    "w",
+    "Czas do u\xC5"
+    "\x9B"
+    "pienia",
+    "Cz\xC4"
+    "\x99"
+    "stotliwo\xC5"
+    "\x9B"
+    "\xC4"
+    "\x87"
+    " od\xC5"
+    "\x9B"
+    "wie\xC5"
+    "\xBC"
+    "ania",
+    "Ustawienia Calibre",
+    "KOReader Sync",
+    "Sprawd\xC5"
+    "\xBA"
+    " uaktualnia",
+    "J\xC4"
+    "\x99"
+    "zyk",
+    "Wybierz tapet\xC4"
+    "\x99"
+    "",
+    "Factory Reset",
+    "Wyczy\xC5"
+    "\x9B"
+    "\xC4"
+    "\x87"
+    " pami\xC4"
+    "\x99"
+    "\xC4"
+    "\x87"
+    " podr\xC4"
+    "\x99"
+    "czn\xC4"
+    "\x85"
+    " czytnika",
+    "Calibre",
+    "U\xC5"
+    "\xBC"
+    "ytkownik",
+    "Has\xC5"
+    "\x82"
+    "o",
+    "Serwer URL synchronizacji",
+    "Dopasowanie dokument\xC3"
+    "\xB3"
+    "w",
+    "Uwierzytelnianie",
+    "U\xC5"
+    "\xBC"
+    "ytkownik KOReader",
+    "Has\xC5"
+    "\x82"
+    "o KOReader",
+    "Nazwa pliku",
+    "Binary",
+    "Najpierw ustaw uwierzytelnianie",
+    "Po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czenie z WiFi nieudane",
+    "Uwierzytelnianie...",
+    "Pomy\xC5"
+    "\x9B"
+    "lnie uwierzytelniono!",
+    "KOReader Auth",
+    "KOReader sync gotowy",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d uwierzytelniania",
+    "Zrobione",
+    "To wyczy\xC5"
+    "\x9B"
+    "ci ca\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    " pami\xC4"
+    "\x99"
+    "c podr\xC4"
+    "\x99"
+    "czn\xC4"
+    "\x85"
+    " ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ek.",
+    "Ca\xC5"
+    "\x82"
+    "y post\xC4"
+    "\x99"
+    "p czytania zostanie stracony!",
+    "Ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ki trzeba b\xC4"
+    "\x99"
+    "dzie ponownie indeksowa\xC4"
+    "\x87"
+    "",
+    "po ponownym otwarciu.",
+    "Czyszczenie pami\xC4"
+    "\x99"
+    "ci podr\xC4"
+    "\x99"
+    "cznej...",
+    "Pami\xC4"
+    "\x99"
+    "\xC4"
+    "\x87"
+    " podr\xC4"
+    "\x99"
+    "czna wyczyszczona",
+    "przedmiot\xC3"
+    "\xB3"
+    "w usuni\xC4"
+    "\x99"
+    "to",
+    "niepowodzenie",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d podczas czyszczenia pami\xC4"
+    "\x99"
+    "ci podr\xC4"
+    "\x99"
+    "cznej",
+    "Szczeg\xC3"
+    "\xB3"
+    "\xC5"
+    "\x82"
+    "y sprawd\xC5"
+    "\xBA"
+    " na wyj\xC5"
+    "\x9B"
+    "ciu szeregowym",
+    "Ciemny",
+    "Jasny",
+    "W\xC5"
+    "\x82"
+    "asny",
+    "Image Source",
+    "Pokedex",
+    "All",
+    "Ok\xC5"
+    "\x82"
+    "adka",
+    "Brak",
+    "Dopasuj",
+    "Przytnij",
+    "Brak post\xC4"
+    "\x99"
+    "pu",
+    "Pe\xC5"
+    "\x82"
+    "ny",
+    "Nigdy",
+    "W czytniku",
+    "Zawsze",
+    "Ignoruj",
+    "U\xC5"
+    "\x9B"
+    "pienie",
+    "Obr\xC3"
+    "\xB3"
+    "t strony",
+    "Pionowo",
+    "Poziomo L",
+    "Odwr\xC3"
+    "\xB3"
+    "cony",
+    "Poziomo P",
+    "Wstecz, Potwierd\xC5"
+    "\xBA"
+    ", Lewo, Prawo",
+    "Lewo, Prawo, Wstecz, Potwierd\xC5"
+    "\xBA"
+    "",
+    "Lewo, Wstecz, Potwierd\xC5"
+    "\xBA"
+    ", Prawo",
+    "Poprzedni/Nast\xC4"
+    "\x99"
+    "pny",
+    "Nast\xC4"
+    "\x99"
+    "pny/Poprzedni",
+    "Bookerly",
+    "Noto Sans",
+    "Open Dyslexic",
+    "Ma\xC5"
+    "\x82"
+    "y",
+    "\xC5"
+    "\x9A"
+    "redni",
+    "Du\xC5"
+    "\xBC"
+    "y",
+    "B. du\xC5"
+    "\xBC"
+    "y",
+    "Ciasno",
+    "Normalnie",
+    "Szeroko",
+    "Wyr\xC3"
+    "\xB3"
+    "wnanie",
+    "Lewej",
+    "\xC5"
+    "\x9A"
+    "rodkuj",
+    "Prawej",
+    "1 min",
+    "5 min",
+    "10 min",
+    "15 min",
+    "30 min",
+    "1 stron\xC4"
+    "\x99"
+    "",
+    "5 stron",
+    "10 stron",
+    "15 stron",
+    "30 stron",
+    "Uaktualnij",
+    "Sprawdzanie aktualizacji...",
+    "Aktualizacja dost\xC4"
+    "\x99"
+    "pna!",
+    "Bie\xC5"
+    "\xBC"
+    "\xC4"
+    "\x85"
+    "ca wersja: ",
+    "Nowa wersja: ",
+    "Aktualizowanie...",
+    "Brak aktualizacji",
+    "Aktualizacja nieudana",
+    "Aktualizacja zako\xC5"
+    "\x84"
+    "czona",
+    "Przyci\xC5"
+    "\x9B"
+    "nij i przytrzymaj przycisk zasilania aby w\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czy\xC4"
+    "\x87"
+    " ponownie",
+    "Czcionka zewn\xC4"
+    "\x99"
+    "trzna",
+    "Wbudowana (wy\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czona)",
+    "Brak wpis\xC3"
+    "\xB3"
+    "w",
+    "Pobieranie...",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d pobierania",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d:",
+    "Nienazwany",
+    "Brak skonfigurowanego serwera URL",
+    "Nie uda\xC5"
+    "\x82"
+    "o si\xC4"
+    "\x99"
+    " pobra\xC4"
+    "\x87"
+    " kana\xC5"
+    "\x82"
+    "u",
+    "Nie uda\xC5"
+    "\x82"
+    "o si\xC4"
+    "\x99"
+    " przeanalizowa\xC4"
+    "\x87"
+    " kana\xC5"
+    "\x82"
+    "u",
+    "Sie\xC4"
+    "\x87"
+    ": ",
+    "Adres IP: ",
+    "albo skanuj kod QR telefonem aby po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czy\xC4"
+    "\x87"
+    " si\xC4"
+    "\x99"
+    " do Wifi.",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d: Og\xC3"
+    "\xB3"
+    "lny",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d: Sieci nie znaleziono",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d: Przekroczono limit czasu po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "czenia",
+    "karta S",
+    "\xC2"
+    "\xAB"
+    " Wstecz",
+    "\xC2"
+    "\xAB"
+    " Wyjd\xC5"
+    "\xBA"
+    "",
+    "\xC2"
+    "\xAB"
+    " Home",
+    "\xC2"
+    "\xAB"
+    " Zapisz",
+    "Wybierz",
+    "Prze\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "cz",
+    "Potwierd\xC5"
+    "\xBA"
+    "",
+    "Anuluj",
+    "Po\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "cz",
+    "Otw\xC3"
+    "\xB3"
+    "rz",
+    "Pobierz",
+    "Pon\xC3"
+    "\xB3"
+    "w",
+    "Tak",
+    "Nie",
+    "Poka\xC5"
+    "\xBC"
+    "",
+    "Ukryj",
+    "ON",
+    "OFF",
+    "Ustawiono",
+    "Nie ustawiono",
+    "Lewo",
+    "Prawo",
+    "G\xC3"
+    "\xB3"
+    "ra",
+    "D\xC3"
+    "\xB3"
+    "\xC5"
+    "\x82"
+    "",
+    "CAPS",
+    "caps",
+    "OK",
+    "[ON]",
+    "Filtr ok\xC5"
+    "\x82"
+    "adki u\xC5"
+    "\x9B"
+    "pionego ekranu",
+    "Kontrast",
+    "Dostosowanie paska statusu",
+    "Strona rozdzia\xC5"
+    "\x82"
+    "u",
+    "Pasek post\xC4"
+    "\x99"
+    "pu ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ki",
+    "Pasek post\xC4"
+    "\x99"
+    "pu",
+    "Grubo\xC5"
+    "\x9B"
+    "\xC4"
+    "\x87"
+    " paska post\xC4"
+    "\x99"
+    "pu",
+    "Cienki",
+    "\xC5"
+    "\x9A"
+    "redni",
+    "Gruby",
+    "Ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ka",
+    "Rozdzia\xC5"
+    "\x82"
+    "",
+    "Rozdzia\xC5"
+    "\x82"
+    " 21",
+    "Tytu\xC5"
+    "\x82"
+    " ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ki",
+    "Podgl\xC4"
+    "\x85"
+    "d",
+    "Tytu\xC5"
+    "\x82"
+    "",
+    "Bateria",
+    "Sk\xC3"
+    "\xB3"
+    "rka UI",
+    "Classic",
+    "Lyra",
+    "Lyra Extended",
+    "Fork Drift",
+    "Przeciwdzia\xC5"
+    "\x82"
+    "anie blakni\xC4"
+    "\x99"
+    "ciu od s\xC5"
+    "\x82"
+    "o\xC5"
+    "\x84"
+    "ca",
+    "Skonfiguruj przednie przyciski",
+    "OPDS Browser",
+    "Ok\xC5"
+    "\x82"
+    "adka + W\xC5"
+    "\x82"
+    "asne",
+    "Ostatnie",
+    "Ostatnio czytane",
+    "Brak ostatnio czytanych",
+    "Przesy\xC5"
+    "\x82"
+    "aj bezprzewodowo do Calibre",
+    "Zapomnie\xC4"
+    "\x87"
+    " zapisane sieci oraz has\xC5"
+    "\x82"
+    "a?",
+    "Zapomnij",
+    "Startowanie Calibre...",
+    "Setup",
+    "Status",
+    "Wyczy\xC5"
+    "\x9B"
+    "\xC4"
+    "\x87"
+    "",
+    "Domy\xC5"
+    "\x9B"
+    "lnie",
+    "Przyci\xC5"
+    "\x9B"
+    "nij przedni przycisk dla ka\xC5"
+    "\xBC"
+    "dej funkcji",
+    "Nieprzypisany",
+    "Ju\xC5"
+    "\xBC"
+    " przypisany",
+    "Boczny przycisk G\xC3"
+    "\xB3"
+    "ra: Przywr\xC3"
+    "\xB3"
+    "\xC4"
+    "\x87"
+    " domy\xC5"
+    "\x9B"
+    "lne",
+    "Boczny przycisk D\xC3"
+    "\xB3"
+    "\xC5"
+    "\x82"
+    ": Anuluj przypisywanie",
+    "Wr\xC3"
+    "\xB3"
+    "\xC4"
+    "\x87"
+    " (1 przycisk)",
+    "Potwierd\xC5"
+    "\xBA"
+    " (2 przycisk)",
+    "Lewo (3 przycisk)",
+    "Prawo (4 przycisk)",
+    "Id\xC5"
+    "\xBA"
+    " do %",
+    "Wr\xC3"
+    "\xB3"
+    "\xC4"
+    "\x87"
+    " do g\xC5"
+    "\x82"
+    "\xC3"
+    "\xB3"
+    "wnego ekranu",
+    "Post\xC4"
+    "\x99"
+    "p synchronizacji",
+    "Usu\xC5"
+    "\x84"
+    " pami\xC4"
+    "\x99"
+    "\xC4"
+    "\x87"
+    " podr\xC4"
+    "\x99"
+    "czn\xC4"
+    "\x85"
+    " ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ek",
+    "Poka\xC5"
+    "\xBC"
+    " stron\xC4"
+    "\x99"
+    " jako kod QR",
+    "Rozdzia\xC5"
+    "\x82"
+    "y: ",
+    " strony  |  ",
+    "Ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ka: ",
+    "shift",
+    "SHIFT",
+    "LOCK",
+    "Dla Calibre, dodaj /opds do adresu URL",
+    "Left/Right: 1%  Up/Down: 10%",
+    "Synchronizacja czasu...",
+    "Obliczanie sumu kontrolnekj...",
+    "B\xC5"
+    "\x82"
+    "\xC4"
+    "\x85"
+    "d obliczania sumy kontrolnej",
+    "Pobieranie zdalnego post\xC4"
+    "\x99"
+    "pu..",
+    "Post\xC4"
+    "\x99"
+    "p wysy\xC5"
+    "\x82"
+    "ania...",
+    "Nie skonfigurowano po\xC5"
+    "\x9B"
+    "wiadcze\xC5"
+    "\x84"
+    "",
+    "Ustaw konto KOReader w ustawieniach",
+    "Post\xC4"
+    "\x99"
+    "p znaleziono!",
+    "Zdalny:",
+    "Lokalny:",
+    "Strona %d, %.2f%% ca\xC5"
+    "\x82"
+    "o\xC5"
+    "\x9B"
+    "ci",
+    "Strona %d/%d, %.2f%% ca\xC5"
+    "\x82"
+    "o\xC5"
+    "\x9B"
+    "ci",
+    "  Od: %s",
+    "Zastosuj zdalny post\xC4"
+    "\x99"
+    "p",
+    "Prze\xC5"
+    "\x9B"
+    "lij lokalny post\xC4"
+    "\x99"
+    "p",
+    "Nie znaleziono zdalnego post\xC4"
+    "\x99"
+    "pu",
+    "Wys\xC5"
+    "\x82"
+    "a\xC4"
+    "\x87"
+    " obecn\xC4"
+    "\x85"
+    " pozycj\xC4"
+    "\x99"
+    "?",
+    "Post\xC4"
+    "\x99"
+    "p wys\xC5"
+    "\x82"
+    "any!",
+    "Synchronizacja nieudana",
+    "Sekcja ",
+    "Wy\xC5"
+    "\x9B"
+    "lij",
+    "Styl ksi\xC4"
+    "\x85"
+    "\xC5"
+    "\xBC"
+    "ki",
+    "Styl wbudowany",
+    "URL serwera OPDS",
+    "Dark Mode",
+    "Background Server on Charge",
+};
+
+const char* const STRINGS_FI[] = {
+    "CrossPoint",
+    "K\xC3"
+    "\x84"
+    "YNNISTYY",
+    "LEPOTILA",
+    "Siirryt\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n lepotilaan",
+    "Selaa tiedostoja",
+    "Tiedostonsiirto",
+    "Asetukset",
+    "Calibre-kirjasto",
+    "Jatka lukemista",
+    "Kirjaa ei valittu",
+    "Aloita lukeminen",
+    "Kirjat",
+    "Kirjoja ei l\xC3"
+    "\xB6"
+    "ytynyt",
+    "Valitse luku",
+    "Ei lukuja",
+    "Kirjan loppu",
+    "Tyhj\xC3"
+    "\xA4"
+    " luku",
+    "Indeksoidaan",
+    "Muistivirhe",
+    "Sivun latausvirhe",
+    "Tyhj\xC3"
+    "\xA4"
+    " tiedosto",
+    "Alueen ulkopuolella",
+    "Ladataan...",
+    "Ladataan",
+    "XTC:n lataus ep\xC3"
+    "\xA4"
+    "onnistui",
+    "TXT:n lataus ep\xC3"
+    "\xA4"
+    "onnistui",
+    "EPUB:n lataus ep\xC3"
+    "\xA4"
+    "onnistui",
+    "SD-korttivirhe",
+    "WiFi-verkot",
+    "Verkkoja ei l\xC3"
+    "\xB6"
+    "ytynyt",
+    "%zu verkkoa l\xC3"
+    "\xB6"
+    "ydetty",
+    "Etsit\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n...",
+    "Yhdistet\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n...",
+    "Yhdistetty!",
+    "Yhteys ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Yhteys aikakatkaistiin",
+    "Unohda verkko?",
+    "Tallenna salasana seuraavaa kertaa varten?",
+    "Poista tallennettu salasana?",
+    "Paina OK etsi\xC3"
+    "\xA4"
+    "ksesi uudelleen",
+    "Paina mit\xC3"
+    "\xA4"
+    " tahansa painiketta jatkaaksesi",
+    "VASEN/OIKEA: Valitse | OK: Vahvista",
+    "Miten haluat yhdist\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "?",
+    "Liity verkkoon",
+    "Luo yhteyspiste",
+    "Yhdist\xC3"
+    "\xA4"
+    " olemassa olevaan WiFi-verkkoon",
+    "Luo WiFi-verkko, johon muut voivat liitty\xC3"
+    "\xA4"
+    "",
+    "K\xC3"
+    "\xA4"
+    "ynnistet\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n yhteyspiste...",
+    "Yhteyspistetila",
+    "Yhdist\xC3"
+    "\xA4"
+    " laitteesi t\xC3"
+    "\xA4"
+    "h\xC3"
+    "\xA4"
+    "n WiFi-verkkoon",
+    "Avaa t\xC3"
+    "\xA4"
+    "m\xC3"
+    "\xA4"
+    " osoite selaimessasi",
+    "tai http://",
+    "tai skannaa QR-koodi puhelimellasi:",
+    "Calibre langaton",
+    "Calibre-verkko-osoite",
+    "Yhdist\xC3"
+    "\xA4"
+    " langattomana laitteena",
+    "* = Salattu | + = Tallennettu",
+    "MAC-osoite:",
+    "Tarkistetaan WiFi...",
+    "Sy\xC3"
+    "\xB6"
+    "t\xC3"
+    "\xA4"
+    " WiFi-salasana",
+    "Sy\xC3"
+    "\xB6"
+    "t\xC3"
+    "\xA4"
+    " teksti",
+    "verkkoon ",
+    "Etsit\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n Calibrea...",
+    "Yhdistet\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n: ",
+    "Yhdistetty: ",
+    "Odotetaan komentoja...",
+    "(Yhteys ep\xC3"
+    "\xA4"
+    "onnistui, yritet\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n uudelleen)",
+    "Yhteys Calibreen katkaistiin",
+    "Odotetaan siirtoa...",
+    "Jos siirto ep\xC3"
+    "\xA4"
+    "onnistuu, ota k\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    "\xC3"
+    "\xB6"
+    "n\n'Ignore free space' Calibren\nSmartDevice-lis\xC3"
+    "\xA4"
+    "osan asetuksissa.",
+    "Vastaanotetaan: ",
+    "Vastaanotettu: ",
+    "Odotetaan lis\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "...",
+    "Tiedoston luonti ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Salasana vaaditaan",
+    "Siirto keskeytyi",
+    "1) Asenna CrossPoint Reader -lis\xC3"
+    "\xA4"
+    "osa",
+    "2) Ole samassa WiFi-verkossa",
+    "3) Calibressa: \"L\xC3"
+    "\xA4"
+    "het\xC3"
+    "\xA4"
+    " laitteelle\"",
+    "\"Pid\xC3"
+    "\xA4"
+    " t\xC3"
+    "\xA4"
+    "m\xC3"
+    "\xA4"
+    " n\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    " auki l\xC3"
+    "\xA4"
+    "hetyksen aikana\"",
+    "N\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    "",
+    "Lukija",
+    "Ohjaimet",
+    "J\xC3"
+    "\xA4"
+    "rjestelm\xC3"
+    "\xA4"
+    "",
+    "Lepotilan\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    "",
+    "Lepotilan\xC3"
+    "\xA4"
+    "yt\xC3"
+    "\xB6"
+    "n kansitila",
+    "Tilapalkki",
+    "Piilota akun %",
+    "Kappaleiden lis\xC3"
+    "\xA4"
+    "v\xC3"
+    "\xA4"
+    "li",
+    "Tekstin reunanpehmennys",
+    "Lyhyt virtapainikkeen painallus",
+    "Lukusuunta",
+    "Etupainikkeiden asettelu",
+    "Sivupainikkeiden asettelu (lukija)",
+    "Pitk\xC3"
+    "\xA4"
+    " painallus: lukuhyppy",
+    "Lukijan fonttiperhe",
+    "Ulkoinen lukijafontti",
+    "Lukijafontti",
+    "K\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    "liittym\xC3"
+    "\xA4"
+    "fontti",
+    "K\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    "liittym\xC3"
+    "\xA4"
+    "n fonttikoko",
+    "Lukijan riviv\xC3"
+    "\xA4"
+    "li",
+    "ASCII-kirjainv\xC3"
+    "\xA4"
+    "li",
+    "ASCII-numerov\xC3"
+    "\xA4"
+    "li",
+    "CJK-v\xC3"
+    "\xA4"
+    "listys",
+    "V\xC3"
+    "\xA4"
+    "ritila",
+    "Lukijan n\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    "marginaali",
+    "Lukijan kappaletasaus",
+    "Tavutus",
+    "Aika lepotilaan",
+    "P\xC3"
+    "\xA4"
+    "ivitystaajuus",
+    "Calibre-asetukset",
+    "KOReader-synkronointi",
+    "Tarkista p\xC3"
+    "\xA4"
+    "ivitykset",
+    "Kieli",
+    "Valitse taustakuva",
+    "Factory Reset",
+    "Tyhjenn\xC3"
+    "\xA4"
+    " lukuv\xC3"
+    "\xA4"
+    "limuisti",
+    "Calibre",
+    "K\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xA4"
+    "j\xC3"
+    "\xA4"
+    "nimi",
+    "Salasana",
+    "Synkronointipalvelimen osoite",
+    "Dokumenttien tunnistus",
+    "Tunnistaudu",
+    "KOReader-k\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xA4"
+    "j\xC3"
+    "\xA4"
+    "nimi",
+    "KOReader-salasana",
+    "Tiedostonimi",
+    "Bin\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "ri",
+    "Aseta tunnukset ensin",
+    "WiFi-yhteys ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Tunnistaudutaan...",
+    "Tunnistautuminen onnistui!",
+    "KOReader-tunnistautuminen",
+    "KOReader-synkronointi on k\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    "valmis",
+    "Tunnistautuminen ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Valmis",
+    "T\xC3"
+    "\xA4"
+    "m\xC3"
+    "\xA4"
+    " tyhjent\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    " kaiken v\xC3"
+    "\xA4"
+    "limuistiin tallennetun kirjatiedon.",
+    "Kaikki lukuedistyminen menetet\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n!",
+    "Kirjat t\xC3"
+    "\xA4"
+    "ytyy indeksoida uudelleen",
+    "kun ne avataan seuraavan kerran.",
+    "Tyhjennet\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n v\xC3"
+    "\xA4"
+    "limuistia...",
+    "V\xC3"
+    "\xA4"
+    "limuisti tyhjennetty",
+    "kohdetta poistettu",
+    "ep\xC3"
+    "\xA4"
+    "onnistui",
+    "V\xC3"
+    "\xA4"
+    "limuistin tyhjennys ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Tarkista sarjatuloste lis\xC3"
+    "\xA4"
+    "tiedoista",
+    "Tumma",
+    "Vaalea",
+    "Mukautettu",
+    "Image Source",
+    "Pokedex",
+    "All",
+    "Kansi",
+    "Ei mit\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n",
+    "Sovita",
+    "Rajaa",
+    "Ei edistymist\xC3"
+    "\xA4"
+    "",
+    "T\xC3"
+    "\xA4"
+    "ysi",
+    "Ei koskaan",
+    "Lukijassa",
+    "Aina",
+    "Ohita",
+    "Lepotila",
+    "Sivunk\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "nt\xC3"
+    "\xB6"
+    "",
+    "Pysty",
+    "Vaaka my\xC3"
+    "\xB6"
+    "t\xC3"
+    "\xA4"
+    "p\xC3"
+    "\xA4"
+    "iv\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n",
+    "K\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "nnetty",
+    "Vaaka vastap\xC3"
+    "\xA4"
+    "iv\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n",
+    "Tak, Vah, Vas, Oik",
+    "Vas, Oik, Tak, Vah",
+    "Vas, Tak, Vah, Oik",
+    "Edell/Seur",
+    "Seur/Edell",
+    "Bookerly",
+    "Noto Sans",
+    "Open Dyslexic",
+    "Pieni",
+    "Keskikokoinen",
+    "Suuri",
+    "Eritt\xC3"
+    "\xA4"
+    "in suuri",
+    "Tiukka",
+    "Normaali",
+    "Leve\xC3"
+    "\xA4"
+    "",
+    "Tasaa",
+    "Vasen",
+    "Keskitetty",
+    "Oikea",
+    "1 min",
+    "5 min",
+    "10 min",
+    "15 min",
+    "30 min",
+    "1 sivu",
+    "5 sivua",
+    "10 sivua",
+    "15 sivua",
+    "30 sivua",
+    "P\xC3"
+    "\xA4"
+    "ivit\xC3"
+    "\xA4"
+    "",
+    "Tarkistetaan p\xC3"
+    "\xA4"
+    "ivityst\xC3"
+    "\xA4"
+    "...",
+    "Uusi p\xC3"
+    "\xA4"
+    "ivitys saatavilla!",
+    "Nykyinen versio: ",
+    "Uusi versio: ",
+    "P\xC3"
+    "\xA4"
+    "ivitet\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n...",
+    "Ei p\xC3"
+    "\xA4"
+    "ivityst\xC3"
+    "\xA4"
+    " saatavilla",
+    "P\xC3"
+    "\xA4"
+    "ivitys ep\xC3"
+    "\xA4"
+    "onnistui",
+    "P\xC3"
+    "\xA4"
+    "ivitys valmis",
+    "Pid\xC3"
+    "\xA4"
+    " virtapainiketta pohjassa k\xC3"
+    "\xA4"
+    "ynnist\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "ksesi",
+    "Ulkoinen fontti",
+    "Sis\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "nrakennettu (pois k\xC3"
+    "\xA4"
+    "yt\xC3"
+    "\xB6"
+    "st\xC3"
+    "\xA4"
+    ")",
+    "Merkint\xC3"
+    "\xB6"
+    "j\xC3"
+    "\xA4"
+    " ei l\xC3"
+    "\xB6"
+    "ytynyt",
+    "Ladataan...",
+    "Lataus ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Virhe:",
+    "Nimet\xC3"
+    "\xB6"
+    "n",
+    "Palvelinosoitetta ei ole m\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "ritetty",
+    "Sy\xC3"
+    "\xB6"
+    "tteen haku ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Sy\xC3"
+    "\xB6"
+    "tteen k\xC3"
+    "\xA4"
+    "sittely ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Verkko: ",
+    "IP-osoite: ",
+    "tai skannaa QR-koodi puhelimellasi yhdist\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "ksesi WiFiin.",
+    "Virhe: Yleinen virhe",
+    "Virhe: Verkkoa ei l\xC3"
+    "\xB6"
+    "ytynyt",
+    "Virhe: Yhteys aikakatkaistiin",
+    "SD-kortti",
+    "\xC2"
+    "\xAB"
+    " Takaisin",
+    "\xC2"
+    "\xAB"
+    " Poistu",
+    "\xC2"
+    "\xAB"
+    " Koti",
+    "\xC2"
+    "\xAB"
+    " Tallenna",
+    "Valitse",
+    "Vaihda",
+    "Vahvista",
+    "Peruuta",
+    "Yhdist\xC3"
+    "\xA4"
+    "",
+    "Avaa",
+    "Lataa",
+    "Yrit\xC3"
+    "\xA4"
+    " uudelleen",
+    "Kyll\xC3"
+    "\xA4"
+    "",
+    "Ei",
+    "Show",
+    "Hide",
+    "P\xC3"
+    "\x84"
+    "\xC3"
+    "\x84"
+    "LL\xC3"
+    "\x84"
+    "",
+    "POIS",
+    "Asetettu",
+    "Ei asetettu",
+    "Vasen",
+    "Oikea",
+    "Yl\xC3"
+    "\xB6"
+    "s",
+    "Alas",
+    "ISOT",
+    "pienet",
+    "OK",
+    "[P\xC3"
+    "\x84"
+    "\xC3"
+    "\x84"
+    "LL\xC3"
+    "\x84"
+    "]",
+    "Lepotilan\xC3"
+    "\xA4"
+    "yt\xC3"
+    "\xB6"
+    "n kansisuodatin",
+    "Kontrasti",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
+    "K\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    "liittym\xC3"
+    "\xA4"
+    "teema",
+    "Klassinen",
+    "Lyra",
+    "Lyra Extended",
+    "Fork Drift",
+    "Auringonvalon haalistumiskorjaus",
+    "Uudelleenm\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "rit\xC3"
+    "\xA4"
+    " etupainikkeet",
+    "OPDS-selain",
+    "Kansi + mukautettu",
+    "Viimeisimm\xC3"
+    "\xA4"
+    "t",
+    "Viimeisimm\xC3"
+    "\xA4"
+    "t kirjat",
+    "Ei viimeisimpi\xC3"
+    "\xA4"
+    " kirjoja",
+    "K\xC3"
+    "\xA4"
+    "yt\xC3"
+    "\xA4"
+    " Calibren langatonta laiteyhteytt\xC3"
+    "\xA4"
+    "",
+    "Unohda verkko ja poista tallennettu salasana?",
+    "Unohda",
+    "K\xC3"
+    "\xA4"
+    "ynnistet\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n Calibrea...",
+    "Asetukset",
+    "Tila",
+    "Tyhjenn\xC3"
+    "\xA4"
+    "",
+    "Oletus",
+    "Paina etupainiketta kullekin toiminnolle",
+    "Ei m\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "ritetty",
+    "Jo m\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "ritetty",
+    "Sivupainike yl\xC3"
+    "\xB6"
+    "s: Palauta oletusasettelu",
+    "Sivupainike alas: Peruuta uudelleenm\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "ritys",
+    "Takaisin (1. painike)",
+    "Vahvista (2. painike)",
+    "Vasen (3. painike)",
+    "Oikea (4. painike)",
+    "Siirry kohtaan %",
+    "Siirry kotiin",
+    "Synkronoi edistyminen",
+    "Poista kirjan v\xC3"
+    "\xA4"
+    "limuisti",
+    "Show page as QR",
+    "Luku: ",
+    " sivua  |  ",
+    "Kirja: ",
+    "shift",
+    "SHIFT",
+    "LOCK",
+    "Calibrelle lis\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    " /opds osoitteeseen",
+    "Vasen/Oikea: 1%  Yl\xC3"
+    "\xB6"
+    "s/Alas: 10%",
+    "Synkronoidaan aikaa...",
+    "Lasketaan dokumentin tarkistussummaa...",
+    "Dokumentin tiivisteen laskenta ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Haetaan et\xC3"
+    "\xA4"
+    "edistymist\xC3"
+    "\xA4"
+    "...",
+    "L\xC3"
+    "\xA4"
+    "hetet\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "n lukuedistymist\xC3"
+    "\xA4"
+    "...",
+    "Tunnuksia ei ole m\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "ritetty",
+    "M\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "rit\xC3"
+    "\xA4"
+    " KOReader-tili asetuksissa",
+    "Edistyminen l\xC3"
+    "\xB6"
+    "ytyi!",
+    "Et\xC3"
+    "\xA4"
+    ":",
+    "Paikallinen:",
+    "Sivu %d, %.2f%% kokonaisuudesta",
+    "Sivu %d/%d, %.2f%% kokonaisuudesta",
+    "  L\xC3"
+    "\xA4"
+    "hde: %s",
+    "K\xC3"
+    "\xA4"
+    "yt\xC3"
+    "\xA4"
+    " et\xC3"
+    "\xA4"
+    "edistymist\xC3"
+    "\xA4"
+    "",
+    "L\xC3"
+    "\xA4"
+    "het\xC3"
+    "\xA4"
+    " paikallinen edistyminen",
+    "Et\xC3"
+    "\xA4"
+    "edistymist\xC3"
+    "\xA4"
+    " ei l\xC3"
+    "\xB6"
+    "ytynyt",
+    "L\xC3"
+    "\xA4"
+    "het\xC3"
+    "\xA4"
+    " nykyinen sijainti?",
+    "Edistyminen l\xC3"
+    "\xA4"
+    "hetetty!",
+    "Synkronointi ep\xC3"
+    "\xA4"
+    "onnistui",
+    "Osio ",
+    "L\xC3"
+    "\xA4"
+    "het\xC3"
+    "\xA4"
+    "",
+    "Kirjan tyyli",
+    "Upotettu tyyli",
+    "OPDS-palvelimen osoite",
+    "Dark Mode",
+    "Background Server on Charge",
+};
+
+const char* const STRINGS_DA[] = {
+    "CrossPoint",
+    "STARTER",
+    "HVILE",
+    "G\xC3"
+    "\xA5"
+    "r i hvile",
+    "Gennems\xC3"
+    "\xB8"
+    "g filer",
+    "Filoverf\xC3"
+    "\xB8"
+    "relse",
+    "Indstillinger",
+    "Calibre bibliotek",
+    "Forts\xC3"
+    "\xA6"
+    "t med at l\xC3"
+    "\xA6"
+    "se",
+    "Ingen \xC3"
+    "\xA5"
+    "ben bog",
+    "Start l\xC3"
+    "\xA6"
+    "sning nedenfor",
+    "B\xC3"
+    "\xB8"
+    "ger",
+    "Ingen b\xC3"
+    "\xB8"
+    "ger fundet",
+    "V\xC3"
+    "\xA6"
+    "lg kapitel",
+    "Ingen kapitler",
+    "Bogen er f\xC3"
+    "\xA6"
+    "rdig",
+    "Tomt kapitel",
+    "Indekserer",
+    "Hukommelsesfejl",
+    "Fejl ved sideindl\xC3"
+    "\xA6"
+    "sning",
+    "Tom fil",
+    "Uden for gr\xC3"
+    "\xA6"
+    "nsen",
+    "Indl\xC3"
+    "\xA6"
+    "ser...",
+    "Indl\xC3"
+    "\xA6"
+    "ser",
+    "Mislykkedes at indl\xC3"
+    "\xA6"
+    "se XTC",
+    "Mislykkedes at indl\xC3"
+    "\xA6"
+    "se TXT",
+    "Mislykkedes at indl\xC3"
+    "\xA6"
+    "se EPUB",
+    "SD kort fejl",
+    "Tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB8"
+    "se netv\xC3"
+    "\xA6"
+    "rk",
+    "Intet netv\xC3"
+    "\xA6"
+    "rk fundet",
+    "%zu netv\xC3"
+    "\xA6"
+    "rk fundet",
+    "Skanner...",
+    "Forbinder...",
+    "Forbundet!",
+    "Forbindelsen mislykkedes",
+    "Forbindelses timeout",
+    "Glem netv\xC3"
+    "\xA6"
+    "rk?",
+    "Gem adgangskode til n\xC3"
+    "\xA6"
+    "ste gang?",
+    "Fjern gemt adgangskode?",
+    "Tryk OK for at scanne igen",
+    "Tryk p\xC3"
+    "\xA5"
+    " en knap for at forts\xC3"
+    "\xA6"
+    "tte",
+    "VENSTRE/H\xC3"
+    "\x98"
+    "JRE: V\xC3"
+    "\xA6"
+    "lg | OK: Bekr\xC3"
+    "\xA6"
+    "ft",
+    "Hvordan vil du oprette forbindelse?",
+    "Tilslut netv\xC3"
+    "\xA6"
+    "rk",
+    "Opret Hotspot",
+    "Opret forbindelse til et eksisterende WiFi-netv\xC3"
+    "\xA6"
+    "rk",
+    "Opret et WiFi-netv\xC3"
+    "\xA6"
+    "rk andre kan tilslutte sig",
+    "Starter Hotspot...",
+    "Hotspot-tilstand",
+    "Opret forbindelse fra din enhed til dette WiFi-netv\xC3"
+    "\xA6"
+    "rk",
+    "\xC3"
+    "\x85"
+    "bn denne URL i din browser",
+    "eller http://",
+    "eller scan QR-kode med din telefon:",
+    "Calibre Wireless",
+    "Calibre Web URL",
+    "Opret forbindelse som tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB8"
+    "s enhed",
+    "* = Krypteret | + = Gemt",
+    "MAC-adresse:",
+    "Tjekker WiFi...",
+    "Indtast WiFi-adgangskode",
+    "Indtast tekst",
+    "til ",
+    "Opdager Calibre...",
+    "Forbinder til ",
+    "Forbundet til ",
+    "Venter p\xC3"
+    "\xA5"
+    " kommandoer...",
+    "(Forbindelsen mislykkedes, pr\xC3"
+    "\xB8"
+    "ver igen)",
+    "Calibre afbrudt",
+    "Venter p\xC3"
+    "\xA5"
+    " overf\xC3"
+    "\xB8"
+    "relse...",
+    "Hvis overf\xC3"
+    "\xB8"
+    "rslen mislykkes, aktiver\n'Ignorer ledig plads' i Calibres\nSmartDevice-plugin-indstillinger.",
+    "Modtager: ",
+    "Modtaget: ",
+    "Venter p\xC3"
+    "\xA5"
+    " mere...",
+    "Kunne ikke oprette fil",
+    "Adgangskode p\xC3"
+    "\xA5"
+    "kr\xC3"
+    "\xA6"
+    "vet",
+    "Overf\xC3"
+    "\xB8"
+    "relse afbrudt",
+    "1) Installer CrossPoint Reader-plugin",
+    "2) V\xC3"
+    "\xA6"
+    "r p\xC3"
+    "\xA5"
+    " det samme WiFi-netv\xC3"
+    "\xA6"
+    "rk",
+    "3) I Calibre: \"Send til enhed\"",
+    "\"Hold denne sk\xC3"
+    "\xA6"
+    "rm \xC3"
+    "\xA5"
+    "ben under afsendelse\"",
+    "Sk\xC3"
+    "\xA6"
+    "rm",
+    "L\xC3"
+    "\xA6"
+    "ser",
+    "Brugerflade",
+    "System",
+    "Hvile-sk\xC3"
+    "\xA6"
+    "rm",
+    "Hvile-sk\xC3"
+    "\xA6"
+    "rm omslag-tilstand",
+    "Statuslinje",
+    "Skjul batteri %",
+    "Ekstra afsnitsafstand",
+    "Tekst Anti-Aliasing",
+    "Kort tryk p\xC3"
+    "\xA5"
+    " t\xC3"
+    "\xA6"
+    "nd/sluk-knap",
+    "L\xC3"
+    "\xA6"
+    "seretning",
+    "Knaplayout foran",
+    "Knaplayout p\xC3"
+    "\xA5"
+    " siden (l\xC3"
+    "\xA6"
+    "ser)",
+    "Langt tryk spring kapitel over",
+    "L\xC3"
+    "\xA6"
+    "ser skrifttype",
+    "Ekstern l\xC3"
+    "\xA6"
+    "serskrifttype",
+    "L\xC3"
+    "\xA6"
+    "serskrifttype",
+    "Brugergr\xC3"
+    "\xA6"
+    "nseflade skrifttype",
+    "Brugergr\xC3"
+    "\xA6"
+    "nseflade skriftst\xC3"
+    "\xB8"
+    "rrelse",
+    "Linjeafstand",
+    "ASCII bogstavafstand",
+    "ASCII cifreafstand",
+    "CJK afstand",
+    "Farvetilstand",
+    "Sk\xC3"
+    "\xA6"
+    "rmmargen",
+    "Afsnitsjustering",
+    "Orddeling",
+    "Tid til hvile",
+    "Opdateringsfrekvens",
+    "Calibre-indstillinger",
+    "KOReader Sync",
+    "S\xC3"
+    "\xB8"
+    "g efter opdateringer",
+    "Sprog",
+    "V\xC3"
+    "\xA6"
+    "lg baggrundsbillede",
+    "Factory Reset",
+    "Ryd l\xC3"
+    "\xA6"
+    "secache",
+    "Calibre",
+    "Brugernavn",
+    "Adgangskode",
+    "Synkroniseringsserver-URL",
+    "Dokumentsammenkobling",
+    "Godkend",
+    "KOReader brugernavn",
+    "KOReader adgangskode",
+    "Filnavn",
+    "Bin\xC3"
+    "\xA6"
+    "r",
+    "Angiv legitimationsoplysninger f\xC3"
+    "\xB8"
+    "rst",
+    "WiFi-forbindelsen mislykkedes",
+    "Godkender...",
+    "Godkendt!",
+    "KOReader-godkendelse",
+    "KOReader-synkronisering er klar til brug",
+    "Godkendelse mislykkedes",
+    "F\xC3"
+    "\xA6"
+    "rdig",
+    "Dette vil rydde alle cachelagrede bogdata.",
+    "Al l\xC3"
+    "\xA6"
+    "sefremskridt vil g\xC3"
+    "\xA5"
+    " tabt!",
+    "B\xC3"
+    "\xB8"
+    "ger skal indekseres igen",
+    "n\xC3"
+    "\xA5"
+    "r de \xC3"
+    "\xA5"
+    "bnes igen.",
+    "Rydder cache...",
+    "Cache ryddet",
+    "elementer fjernet",
+    "mislykkedes",
+    "Kunne ikke rydde cache",
+    "Tjek serielt output for detaljer",
+    "M\xC3"
+    "\xB8"
+    "rk",
+    "Lys",
+    "Brugerdefineret",
+    "Image Source",
+    "Pokedex",
+    "All",
+    "Omslag",
+    "Ingen",
+    "Tilpas",
+    "Besk\xC3"
+    "\xA6"
+    "r",
+    "Ingen fremskridt",
+    "Fuld",
+    "Aldrig",
+    "I l\xC3"
+    "\xA6"
+    "seren",
+    "Altid",
+    "Ignorer",
+    "Hvile",
+    "Sideskift",
+    "Portr\xC3"
+    "\xA6"
+    "t",
+    "Liggende med uret",
+    "Inverteret",
+    "Liggende mod uret",
+    "Bck, Cnfrm, Lft, Rght",
+    "Lft, Rght, Bck, Cnfrm",
+    "Lft, Bck, Cnfrm, Rght",
+    "Forrige/N\xC3"
+    "\xA6"
+    "ste",
+    "N\xC3"
+    "\xA6"
+    "ste/Forrige",
+    "Bookerly",
+    "Noto Sans",
+    "Open Dyslexic",
+    "Lille",
+    "Mellem",
+    "Stor",
+    "Ekstra stor",
+    "T\xC3"
+    "\xA6"
+    "t",
+    "Normal",
+    "Bred",
+    "Justeret",
+    "Venstre",
+    "Centreret",
+    "H\xC3"
+    "\xB8"
+    "jre",
+    "1 min",
+    "5 min",
+    "10 min",
+    "15 min",
+    "30 min",
+    "1 side",
+    "5 sider",
+    "10 sider",
+    "15 sider",
+    "30 sider",
+    "Opdater",
+    "S\xC3"
+    "\xB8"
+    "ger efter opdatering...",
+    "Ny opdatering tilg\xC3"
+    "\xA6"
+    "ngelig!",
+    "Nuv\xC3"
+    "\xA6"
+    "rende version: ",
+    "Ny version: ",
+    "Opdaterer...",
+    "Ingen opdatering tilg\xC3"
+    "\xA6"
+    "ngelig",
+    "Opdatering mislykkedes",
+    "Opdatering f\xC3"
+    "\xA6"
+    "rdig",
+    "Hold t\xC3"
+    "\xA6"
+    "nd/sluk-knappen nede for at t\xC3"
+    "\xA6"
+    "nde igen",
+    "Ekstern skrifttype",
+    "Indbygget (deaktiveret)",
+    "Ingen poster fundet",
+    "Downloader...",
+    "Download mislykkedes",
+    "Fejl:",
+    "Unavngivet",
+    "Ingen server-URL konfigureret",
+    "Kunne ikke hente feed",
+    "Kunne ikke fortolke feed",
+    "Netv\xC3"
+    "\xA6"
+    "rk: ",
+    "IP-adresse: ",
+    "eller scan QR-kode med din telefon for at oprette forbindelse til WiFi.",
+    "Fejl: Generel fejl",
+    "Fejl: Netv\xC3"
+    "\xA6"
+    "rk ikke fundet",
+    "Fejl: Forbindelses timeout",
+    "SD-kort",
+    "\xC2"
+    "\xAB"
+    " Tilbage",
+    "\xC2"
+    "\xAB"
+    " Afslut",
+    "\xC2"
+    "\xAB"
+    " Hjem",
+    "\xC2"
+    "\xAB"
+    " Gem",
+    "V\xC3"
+    "\xA6"
+    "lg",
+    "Skift",
+    "Bekr\xC3"
+    "\xA6"
+    "ft",
+    "Annuller",
+    "Forbind",
+    "\xC3"
+    "\x85"
+    "bn",
+    "Download",
+    "Pr\xC3"
+    "\xB8"
+    "v igen",
+    "Ja",
+    "Nej",
+    "Show",
+    "Hide",
+    "T\xC3"
+    "\x86"
+    "NDT",
+    "SLUKKET",
+    "Indstil",
+    "Ikke indstillet",
+    "Venstre",
+    "H\xC3"
+    "\xB8"
+    "jre",
+    "Op",
+    "Ned",
+    "CAPS",
+    "caps",
+    "OK",
+    "[ON]",
+    "Hvile-sk\xC3"
+    "\xA6"
+    "rm omslag-filter",
+    "Kontrast",
+    "Customise Status Bar",
+    "Chapter Page Count",
+    "Book Progress Percentage",
+    "Progress Bar",
+    "Progress Bar Thickness",
+    "Thin",
+    "Medium",
+    "Thick",
+    "Book",
+    "Chapter",
+    "Chapter 21",
+    "Book Title",
+    "Preview",
+    "Title",
+    "Battery",
+    "Brugergr\xC3"
+    "\xA6"
+    "nseflade tema",
+    "Klassisk",
+    "Lyra",
+    "Lyra Extended",
+    "Fork Drift",
+    "Sollysfading-rettelse",
+    "Omtildel frontknapper",
+    "OPDS Browser",
+    "Omslag + Brugerdefineret",
+    "Seneste",
+    "Seneste b\xC3"
+    "\xB8"
+    "ger",
+    "Ingen seneste b\xC3"
+    "\xB8"
+    "ger",
+    "Brug Calibre tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB8"
+    "s enhedsoverf\xC3"
+    "\xB8"
+    "relse",
+    "Glem netv\xC3"
+    "\xA6"
+    "rk og fjern gemt adgangskode?",
+    "Glem",
+    "Starter Calibre...",
+    "Ops\xC3"
+    "\xA6"
+    "tning",
+    "Status",
+    "Ryd",
+    "Standard",
+    "Tryk p\xC3"
+    "\xA5"
+    " en frontknap for hver rolle",
+    "Ikke tildelt",
+    "Allerede tildelt",
+    "Sideknap op: Nulstil til standardlayout",
+    "Sideknap ned: Annuller omtildeling",
+    "Tilbage (1. knap)",
+    "Bekr\xC3"
+    "\xA6"
+    "ft (2. knap)",
+    "Venstre (3. knap)",
+    "H\xC3"
+    "\xB8"
+    "jre (4. knap)",
+    "G\xC3"
+    "\xA5"
+    " til %",
+    "G\xC3"
+    "\xA5"
+    " til start",
+    "Synkroniser fremskridt",
+    "Slet bogcache",
+    "Show page as QR",
+    "Kapitel: ",
+    " sider  |  ",
+    "Bog: ",
+    "shift",
+    "SHIFT",
+    "LOCK",
+    "Tilf\xC3"
+    "\xB8"
+    "j /opds til din URL for Calibre",
+    "Venstre/H\xC3"
+    "\xB8"
+    "jre: 1%  Op/Ned: 10%",
+    "Synkroniserer tid...",
+    "Beregner dokument-hash...",
+    "Kunne ikke beregne dokument-hash",
+    "Henter fjernfremskridt...",
+    "Uploader fremskridt...",
+    "Ingen legitimationsoplysninger konfigureret",
+    "Ops\xC3"
+    "\xA6"
+    "t KOReader-konto i Indstillinger",
+    "Fremskridt fundet!",
+    "Ekstern:",
+    "Lokal:",
+    "Side %d, %.2f%% samlet",
+    "Side %d/%d, %.2f%% samlet",
+    "  Fra: %s",
+    "Anvend fjernfremskridt",
+    "Upload lokalt fremskridt",
+    "Ingen fjernfremskridt fundet",
+    "Upload nuv\xC3"
+    "\xA6"
+    "rende position?",
+    "Fremskridt uploadet!",
+    "Synkronisering mislykkedes",
+    "Afsnit ",
+    "Upload",
+    "Bogens stil",
+    "Indlejret stil",
+    "OPDS Server URL",
+    "Dark Mode",
+    "Background Server on Charge",
+};
+
 }  // namespace i18n_strings
 
 // Compile-time validation of array sizes
@@ -33956,9 +36679,9 @@ static_assert(sizeof(i18n_strings::STRINGS_FR) / sizeof(i18n_strings::STRINGS_FR
 static_assert(sizeof(i18n_strings::STRINGS_DE) / sizeof(i18n_strings::STRINGS_DE[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_DE size mismatch");
-static_assert(sizeof(i18n_strings::STRINGS_CZ) / sizeof(i18n_strings::STRINGS_CZ[0]) ==
+static_assert(sizeof(i18n_strings::STRINGS_CS) / sizeof(i18n_strings::STRINGS_CS[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
-              "STRINGS_CZ size mismatch");
+              "STRINGS_CS size mismatch");
 static_assert(sizeof(i18n_strings::STRINGS_PO) / sizeof(i18n_strings::STRINGS_PO[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_PO size mismatch");
@@ -33980,3 +36703,15 @@ static_assert(sizeof(i18n_strings::STRINGS_UK) / sizeof(i18n_strings::STRINGS_UK
 static_assert(sizeof(i18n_strings::STRINGS_BE) / sizeof(i18n_strings::STRINGS_BE[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_BE size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_IT) / sizeof(i18n_strings::STRINGS_IT[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_IT size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_PL) / sizeof(i18n_strings::STRINGS_PL[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_PL size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_FI) / sizeof(i18n_strings::STRINGS_FI[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_FI size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_DA) / sizeof(i18n_strings::STRINGS_DA[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_DA size mismatch");
