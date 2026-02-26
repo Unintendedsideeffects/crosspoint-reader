@@ -3,6 +3,7 @@
 #include <FeatureFlags.h>
 #include <Logging.h>
 
+#include <algorithm>
 #include <cstring>
 
 namespace core {
@@ -81,12 +82,9 @@ const FeatureDescriptor* FeatureCatalog::find(const char* key) {
     return nullptr;
   }
 
-  for (const auto& feature : kFeatureCatalog) {
-    if (std::strcmp(feature.key, key) == 0) {
-      return &feature;
-    }
-  }
-  return nullptr;
+  const auto it = std::find_if(std::begin(kFeatureCatalog), std::end(kFeatureCatalog),
+                               [key](const FeatureDescriptor& feature) { return std::strcmp(feature.key, key) == 0; });
+  return it == std::end(kFeatureCatalog) ? nullptr : &(*it);
 }
 
 bool FeatureCatalog::isEnabled(const char* key) {
@@ -95,13 +93,8 @@ bool FeatureCatalog::isEnabled(const char* key) {
 }
 
 int FeatureCatalog::enabledCount() {
-  int count = 0;
-  for (const auto& feature : kFeatureCatalog) {
-    if (feature.enabled) {
-      count++;
-    }
-  }
-  return count;
+  return static_cast<int>(std::count_if(std::begin(kFeatureCatalog), std::end(kFeatureCatalog),
+                                        [](const FeatureDescriptor& feature) { return feature.enabled; }));
 }
 
 String FeatureCatalog::buildString() {

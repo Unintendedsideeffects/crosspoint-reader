@@ -39,7 +39,6 @@ class MyLibraryActivity final : public Activity {
   void renderRecentTab(int contentTop, int contentHeight) const;
   void renderFilesTab(int contentTop, int contentHeight) const;
   void renderGrid() const;
-  void extractCovers();
   bool drawCoverAt(const std::string& path, int x, int y, int width, int height) const;
 
   struct GridMetrics {

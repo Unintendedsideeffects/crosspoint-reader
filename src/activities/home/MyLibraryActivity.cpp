@@ -1,6 +1,5 @@
 #include "MyLibraryActivity.h"
 
-#include <Epub.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <I18n.h>
@@ -472,40 +471,4 @@ bool MyLibraryActivity::drawCoverAt(const std::string& path, const int x, const 
   }
   file.close();
   return ok;
-}
-
-void MyLibraryActivity::extractCovers() {
-  if (viewMode != ViewMode::Grid) return;
-  SpiBusMutex::Guard guard;
-
-  const auto m = getGridMetrics();
-  const int itemsPerPage = m.cols * m.rows;
-  const int itemCount = getCurrentItemCount();
-  const int pageStartIndex = selectorIndex / itemsPerPage * itemsPerPage;
-
-  for (int i = 0; i < itemsPerPage && (pageStartIndex + i) < itemCount; i++) {
-    const int idx = pageStartIndex + i;
-    std::string path;
-    if (currentTab == Tab::Recent) {
-      path = recentBooks[idx].path;
-    } else {
-      path = basepath + files[idx];
-    }
-
-    if (StringUtils::checkFileExtension(path, ".epub")) {
-      std::string cacheKey = "/.crosspoint/epub_" + std::to_string(std::hash<std::string>{}(path));
-      std::string thumbPath = cacheKey + "/thumb_" + std::to_string(m.thumbHeight) + ".bmp";
-
-      if (!Storage.exists(thumbPath.c_str())) {
-        LOG_DBG("LIB", "Generating thumb for %s", path.c_str());
-        Epub epub(path, "/.crosspoint");
-        // Load without CSS to save time/RAM
-        if (epub.load(true, true)) {
-          if (epub.generateThumbBmp(m.thumbHeight)) {
-            requestUpdate();
-          }
-        }
-      }
-    }
-  }
 }

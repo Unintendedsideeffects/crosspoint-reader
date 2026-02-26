@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <numeric>
 #include <vector>
 
 #include "CrossPointSettings.h"
@@ -725,15 +726,17 @@ void HomeActivity::render(Activity::RenderLock&&) {
 
       if (coverRendered) {
         // Draw background box for text legibility over cover
-        int maxW = 0;
-        for (auto& l : lines) maxW = std::max(maxW, renderer.getTextWidth(UI_12_FONT_ID, l.c_str()));
+        const int maxW =
+            std::accumulate(lines.begin(), lines.end(), 0, [this](const int maxWidth, const std::string& line) {
+              return std::max(maxWidth, renderer.getTextWidth(UI_12_FONT_ID, line.c_str()));
+            });
         int boxW = maxW + 16;
         int boxH = totalTextHeight + 16;
         renderer.fillRect((pageWidth - boxW) / 2, titleYStart - 8, boxW, boxH, bookSelected);
         renderer.drawRect((pageWidth - boxW) / 2, titleYStart - 8, boxW, boxH, !bookSelected);
       }
 
-      for (auto& l : lines) {
+      for (const auto& l : lines) {
         renderer.drawCenteredText(UI_12_FONT_ID, titleYStart, l.c_str(), !bookSelected);
         titleYStart += renderer.getLineHeight(UI_12_FONT_ID);
       }
