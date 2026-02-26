@@ -395,7 +395,7 @@ void CrossPointWebServer::handleStatus() const {
 void CrossPointWebServer::handlePlugins() const { server->send(200, "application/json", FeatureManifest::toJson()); }
 
 void CrossPointWebServer::handleTodoEntry() {
-  if (!core::FeatureModules::isEnabled("todo_planner")) {
+  if (!core::FeatureModules::hasCapability(core::Capability::TodoPlanner)) {
     server->send(404, "text/plain", "TODO planner disabled");
     return;
   }
@@ -435,8 +435,8 @@ void CrossPointWebServer::handleTodoEntry() {
     SpiBusMutex::Guard guard;
     const bool markdownExists = Storage.exists(markdownPath.c_str());
     const bool textExists = Storage.exists(textPath.c_str());
-    targetPath =
-        TodoPlannerStorage::dailyPath(today, core::FeatureModules::isEnabled("markdown"), markdownExists, textExists);
+    targetPath = TodoPlannerStorage::dailyPath(
+        today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport), markdownExists, textExists);
     if (!Storage.exists(dirPath.c_str())) {
       Storage.mkdir(dirPath.c_str());
     }
@@ -2219,7 +2219,6 @@ void CrossPointWebServer::handleWifiScan() const {
     return;
   }
 
-#if ENABLE_WEB_WIFI_SETUP
   int n = WiFi.scanNetworks();
   JsonDocument doc;
   JsonArray array = doc.to<JsonArray>();
@@ -2236,9 +2235,6 @@ void CrossPointWebServer::handleWifiScan() const {
   String json;
   serializeJson(doc, json);
   server->send(200, "application/json", json);
-#else
-  server->send(404, "text/plain", "WiFi setup API disabled");
-#endif
 }
 
 void CrossPointWebServer::handleWifiConnect() const {
@@ -2247,7 +2243,6 @@ void CrossPointWebServer::handleWifiConnect() const {
     return;
   }
 
-#if ENABLE_WEB_WIFI_SETUP
   if (!server->hasArg("plain")) {
     server->send(400, "text/plain", "Missing body");
     return;
@@ -2267,9 +2262,6 @@ void CrossPointWebServer::handleWifiConnect() const {
   WIFI_STORE.saveToFile();
 
   server->send(200, "text/plain", "WiFi credentials saved");
-#else
-  server->send(404, "text/plain", "WiFi setup API disabled");
-#endif
 }
 
 void CrossPointWebServer::handleWifiForget() const {
@@ -2278,7 +2270,6 @@ void CrossPointWebServer::handleWifiForget() const {
     return;
   }
 
-#if ENABLE_WEB_WIFI_SETUP
   if (!server->hasArg("plain")) {
     server->send(400, "text/plain", "Missing body");
     return;
@@ -2294,9 +2285,6 @@ void CrossPointWebServer::handleWifiForget() const {
   } else {
     server->send(400, "text/plain", "SSID required");
   }
-#else
-  server->send(404, "text/plain", "WiFi setup API disabled");
-#endif
 }
 
 namespace {
