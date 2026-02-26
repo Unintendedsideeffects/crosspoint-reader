@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include <cstddef>
 #include <functional>
 #include <string>
 #include <vector>
@@ -57,6 +58,8 @@ class FeatureModules {
   static void onFontFamilySettingChanged(uint8_t newValue);
   static void onWebSettingsApplied();
   static void onUploadCompleted(const String& uploadPath, const String& uploadFileName);
+  static void onWebFileChanged(const String& filePath);
+  static bool tryGetDocumentCoverPath(const String& documentPath, std::string& outCoverPath);
 
   static bool shouldRegisterWebRoute(WebOptionalRoute route);
   static bool shouldExposeHomeAction(HomeOptionalAction action, bool hasOpdsUrl);
@@ -78,6 +81,15 @@ class FeatureModules {
     int familyCount;
     bool activeLoaded;
   };
+
+  struct WebCompressedPayload {
+    bool available;
+    const char* data;
+    size_t compressedSize;
+  };
+
+  static WebCompressedPayload getPokedexPluginPagePayload();
+
   /**
    * Scan/reload the user-font library and (if a USER_SD font is selected)
    * reload the active font family.  Returns metadata for building a JSON

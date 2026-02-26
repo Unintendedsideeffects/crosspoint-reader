@@ -6,7 +6,14 @@
 #include <algorithm>
 #include <cstring>
 
+#if ENABLE_EPUB_SUPPORT
+#include <Epub.h>
+#endif
+
 #include "CrossPointSettings.h"
+#if ENABLE_EPUB_SUPPORT
+#include "SpiBusMutex.h"
+#endif
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/settings/ButtonRemapActivity.h"
 #include "activities/settings/ClearCacheActivity.h"
@@ -14,6 +21,13 @@
 #include "activities/settings/LanguageSelectActivity.h"
 #include "activities/settings/SettingsActivity.h"
 #include "core/features/FeatureCatalog.h"
+#if ENABLE_EPUB_SUPPORT
+#include "util/StringUtils.h"
+#endif
+
+#if ENABLE_WEB_POKEDEX_PLUGIN
+#include "html/PokedexPluginPageHtml.generated.h"
+#endif
 
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
 #include "activities/settings/CalibreSettingsActivity.h"
@@ -33,6 +47,11 @@
 #endif
 
 namespace core {
+
+#if ENABLE_WEB_POKEDEX_PLUGIN
+static_assert(PokedexPluginPageHtmlCompressedSize == sizeof(PokedexPluginPageHtml),
+              "Pokedex page compressed size mismatch");
+#endif
 
 bool FeatureModules::isEnabled(const char* featureKey) { return FeatureCatalog::isEnabled(featureKey); }
 
@@ -298,6 +317,48 @@ void FeatureModules::onUploadCompleted(const String& uploadPath, const String& u
 #else
   (void)uploadPath;
   (void)uploadFileName;
+#endif
+}
+
+void FeatureModules::onWebFileChanged(const String& filePath) {
+#if ENABLE_EPUB_SUPPORT
+  if (StringUtils::checkFileExtension(filePath, ".epub")) {
+    Epub(filePath.c_str(), "/.crosspoint").clearCache();
+    LOG_DBG("FEATURES", "Cleared epub cache for: %s", filePath.c_str());
+  }
+#else
+  (void)filePath;
+#endif
+}
+
+bool FeatureModules::tryGetDocumentCoverPath(const String& documentPath, std::string& outCoverPath) {
+#if ENABLE_EPUB_SUPPORT
+  String lowerPath = documentPath;
+  lowerPath.toLowerCase();
+  if (!lowerPath.endsWith(".epub")) {
+    return false;
+  }
+
+  Epub epub(documentPath.c_str(), "/.crosspoint");
+  SpiBusMutex::Guard guard;
+  if (!epub.load(false)) {
+    return false;
+  }
+
+  outCoverPath = epub.getThumbBmpPath();
+  return !outCoverPath.empty();
+#else
+  (void)documentPath;
+  outCoverPath.clear();
+  return false;
+#endif
+}
+
+FeatureModules::WebCompressedPayload FeatureModules::getPokedexPluginPagePayload() {
+#if ENABLE_WEB_POKEDEX_PLUGIN
+  return {true, PokedexPluginPageHtml, PokedexPluginPageHtmlCompressedSize};
+#else
+  return {false, nullptr, 0};
 #endif
 }
 

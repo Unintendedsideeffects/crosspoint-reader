@@ -3,9 +3,6 @@
 #include <ArduinoJson.h>
 #include <FeatureFlags.h>
 #include <FsHelpers.h>
-#if ENABLE_EPUB_SUPPORT
-#include <Epub.h>
-#endif
 #include <HalStorage.h>
 #include <Logging.h>
 #include <WiFi.h>
@@ -25,17 +22,13 @@
 #include "SpiBusMutex.h"
 #include "WebDAVHandler.h"
 #include "activities/boot_sleep/SleepActivity.h"
+#include "activities/todo/TodoPlannerStorage.h"
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
-#if ENABLE_WEB_POKEDEX_PLUGIN
-#include "html/PokedexPluginPageHtml.generated.h"
-#endif
-#include "activities/todo/TodoPlannerStorage.h"
 #include "html/SettingsPageHtml.generated.h"
 #include "util/DateUtils.h"
 #include "util/InputValidation.h"
 #include "util/PathUtils.h"
-#include "util/StringUtils.h"
 
 namespace {
 // Folders/files to hide from the web interface file browser
@@ -51,19 +44,6 @@ constexpr size_t WS_UPLOAD_MAX_BYTES = 512UL * 1024UL * 1024UL;
 // Static pointer for WebSocket callback (WebSocketsServer requires C-style callback)
 CrossPointWebServer* wsInstance = nullptr;
 
-// Helper function to clear epub cache after upload
-void clearEpubCacheIfNeeded(const String& filePath) {
-#if ENABLE_EPUB_SUPPORT
-  // Only clear cache for .epub files
-  if (StringUtils::checkFileExtension(filePath, ".epub")) {
-    Epub(filePath.c_str(), "/.crosspoint").clearCache();
-    LOG_DBG("WEB", "Cleared epub cache for: %s", filePath.c_str());
-  }
-#else
-  (void)filePath;
-#endif
-}
-
 // Helper to invalidate sleep image cache when /sleep/ or sleep images are modified
 void invalidateSleepCacheIfNeeded(const String& filePath) {
   String lowerPath = filePath;
@@ -72,6 +52,11 @@ void invalidateSleepCacheIfNeeded(const String& filePath) {
       lowerPath.equals("/sleep.jpeg") || lowerPath.startsWith("/sleep/") || lowerPath.equals("/sleep")) {
     invalidateSleepImageCache();
   }
+}
+
+void invalidateFeatureCachesIfNeeded(const String& filePath) {
+  core::FeatureModules::onWebFileChanged(filePath);
+  invalidateSleepCacheIfNeeded(filePath);
 }
 
 }  // namespace
@@ -334,10 +319,6 @@ CrossPointWebServer::WsUploadStatus CrossPointWebServer::getWsUploadStatus() con
 static_assert(HomePageHtmlCompressedSize == sizeof(HomePageHtml), "Home page compressed size mismatch");
 static_assert(FilesPageHtmlCompressedSize == sizeof(FilesPageHtml), "Files page compressed size mismatch");
 static_assert(SettingsPageHtmlCompressedSize == sizeof(SettingsPageHtml), "Settings page compressed size mismatch");
-#if ENABLE_WEB_POKEDEX_PLUGIN
-static_assert(PokedexPluginPageHtmlCompressedSize == sizeof(PokedexPluginPageHtml),
-              "Pokedex page compressed size mismatch");
-#endif
 
 static bool isGzipPayload(const char* data, size_t len) {
   return len >= 2 && static_cast<unsigned char>(data[0]) == 0x1f && static_cast<unsigned char>(data[1]) == 0x8b;
@@ -951,8 +932,7 @@ void CrossPointWebServer::handleUpload() {
         String filePath = uploadPath;
         if (!filePath.endsWith("/")) filePath += "/";
         filePath += uploadFileName;
-        clearEpubCacheIfNeeded(filePath);
-        invalidateSleepCacheIfNeeded(filePath);
+        invalidateFeatureCachesIfNeeded(filePath);
         core::FeatureModules::onUploadCompleted(uploadPath, uploadFileName);
       }
     }
@@ -1157,8 +1137,7 @@ void CrossPointWebServer::handleRename() const {
     return;
   }
 
-  clearEpubCacheIfNeeded(itemPath);
-  invalidateSleepCacheIfNeeded(itemPath);
+  invalidateFeatureCachesIfNeeded(itemPath);
   bool success = false;
   {
     SpiBusMutex::Guard guard;
@@ -1283,8 +1262,7 @@ void CrossPointWebServer::handleMove() const {
     return;
   }
 
-  clearEpubCacheIfNeeded(itemPath);
-  invalidateSleepCacheIfNeeded(itemPath);
+  invalidateFeatureCachesIfNeeded(itemPath);
   bool success = false;
   {
     SpiBusMutex::Guard guard;
@@ -1384,8 +1362,7 @@ void CrossPointWebServer::handleDelete() const {
       return;
     }
 
-    clearEpubCacheIfNeeded(itemPath);
-    invalidateSleepCacheIfNeeded(itemPath);
+    invalidateFeatureCachesIfNeeded(itemPath);
     LOG_DBG("WEB", "Deleted %s: %s", isDirectory ? "folder" : "file", itemPath.c_str());
   };
 
@@ -1436,12 +1413,14 @@ void CrossPointWebServer::handleSettingsPage() const {
 }
 
 void CrossPointWebServer::handlePokedexPluginPage() const {
-#if ENABLE_WEB_POKEDEX_PLUGIN
-  sendPrecompressedHtml(server.get(), PokedexPluginPageHtml, PokedexPluginPageHtmlCompressedSize);
+  const auto payload = core::FeatureModules::getPokedexPluginPagePayload();
+  if (!payload.available || payload.data == nullptr || payload.compressedSize == 0) {
+    server->send(404, "text/plain", "Pokedex plugin not enabled in this build");
+    return;
+  }
+
+  sendPrecompressedHtml(server.get(), payload.data, payload.compressedSize);
   LOG_DBG("WEB", "Served pokedex plugin page");
-#else
-  server->send(404, "text/plain", "Pokedex plugin not enabled in this build");
-#endif
 }
 
 void CrossPointWebServer::handleGetSettings() const {
@@ -1656,7 +1635,6 @@ void CrossPointWebServer::handleFontUpload() {
     return;
   }
 
-#if ENABLE_USER_FONTS
   esp_task_wdt_reset();
 
   if (!running || !server) return;
@@ -1764,9 +1742,6 @@ void CrossPointWebServer::handleFontUpload() {
     }
     uploadError = "Font upload aborted";
   }
-#else
-  uploadError = "User font API disabled";
-#endif
 }
 
 void CrossPointWebServer::handleFontUploadPost() {
@@ -1858,19 +1833,7 @@ void CrossPointWebServer::handleCover() const {
 
   // If not found in recent books or no cover, try generating one
   if (coverPath.empty()) {
-    String lower = bookPath;
-    lower.toLowerCase();
-#if ENABLE_EPUB_SUPPORT
-    if (lower.endsWith(".epub")) {
-      Epub epub(bookPath.c_str(), "/.crosspoint");
-      SpiBusMutex::Guard guard;
-      if (epub.load(false)) {
-        coverPath = epub.getThumbBmpPath();
-      }
-#else
-    if (false) {
-#endif
-    }
+    core::FeatureModules::tryGetDocumentCoverPath(bookPath, coverPath);
   }
 
   if (coverPath.empty()) {
@@ -2195,8 +2158,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
         String filePath = wsUploadPath;
         if (!filePath.endsWith("/")) filePath += "/";
         filePath += wsUploadFileName;
-        clearEpubCacheIfNeeded(filePath);
-        invalidateSleepCacheIfNeeded(filePath);
+        invalidateFeatureCachesIfNeeded(filePath);
 
         wsServer->sendTXT(num, "DONE");
         wsLastProgressSent = 0;
