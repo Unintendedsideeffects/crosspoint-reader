@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstring>
+#include <utility>
 
 #if ENABLE_EPUB_SUPPORT
 #include <Epub.h>
@@ -31,6 +32,7 @@
 #endif
 
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+#include "activities/browser/OpdsBookBrowserActivity.h"
 #include "activities/settings/CalibreSettingsActivity.h"
 #endif
 
@@ -46,6 +48,11 @@
 
 #if ENABLE_USER_FONTS
 #include "UserFontManager.h"
+#endif
+
+#if ENABLE_TODO_PLANNER
+#include "activities/todo/TodoActivity.h"
+#include "activities/todo/TodoFallbackActivity.h"
 #endif
 
 namespace core {
@@ -194,6 +201,55 @@ Activity* FeatureModules::createSettingsSubActivity(const SettingAction action, 
   }
 
   return nullptr;
+}
+
+Activity* FeatureModules::createOpdsBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                                    const std::function<void()>& onBack) {
+#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+  if (!hasCapability(Capability::CalibreSync)) {
+    return nullptr;
+  }
+  return new OpdsBookBrowserActivity(renderer, mappedInput, onBack);
+#else
+  (void)renderer;
+  (void)mappedInput;
+  (void)onBack;
+  return nullptr;
+#endif
+}
+
+Activity* FeatureModules::createTodoPlannerActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                                    std::string filePath, std::string dateTitle,
+                                                    const std::function<void()>& onBack) {
+#if ENABLE_TODO_PLANNER
+  if (!hasCapability(Capability::TodoPlanner)) {
+    return nullptr;
+  }
+  return new TodoActivity(renderer, mappedInput, std::move(filePath), std::move(dateTitle), onBack);
+#else
+  (void)renderer;
+  (void)mappedInput;
+  (void)filePath;
+  (void)dateTitle;
+  (void)onBack;
+  return nullptr;
+#endif
+}
+
+Activity* FeatureModules::createTodoFallbackActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                                     std::string dateText, const std::function<void()>& onBack) {
+#if ENABLE_TODO_PLANNER
+  if (!hasCapability(Capability::TodoPlanner)) {
+    return nullptr;
+  }
+  return new TodoFallbackActivity(renderer, mappedInput, std::move(dateText), onBack);
+#else
+  (void)renderer;
+  (void)mappedInput;
+  (void)dateText;
+  (void)onBack;
+  return nullptr;
+#endif
 }
 
 std::string FeatureModules::getKoreaderUsername() {

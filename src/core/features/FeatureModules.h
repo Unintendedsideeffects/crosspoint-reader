@@ -54,6 +54,13 @@ class FeatureModules {
   static Activity* createSettingsSubActivity(SettingAction action, GfxRenderer& renderer,
                                              MappedInputManager& mappedInput, const std::function<void()>& onComplete,
                                              const std::function<void(bool)>& onCompleteBool);
+  static Activity* createOpdsBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                             const std::function<void()>& onBack);
+  static Activity* createTodoPlannerActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                             std::string filePath, std::string dateTitle,
+                                             const std::function<void()>& onBack);
+  static Activity* createTodoFallbackActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                              std::string dateText, const std::function<void()>& onBack);
 
   static void onFontFamilySettingChanged(uint8_t newValue);
   static void onWebSettingsApplied();

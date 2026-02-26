@@ -25,15 +25,11 @@
 #include "activities/network/CrossPointWebServerActivity.h"
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
-#include "core/features/FeatureLifecycle.h"
-#if ENABLE_TODO_PLANNER
-#include "activities/todo/TodoActivity.h"
-#include "activities/todo/TodoFallbackActivity.h"
 #include "activities/todo/TodoPlannerStorage.h"
-#endif
 #include "activities/util/FullScreenMessageActivity.h"
 #include "components/UITheme.h"
 #include "core/CoreBootstrap.h"
+#include "core/features/FeatureLifecycle.h"
 #include "core/features/FeatureModules.h"
 #include "fontIds.h"
 #include "network/BackgroundWebServer.h"
@@ -42,10 +38,6 @@
 #include "util/FactoryResetUtils.h"
 #if ENABLE_USB_MASS_STORAGE
 #include "UsbSerialProtocol.h"
-#endif
-
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-#include "activities/browser/OpdsBookBrowserActivity.h"
 #endif
 
 HalDisplay display;
@@ -344,23 +336,32 @@ void onGoToBrowser() {
   if (!core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) {
     return;
   }
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
+
+  Activity* activity = core::FeatureModules::createOpdsBrowserActivity(renderer, mappedInputManager, onGoHome);
+  if (!activity) {
+    return;
+  }
+
   exitActivity();
-  enterNewActivity(new OpdsBookBrowserActivity(renderer, mappedInputManager, onGoHome));
-#endif
+  enterNewActivity(activity);
 }
 
 void onGoToTodo() {
   if (!core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
     return;
   }
-#if ENABLE_TODO_PLANNER
+
   exitActivity();
 
   const std::string today = DateUtils::currentDate();
   if (today.empty()) {
-    // Fallback if date is not set
-    enterNewActivity(new TodoFallbackActivity(renderer, mappedInputManager, today, onGoHome));
+    Activity* fallbackActivity =
+        core::FeatureModules::createTodoFallbackActivity(renderer, mappedInputManager, today, onGoHome);
+    if (fallbackActivity) {
+      enterNewActivity(fallbackActivity);
+    } else {
+      onGoHome();
+    }
     return;
   }
 
@@ -369,11 +370,16 @@ void onGoToTodo() {
   const bool todoMdExists = Storage.exists(todoMdPath.c_str());
   const bool todoTxtExists = Storage.exists(todoTxtPath.c_str());
   if (todoMdExists || todoTxtExists) {
-    enterNewActivity(new TodoActivity(
+    Activity* todoActivity = core::FeatureModules::createTodoPlannerActivity(
         renderer, mappedInputManager,
         TodoPlannerStorage::dailyPath(today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport),
                                       todoMdExists, todoTxtExists),
-        today, onGoHome));
+        today, onGoHome);
+    if (todoActivity) {
+      enterNewActivity(todoActivity);
+    } else {
+      onGoHome();
+    }
     return;
   }
 
@@ -386,12 +392,16 @@ void onGoToTodo() {
   }
 
   // 3. Default: Create/Open new list
-  enterNewActivity(new TodoActivity(
+  Activity* todoActivity = core::FeatureModules::createTodoPlannerActivity(
       renderer, mappedInputManager,
       TodoPlannerStorage::dailyPath(today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport),
                                     todoMdExists, todoTxtExists),
-      today, onGoHome));
-#endif  // ENABLE_TODO_PLANNER
+      today, onGoHome);
+  if (todoActivity) {
+    enterNewActivity(todoActivity);
+  } else {
+    onGoHome();
+  }
 }
 
 void onGoHome() {
