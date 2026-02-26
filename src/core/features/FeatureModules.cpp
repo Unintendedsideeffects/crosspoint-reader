@@ -135,6 +135,10 @@ bool FeatureModules::hasCapability(const Capability capability) {
   return false;
 }
 
+String FeatureModules::getBuildString() { return FeatureCatalog::buildString(); }
+
+String FeatureModules::getFeatureMapJson() { return FeatureCatalog::toJson(); }
+
 bool FeatureModules::supportsSettingAction(const SettingAction action) {
   switch (action) {
     case SettingAction::RemapFrontButtons:

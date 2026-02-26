@@ -49,6 +49,8 @@ class FeatureModules {
  public:
   static bool isEnabled(const char* featureKey);
   static bool hasCapability(Capability capability);
+  static String getBuildString();
+  static String getFeatureMapJson();
   static bool supportsSettingAction(SettingAction action);
 
   static Activity* createSettingsSubActivity(SettingAction action, GfxRenderer& renderer,

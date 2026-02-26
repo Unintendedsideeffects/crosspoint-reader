@@ -12,7 +12,6 @@
 #include <cstring>
 
 #include "CrossPointSettings.h"
-#include "FeatureManifest.h"
 #include "RecentBooksStore.h"
 #include "SettingsList.h"
 #include "SpiBusMutex.h"
@@ -363,14 +362,16 @@ void CrossPointWebServer::handleStatus() const {
   doc["otaSelectedBundle"] = SETTINGS.selectedOtaBundle;
   doc["otaInstalledBundle"] = SETTINGS.installedOtaBundle;
   doc["otaInstalledFeatures"] = SETTINGS.installedOtaFeatureFlags[0] != '\0' ? SETTINGS.installedOtaFeatureFlags
-                                                                             : FeatureManifest::getBuildString();
+                                                                             : core::FeatureModules::getBuildString();
 
   String json;
   serializeJson(doc, json);
   server->send(200, "application/json", json);
 }
 
-void CrossPointWebServer::handlePlugins() const { server->send(200, "application/json", FeatureManifest::toJson()); }
+void CrossPointWebServer::handlePlugins() const {
+  server->send(200, "application/json", core::FeatureModules::getFeatureMapJson());
+}
 
 void CrossPointWebServer::handleTodoEntry() {
   if (!core::FeatureModules::hasCapability(core::Capability::TodoPlanner)) {
