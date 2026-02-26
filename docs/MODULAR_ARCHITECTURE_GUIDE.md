@@ -100,6 +100,10 @@ core::FeatureLifecycle::onFontSetup(renderer);
 `main.cpp` calls each stage once in order; each hook internally gates its work
 behind compile-time feature flags so disabled features cost nothing.
 
+Internally, `FeatureLifecycle` uses a registry table keyed by feature id,
+making startup wiring additive (add one registry entry) instead of modifying
+central boot flow logic.
+
 **Adding startup behavior for a new feature:**
 
 1. Add the feature's startup code inside the appropriate hook in

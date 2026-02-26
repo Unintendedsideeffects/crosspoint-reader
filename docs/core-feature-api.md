@@ -18,6 +18,9 @@ bootstrapping from compile-time feature wiring.
   - Validates `requiresAll` and `requiresAny` dependency rules.
 - `src/core/features/FeatureLifecycle.h/.cpp`
   - Provides explicit startup hook points for optional features.
+  - Uses a registry table keyed by feature id (`kLifecycleHooks`) so startup
+    work for each feature is declarative and does not require touching
+    `main.cpp` or switch-style dispatch code.
   - `main.cpp` calls each stage once in order; each hook internally gates
     its work behind compile-time feature flags.
   - Stages: `onStorageReady`, `onSettingsLoaded`, `onFontSetup`.
