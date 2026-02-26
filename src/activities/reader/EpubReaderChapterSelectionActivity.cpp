@@ -2,16 +2,11 @@
 
 #include <GfxRenderer.h>
 
-#include "FeatureFlags.h"
 #include "MappedInputManager.h"
 #include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
+#include "core/features/FeatureModules.h"
 #include "fontIds.h"
-
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-#include "KOReaderCredentialStore.h"
-#include "KOReaderSyncActivity.h"
-#endif
 
 namespace {
 // Time threshold for treating a long press as a page-up/page-down
@@ -19,11 +14,7 @@ constexpr int SKIP_PAGE_MS = 700;
 }  // namespace
 
 bool EpubReaderChapterSelectionActivity::hasSyncOption() const {
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-  return KOREADER_STORE.hasCredentials();
-#else
-  return false;
-#endif
+  return core::FeatureModules::hasKoreaderSyncCredentials();
 }
 
 int EpubReaderChapterSelectionActivity::getTotalItems() const {
@@ -32,14 +23,11 @@ int EpubReaderChapterSelectionActivity::getTotalItems() const {
   return epub->getTocItemsCount() + syncCount;
 }
 
-// Only compiled when KOReader sync integration is available.
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 bool EpubReaderChapterSelectionActivity::isSyncItem(int index) const {
-  if (!KOREADER_STORE.hasCredentials()) return false;
+  if (!hasSyncOption()) return false;
   // First item and last item are sync options
   return index == 0 || index == getTotalItems() - 1;
 }
-#endif
 
 int EpubReaderChapterSelectionActivity::tocIndexFromItemIndex(int itemIndex) const {
   // Account for the sync option at the top
@@ -104,11 +92,8 @@ void EpubReaderChapterSelectionActivity::onExit() {
   TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
 }
 
-// Only compiled when KOReader sync integration is available.
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 void EpubReaderChapterSelectionActivity::launchSyncActivity() {
-  exitActivity();
-  enterNewActivity(new KOReaderSyncActivity(
+  Activity* syncActivity = core::FeatureModules::createKoreaderSyncActivity(
       renderer, mappedInput, epub, epubPath, currentSpineIndex, currentPage, totalPagesInSpine,
       [this]() {
         // On cancel
@@ -119,9 +104,15 @@ void EpubReaderChapterSelectionActivity::launchSyncActivity() {
         // On sync complete
         exitActivity();
         onSyncPosition(newSpineIndex, newPage);
-      }));
+      });
+
+  if (syncActivity == nullptr) {
+    return;
+  }
+
+  exitActivity();
+  enterNewActivity(syncActivity);
 }
-#endif
 
 void EpubReaderChapterSelectionActivity::loop() {
   if (subActivity) {
@@ -139,13 +130,11 @@ void EpubReaderChapterSelectionActivity::loop() {
   const int totalItems = getTotalItems();
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
     // Check if sync option is selected (first or last item)
     if (isSyncItem(selectorIndex)) {
       launchSyncActivity();
       return;
     }
-#endif
 
     // Get TOC index (account for top sync offset)
     const int tocIndex = tocIndexFromItemIndex(selectorIndex);
@@ -213,11 +202,9 @@ void EpubReaderChapterSelectionActivity::renderScreen() {
     const int displayY = 60 + i * 30;
     const bool isSelected = (itemIndex == selectorIndex);
 
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
     if (isSyncItem(itemIndex)) {
       renderer.drawText(UI_10_FONT_ID, 20, displayY, ">> Sync Progress", !isSelected);
     } else {
-#endif
       const int tocIndex = tocIndexFromItemIndex(itemIndex);
       auto item = epub->getTocItem(tocIndex);
 
@@ -226,9 +213,7 @@ void EpubReaderChapterSelectionActivity::renderScreen() {
           renderer.truncatedText(UI_10_FONT_ID, item.title.c_str(), pageWidth - 40 - indentSize);
 
       renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
     }
-#endif
   }
 
   const auto labels = mappedInput.mapLabels("« Back", "Select", "Up", "Down");

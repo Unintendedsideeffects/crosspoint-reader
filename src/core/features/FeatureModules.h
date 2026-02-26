@@ -4,11 +4,13 @@
 
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
 class Activity;
 class CrossPointWebServer;
+class Epub;
 class GfxRenderer;
 class MappedInputManager;
 class WebServer;
@@ -95,6 +97,12 @@ class FeatureModules {
                                              const std::function<void(bool)>& onCompleteBool);
   static Activity* createOpdsBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                              const std::function<void()>& onBack);
+  static bool hasKoreaderSyncCredentials();
+  static Activity* createKoreaderSyncActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                              const std::shared_ptr<Epub>& epub, const std::string& epubPath,
+                                              int currentSpineIndex, int currentPage, int totalPagesInSpine,
+                                              const std::function<void()>& onCancel,
+                                              const std::function<void(int, int)>& onSyncComplete);
   static Activity* createTodoPlannerActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                              std::string filePath, std::string dateTitle,
                                              const std::function<void()>& onBack);

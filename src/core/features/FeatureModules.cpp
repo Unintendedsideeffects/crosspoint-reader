@@ -51,6 +51,7 @@
 #endif
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+#include "activities/reader/KOReaderSyncActivity.h"
 #include "activities/settings/KOReaderSettingsActivity.h"
 #include "lib/KOReaderSync/KOReaderCredentialStore.h"
 #endif
@@ -561,6 +562,42 @@ Activity* FeatureModules::createOpdsBrowserActivity(GfxRenderer& renderer, Mappe
   (void)renderer;
   (void)mappedInput;
   (void)onBack;
+  return nullptr;
+#endif
+}
+
+bool FeatureModules::hasKoreaderSyncCredentials() {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  if (!hasCapability(Capability::KoreaderSync)) {
+    return false;
+  }
+  return KOREADER_STORE.hasCredentials();
+#else
+  return false;
+#endif
+}
+
+Activity* FeatureModules::createKoreaderSyncActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                                     const std::shared_ptr<Epub>& epub, const std::string& epubPath,
+                                                     const int currentSpineIndex, const int currentPage,
+                                                     const int totalPagesInSpine, const std::function<void()>& onCancel,
+                                                     const std::function<void(int, int)>& onSyncComplete) {
+#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+  if (!hasKoreaderSyncCredentials()) {
+    return nullptr;
+  }
+  return new KOReaderSyncActivity(renderer, mappedInput, epub, epubPath, currentSpineIndex, currentPage,
+                                  totalPagesInSpine, onCancel, onSyncComplete);
+#else
+  (void)renderer;
+  (void)mappedInput;
+  (void)epub;
+  (void)epubPath;
+  (void)currentSpineIndex;
+  (void)currentPage;
+  (void)totalPagesInSpine;
+  (void)onCancel;
+  (void)onSyncComplete;
   return nullptr;
 #endif
 }
