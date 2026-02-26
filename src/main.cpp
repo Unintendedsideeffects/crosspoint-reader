@@ -17,6 +17,7 @@
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "UsbSerialProtocol.h"
 #include "WifiCredentialStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
@@ -36,9 +37,6 @@
 #include "util/ButtonNavigator.h"
 #include "util/DateUtils.h"
 #include "util/FactoryResetUtils.h"
-#if ENABLE_USB_MASS_STORAGE
-#include "UsbSerialProtocol.h"
-#endif
 
 HalDisplay display;
 HalGPIO gpio;
@@ -150,7 +148,6 @@ void exitActivity();
 namespace {
 constexpr char kCrossPointDataDir[] = "/.crosspoint";
 constexpr char kFactoryResetMarkerFile[] = "/.factory-reset-pending";
-#if ENABLE_USB_MASS_STORAGE
 constexpr char kUsbMscSessionMarkerFile[] = "/.crosspoint/usb-msc-active";
 
 enum class UsbMscSessionState { Idle, Prompt, Active };
@@ -197,7 +194,6 @@ void exitUsbMscSession() {
   usbMscScreenNeedsRedraw = false;
   usbMscRemountPending = true;
 }
-#endif
 
 void applyPendingFactoryReset() {
   if (!Storage.exists(kFactoryResetMarkerFile)) {
@@ -477,13 +473,13 @@ void setup() {
   core::FeatureLifecycle::onStorageReady();
 
   applyPendingFactoryReset();
-#if ENABLE_USB_MASS_STORAGE
-  usbConnectedLast = gpio.isUsbConnected();
-  if (Storage.exists(kUsbMscSessionMarkerFile)) {
-    LOG_WRN("USBMSC", "Detected stale USB MSC marker; recovering SD ownership");
-    Storage.remove(kUsbMscSessionMarkerFile);
+  if (core::FeatureModules::hasCapability(core::Capability::UsbMassStorage)) {
+    usbConnectedLast = gpio.isUsbConnected();
+    if (Storage.exists(kUsbMscSessionMarkerFile)) {
+      LOG_WRN("USBMSC", "Detected stale USB MSC marker; recovering SD ownership");
+      Storage.remove(kUsbMscSessionMarkerFile);
+    }
   }
-#endif
 
   SETTINGS.loadFromFile();
   core::FeatureLifecycle::onSettingsLoaded(renderer);
@@ -567,67 +563,68 @@ void loop() {
     }
   }
 
-#if ENABLE_USB_MASS_STORAGE
-  const bool usbConnected = gpio.isUsbConnected();
+  const bool usbMscEnabled = core::FeatureModules::hasCapability(core::Capability::UsbMassStorage);
+  if (usbMscEnabled) {
+    const bool usbConnected = gpio.isUsbConnected();
 
-  if (usbMscRemountPending) {
-    usbMscRemountPending = false;
-    Storage.remove(kUsbMscSessionMarkerFile);
-    if (!Storage.begin()) {
-      LOG_ERR("USBMSC", "SD remount failed after USB MSC exit");
-      exitActivity();
-      enterNewActivity(
-          new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
+    if (usbMscRemountPending) {
+      usbMscRemountPending = false;
+      Storage.remove(kUsbMscSessionMarkerFile);
+      if (!Storage.begin()) {
+        LOG_ERR("USBMSC", "SD remount failed after USB MSC exit");
+        exitActivity();
+        enterNewActivity(
+            new FullScreenMessageActivity(renderer, mappedInputManager, "SD card error", EpdFontFamily::BOLD));
+        return;
+      }
+      onGoHome();
+      usbConnectedLast = usbConnected;
       return;
     }
-    onGoHome();
-    usbConnectedLast = usbConnected;
-    return;
-  }
 
-  if (SETTINGS.usbMscPromptOnConnect && usbConnected && !usbConnectedLast &&
-      usbMscSessionState == UsbMscSessionState::Idle) {
-    usbMscSessionState = UsbMscSessionState::Prompt;
-    usbMscScreenNeedsRedraw = true;
-  }
+    if (SETTINGS.usbMscPromptOnConnect && usbConnected && !usbConnectedLast &&
+        usbMscSessionState == UsbMscSessionState::Idle) {
+      usbMscSessionState = UsbMscSessionState::Prompt;
+      usbMscScreenNeedsRedraw = true;
+    }
 
-  if (usbMscSessionState == UsbMscSessionState::Prompt) {
-    backgroundServer.loop(usbConnected, false);
-    if (!usbConnected) {
-      usbMscSessionState = UsbMscSessionState::Idle;
-      if (currentActivity) currentActivity->requestUpdate();
-    } else {
-      if (usbMscScreenNeedsRedraw) {
-        renderUsbMscPrompt();
-        usbMscScreenNeedsRedraw = false;
-      }
-      if (mappedInputManager.wasReleased(MappedInputManager::Button::Confirm)) {
-        enterUsbMscSession();
-      } else if (mappedInputManager.wasReleased(MappedInputManager::Button::Back)) {
+    if (usbMscSessionState == UsbMscSessionState::Prompt) {
+      backgroundServer.loop(usbConnected, false);
+      if (!usbConnected) {
         usbMscSessionState = UsbMscSessionState::Idle;
         if (currentActivity) currentActivity->requestUpdate();
+      } else {
+        if (usbMscScreenNeedsRedraw) {
+          renderUsbMscPrompt();
+          usbMscScreenNeedsRedraw = false;
+        }
+        if (mappedInputManager.wasReleased(MappedInputManager::Button::Confirm)) {
+          enterUsbMscSession();
+        } else if (mappedInputManager.wasReleased(MappedInputManager::Button::Back)) {
+          usbMscSessionState = UsbMscSessionState::Idle;
+          if (currentActivity) currentActivity->requestUpdate();
+        }
       }
+      usbConnectedLast = usbConnected;
+      delay(20);
+      return;
     }
-    usbConnectedLast = usbConnected;
-    delay(20);
-    return;
-  }
 
-  if (usbMscSessionState == UsbMscSessionState::Active) {
-    usbSerialProtocol.loop();
-    if (!usbConnected) {
-      exitUsbMscSession();
-    } else if (usbMscScreenNeedsRedraw) {
-      renderUsbMscLockedScreen();
-      usbMscScreenNeedsRedraw = false;
+    if (usbMscSessionState == UsbMscSessionState::Active) {
+      usbSerialProtocol.loop();
+      if (!usbConnected) {
+        exitUsbMscSession();
+      } else if (usbMscScreenNeedsRedraw) {
+        renderUsbMscLockedScreen();
+        usbMscScreenNeedsRedraw = false;
+      }
+      usbConnectedLast = usbConnected;
+      delay(20);
+      return;
     }
-    usbConnectedLast = usbConnected;
-    delay(20);
-    return;
-  }
 
-  usbConnectedLast = usbConnected;
-#endif
+    usbConnectedLast = usbConnected;
+  }
 
   {
     const bool usbConn = gpio.isUsbConnected();

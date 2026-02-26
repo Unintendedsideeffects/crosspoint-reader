@@ -8,4 +8,12 @@ class UsbSerialProtocol {
   void reset();  // call on session enter/exit to clear parser state
 };
 
+#else
+
+class UsbSerialProtocol {
+ public:
+  void loop() {}
+  void reset() {}
+};
+
 #endif
