@@ -245,8 +245,9 @@ bool FeatureModules::hasCapability(const Capability capability) {
       return isEnabled("web_wifi_setup");
     case Capability::XtcSupport:
       return isEnabled("xtc_support");
+    default:
+      return false;
   }
-  return false;
 }
 
 String FeatureModules::getBuildString() { return FeatureCatalog::buildString(); }
@@ -327,6 +328,10 @@ FeatureModules::ReaderOpenResult FeatureModules::createReaderActivityForPath(
         nullptr,
         nullptr,
     };
+  }
+
+  if (!isEpubDocumentPath(path)) {
+    return {ReaderOpenStatus::Unsupported, nullptr, "Unsupported format", "Unsupported\nformat"};
   }
 
   if (!hasCapability(Capability::EpubSupport)) {
@@ -503,8 +508,9 @@ bool FeatureModules::supportsSettingAction(const SettingAction action) {
     case SettingAction::OPDSBrowser:
       return hasCapability(Capability::CalibreSync);
     case SettingAction::CheckForUpdates:
-    case SettingAction::Language:
       return hasCapability(Capability::OtaUpdates);
+    case SettingAction::Language:
+      return true;
     case SettingAction::None:
       return false;
   }
@@ -547,11 +553,7 @@ Activity* FeatureModules::createSettingsSubActivity(const SettingAction action, 
       return nullptr;
 #endif
     case SettingAction::Language:
-#if ENABLE_OTA_UPDATES
       return new LanguageSelectActivity(renderer, mappedInput, onComplete);
-#else
-      return nullptr;
-#endif
     case SettingAction::None:
       return nullptr;
   }
@@ -736,7 +738,7 @@ void FeatureModules::saveKoreaderSettings() {
 std::vector<std::string> FeatureModules::getUserFontFamilies() {
 #if ENABLE_USER_FONTS
   auto& manager = UserFontManager::getInstance();
-  manager.scanFonts();
+  manager.ensureScanned();
   return manager.getAvailableFonts();
 #else
   return {};
@@ -746,7 +748,7 @@ std::vector<std::string> FeatureModules::getUserFontFamilies() {
 uint8_t FeatureModules::getSelectedUserFontFamilyIndex() {
 #if ENABLE_USER_FONTS
   auto& manager = UserFontManager::getInstance();
-  manager.scanFonts();
+  manager.ensureScanned();
   const auto& fonts = manager.getAvailableFonts();
   if (fonts.empty()) {
     return 0;
@@ -766,7 +768,7 @@ uint8_t FeatureModules::getSelectedUserFontFamilyIndex() {
 void FeatureModules::setSelectedUserFontFamilyIndex(const uint8_t index) {
 #if ENABLE_USER_FONTS
   auto& manager = UserFontManager::getInstance();
-  manager.scanFonts();
+  manager.ensureScanned();
   const auto& fonts = manager.getAvailableFonts();
   if (fonts.empty()) {
     SETTINGS.userFontPath[0] = '\0';
@@ -817,7 +819,9 @@ void FeatureModules::onUploadCompleted(const String& uploadPath, const String& u
   String normalizedUploadFileName = uploadFileName;
   normalizedUploadFileName.toLowerCase();
   if (uploadPath == "/fonts" && normalizedUploadFileName.endsWith(".cpf")) {
-    UserFontManager::getInstance().scanFonts();
+    auto& manager = UserFontManager::getInstance();
+    manager.invalidateCache();
+    manager.scanFonts();
   }
 #else
   (void)uploadPath;

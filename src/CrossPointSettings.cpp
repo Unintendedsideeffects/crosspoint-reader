@@ -12,7 +12,7 @@
 
 CrossPointSettings CrossPointSettings::instance;
 
-bool readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
+static bool readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
   uint8_t tempValue = 0;
   if (!serialization::readPod(file, tempValue)) {
     return false;
@@ -21,21 +21,6 @@ bool readAndValidate(FsFile& file, uint8_t& member, const uint8_t maxValue) {
     member = tempValue;
   }
   return true;
-}
-
-namespace {
-constexpr uint8_t SETTINGS_FILE_VERSION = 4;
-// Increment this when adding new persisted settings fields.
-// Must match the number of writePod/writeString calls in saveToFile() (excluding the
-// version and count header writes). Current count: 39.
-constexpr uint8_t SETTINGS_COUNT = 39;
-constexpr char SETTINGS_FILE_BIN[] = "/.crosspoint/settings.bin";
-constexpr char SETTINGS_FILE_JSON[] = "/.crosspoint/settings.json";
-constexpr char SETTINGS_FILE_BAK[] = "/.crosspoint/settings.bin.bak";
-
-void applyLegacyFrontButtonLayout(CrossPointSettings& settings) {
-  settings.applyFrontButtonLayoutPreset(
-      static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(settings.frontButtonLayout));
 }
 
 void applyLegacyStatusBarSettings(CrossPointSettings& settings) {
@@ -85,6 +70,21 @@ void applyLegacyStatusBarSettings(CrossPointSettings& settings) {
       settings.statusBarBattery = 1;
       break;
   }
+}
+
+namespace {
+constexpr uint8_t SETTINGS_FILE_VERSION = 4;
+// Increment this when adding new persisted settings fields.
+// Must match the number of writePod/writeString calls in saveToFile() (excluding the
+// version and count header writes). Current count: 39.
+constexpr uint8_t SETTINGS_COUNT = 39;
+constexpr char SETTINGS_FILE_BIN[] = "/.crosspoint/settings.bin";
+constexpr char SETTINGS_FILE_JSON[] = "/.crosspoint/settings.json";
+constexpr char SETTINGS_FILE_BAK[] = "/.crosspoint/settings.bin.bak";
+
+void applyLegacyFrontButtonLayout(CrossPointSettings& settings) {
+  settings.applyFrontButtonLayoutPreset(
+      static_cast<CrossPointSettings::FRONT_BUTTON_LAYOUT>(settings.frontButtonLayout));
 }
 
 }  // namespace

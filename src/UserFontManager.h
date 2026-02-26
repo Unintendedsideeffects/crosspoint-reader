@@ -16,7 +16,9 @@ class UserFontManager {
     return instance;
   }
 
+  void ensureScanned();
   void scanFonts();
+  void invalidateCache();
   const std::vector<std::string>& getAvailableFonts() const { return availableFonts; }
 
   bool loadFontFamily(const std::string& fontName);
@@ -31,6 +33,7 @@ class UserFontManager {
 
   std::vector<std::string> availableFonts;
   std::string currentFontName;
+  bool fontsScanned = false;
 
   // SdFont objects must be declared before fontFamily so they are
   // initialized first and their addresses are stable for the initializer list.

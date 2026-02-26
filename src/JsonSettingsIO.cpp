@@ -13,57 +13,6 @@
 #include "RecentBooksStore.h"
 #include "WifiCredentialStore.h"
 
-namespace {
-void applyLegacyStatusBarSettings(CrossPointSettings& settings) {
-  settings.statusBarProgressBarThickness = CrossPointSettings::PROGRESS_BAR_NORMAL;
-  switch (static_cast<CrossPointSettings::STATUS_BAR_MODE>(settings.statusBar)) {
-    case CrossPointSettings::NONE:
-      settings.statusBarChapterPageCount = 0;
-      settings.statusBarBookProgressPercentage = 0;
-      settings.statusBarProgressBar = CrossPointSettings::HIDE_PROGRESS;
-      settings.statusBarTitle = CrossPointSettings::HIDE_TITLE;
-      settings.statusBarBattery = 0;
-      break;
-    case CrossPointSettings::NO_PROGRESS:
-      settings.statusBarChapterPageCount = 0;
-      settings.statusBarBookProgressPercentage = 0;
-      settings.statusBarProgressBar = CrossPointSettings::HIDE_PROGRESS;
-      settings.statusBarTitle = CrossPointSettings::CHAPTER_TITLE;
-      settings.statusBarBattery = 1;
-      break;
-    case CrossPointSettings::BOOK_PROGRESS_BAR:
-      settings.statusBarChapterPageCount = 1;
-      settings.statusBarBookProgressPercentage = 0;
-      settings.statusBarProgressBar = CrossPointSettings::BOOK_PROGRESS;
-      settings.statusBarTitle = CrossPointSettings::CHAPTER_TITLE;
-      settings.statusBarBattery = 1;
-      break;
-    case CrossPointSettings::ONLY_BOOK_PROGRESS_BAR:
-      settings.statusBarChapterPageCount = 1;
-      settings.statusBarBookProgressPercentage = 0;
-      settings.statusBarProgressBar = CrossPointSettings::BOOK_PROGRESS;
-      settings.statusBarTitle = CrossPointSettings::HIDE_TITLE;
-      settings.statusBarBattery = 0;
-      break;
-    case CrossPointSettings::CHAPTER_PROGRESS_BAR:
-      settings.statusBarChapterPageCount = 0;
-      settings.statusBarBookProgressPercentage = 1;
-      settings.statusBarProgressBar = CrossPointSettings::CHAPTER_PROGRESS;
-      settings.statusBarTitle = CrossPointSettings::CHAPTER_TITLE;
-      settings.statusBarBattery = 1;
-      break;
-    case CrossPointSettings::FULL:
-    default:
-      settings.statusBarChapterPageCount = 1;
-      settings.statusBarBookProgressPercentage = 1;
-      settings.statusBarProgressBar = CrossPointSettings::HIDE_PROGRESS;
-      settings.statusBarTitle = CrossPointSettings::CHAPTER_TITLE;
-      settings.statusBarBattery = 1;
-      break;
-  }
-}
-}  // namespace
-
 // ---- CrossPointState ----
 
 bool JsonSettingsIO::saveState(const CrossPointState& s, const char* path) {

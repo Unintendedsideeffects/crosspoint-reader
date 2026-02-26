@@ -22,10 +22,22 @@ bool hasSuffix(const std::string& value, const char* suffix) {
 
 UserFontManager::UserFontManager() : fontFamily(&regularFont, &boldFont, &italicFont, &boldItalicFont) {}
 
+void UserFontManager::ensureScanned() {
+  if (!fontsScanned) {
+    scanFonts();
+  }
+}
+
+void UserFontManager::invalidateCache() {
+  fontsScanned = false;
+  availableFonts.clear();
+}
+
 void UserFontManager::scanFonts() {
   availableFonts.clear();
   if (!Storage.exists("/fonts")) {
     Storage.mkdir("/fonts");
+    fontsScanned = true;
     return;
   }
 
@@ -56,6 +68,7 @@ void UserFontManager::scanFonts() {
   }
 
   availableFonts.assign(families.begin(), families.end());
+  fontsScanned = true;
 
   LOG_INF("FONTS", "Scanned %d font families from SD", availableFonts.size());
 }
