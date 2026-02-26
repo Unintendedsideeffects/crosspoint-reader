@@ -1,12 +1,10 @@
 #include "HomeActivity.h"
 
 #include <Bitmap.h>
-#include <Epub.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Utf8.h>
-#include <Xtc.h>
 
 #include <algorithm>
 #include <cstring>
@@ -137,48 +135,23 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
     if (!book.coverBmpPath.empty()) {
       std::string coverPath = UITheme::getCoverThumbPath(book.coverBmpPath, coverHeight);
       if (!Storage.exists(coverPath.c_str())) {
-        // If epub, try to load the metadata for title/author and cover
-        if (StringUtils::checkFileExtension(book.path, ".epub")) {
-#if ENABLE_EPUB_SUPPORT
-          Epub epub(book.path, "/.crosspoint");
-          // Skip loading css since we only need metadata here
-          epub.load(false, true);
-
-          // Try to generate thumbnail image for Continue Reading card
+        const auto homeCardData = core::FeatureModules::resolveHomeCardData(book.path, coverHeight);
+        if (homeCardData.handled) {
           if (!showingLoading) {
             showingLoading = true;
             popupRect = GUI.drawPopup(renderer, tr(STR_LOADING));
           }
           GUI.fillPopupProgress(renderer, popupRect, 10 + progress * (90 / recentBooks.size()));
-          bool success = epub.generateThumbBmp(coverHeight);
-          if (!success) {
+
+          if (!homeCardData.coverPath.empty()) {
+            RECENT_BOOKS.updateBook(book.path, book.title, book.author, homeCardData.coverPath);
+            book.coverBmpPath = homeCardData.coverPath;
+          } else if (homeCardData.loaded) {
             RECENT_BOOKS.updateBook(book.path, book.title, book.author, "");
             book.coverBmpPath = "";
           }
           coverRendered = false;
           requestUpdate();
-#endif
-        } else if (StringUtils::checkFileExtension(book.path, ".xtch") ||
-                   StringUtils::checkFileExtension(book.path, ".xtc")) {
-#if ENABLE_XTC_SUPPORT
-          // Handle XTC file
-          Xtc xtc(book.path, "/.crosspoint");
-          if (xtc.load()) {
-            // Try to generate thumbnail image for Continue Reading card
-            if (!showingLoading) {
-              showingLoading = true;
-              popupRect = GUI.drawPopup(renderer, tr(STR_LOADING));
-            }
-            GUI.fillPopupProgress(renderer, popupRect, 10 + progress * (90 / recentBooks.size()));
-            bool success = xtc.generateThumbBmp(coverHeight);
-            if (!success) {
-              RECENT_BOOKS.updateBook(book.path, book.title, book.author, "");
-              book.coverBmpPath = "";
-            }
-            coverRendered = false;
-            requestUpdate();
-          }
-#endif
         }
       }
     }
@@ -283,54 +256,26 @@ void HomeActivity::onEnter() {
       lastBookTitle = lastBookTitle.substr(lastSlash + 1);
     }
 
-    // If epub, try to load the metadata for title/author and cover
-#if ENABLE_EPUB_SUPPORT
-    if (StringUtils::checkFileExtension(lastBookTitle, ".epub")) {
-      Epub epub(APP_STATE.openEpubPath, "/.crosspoint");
-      epub.load(false);
-      if (!epub.getTitle().empty()) {
-        lastBookTitle = std::string(epub.getTitle());
-      }
-      if (!epub.getAuthor().empty()) {
-        lastBookAuthor = std::string(epub.getAuthor());
-      }
-      // Try to generate thumbnail image for Continue Reading card
-      const int thumbHeight = renderer.getScreenHeight() / 2;
-      if (epub.generateThumbBmp(thumbHeight)) {
-        coverBmpPath = epub.getThumbBmpPath();
-        hasCoverImage = true;
-      }
-    } else
-#endif
-#if ENABLE_XTC_SUPPORT
-        if (StringUtils::checkFileExtension(lastBookTitle, ".xtch") ||
-            StringUtils::checkFileExtension(lastBookTitle, ".xtc")) {
-      // Handle XTC file
-      Xtc xtc(APP_STATE.openEpubPath, "/.crosspoint");
-      if (xtc.load()) {
-        if (!xtc.getTitle().empty()) {
-          lastBookTitle = std::string(xtc.getTitle());
-        }
-        if (!xtc.getAuthor().empty()) {
-          lastBookAuthor = std::string(xtc.getAuthor());
-        }
-        // Try to generate thumbnail image for Continue Reading card
-        const int thumbHeight = renderer.getScreenHeight() / 2;
-        if (xtc.generateThumbBmp(thumbHeight)) {
-          coverBmpPath = xtc.getThumbBmpPath();
-          hasCoverImage = true;
-        }
-      }
-      // Remove extension from title if we don't have metadata
+    const int thumbHeight = renderer.getScreenHeight() / 2;
+    const auto homeCardData = core::FeatureModules::resolveHomeCardData(APP_STATE.openEpubPath, thumbHeight);
+    if (!homeCardData.title.empty()) {
+      lastBookTitle = homeCardData.title;
+    }
+    if (!homeCardData.author.empty()) {
+      lastBookAuthor = homeCardData.author;
+    }
+    if (!homeCardData.coverPath.empty()) {
+      coverBmpPath = homeCardData.coverPath;
+      hasCoverImage = true;
+    }
+
+    // Preserve previous xtc fallback behavior when metadata is unavailable.
+    if (homeCardData.handled && homeCardData.title.empty()) {
       if (StringUtils::checkFileExtension(lastBookTitle, ".xtch")) {
         lastBookTitle.resize(lastBookTitle.length() - 5);
       } else if (StringUtils::checkFileExtension(lastBookTitle, ".xtc")) {
         lastBookTitle.resize(lastBookTitle.length() - 4);
       }
-    } else
-#endif
-    {
-      // No format-specific metadata available
     }
   }
 

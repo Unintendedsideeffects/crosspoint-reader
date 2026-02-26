@@ -77,6 +77,8 @@ static_assert(PokedexPluginPageHtmlCompressedSize == sizeof(PokedexPluginPageHtm
 #endif
 
 namespace {
+bool isEpubDocumentPath(const std::string& path) { return StringUtils::checkFileExtension(path, ".epub"); }
+
 bool isXtcDocumentPath(const std::string& path) {
   return StringUtils::checkFileExtension(path, ".xtc") || StringUtils::checkFileExtension(path, ".xtch");
 }
@@ -331,6 +333,67 @@ FeatureModules::ReaderOpenResult FeatureModules::createReaderActivityForPath(
   return {ReaderOpenStatus::Unsupported, nullptr, "EPUB support disabled in this build",
           "EPUB support\nnot available\nin this build"};
 #endif
+}
+
+FeatureModules::HomeCardDataResult FeatureModules::resolveHomeCardData(const std::string& path, const int thumbHeight) {
+  HomeCardDataResult result;
+  if (path.empty() || thumbHeight <= 0) {
+    return result;
+  }
+
+  if (isEpubDocumentPath(path)) {
+    result.handled = true;
+    if (!hasCapability(Capability::EpubSupport)) {
+      return result;
+    }
+#if ENABLE_EPUB_SUPPORT
+    Epub epub(path, "/.crosspoint");
+    if (!epub.load(false, true)) {
+      return result;
+    }
+
+    result.loaded = true;
+    if (!epub.getTitle().empty()) {
+      result.title = epub.getTitle();
+    }
+    if (!epub.getAuthor().empty()) {
+      result.author = epub.getAuthor();
+    }
+    if (epub.generateThumbBmp(thumbHeight)) {
+      result.coverPath = epub.getThumbBmpPath();
+    }
+#endif
+    return result;
+  }
+
+  if (isXtcDocumentPath(path)) {
+    result.handled = true;
+    if (!hasCapability(Capability::XtcSupport)) {
+      return result;
+    }
+#if ENABLE_XTC_SUPPORT
+    Xtc xtc(path, "/.crosspoint");
+    if (!xtc.load()) {
+      return result;
+    }
+
+    result.loaded = true;
+    const std::string xtcTitle = xtc.getTitle();
+    if (!xtcTitle.empty()) {
+      result.title = xtcTitle;
+    }
+    const std::string xtcAuthor = xtc.getAuthor();
+    if (!xtcAuthor.empty()) {
+      result.author = xtcAuthor;
+    }
+    if (xtc.generateThumbBmp(thumbHeight)) {
+      result.coverPath = xtc.getThumbBmpPath();
+    }
+#endif
+    return result;
+  }
+
+  return result;
 }
 
 bool FeatureModules::supportsSettingAction(const SettingAction action) {
