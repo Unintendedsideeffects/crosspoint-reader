@@ -8,7 +8,7 @@
       "version": "latest",
       "board": "esp32c3",
       "featureFlags": "FEATURE_EPUB,FEATURE_MARKDOWN,FEATURE_TODO_PLANNER",
-      "downloadUrl": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/latest/download/crosspoint-reader-stable.bin",
+      "downloadUrl": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/download/stable/crosspoint-standard.bin",
       "checksum": "",
       "binarySize": 0
     },

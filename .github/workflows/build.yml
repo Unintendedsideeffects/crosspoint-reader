@@ -210,8 +210,8 @@ jobs:
             .pio/build/gh_latest/partitions.bin
           retention-days: 7
 
-  # ── Publish: update rolling release channels on fork-drift push ─
-  publish-channels:
+  # ── Publish: update rolling latest channel (4 variants) on fork-drift push ─
+  publish-latest:
     needs: [build, build-latest]
     if: >-
       !startsWith(github.ref, 'refs/tags/')
@@ -219,108 +219,65 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    strategy:
-      matrix:
-        include:
-          - profile: lean
-            tag: latest-lean
-            artifact: firmware-lean
-            fallback_name: Latest Lean
-          - profile: standard
-            tag: latest
-            artifact: firmware-latest
-            fallback_name: Latest
-          - profile: full
-            tag: latest-full
-            artifact: firmware-full
-            fallback_name: Latest Full
     steps:
-      - name: Download firmware
+      - name: Download latest standard firmware
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: firmware
+          name: firmware-latest
+          path: artifacts/latest-standard
 
-      - name: Resolve channel version name
-        id: ver
+      - name: Download lean firmware
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-lean
+          path: artifacts/lean
+
+      - name: Download full firmware
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-full
+          path: artifacts/full
+
+      - name: Prepare latest channel assets
         run: |
-          if [ "${{ matrix.profile }}" = "standard" ]; then
-            echo "name=${{ needs.build-latest.outputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "name=${{ matrix.fallback_name }}" >> $GITHUB_OUTPUT
-          fi
+          set -euo pipefail
+          mkdir -p channel
+          cp artifacts/latest-standard/firmware.bin channel/crosspoint-standard.bin
+          cp artifacts/latest-standard/partitions.bin channel/crosspoint-standard-partitions.bin
+          cp artifacts/lean/firmware.bin channel/crosspoint-lean.bin
+          cp artifacts/lean/partitions.bin channel/crosspoint-lean-partitions.bin
+          cp artifacts/full/firmware.bin channel/crosspoint-full.bin
+          cp artifacts/full/partitions.bin channel/crosspoint-full-partitions.bin
+          # lean-reset intentionally reuses the lean profile firmware.
+          cp artifacts/lean/firmware.bin channel/crosspoint-lean-reset.bin
+          cp artifacts/lean/partitions.bin channel/crosspoint-lean-reset-partitions.bin
+          ls -lh channel
 
-      - name: Remove existing assets
+      - name: Remove existing latest assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/${{ matrix.tag }} \
-            --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' \
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/latest \
+            --jq '.assets[] | .id' \
             2>/dev/null || true)"
           if [ -z "$asset_ids" ]; then
-            echo "No existing ${{ matrix.tag }} assets to remove."
+            echo "No existing latest assets to remove."
             exit 0
           fi
           for asset_id in $asset_ids; do
             gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
           done
 
-      - name: Publish ${{ matrix.tag }} release
+      - name: Publish latest channel release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ matrix.tag }}
-          name: ${{ steps.ver.outputs.name }}
+          tag_name: latest
+          name: ${{ needs.build-latest.outputs.version }}
           prerelease: true
           draft: false
           generate_release_notes: false
-          files: |
-            firmware/firmware.bin
-            firmware/partitions.bin
-
-  # ── Publish: reset channel (standard firmware) on fork-drift push
-  publish-reset:
-    needs: build
-    if: >-
-      !startsWith(github.ref, 'refs/tags/')
-      && github.ref == 'refs/heads/fork-drift'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download firmware
-        uses: actions/download-artifact@v4
-        with:
-          name: firmware-standard
-          path: firmware
-
-      - name: Remove existing reset assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/reset \
-            --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' \
-            2>/dev/null || true)"
-          if [ -z "$asset_ids" ]; then
-            echo "No existing reset assets to remove."
-            exit 0
-          fi
-          for asset_id in $asset_ids; do
-            gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
-          done
-
-      - name: Publish reset release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: reset
-          name: Reset
-          prerelease: true
-          draft: false
-          generate_release_notes: false
-          files: |
-            firmware/firmware.bin
-            firmware/partitions.bin
+          files: channel/*.bin
 
   # ── Release: versioned release + rolling channel on tag push ────
   release:
@@ -355,11 +312,27 @@ jobs:
           cp firmware-lean.bin "crosspoint-${TAG}-lean.bin"
           cp partitions-lean.bin "crosspoint-${TAG}-lean-partitions.bin"
 
+          # Lean reset firmware (same payload as lean, separate distribution target)
+          cp firmware-lean.bin firmware-lean-reset.bin
+          cp partitions-lean.bin partitions-lean-reset.bin
+          cp firmware-lean-reset.bin "crosspoint-${TAG}-lean-reset.bin"
+          cp partitions-lean-reset.bin "crosspoint-${TAG}-lean-reset-partitions.bin"
+
           # Full firmware
           cp artifacts/firmware-full/firmware.bin firmware-full.bin
           cp artifacts/firmware-full/partitions.bin partitions-full.bin
           cp firmware-full.bin "crosspoint-${TAG}-full.bin"
           cp partitions-full.bin "crosspoint-${TAG}-full-partitions.bin"
+
+          # Stable channel rolling assets (tag: stable)
+          cp firmware.bin crosspoint-standard.bin
+          cp partitions.bin crosspoint-standard-partitions.bin
+          cp firmware-lean.bin crosspoint-lean.bin
+          cp partitions-lean.bin crosspoint-lean-partitions.bin
+          cp firmware-full.bin crosspoint-full.bin
+          cp partitions-full.bin crosspoint-full-partitions.bin
+          cp firmware-lean-reset.bin crosspoint-lean-reset.bin
+          cp partitions-lean-reset.bin crosspoint-lean-reset-partitions.bin
 
           echo "Release assets:"
           ls -lh *.bin
@@ -374,42 +347,52 @@ jobs:
             partitions-lean.bin
             firmware-full.bin
             partitions-full.bin
+            firmware-lean-reset.bin
+            partitions-lean-reset.bin
             crosspoint-${{ github.ref_name }}.bin
             crosspoint-${{ github.ref_name }}-partitions.bin
             crosspoint-${{ github.ref_name }}-lean.bin
             crosspoint-${{ github.ref_name }}-lean-partitions.bin
             crosspoint-${{ github.ref_name }}-full.bin
             crosspoint-${{ github.ref_name }}-full-partitions.bin
+            crosspoint-${{ github.ref_name }}-lean-reset.bin
+            crosspoint-${{ github.ref_name }}-lean-reset-partitions.bin
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
 
-      - name: Remove existing release channel assets
+      - name: Remove existing stable channel assets
         if: ${{ !contains(github.ref_name, '-') }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/release \
-            --jq '.assets[] | select(.name=="firmware.bin" or .name=="partitions.bin") | .id' \
+          asset_ids="$(gh api repos/${{ github.repository }}/releases/tags/stable \
+            --jq '.assets[] | .id' \
             2>/dev/null || true)"
           if [ -z "$asset_ids" ]; then
-            echo "No existing release channel assets to remove."
+            echo "No existing stable channel assets to remove."
             exit 0
           fi
           for asset_id in $asset_ids; do
             gh api -X DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}" || true
           done
 
-      - name: Publish release channel
+      - name: Publish stable channel
         if: ${{ !contains(github.ref_name, '-') }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: release
+          tag_name: stable
           name: ${{ steps.version.outputs.ver }}
           prerelease: false
           draft: false
           generate_release_notes: false
           files: |
-            firmware.bin
-            partitions.bin
+            crosspoint-standard.bin
+            crosspoint-standard-partitions.bin
+            crosspoint-lean.bin
+            crosspoint-lean-partitions.bin
+            crosspoint-full.bin
+            crosspoint-full-partitions.bin
+            crosspoint-lean-reset.bin
+            crosspoint-lean-reset-partitions.bin

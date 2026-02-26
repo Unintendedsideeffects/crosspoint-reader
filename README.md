@@ -81,6 +81,20 @@ For scope/constraints, see [SCOPE.md](SCOPE.md).
 
 To revert to official firmware, use the "Swap boot partition" button at [xteink.dve.al/debug](https://xteink.dve.al/debug).
 
+### Firmware Release Channels
+
+Firmware is published as two rolling channel tags:
+
+- `latest` (auto-updated from green `fork-drift` pushes)
+- `stable` (updated on stable version tags)
+
+Each channel publishes four variants:
+
+- `crosspoint-standard.bin` (+ `crosspoint-standard-partitions.bin`)
+- `crosspoint-lean.bin` (+ `crosspoint-lean-partitions.bin`)
+- `crosspoint-full.bin` (+ `crosspoint-full-partitions.bin`)
+- `crosspoint-lean-reset.bin` (+ `crosspoint-lean-reset-partitions.bin`)
+
 ### Web (Specific Firmware Version)
 
 1. Connect your Xteink X4 via USB-C
