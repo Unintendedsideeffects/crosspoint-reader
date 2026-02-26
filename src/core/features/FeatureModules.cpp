@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <utility>
 
 #if ENABLE_EPUB_SUPPORT
@@ -178,21 +179,25 @@ struct OtaWebCheckData {
 };
 
 OtaWebCheckData otaWebCheckData;
+std::mutex otaWebCheckDataMutex;
 
 void otaWebCheckTask(void* param) {
   auto* updater = static_cast<OtaUpdater*>(param);
   const auto result = updater->checkForUpdate();
 
-  otaWebCheckData.errorCode = static_cast<int>(result);
-  if (result == OtaUpdater::OK) {
-    otaWebCheckData.available = updater->isUpdateNewer();
-    otaWebCheckData.latestVersion = updater->getLatestVersion();
-    otaWebCheckData.message =
-        otaWebCheckData.available ? "Update available. Install from device Settings." : "Already on latest version.";
-  } else {
-    otaWebCheckData.available = false;
-    const String& error = updater->getLastError();
-    otaWebCheckData.message = error.length() > 0 ? error.c_str() : "Update check failed";
+  {
+    std::lock_guard<std::mutex> lock(otaWebCheckDataMutex);
+    otaWebCheckData.errorCode = static_cast<int>(result);
+    if (result == OtaUpdater::OK) {
+      otaWebCheckData.available = updater->isUpdateNewer();
+      otaWebCheckData.latestVersion = updater->getLatestVersion();
+      otaWebCheckData.message =
+          otaWebCheckData.available ? "Update available. Install from device Settings." : "Already on latest version.";
+    } else {
+      otaWebCheckData.available = false;
+      const String& error = updater->getLastError();
+      otaWebCheckData.message = error.length() > 0 ? error.c_str() : "Update check failed";
+    }
   }
 
   otaWebCheckData.state.store(OtaWebCheckState::Done, std::memory_order_release);
@@ -868,10 +873,13 @@ FeatureModules::OtaWebStartResult FeatureModules::startOtaWebCheck() {
     return OtaWebStartResult::AlreadyChecking;
   }
 
-  otaWebCheckData.available = false;
-  otaWebCheckData.latestVersion.clear();
-  otaWebCheckData.message = "Checking...";
-  otaWebCheckData.errorCode = 0;
+  {
+    std::lock_guard<std::mutex> lock(otaWebCheckDataMutex);
+    otaWebCheckData.available = false;
+    otaWebCheckData.latestVersion.clear();
+    otaWebCheckData.message = "Checking...";
+    otaWebCheckData.errorCode = 0;
+  }
   otaWebCheckData.state.store(OtaWebCheckState::Checking, std::memory_order_release);
 
   auto* updater = new OtaUpdater();
@@ -894,10 +902,13 @@ FeatureModules::OtaWebCheckSnapshot FeatureModules::getOtaWebCheckSnapshot() {
   snapshot.status = state == OtaWebCheckState::Checking
                         ? OtaWebCheckStatus::Checking
                         : (state == OtaWebCheckState::Done ? OtaWebCheckStatus::Done : OtaWebCheckStatus::Idle);
-  snapshot.available = otaWebCheckData.available;
-  snapshot.latestVersion = otaWebCheckData.latestVersion;
-  snapshot.message = otaWebCheckData.message;
-  snapshot.errorCode = otaWebCheckData.errorCode;
+  {
+    std::lock_guard<std::mutex> lock(otaWebCheckDataMutex);
+    snapshot.available = otaWebCheckData.available;
+    snapshot.latestVersion = otaWebCheckData.latestVersion;
+    snapshot.message = otaWebCheckData.message;
+    snapshot.errorCode = otaWebCheckData.errorCode;
+  }
   return snapshot;
 #else
   return {};

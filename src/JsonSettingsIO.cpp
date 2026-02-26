@@ -15,6 +15,7 @@
 
 namespace {
 void applyLegacyStatusBarSettings(CrossPointSettings& settings) {
+  settings.statusBarProgressBarThickness = CrossPointSettings::PROGRESS_BAR_NORMAL;
   switch (static_cast<CrossPointSettings::STATUS_BAR_MODE>(settings.statusBar)) {
     case CrossPointSettings::NONE:
       settings.statusBarChapterPageCount = 0;
