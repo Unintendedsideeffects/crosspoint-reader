@@ -85,6 +85,7 @@ class FeatureModules {
       const std::function<void(const std::string&)>& onBackToLibraryPath, const std::function<void()>& onBackHome);
   static HomeCardDataResult resolveHomeCardData(const std::string& path, int thumbHeight);
   static RecentBookDataResult resolveRecentBookData(const std::string& path);
+  static bool isSupportedLibraryFile(const std::string& path);
 
   static Activity* createSettingsSubActivity(SettingAction action, GfxRenderer& renderer,
                                              MappedInputManager& mappedInput, const std::function<void()>& onComplete,

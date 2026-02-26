@@ -452,6 +452,30 @@ FeatureModules::RecentBookDataResult FeatureModules::resolveRecentBookData(const
   return result;
 }
 
+bool FeatureModules::isSupportedLibraryFile(const std::string& path) {
+  if (path.empty()) {
+    return false;
+  }
+
+  if (isEpubDocumentPath(path)) {
+    return hasCapability(Capability::EpubSupport);
+  }
+
+  if (isXtcDocumentPath(path)) {
+    return hasCapability(Capability::XtcSupport);
+  }
+
+  if (isMarkdownDocumentPath(path)) {
+    return hasCapability(Capability::MarkdownSupport);
+  }
+
+  if (isTxtDocumentPath(path)) {
+    return true;
+  }
+
+  return StringUtils::checkFileExtension(path, ".bmp");
+}
+
 bool FeatureModules::supportsSettingAction(const SettingAction action) {
   switch (action) {
     case SettingAction::RemapFrontButtons:
