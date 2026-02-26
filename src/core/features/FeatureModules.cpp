@@ -43,7 +43,7 @@
 #endif
 
 #if ENABLE_WEB_POKEDEX_PLUGIN
-#include "html/PokedexPluginPageHtml.generated.h"
+#include "network/html/PokedexPluginPageHtml.generated.h"
 #endif
 
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
@@ -52,9 +52,9 @@
 #endif
 
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
+#include "KOReaderCredentialStore.h"
 #include "activities/reader/KOReaderSyncActivity.h"
 #include "activities/settings/KOReaderSettingsActivity.h"
-#include "lib/KOReaderSync/KOReaderCredentialStore.h"
 #endif
 
 #if ENABLE_OTA_UPDATES
