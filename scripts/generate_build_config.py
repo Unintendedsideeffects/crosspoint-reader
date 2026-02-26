@@ -25,19 +25,19 @@ FEATURES = {
     'bookerly_fonts': Feature(
         name='Bookerly Fonts',
         flag='ENABLE_BOOKERLY_FONTS',
-        size_kb=530,
+        size_kb=945,
         description='12/16/18pt Bookerly family'
     ),
     'notosans_fonts': Feature(
         name='Noto Sans Fonts',
         flag='ENABLE_NOTOSANS_FONTS',
-        size_kb=742,
+        size_kb=1086,
         description='12/16/18pt Noto Sans family'
     ),
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
-        size_kb=1876,
+        size_kb=2900,
         description='Optional OpenDyslexic 8/10/12/14pt family (requires Bookerly + Noto Sans)'
     ),
     'image_sleep': Feature(
@@ -55,7 +55,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=284,
+        size_kb=285,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -67,7 +67,7 @@ FEATURES = {
     'koreader_sync': Feature(
         name='KOReader Sync',
         flag='ENABLE_KOREADER_SYNC',
-        size_kb=155,
+        size_kb=153,
         description='Sync reading progress with KOReader'
     ),
     'calibre_sync': Feature(
@@ -115,19 +115,19 @@ FEATURES = {
     'lyra_theme': Feature(
         name='Lyra Theme',
         flag='ENABLE_LYRA_THEME',
-        size_kb=16,
+        size_kb=13,
         description='Alternative UI theme with refined spacing and layout'
     ),
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=243,
+        size_kb=241,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
         name='Todo Planner',
         flag='ENABLE_TODO_PLANNER',
-        size_kb=11,
+        size_kb=7,
         description='Standalone daily TODO/agenda planner with .md/.txt fallback and web quick-entry'
     ),
     'dark_mode': Feature(
@@ -139,31 +139,31 @@ FEATURES = {
     'visual_cover_picker': Feature(
         name='Visual Covers',
         flag='ENABLE_VISUAL_COVER_PICKER',
-        size_kb=147,
+        size_kb=0,
         description='Grid-based book explorer with thumbnails'
     ),
     'ble_wifi_provisioning': Feature(
         name='BLE WiFi Provisioning',
         flag='ENABLE_BLE_WIFI_PROVISIONING',
-        size_kb=674,
+        size_kb=668,
         description='Initial WiFi setup via Bluetooth LE'
     ),
     'user_fonts': Feature(
         name='User Fonts',
         flag='ENABLE_USER_FONTS',
-        size_kb=10,
+        size_kb=8,
         description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
     ),
     'web_wifi_setup': Feature(
         name='Web WiFi Setup',
         flag='ENABLE_WEB_WIFI_SETUP',
-        size_kb=9,
+        size_kb=3,
         description='Manage WiFi networks directly from the web interface'
     ),
     'usb_mass_storage': Feature(
         name='USB Mass Storage',
         flag='ENABLE_USB_MASS_STORAGE',
-        size_kb=14,
+        size_kb=13,
         description='On-device prompt for USB SD card access as mass storage'
     ),
 }
@@ -511,7 +511,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 1.78  # Lean profile size baseline (measured)
+    base_size_mb = 2.08  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
