@@ -286,13 +286,12 @@ void MyLibraryActivity::loop() {
     return;
   }
 
-#if ENABLE_VISUAL_COVER_PICKER
-  if (mappedInput.getHeldTime() >= 500 && mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+  if (core::FeatureModules::hasCapability(core::Capability::VisualCoverPicker) && mappedInput.getHeldTime() >= 500 &&
+      mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     viewMode = (viewMode == ViewMode::List) ? ViewMode::Grid : ViewMode::List;
     requestUpdate();
     return;
   }
-#endif
 
   int listSize = static_cast<int>(itemCount);
 
@@ -340,8 +339,7 @@ void MyLibraryActivity::render(Activity::RenderLock&& lock) {
   if (getCurrentItemCount() == 0) {
     renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, tr(STR_NO_BOOKS_FOUND));
   } else {
-#if ENABLE_VISUAL_COVER_PICKER
-    if (viewMode == ViewMode::Grid) {
+    if (core::FeatureModules::hasCapability(core::Capability::VisualCoverPicker) && viewMode == ViewMode::Grid) {
       renderGrid();
     } else {
       if (currentTab == Tab::Recent) {
@@ -350,13 +348,6 @@ void MyLibraryActivity::render(Activity::RenderLock&& lock) {
         renderFilesTab(contentTop, contentHeight);
       }
     }
-#else
-    if (currentTab == Tab::Recent) {
-      renderRecentTab(contentTop, contentHeight);
-    } else {
-      renderFilesTab(contentTop, contentHeight);
-    }
-#endif
   }
 
   // Help text
@@ -396,8 +387,6 @@ void MyLibraryActivity::renderFilesTab(int contentTop, int contentHeight) const 
       [this](int index) { return files[index]; }, nullptr,
       [this](int index) { return UITheme::getFileIcon(files[index]); });
 }
-
-#if ENABLE_VISUAL_COVER_PICKER
 
 MyLibraryActivity::GridMetrics MyLibraryActivity::getGridMetrics() const {
   const int pageWidth = renderer.getScreenWidth();
@@ -520,4 +509,3 @@ void MyLibraryActivity::extractCovers() {
     }
   }
 }
-#endif

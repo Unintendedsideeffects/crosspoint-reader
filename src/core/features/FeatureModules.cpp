@@ -213,6 +213,8 @@ bool FeatureModules::hasCapability(const Capability capability) {
       return isEnabled("dark_mode");
     case Capability::EpubSupport:
       return isEnabled("epub_support");
+    case Capability::HomeMediaPicker:
+      return isEnabled("home_media_picker");
     case Capability::KoreaderSync:
       return isEnabled("koreader_sync");
     case Capability::LyraTheme:
@@ -227,6 +229,8 @@ bool FeatureModules::hasCapability(const Capability capability) {
       return isEnabled("usb_mass_storage");
     case Capability::UserFonts:
       return isEnabled("user_fonts");
+    case Capability::VisualCoverPicker:
+      return isEnabled("visual_cover_picker");
     case Capability::WebPokedexPlugin:
       return isEnabled("web_pokedex_plugin");
     case Capability::WebWifiSetup:

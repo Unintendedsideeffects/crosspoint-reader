@@ -38,7 +38,6 @@ class MyLibraryActivity final : public Activity {
   // Rendering
   void renderRecentTab(int contentTop, int contentHeight) const;
   void renderFilesTab(int contentTop, int contentHeight) const;
-#if ENABLE_VISUAL_COVER_PICKER
   void renderGrid() const;
   void extractCovers();
   bool drawCoverAt(const std::string& path, int x, int y, int width, int height) const;
@@ -54,7 +53,6 @@ class MyLibraryActivity final : public Activity {
     int startY;
   };
   GridMetrics getGridMetrics() const;
-#endif
 
   int getCurrentItemCount() const {
     return currentTab == Tab::Recent ? static_cast<int>(recentBooks.size()) : static_cast<int>(files.size());

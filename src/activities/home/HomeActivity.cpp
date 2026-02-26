@@ -12,7 +12,6 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
-#include "FeatureFlags.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
@@ -230,57 +229,58 @@ void HomeActivity::onEnter() {
 
   // Check if OPDS browser URL is configured
   hasOpdsUrl = strlen(SETTINGS.opdsServerUrl) > 0;
+  const bool mediaPickerEnabled = core::FeatureModules::hasCapability(core::Capability::HomeMediaPicker);
 
-#if ENABLE_HOME_MEDIA_PICKER
-  loadRecentBooks();
-  rebuildMenuLayout();
-  selectedMenuIndex = 0;
-  inButtonGrid = (SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT && recentBooks.empty());
-  hasContinueReading = !recentBooks.empty();
-  selectorIndex = 0;
+  if (mediaPickerEnabled) {
+    loadRecentBooks();
+    rebuildMenuLayout();
+    selectedMenuIndex = 0;
+    inButtonGrid = (SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT && recentBooks.empty());
+    hasContinueReading = !recentBooks.empty();
+    selectorIndex = 0;
 
-  hasCoverImage = false;
-  coverRendered = false;
-  coverBmpPath.clear();
-  lastBookTitle.clear();
-  lastBookAuthor.clear();
-#else
-  // Check if we have a book to continue reading
-  hasContinueReading = !APP_STATE.openEpubPath.empty() && Storage.exists(APP_STATE.openEpubPath.c_str());
+    hasCoverImage = false;
+    coverRendered = false;
+    coverBmpPath.clear();
+    lastBookTitle.clear();
+    lastBookAuthor.clear();
+  } else {
+    // Check if we have a book to continue reading
+    hasContinueReading = !APP_STATE.openEpubPath.empty() && Storage.exists(APP_STATE.openEpubPath.c_str());
 
-  if (hasContinueReading) {
-    // Extract filename from path for display
-    lastBookTitle = APP_STATE.openEpubPath;
-    const size_t lastSlash = lastBookTitle.find_last_of('/');
-    if (lastSlash != std::string::npos) {
-      lastBookTitle = lastBookTitle.substr(lastSlash + 1);
-    }
+    if (hasContinueReading) {
+      // Extract filename from path for display
+      lastBookTitle = APP_STATE.openEpubPath;
+      const size_t lastSlash = lastBookTitle.find_last_of('/');
+      if (lastSlash != std::string::npos) {
+        lastBookTitle = lastBookTitle.substr(lastSlash + 1);
+      }
 
-    const int thumbHeight = renderer.getScreenHeight() / 2;
-    const auto homeCardData = core::FeatureModules::resolveHomeCardData(APP_STATE.openEpubPath, thumbHeight);
-    if (!homeCardData.title.empty()) {
-      lastBookTitle = homeCardData.title;
-    }
-    if (!homeCardData.author.empty()) {
-      lastBookAuthor = homeCardData.author;
-    }
-    if (!homeCardData.coverPath.empty()) {
-      coverBmpPath = homeCardData.coverPath;
-      hasCoverImage = true;
-    }
+      const int thumbHeight = renderer.getScreenHeight() / 2;
+      const auto homeCardData = core::FeatureModules::resolveHomeCardData(APP_STATE.openEpubPath, thumbHeight);
+      if (!homeCardData.title.empty()) {
+        lastBookTitle = homeCardData.title;
+      }
+      if (!homeCardData.author.empty()) {
+        lastBookAuthor = homeCardData.author;
+      }
+      if (!homeCardData.coverPath.empty()) {
+        coverBmpPath = homeCardData.coverPath;
+        hasCoverImage = true;
+      }
 
-    // Preserve previous xtc fallback behavior when metadata is unavailable.
-    if (homeCardData.handled && homeCardData.title.empty()) {
-      if (StringUtils::checkFileExtension(lastBookTitle, ".xtch")) {
-        lastBookTitle.resize(lastBookTitle.length() - 5);
-      } else if (StringUtils::checkFileExtension(lastBookTitle, ".xtc")) {
-        lastBookTitle.resize(lastBookTitle.length() - 4);
+      // Preserve previous xtc fallback behavior when metadata is unavailable.
+      if (homeCardData.handled && homeCardData.title.empty()) {
+        if (StringUtils::checkFileExtension(lastBookTitle, ".xtch")) {
+          lastBookTitle.resize(lastBookTitle.length() - 5);
+        } else if (StringUtils::checkFileExtension(lastBookTitle, ".xtc")) {
+          lastBookTitle.resize(lastBookTitle.length() - 4);
+        }
       }
     }
-  }
 
-  selectorIndex = 0;
-#endif
+    selectorIndex = 0;
+  }
 
   // Trigger first update
   requestUpdate();
@@ -338,18 +338,49 @@ void HomeActivity::freeCoverBuffer() {
 }
 
 void HomeActivity::loop() {
-#if ENABLE_HOME_MEDIA_PICKER
-  const bool leftPressed = mappedInput.wasPressed(MappedInputManager::Button::Left);
-  const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
-  const bool upPressed = mappedInput.wasPressed(MappedInputManager::Button::Up);
-  const bool downPressed = mappedInput.wasPressed(MappedInputManager::Button::Down);
-  const bool forkDrift = SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT;
+  const bool mediaPickerEnabled = core::FeatureModules::hasCapability(core::Capability::HomeMediaPicker);
 
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    if (forkDrift) {
-      if (inButtonGrid) {
+  if (mediaPickerEnabled) {
+    const bool leftPressed = mappedInput.wasPressed(MappedInputManager::Button::Left);
+    const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
+    const bool upPressed = mappedInput.wasPressed(MappedInputManager::Button::Up);
+    const bool downPressed = mappedInput.wasPressed(MappedInputManager::Button::Down);
+    const bool forkDrift = SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT;
+
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+      if (forkDrift) {
+        if (inButtonGrid) {
+          if (selectedMenuIndex == menuMyLibraryIndex) {
+            onMyLibraryOpen();
+            return;
+          }
+          if (selectedMenuIndex == menuTodoIndex) {
+            onTodoOpen();
+            return;
+          }
+          if (selectedMenuIndex == menuFileTransferIndex) {
+            onFileTransferOpen();
+            return;
+          }
+          if (selectedMenuIndex == menuSettingsIndex) {
+            onSettingsOpen();
+            return;
+          }
+        } else if (!recentBooks.empty()) {
+          openSelectedBook();
+          return;
+        }
+      } else {
+        if (selectedMenuIndex == menuOpenBookIndex) {
+          openSelectedBook();
+          return;
+        }
         if (selectedMenuIndex == menuMyLibraryIndex) {
           onMyLibraryOpen();
+          return;
+        }
+        if (selectedMenuIndex == menuOpdsIndex) {
+          onOpdsBrowserOpen();
           return;
         }
         if (selectedMenuIndex == menuTodoIndex) {
@@ -364,109 +395,81 @@ void HomeActivity::loop() {
           onSettingsOpen();
           return;
         }
-      } else if (!recentBooks.empty()) {
-        openSelectedBook();
-        return;
-      }
-    } else {
-      if (selectedMenuIndex == menuOpenBookIndex) {
-        openSelectedBook();
-        return;
-      }
-      if (selectedMenuIndex == menuMyLibraryIndex) {
-        onMyLibraryOpen();
-        return;
-      }
-      if (selectedMenuIndex == menuOpdsIndex) {
-        onOpdsBrowserOpen();
-        return;
-      }
-      if (selectedMenuIndex == menuTodoIndex) {
-        onTodoOpen();
-        return;
-      }
-      if (selectedMenuIndex == menuFileTransferIndex) {
-        onFileTransferOpen();
-        return;
-      }
-      if (selectedMenuIndex == menuSettingsIndex) {
-        onSettingsOpen();
-        return;
       }
     }
-  }
 
-  if (forkDrift) {
-    constexpr int coverCols = 3;
-    constexpr int coverRows = 2;
-    const int bookCount = static_cast<int>(recentBooks.size());
-
-    if (inButtonGrid) {
-      constexpr int btnCols = 2;
-      constexpr int btnRows = 2;
-      if (leftPressed || rightPressed) {
-        int col = selectedMenuIndex % btnCols;
-        int row = selectedMenuIndex / btnCols;
-        if (leftPressed)
-          col = (col + btnCols - 1) % btnCols;
-        else
-          col = (col + 1) % btnCols;
-        selectedMenuIndex = row * btnCols + col;
-        requestUpdate();
-      }
-      if (upPressed) {
-        int row = selectedMenuIndex / 2;
-        if (row == 0) {
-          inButtonGrid = false;
-          selectedBookIndex = std::min(selectedBookIndex, bookCount - 1);
-          selectedBookIndex = std::max(0, selectedBookIndex);
-        } else {
-          selectedMenuIndex -= 2;
-          requestUpdate();
-        }
-      } else if (downPressed) {
-        int row = selectedMenuIndex / 2;
-        if (row < btnRows - 1) {
-          selectedMenuIndex += 2;
-          requestUpdate();
-        }
-      }
-    } else {
-      if (bookCount > 0 && (leftPressed || rightPressed || upPressed || downPressed)) {
-        const auto nav = ForkDriftNavigation::navigateCoverGrid(selectedBookIndex, bookCount, coverCols, coverRows,
-                                                                leftPressed, rightPressed, upPressed, downPressed);
-        if (nav.enterButtonGrid) {
-          inButtonGrid = true;
-          selectedMenuIndex = 0;
-        } else {
-          selectedBookIndex = nav.bookIndex;
-        }
-        requestUpdate();
-      }
-    }
-  } else {
-    if (!recentBooks.empty()) {
+    if (forkDrift) {
+      constexpr int coverCols = 3;
+      constexpr int coverRows = 2;
       const int bookCount = static_cast<int>(recentBooks.size());
-      if (leftPressed) {
-        selectedBookIndex = (selectedBookIndex + bookCount - 1) % bookCount;
-        requestUpdate();
-      } else if (rightPressed) {
-        selectedBookIndex = (selectedBookIndex + 1) % bookCount;
-        requestUpdate();
-      }
-    }
 
-    if (menuItemCount > 0) {
-      if (upPressed) {
-        selectedMenuIndex = (selectedMenuIndex + menuItemCount - 1) % menuItemCount;
-        requestUpdate();
-      } else if (downPressed) {
-        selectedMenuIndex = (selectedMenuIndex + 1) % menuItemCount;
-        requestUpdate();
+      if (inButtonGrid) {
+        constexpr int btnCols = 2;
+        constexpr int btnRows = 2;
+        if (leftPressed || rightPressed) {
+          int col = selectedMenuIndex % btnCols;
+          int row = selectedMenuIndex / btnCols;
+          if (leftPressed)
+            col = (col + btnCols - 1) % btnCols;
+          else
+            col = (col + 1) % btnCols;
+          selectedMenuIndex = row * btnCols + col;
+          requestUpdate();
+        }
+        if (upPressed) {
+          int row = selectedMenuIndex / 2;
+          if (row == 0) {
+            inButtonGrid = false;
+            selectedBookIndex = std::min(selectedBookIndex, bookCount - 1);
+            selectedBookIndex = std::max(0, selectedBookIndex);
+          } else {
+            selectedMenuIndex -= 2;
+            requestUpdate();
+          }
+        } else if (downPressed) {
+          int row = selectedMenuIndex / 2;
+          if (row < btnRows - 1) {
+            selectedMenuIndex += 2;
+            requestUpdate();
+          }
+        }
+      } else {
+        if (bookCount > 0 && (leftPressed || rightPressed || upPressed || downPressed)) {
+          const auto nav = ForkDriftNavigation::navigateCoverGrid(selectedBookIndex, bookCount, coverCols, coverRows,
+                                                                  leftPressed, rightPressed, upPressed, downPressed);
+          if (nav.enterButtonGrid) {
+            inButtonGrid = true;
+            selectedMenuIndex = 0;
+          } else {
+            selectedBookIndex = nav.bookIndex;
+          }
+          requestUpdate();
+        }
+      }
+    } else {
+      if (!recentBooks.empty()) {
+        const int bookCount = static_cast<int>(recentBooks.size());
+        if (leftPressed) {
+          selectedBookIndex = (selectedBookIndex + bookCount - 1) % bookCount;
+          requestUpdate();
+        } else if (rightPressed) {
+          selectedBookIndex = (selectedBookIndex + 1) % bookCount;
+          requestUpdate();
+        }
+      }
+
+      if (menuItemCount > 0) {
+        if (upPressed) {
+          selectedMenuIndex = (selectedMenuIndex + menuItemCount - 1) % menuItemCount;
+          requestUpdate();
+        } else if (downPressed) {
+          selectedMenuIndex = (selectedMenuIndex + 1) % menuItemCount;
+          requestUpdate();
+        }
       }
     }
+    return;
   }
-#else
 
   const int menuCount = getMenuItemCount();
 
@@ -506,7 +509,6 @@ void HomeActivity::loop() {
       onSettingsOpen();
     }
   }
-#endif
 }
 
 void HomeActivity::render(Activity::RenderLock&&) {
@@ -517,273 +519,273 @@ void HomeActivity::render(Activity::RenderLock&&) {
   renderer.clearScreen();
   bool bufferRestored = coverBufferStored && restoreCoverBuffer();
   // If we are using the new media picker UI, use its specialized rendering
-#if ENABLE_HOME_MEDIA_PICKER
-  const bool forkDrift = SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT;
-  const int coverSelector = forkDrift && inButtonGrid ? -1 : selectedBookIndex;
-  const int menuSelector = forkDrift && !inButtonGrid ? -1 : selectedMenuIndex;
+  const bool mediaPickerEnabled = core::FeatureModules::hasCapability(core::Capability::HomeMediaPicker);
+  if (mediaPickerEnabled) {
+    const bool forkDrift = SETTINGS.uiTheme == CrossPointSettings::FORK_DRIFT;
+    const int coverSelector = forkDrift && inButtonGrid ? -1 : selectedBookIndex;
+    const int menuSelector = forkDrift && !inButtonGrid ? -1 : selectedMenuIndex;
 
-  GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, metrics.homeCoverTileHeight), recentBooks, coverSelector,
-                          coverRendered, coverBufferStored, bufferRestored, [this]() { return storeCoverBuffer(); });
+    GUI.drawRecentBookCover(renderer, Rect(0, 0, pageWidth, metrics.homeCoverTileHeight), recentBooks, coverSelector,
+                            coverRendered, coverBufferStored, bufferRestored, [this]() { return storeCoverBuffer(); });
 
-  std::vector<std::string> menuLabels;
-  std::vector<UIIcon> menuIcons;
-  menuLabels.reserve(6);
-  menuIcons.reserve(6);
+    std::vector<std::string> menuLabels;
+    std::vector<UIIcon> menuIcons;
+    menuLabels.reserve(6);
+    menuIcons.reserve(6);
 
-  if (forkDrift) {
-    menuLabels.push_back("Library");
-    menuIcons.push_back(Folder);
-    if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
-      menuLabels.push_back("Agenda");
-      menuIcons.push_back(Text);
+    if (forkDrift) {
+      menuLabels.push_back("Library");
+      menuIcons.push_back(Folder);
+      if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
+        menuLabels.push_back("Agenda");
+        menuIcons.push_back(Text);
+      }
+      menuLabels.push_back("File Manager");
+      menuIcons.push_back(Transfer);
+      menuLabels.push_back("Settings");
+      menuIcons.push_back(Settings);
+    } else {
+      menuLabels.push_back(recentBooks.empty() ? "Open Book (empty)" : "Open Book");
+      menuIcons.push_back(Book);
+      menuLabels.push_back("My Library");
+      menuIcons.push_back(Folder);
+      if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) {
+        menuLabels.push_back("OPDS Browser");
+        menuIcons.push_back(Library);
+      }
+      if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
+        menuLabels.push_back("TODO");
+        menuIcons.push_back(Text);
+      }
+      menuLabels.push_back("File Transfer");
+      menuIcons.push_back(Transfer);
+      menuLabels.push_back("Settings");
+      menuIcons.push_back(Settings);
     }
-    menuLabels.push_back("File Manager");
-    menuIcons.push_back(Transfer);
-    menuLabels.push_back("Settings");
-    menuIcons.push_back(Settings);
+
+    GUI.drawButtonMenu(
+        renderer,
+        Rect{0, metrics.homeCoverTileHeight + metrics.verticalSpacing, pageWidth,
+             pageHeight - (metrics.homeCoverTileHeight + metrics.verticalSpacing * 2 + metrics.buttonHintsHeight)},
+        static_cast<int>(menuLabels.size()), menuSelector, [&menuLabels](const int index) { return menuLabels[index]; },
+        [&menuIcons](const int index) { return menuIcons[index]; });
+
+    const auto labels = mappedInput.mapLabels("", "Select", "Up", "Down");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   } else {
-    menuLabels.push_back(recentBooks.empty() ? "Open Book (empty)" : "Open Book");
-    menuIcons.push_back(Book);
-    menuLabels.push_back("My Library");
-    menuIcons.push_back(Folder);
-    if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) {
-      menuLabels.push_back("OPDS Browser");
-      menuIcons.push_back(Library);
-    }
-    if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
-      menuLabels.push_back("TODO");
-      menuIcons.push_back(Text);
-    }
-    menuLabels.push_back("File Transfer");
-    menuIcons.push_back(Transfer);
-    menuLabels.push_back("Settings");
-    menuIcons.push_back(Settings);
-  }
+    constexpr int margin = 20;
 
-  GUI.drawButtonMenu(
-      renderer,
-      Rect{0, metrics.homeCoverTileHeight + metrics.verticalSpacing, pageWidth,
-           pageHeight - (metrics.homeCoverTileHeight + metrics.verticalSpacing * 2 + metrics.buttonHintsHeight)},
-      static_cast<int>(menuLabels.size()), menuSelector, [&menuLabels](const int index) { return menuLabels[index]; },
-      [&menuIcons](const int index) { return menuIcons[index]; });
+    // --- Top "book" card for the current title (selectorIndex == 0) ---
+    const int bookWidth = pageWidth / 2;
+    const int bookHeight = pageHeight / 2;
+    const int bookX = (pageWidth - bookWidth) / 2;
+    constexpr int bookY = 30;
+    const bool bookSelected = hasContinueReading && selectorIndex == 0;
 
-  const auto labels = mappedInput.mapLabels("", "Select", "Up", "Down");
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    // Bookmark dimensions (used in multiple places)
+    const int bookmarkWidth = bookWidth / 8;
+    const int bookmarkHeight = bookHeight / 5;
+    const int bookmarkX = bookX + bookWidth - bookmarkWidth - 10;
+    const int bookmarkY = bookY + 5;
 
-#else
-  constexpr int margin = 20;
+    // Draw book card regardless, fill with message based on `hasContinueReading`
+    {
+      // Draw cover image as background if available (inside the box)
+      // Only load from SD on first render, then use stored buffer
+      if (hasContinueReading && hasCoverImage && !coverBmpPath.empty() && !coverRendered) {
+        // First time: load cover from SD and render
+        SpiBusMutex::Guard guard;
+        FsFile file;
+        if (Storage.openFileForRead("HOME", coverBmpPath, file)) {
+          Bitmap bitmap(file);
+          if (bitmap.parseHeaders() == BmpReaderError::Ok) {
+            // Calculate position to center image within the book card
+            int coverX, coverY;
 
-  // --- Top "book" card for the current title (selectorIndex == 0) ---
-  const int bookWidth = pageWidth / 2;
-  const int bookHeight = pageHeight / 2;
-  const int bookX = (pageWidth - bookWidth) / 2;
-  constexpr int bookY = 30;
-  const bool bookSelected = hasContinueReading && selectorIndex == 0;
+            if (bitmap.getWidth() > bookWidth || bitmap.getHeight() > bookHeight) {
+              const float imgRatio = static_cast<float>(bitmap.getWidth()) / static_cast<float>(bitmap.getHeight());
+              const float boxRatio = static_cast<float>(bookWidth) / static_cast<float>(bookHeight);
 
-  // Bookmark dimensions (used in multiple places)
-  const int bookmarkWidth = bookWidth / 8;
-  const int bookmarkHeight = bookHeight / 5;
-  const int bookmarkX = bookX + bookWidth - bookmarkWidth - 10;
-  const int bookmarkY = bookY + 5;
-
-  // Draw book card regardless, fill with message based on `hasContinueReading`
-  {
-    // Draw cover image as background if available (inside the box)
-    // Only load from SD on first render, then use stored buffer
-    if (hasContinueReading && hasCoverImage && !coverBmpPath.empty() && !coverRendered) {
-      // First time: load cover from SD and render
-      SpiBusMutex::Guard guard;
-      FsFile file;
-      if (Storage.openFileForRead("HOME", coverBmpPath, file)) {
-        Bitmap bitmap(file);
-        if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-          // Calculate position to center image within the book card
-          int coverX, coverY;
-
-          if (bitmap.getWidth() > bookWidth || bitmap.getHeight() > bookHeight) {
-            const float imgRatio = static_cast<float>(bitmap.getWidth()) / static_cast<float>(bitmap.getHeight());
-            const float boxRatio = static_cast<float>(bookWidth) / static_cast<float>(bookHeight);
-
-            if (imgRatio > boxRatio) {
-              coverX = bookX;
-              coverY = bookY + (bookHeight - static_cast<int>(bookWidth / imgRatio)) / 2;
+              if (imgRatio > boxRatio) {
+                coverX = bookX;
+                coverY = bookY + (bookHeight - static_cast<int>(bookWidth / imgRatio)) / 2;
+              } else {
+                coverX = bookX + (bookWidth - static_cast<int>(bookHeight * imgRatio)) / 2;
+                coverY = bookY;
+              }
             } else {
-              coverX = bookX + (bookWidth - static_cast<int>(bookHeight * imgRatio)) / 2;
-              coverY = bookY;
+              coverX = bookX + (bookWidth - bitmap.getWidth()) / 2;
+              coverY = bookY + (bookHeight - bitmap.getHeight()) / 2;
             }
-          } else {
-            coverX = bookX + (bookWidth - bitmap.getWidth()) / 2;
-            coverY = bookY + (bookHeight - bitmap.getHeight()) / 2;
+
+            // Draw the cover image centered within the book card
+            renderer.drawBitmap(bitmap, coverX, coverY, bookWidth, bookHeight);
+
+            // Draw border around the card
+            renderer.drawRect(bookX, bookY, bookWidth, bookHeight);
+
+            // Store the buffer with cover image for fast navigation
+            coverBufferStored = storeCoverBuffer();
+            coverRendered = true;
+
+            // First render: if selected, draw selection indicators now
+            if (bookSelected) {
+              renderer.drawRect(bookX + 1, bookY + 1, bookWidth - 2, bookHeight - 2);
+              renderer.drawRect(bookX + 2, bookY + 2, bookWidth - 4, bookHeight - 4);
+            }
           }
-
-          // Draw the cover image centered within the book card
-          renderer.drawBitmap(bitmap, coverX, coverY, bookWidth, bookHeight);
-
-          // Draw border around the card
+          file.close();
+        }
+      } else if (!bufferRestored && !coverRendered) {
+        // No cover image: draw border or fill, plus bookmark as visual flair
+        if (bookSelected) {
+          renderer.fillRect(bookX, bookY, bookWidth, bookHeight);
+        } else {
           renderer.drawRect(bookX, bookY, bookWidth, bookHeight);
+        }
 
-          // Store the buffer with cover image for fast navigation
-          coverBufferStored = storeCoverBuffer();
-          coverRendered = true;
+        // Draw bookmark ribbon when no cover image (visual decoration)
+        if (hasContinueReading) {
+          const int notchDepth = bookmarkHeight / 3;
+          const int centerX = bookmarkX + bookmarkWidth / 2;
 
-          // First render: if selected, draw selection indicators now
-          if (bookSelected) {
-            renderer.drawRect(bookX + 1, bookY + 1, bookWidth - 2, bookHeight - 2);
-            renderer.drawRect(bookX + 2, bookY + 2, bookWidth - 4, bookHeight - 4);
+          const int xPoints[5] = {
+              bookmarkX,                  // top-left
+              bookmarkX + bookmarkWidth,  // top-right
+              bookmarkX + bookmarkWidth,  // bottom-right
+              centerX,                    // center notch point
+              bookmarkX                   // bottom-left
+          };
+          const int yPoints[5] = {
+              bookmarkY,                                // top-left
+              bookmarkY,                                // top-right
+              bookmarkY + bookmarkHeight,               // bottom-right
+              bookmarkY + bookmarkHeight - notchDepth,  // center notch point
+              bookmarkY + bookmarkHeight                // bottom-left
+          };
+
+          // Draw bookmark ribbon (inverted if selected)
+          renderer.fillPolygon(xPoints, yPoints, 5, !bookSelected);
+        }
+      }
+
+      // If buffer was restored, draw selection indicators if needed
+      if (bufferRestored && bookSelected && coverRendered) {
+        // Draw selection border (no bookmark inversion needed since cover has no bookmark)
+        renderer.drawRect(bookX + 1, bookY + 1, bookWidth - 2, bookHeight - 2);
+        renderer.drawRect(bookX + 2, bookY + 2, bookWidth - 4, bookHeight - 4);
+      }
+    }
+
+    if (hasContinueReading) {
+      // Split into words
+      std::vector<std::string> words;
+      size_t pos = 0;
+      while (pos < lastBookTitle.size()) {
+        while (pos < lastBookTitle.size() && lastBookTitle[pos] == ' ') ++pos;
+        if (pos >= lastBookTitle.size()) break;
+        size_t start = pos;
+        while (pos < lastBookTitle.size() && lastBookTitle[pos] != ' ') ++pos;
+        words.push_back(lastBookTitle.substr(start, pos - start));
+      }
+
+      std::vector<std::string> lines;
+      std::string currentLine;
+      const int maxLineWidth = bookWidth - 40;
+      const int spaceWidth = renderer.getSpaceWidth(UI_12_FONT_ID);
+
+      for (auto& word : words) {
+        if (lines.size() >= 3) {
+          lines.back() += "...";
+          break;
+        }
+        int wordWidth = renderer.getTextWidth(UI_12_FONT_ID, word.c_str());
+        if (wordWidth > maxLineWidth) {
+          while (renderer.getTextWidth(UI_12_FONT_ID, (word + "...").c_str()) > maxLineWidth && !word.empty()) {
+            utf8RemoveLastChar(word);
           }
+          word += "...";
         }
-        file.close();
-      }
-    } else if (!bufferRestored && !coverRendered) {
-      // No cover image: draw border or fill, plus bookmark as visual flair
-      if (bookSelected) {
-        renderer.fillRect(bookX, bookY, bookWidth, bookHeight);
-      } else {
-        renderer.drawRect(bookX, bookY, bookWidth, bookHeight);
-      }
 
-      // Draw bookmark ribbon when no cover image (visual decoration)
-      if (hasContinueReading) {
-        const int notchDepth = bookmarkHeight / 3;
-        const int centerX = bookmarkX + bookmarkWidth / 2;
-
-        const int xPoints[5] = {
-            bookmarkX,                  // top-left
-            bookmarkX + bookmarkWidth,  // top-right
-            bookmarkX + bookmarkWidth,  // bottom-right
-            centerX,                    // center notch point
-            bookmarkX                   // bottom-left
-        };
-        const int yPoints[5] = {
-            bookmarkY,                                // top-left
-            bookmarkY,                                // top-right
-            bookmarkY + bookmarkHeight,               // bottom-right
-            bookmarkY + bookmarkHeight - notchDepth,  // center notch point
-            bookmarkY + bookmarkHeight                // bottom-left
-        };
-
-        // Draw bookmark ribbon (inverted if selected)
-        renderer.fillPolygon(xPoints, yPoints, 5, !bookSelected);
-      }
-    }
-
-    // If buffer was restored, draw selection indicators if needed
-    if (bufferRestored && bookSelected && coverRendered) {
-      // Draw selection border (no bookmark inversion needed since cover has no bookmark)
-      renderer.drawRect(bookX + 1, bookY + 1, bookWidth - 2, bookHeight - 2);
-      renderer.drawRect(bookX + 2, bookY + 2, bookWidth - 4, bookHeight - 4);
-    }
-  }
-
-  if (hasContinueReading) {
-    // Split into words
-    std::vector<std::string> words;
-    size_t pos = 0;
-    while (pos < lastBookTitle.size()) {
-      while (pos < lastBookTitle.size() && lastBookTitle[pos] == ' ') ++pos;
-      if (pos >= lastBookTitle.size()) break;
-      size_t start = pos;
-      while (pos < lastBookTitle.size() && lastBookTitle[pos] != ' ') ++pos;
-      words.push_back(lastBookTitle.substr(start, pos - start));
-    }
-
-    std::vector<std::string> lines;
-    std::string currentLine;
-    const int maxLineWidth = bookWidth - 40;
-    const int spaceWidth = renderer.getSpaceWidth(UI_12_FONT_ID);
-
-    for (auto& word : words) {
-      if (lines.size() >= 3) {
-        lines.back() += "...";
-        break;
-      }
-      int wordWidth = renderer.getTextWidth(UI_12_FONT_ID, word.c_str());
-      if (wordWidth > maxLineWidth) {
-        while (renderer.getTextWidth(UI_12_FONT_ID, (word + "...").c_str()) > maxLineWidth && !word.empty()) {
-          utf8RemoveLastChar(word);
+        int curWidth = renderer.getTextWidth(UI_12_FONT_ID, currentLine.c_str());
+        if (!currentLine.empty() && curWidth + spaceWidth + wordWidth > maxLineWidth) {
+          lines.push_back(currentLine);
+          currentLine = word;
+        } else {
+          if (!currentLine.empty()) currentLine += " ";
+          currentLine += word;
         }
-        word += "...";
+      }
+      if (!currentLine.empty() && lines.size() < 3) lines.push_back(currentLine);
+
+      int totalTextHeight = renderer.getLineHeight(UI_12_FONT_ID) * lines.size();
+      if (!lastBookAuthor.empty()) totalTextHeight += renderer.getLineHeight(UI_10_FONT_ID) * 1.5;
+
+      int titleYStart = bookY + (bookHeight - totalTextHeight) / 2;
+
+      if (coverRendered) {
+        // Draw background box for text legibility over cover
+        int maxW = 0;
+        for (auto& l : lines) maxW = std::max(maxW, renderer.getTextWidth(UI_12_FONT_ID, l.c_str()));
+        int boxW = maxW + 16;
+        int boxH = totalTextHeight + 16;
+        renderer.fillRect((pageWidth - boxW) / 2, titleYStart - 8, boxW, boxH, bookSelected);
+        renderer.drawRect((pageWidth - boxW) / 2, titleYStart - 8, boxW, boxH, !bookSelected);
       }
 
-      int curWidth = renderer.getTextWidth(UI_12_FONT_ID, currentLine.c_str());
-      if (!currentLine.empty() && curWidth + spaceWidth + wordWidth > maxLineWidth) {
-        lines.push_back(currentLine);
-        currentLine = word;
-      } else {
-        if (!currentLine.empty()) currentLine += " ";
-        currentLine += word;
+      for (auto& l : lines) {
+        renderer.drawCenteredText(UI_12_FONT_ID, titleYStart, l.c_str(), !bookSelected);
+        titleYStart += renderer.getLineHeight(UI_12_FONT_ID);
       }
-    }
-    if (!currentLine.empty() && lines.size() < 3) lines.push_back(currentLine);
 
-    int totalTextHeight = renderer.getLineHeight(UI_12_FONT_ID) * lines.size();
-    if (!lastBookAuthor.empty()) totalTextHeight += renderer.getLineHeight(UI_10_FONT_ID) * 1.5;
-
-    int titleYStart = bookY + (bookHeight - totalTextHeight) / 2;
-
-    if (coverRendered) {
-      // Draw background box for text legibility over cover
-      int maxW = 0;
-      for (auto& l : lines) maxW = std::max(maxW, renderer.getTextWidth(UI_12_FONT_ID, l.c_str()));
-      int boxW = maxW + 16;
-      int boxH = totalTextHeight + 16;
-      renderer.fillRect((pageWidth - boxW) / 2, titleYStart - 8, boxW, boxH, bookSelected);
-      renderer.drawRect((pageWidth - boxW) / 2, titleYStart - 8, boxW, boxH, !bookSelected);
-    }
-
-    for (auto& l : lines) {
-      renderer.drawCenteredText(UI_12_FONT_ID, titleYStart, l.c_str(), !bookSelected);
-      titleYStart += renderer.getLineHeight(UI_12_FONT_ID);
-    }
-
-    if (!lastBookAuthor.empty()) {
-      titleYStart += renderer.getLineHeight(UI_10_FONT_ID) * 0.5;
-      std::string author = lastBookAuthor;
-      if (renderer.getTextWidth(UI_10_FONT_ID, author.c_str()) > maxLineWidth) {
-        while (renderer.getTextWidth(UI_10_FONT_ID, (author + "...").c_str()) > maxLineWidth && !author.empty()) {
-          utf8RemoveLastChar(author);
+      if (!lastBookAuthor.empty()) {
+        titleYStart += renderer.getLineHeight(UI_10_FONT_ID) * 0.5;
+        std::string author = lastBookAuthor;
+        if (renderer.getTextWidth(UI_10_FONT_ID, author.c_str()) > maxLineWidth) {
+          while (renderer.getTextWidth(UI_10_FONT_ID, (author + "...").c_str()) > maxLineWidth && !author.empty()) {
+            utf8RemoveLastChar(author);
+          }
+          author += "...";
         }
-        author += "...";
+        renderer.drawCenteredText(UI_10_FONT_ID, titleYStart, author.c_str(), !bookSelected);
       }
-      renderer.drawCenteredText(UI_10_FONT_ID, titleYStart, author.c_str(), !bookSelected);
+
+      const int continueY = bookY + bookHeight - renderer.getLineHeight(UI_10_FONT_ID) * 1.5;
+      renderer.drawCenteredText(UI_10_FONT_ID, continueY, "Continue Reading", !bookSelected);
+    } else {
+      int y = bookY + (bookHeight - renderer.getLineHeight(UI_12_FONT_ID)) / 2;
+      renderer.drawCenteredText(UI_12_FONT_ID, y, "No open book");
     }
 
-    const int continueY = bookY + bookHeight - renderer.getLineHeight(UI_10_FONT_ID) * 1.5;
-    renderer.drawCenteredText(UI_10_FONT_ID, continueY, "Continue Reading", !bookSelected);
-  } else {
-    int y = bookY + (bookHeight - renderer.getLineHeight(UI_12_FONT_ID)) / 2;
-    renderer.drawCenteredText(UI_12_FONT_ID, y, "No open book");
-  }
+    // Draw other menu items
+    int menuStartY = bookY + bookHeight + 30;
+    int menuTileWidth = pageWidth - 40;
+    int menuTileHeight = 45;
+    int menuSpacing = 10;
 
-  // Draw other menu items
-  int menuStartY = bookY + bookHeight + 30;
-  int menuTileWidth = pageWidth - 40;
-  int menuTileHeight = 45;
-  int menuSpacing = 10;
+    std::vector<const char*> labels_text = {"My Library"};
+    if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) {
+      labels_text.push_back("OPDS Browser");
+    }
+    if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
+      labels_text.push_back("TODO");
+    }
+    labels_text.push_back("File Transfer");
+    labels_text.push_back("Settings");
+    for (size_t i = 0; i < labels_text.size(); ++i) {
+      int tileY = menuStartY + i * (menuTileHeight + menuSpacing);
+      bool selected = (selectorIndex == (int)i + (hasContinueReading ? 1 : 0));
+      if (selected)
+        renderer.fillRect(20, tileY, menuTileWidth, menuTileHeight);
+      else
+        renderer.drawRect(20, tileY, menuTileWidth, menuTileHeight);
+      renderer.drawCenteredText(UI_10_FONT_ID, tileY + (menuTileHeight - renderer.getLineHeight(UI_10_FONT_ID)) / 2,
+                                labels_text[i], !selected);
+    }
 
-  std::vector<const char*> labels_text = {"My Library"};
-  if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) {
-    labels_text.push_back("OPDS Browser");
+    const auto hints = mappedInput.mapLabels("", "Select", "Up", "Down");
+    GUI.drawButtonHints(renderer, hints.btn1, hints.btn2, hints.btn3, hints.btn4);
   }
-  if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
-    labels_text.push_back("TODO");
-  }
-  labels_text.push_back("File Transfer");
-  labels_text.push_back("Settings");
-  for (size_t i = 0; i < labels_text.size(); ++i) {
-    int tileY = menuStartY + i * (menuTileHeight + menuSpacing);
-    bool selected = (selectorIndex == (int)i + (hasContinueReading ? 1 : 0));
-    if (selected)
-      renderer.fillRect(20, tileY, menuTileWidth, menuTileHeight);
-    else
-      renderer.drawRect(20, tileY, menuTileWidth, menuTileHeight);
-    renderer.drawCenteredText(UI_10_FONT_ID, tileY + (menuTileHeight - renderer.getLineHeight(UI_10_FONT_ID)) / 2,
-                              labels_text[i], !selected);
-  }
-
-  const auto hints = mappedInput.mapLabels("", "Select", "Up", "Down");
-  GUI.drawButtonHints(renderer, hints.btn1, hints.btn2, hints.btn3, hints.btn4);
-#endif
 
   renderer.displayBuffer();
 
