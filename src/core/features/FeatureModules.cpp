@@ -3,6 +3,9 @@
 #include <FeatureFlags.h>
 #include <Logging.h>
 
+#include <algorithm>
+#include <cstring>
+
 #include "CrossPointSettings.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/settings/ButtonRemapActivity.h"
@@ -203,6 +206,61 @@ void FeatureModules::setKoreaderMatchMethod(const uint8_t method) {
   KOREADER_STORE.saveToFile();
 #else
   (void)method;
+#endif
+}
+
+std::vector<std::string> FeatureModules::getUserFontFamilies() {
+#if ENABLE_USER_FONTS
+  auto& manager = UserFontManager::getInstance();
+  manager.scanFonts();
+  return manager.getAvailableFonts();
+#else
+  return {};
+#endif
+}
+
+uint8_t FeatureModules::getSelectedUserFontFamilyIndex() {
+#if ENABLE_USER_FONTS
+  auto& manager = UserFontManager::getInstance();
+  manager.scanFonts();
+  const auto& fonts = manager.getAvailableFonts();
+  if (fonts.empty()) {
+    return 0;
+  }
+
+  const std::string selectedFont = SETTINGS.userFontPath;
+  const auto it = std::find(fonts.begin(), fonts.end(), selectedFont);
+  if (it == fonts.end()) {
+    return 0;
+  }
+  return static_cast<uint8_t>(std::distance(fonts.begin(), it));
+#else
+  return 0;
+#endif
+}
+
+void FeatureModules::setSelectedUserFontFamilyIndex(const uint8_t index) {
+#if ENABLE_USER_FONTS
+  auto& manager = UserFontManager::getInstance();
+  manager.scanFonts();
+  const auto& fonts = manager.getAvailableFonts();
+  if (fonts.empty()) {
+    SETTINGS.userFontPath[0] = '\0';
+    if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
+      SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
+      manager.unloadCurrentFont();
+    }
+    return;
+  }
+
+  const size_t selectedIndex = std::min(static_cast<size_t>(index), fonts.size() - 1);
+  strncpy(SETTINGS.userFontPath, fonts[selectedIndex].c_str(), sizeof(SETTINGS.userFontPath) - 1);
+  SETTINGS.userFontPath[sizeof(SETTINGS.userFontPath) - 1] = '\0';
+  if (SETTINGS.fontFamily == CrossPointSettings::USER_SD && !manager.loadFontFamily(SETTINGS.userFontPath)) {
+    SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
+  }
+#else
+  (void)index;
 #endif
 }
 

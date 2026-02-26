@@ -2,13 +2,9 @@
 
 #include <I18n.h>
 
-#include <algorithm>
-#include <cstring>
 #include <vector>
 
 #include "CrossPointSettings.h"
-#include "FeatureFlags.h"
-#include "UserFontManager.h"
 #include "activities/settings/SettingsActivity.h"
 #include "core/features/FeatureModules.h"
 
@@ -53,16 +49,17 @@ inline std::vector<SettingInfo> getSettingsList() {
                           StrId::STR_CAT_DISPLAY),
 
       // --- Reader ---
-      SettingInfo::Enum(StrId::STR_FONT_FAMILY, &CrossPointSettings::fontFamily,
-                        {
-                            StrId::STR_BOOKERLY,
-                            StrId::STR_NOTO_SANS,
-                            StrId::STR_OPEN_DYSLEXIC,
-#if ENABLE_USER_FONTS
-                            StrId::STR_EXTERNAL_FONT,
-#endif
-                        },
-                        "fontFamily", StrId::STR_CAT_READER),
+      SettingInfo::DynamicEnum(
+          StrId::STR_FONT_FAMILY,
+          [] {
+            std::vector<StrId> values = {StrId::STR_BOOKERLY, StrId::STR_NOTO_SANS, StrId::STR_OPEN_DYSLEXIC};
+            if (core::FeatureModules::hasCapability(core::Capability::UserFonts)) {
+              values.push_back(StrId::STR_EXTERNAL_FONT);
+            }
+            return values;
+          }(),
+          [] { return SETTINGS.fontFamily; }, [](uint8_t value) { SETTINGS.fontFamily = value; }, "fontFamily",
+          StrId::STR_CAT_READER),
       SettingInfo::Enum(StrId::STR_FONT_SIZE, &CrossPointSettings::fontSize,
                         {StrId::STR_SMALL, StrId::STR_MEDIUM, StrId::STR_LARGE, StrId::STR_X_LARGE}, "fontSize",
                         StrId::STR_CAT_READER),
@@ -138,48 +135,14 @@ inline std::vector<SettingInfo> getSettingsList() {
         StrId::STR_KOREADER_SYNC));
   }
 
-#if ENABLE_USER_FONTS
-  SettingInfo userFontPathSetting = SettingInfo::DynamicEnum(
-      StrId::STR_EXTERNAL_FONT, {},
-      [] {
-        auto& manager = UserFontManager::getInstance();
-        manager.scanFonts();
-        const auto& fonts = manager.getAvailableFonts();
-        if (fonts.empty()) return static_cast<uint8_t>(0);
-
-        const std::string selectedFont = SETTINGS.userFontPath;
-        const auto it = std::find(fonts.begin(), fonts.end(), selectedFont);
-        if (it == fonts.end()) return static_cast<uint8_t>(0);
-        return static_cast<uint8_t>(std::distance(fonts.begin(), it));
-      },
-      [](uint8_t value) {
-        auto& manager = UserFontManager::getInstance();
-        manager.scanFonts();
-        const auto& fonts = manager.getAvailableFonts();
-        if (fonts.empty()) {
-          SETTINGS.userFontPath[0] = '\0';
-          if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
-            SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-            manager.unloadCurrentFont();
-          }
-          return;
-        }
-
-        const size_t index = std::min(static_cast<size_t>(value), fonts.size() - 1);
-        strncpy(SETTINGS.userFontPath, fonts[index].c_str(), sizeof(SETTINGS.userFontPath) - 1);
-        SETTINGS.userFontPath[sizeof(SETTINGS.userFontPath) - 1] = '\0';
-        if (SETTINGS.fontFamily == CrossPointSettings::USER_SD && !manager.loadFontFamily(SETTINGS.userFontPath)) {
-          SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-        }
-      },
-      "userFontPath", StrId::STR_CAT_READER);
-  userFontPathSetting.dynamicValuesGetter = [] {
-    auto& manager = UserFontManager::getInstance();
-    manager.scanFonts();
-    return manager.getAvailableFonts();
-  };
-  list.push_back(std::move(userFontPathSetting));
-#endif
+  if (core::FeatureModules::hasCapability(core::Capability::UserFonts)) {
+    SettingInfo userFontPathSetting = SettingInfo::DynamicEnum(
+        StrId::STR_EXTERNAL_FONT, {}, [] { return core::FeatureModules::getSelectedUserFontFamilyIndex(); },
+        [](uint8_t value) { core::FeatureModules::setSelectedUserFontFamilyIndex(value); }, "userFontPath",
+        StrId::STR_CAT_READER);
+    userFontPathSetting.dynamicValuesGetter = [] { return core::FeatureModules::getUserFontFamilies(); };
+    list.push_back(std::move(userFontPathSetting));
+  }
 
   if (core::FeatureModules::hasCapability(core::Capability::CalibreSync)) {
     // --- OPDS Browser (web-only, uses CrossPointSettings char arrays) ---

@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 class Activity;
 class CrossPointWebServer;
@@ -68,6 +69,9 @@ class FeatureModules {
   static void setKoreaderPassword(const std::string& password);
   static void setKoreaderServerUrl(const std::string& serverUrl);
   static void setKoreaderMatchMethod(uint8_t method);
+  static std::vector<std::string> getUserFontFamilies();
+  static uint8_t getSelectedUserFontFamilyIndex();
+  static void setSelectedUserFontFamilyIndex(uint8_t index);
 
   struct FontScanResult {
     bool available;  // false when ENABLE_USER_FONTS is off
