@@ -87,6 +87,14 @@ bool isTxtDocumentPath(const std::string& path) { return StringUtils::checkFileE
 
 bool isMarkdownDocumentPath(const std::string& path) { return StringUtils::checkFileExtension(path, ".md"); }
 
+std::string fileNameFromPath(const std::string& path) {
+  const size_t lastSlash = path.find_last_of('/');
+  if (lastSlash == std::string::npos) {
+    return path;
+  }
+  return path.substr(lastSlash + 1);
+}
+
 #if ENABLE_EPUB_SUPPORT
 std::unique_ptr<Epub> loadEpubDocument(const std::string& path) {
   SpiBusMutex::Guard guard;
@@ -390,6 +398,54 @@ FeatureModules::HomeCardDataResult FeatureModules::resolveHomeCardData(const std
       result.coverPath = xtc.getThumbBmpPath();
     }
 #endif
+    return result;
+  }
+
+  return result;
+}
+
+FeatureModules::RecentBookDataResult FeatureModules::resolveRecentBookData(const std::string& path) {
+  RecentBookDataResult result;
+  if (path.empty()) {
+    return result;
+  }
+
+  if (isEpubDocumentPath(path)) {
+    result.handled = true;
+    if (!hasCapability(Capability::EpubSupport)) {
+      return result;
+    }
+#if ENABLE_EPUB_SUPPORT
+    Epub epub(path, "/.crosspoint");
+    epub.load(false);
+    result.title = epub.getTitle();
+    result.author = epub.getAuthor();
+    result.coverPath = epub.getThumbBmpPath();
+#endif
+    return result;
+  }
+
+  if (isXtcDocumentPath(path)) {
+    result.handled = true;
+    if (!hasCapability(Capability::XtcSupport)) {
+      return result;
+    }
+#if ENABLE_XTC_SUPPORT
+    Xtc xtc(path, "/.crosspoint");
+    if (!xtc.load()) {
+      return result;
+    }
+
+    result.title = xtc.getTitle();
+    result.author = xtc.getAuthor();
+    result.coverPath = xtc.getThumbBmpPath();
+#endif
+    return result;
+  }
+
+  if (isTxtDocumentPath(path) || isMarkdownDocumentPath(path)) {
+    result.handled = true;
+    result.title = fileNameFromPath(path);
     return result;
   }
 

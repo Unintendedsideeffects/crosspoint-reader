@@ -1,20 +1,13 @@
 #include "RecentBooksStore.h"
 
-#include <FeatureFlags.h>
 #include <HalStorage.h>
 #include <JsonSettingsIO.h>
 #include <Logging.h>
 #include <Serialization.h>
-#if ENABLE_EPUB_SUPPORT
-#include <Epub.h>
-#endif
-#if ENABLE_XTC_SUPPORT
-#include <Xtc.h>
-#endif
 
 #include <algorithm>
 
-#include "util/StringUtils.h"
+#include "core/features/FeatureModules.h"
 
 namespace {
 constexpr uint8_t RECENT_BOOKS_FILE_VERSION = 3;
@@ -65,36 +58,13 @@ bool RecentBooksStore::saveToFile() const {
 }
 
 RecentBook RecentBooksStore::getDataFromBook(std::string path) const {
-  std::string lastBookFileName = "";
-  const size_t lastSlash = path.find_last_of('/');
-  if (lastSlash != std::string::npos) {
-    lastBookFileName = path.substr(lastSlash + 1);
-  }
-
   LOG_DBG("RBS", "Loading recent book: %s", path.c_str());
 
-  // If epub, try to load the metadata for title/author and cover
-#if ENABLE_EPUB_SUPPORT
-  if (StringUtils::checkFileExtension(lastBookFileName, ".epub")) {
-    Epub epub(path, "/.crosspoint");
-    epub.load(false);
-    return RecentBook{path, epub.getTitle(), epub.getAuthor(), epub.getThumbBmpPath()};
-  } else
-#endif
-#if ENABLE_XTC_SUPPORT
-      if (StringUtils::checkFileExtension(lastBookFileName, ".xtch") ||
-          StringUtils::checkFileExtension(lastBookFileName, ".xtc")) {
-    // Handle XTC file
-    Xtc xtc(path, "/.crosspoint");
-    if (xtc.load()) {
-      return RecentBook{path, xtc.getTitle(), xtc.getAuthor(), xtc.getThumbBmpPath()};
-    }
-  } else
-#endif
-      if (StringUtils::checkFileExtension(lastBookFileName, ".txt") ||
-          StringUtils::checkFileExtension(lastBookFileName, ".md")) {
-    return RecentBook{path, lastBookFileName, "", ""};
+  const auto result = core::FeatureModules::resolveRecentBookData(path);
+  if (result.handled) {
+    return RecentBook{path, result.title, result.author, result.coverPath};
   }
+
   return RecentBook{path, "", "", ""};
 }
 

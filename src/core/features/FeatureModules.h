@@ -68,6 +68,13 @@ class FeatureModules {
     std::string coverPath;
   };
 
+  struct RecentBookDataResult {
+    bool handled = false;
+    std::string title;
+    std::string author;
+    std::string coverPath;
+  };
+
   static bool isEnabled(const char* featureKey);
   static bool hasCapability(Capability capability);
   static String getBuildString();
@@ -77,6 +84,7 @@ class FeatureModules {
       const std::string& path, GfxRenderer& renderer, MappedInputManager& mappedInput,
       const std::function<void(const std::string&)>& onBackToLibraryPath, const std::function<void()>& onBackHome);
   static HomeCardDataResult resolveHomeCardData(const std::string& path, int thumbHeight);
+  static RecentBookDataResult resolveRecentBookData(const std::string& path);
 
   static Activity* createSettingsSubActivity(SettingAction action, GfxRenderer& renderer,
                                              MappedInputManager& mappedInput, const std::function<void()>& onComplete,
