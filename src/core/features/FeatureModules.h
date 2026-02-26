@@ -29,14 +29,17 @@ enum class Capability {
   BackgroundServer,
   CalibreSync,
   DarkMode,
+  EpubSupport,
   KoreaderSync,
   LyraTheme,
+  MarkdownSupport,
   OtaUpdates,
   TodoPlanner,
   UsbMassStorage,
   UserFonts,
   WebPokedexPlugin,
   WebWifiSetup,
+  XtcSupport,
 };
 
 class FeatureModules {

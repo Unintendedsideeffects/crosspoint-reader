@@ -8,6 +8,7 @@
 #include "Txt.h"
 #include "TxtReaderActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
+#include "core/features/FeatureModules.h"
 #include "util/StringUtils.h"
 
 #if ENABLE_EPUB_SUPPORT
@@ -33,11 +34,9 @@ std::string ReaderActivity::extractFolderPath(const std::string& filePath) {
   return filePath.substr(0, lastSlash);
 }
 
-#if ENABLE_XTC_SUPPORT
 bool ReaderActivity::isXtcFile(const std::string& path) {
   return StringUtils::checkFileExtension(path, ".xtc") || StringUtils::checkFileExtension(path, ".xtch");
 }
-#endif
 
 bool ReaderActivity::isTxtFile(const std::string& path) { return StringUtils::checkFileExtension(path, ".txt"); }
 
@@ -198,17 +197,37 @@ void ReaderActivity::onEnter() {
 
   currentBookPath = initialBookPath;
 
-#if ENABLE_XTC_SUPPORT
+  const auto showUnsupported = [this](const char* logMessage, const char* uiMessage) {
+    LOG_ERR("READER", "%s", logMessage);
+    exitActivity();
+    enterNewActivity(
+        new FullScreenMessageActivity(renderer, mappedInput, uiMessage, EpdFontFamily::BOLD, [this] { onGoBack(); }));
+  };
+
   if (isXtcFile(initialBookPath)) {
+    if (!core::FeatureModules::hasCapability(core::Capability::XtcSupport)) {
+      showUnsupported("XTC support disabled in this build", "XTC support\nnot available\nin this build");
+      return;
+    }
+#if ENABLE_XTC_SUPPORT
     auto xtc = loadXtc(initialBookPath);
     if (!xtc) {
       onGoBack();
       return;
     }
     onGoToXtcReader(std::move(xtc));
-  } else
+    return;
+#else
+    showUnsupported("XTC support disabled in this build", "XTC support\nnot available\nin this build");
+    return;
 #endif
-      if (isMarkdownFile(initialBookPath)) {
+  }
+
+  if (isMarkdownFile(initialBookPath)) {
+    if (!core::FeatureModules::hasCapability(core::Capability::MarkdownSupport)) {
+      showUnsupported("Markdown support disabled in this build", "Markdown support\nnot available\nin this build");
+      return;
+    }
 #if ENABLE_MARKDOWN
     LOG_DBG("READER", "Detected as Markdown file");
     auto markdown = loadMarkdown(initialBookPath);
@@ -219,15 +238,14 @@ void ReaderActivity::onEnter() {
     }
     LOG_DBG("READER", "Markdown loaded, opening reader");
     onGoToMarkdownReader(std::move(markdown));
+    return;
 #else
-    // Markdown support not compiled in this build
-    LOG_ERR("READER", "Markdown support disabled in this build");
-    exitActivity();
-    enterNewActivity(new FullScreenMessageActivity(renderer, mappedInput,
-                                                   "Markdown support\nnot available\nin this build",
-                                                   EpdFontFamily::BOLD, [this] { onGoBack(); }));
+    showUnsupported("Markdown support disabled in this build", "Markdown support\nnot available\nin this build");
+    return;
 #endif  // ENABLE_MARKDOWN
-  } else if (isTxtFile(initialBookPath)) {
+  }
+
+  if (isTxtFile(initialBookPath)) {
     LOG_DBG("READER", "Detected as TXT file");
     auto txt = loadTxt(initialBookPath);
     if (!txt) {
@@ -237,19 +255,23 @@ void ReaderActivity::onEnter() {
     }
     LOG_DBG("READER", "TXT loaded, opening reader");
     onGoToTxtReader(std::move(txt));
-  } else {
-#if ENABLE_EPUB_SUPPORT
-    auto epub = loadEpub(initialBookPath);
-    if (!epub) {
-      onGoBack();
-      return;
-    }
-    onGoToEpubReader(std::move(epub));
-#else
-    LOG_ERR("READER", "EPUB support disabled in this build");
-    exitActivity();
-    enterNewActivity(new FullScreenMessageActivity(renderer, mappedInput, "EPUB support\nnot available\nin this build",
-                                                   EpdFontFamily::BOLD, [this] { onGoBack(); }));
-#endif  // ENABLE_EPUB_SUPPORT
+    return;
   }
+
+  if (!core::FeatureModules::hasCapability(core::Capability::EpubSupport)) {
+    showUnsupported("EPUB support disabled in this build", "EPUB support\nnot available\nin this build");
+    return;
+  }
+
+#if ENABLE_EPUB_SUPPORT
+  auto epub = loadEpub(initialBookPath);
+  if (!epub) {
+    onGoBack();
+    return;
+  }
+  onGoToEpubReader(std::move(epub));
+#else
+  showUnsupported("EPUB support disabled in this build", "EPUB support\nnot available\nin this build");
+  return;
+#endif  // ENABLE_EPUB_SUPPORT
 }

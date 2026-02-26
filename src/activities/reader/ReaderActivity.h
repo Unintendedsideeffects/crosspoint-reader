@@ -36,9 +36,7 @@ class ReaderActivity final : public ActivityWithSubactivity {
 #if ENABLE_MARKDOWN
   static std::unique_ptr<Markdown> loadMarkdown(const std::string& path);
 #endif
-#if ENABLE_XTC_SUPPORT
   static bool isXtcFile(const std::string& path);
-#endif
   static bool isTxtFile(const std::string& path);
   static bool isMarkdownFile(const std::string& path);
 

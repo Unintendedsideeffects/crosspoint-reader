@@ -40,10 +40,14 @@ bool FeatureModules::hasCapability(const Capability capability) {
       return isEnabled("calibre_sync");
     case Capability::DarkMode:
       return isEnabled("dark_mode");
+    case Capability::EpubSupport:
+      return isEnabled("epub_support");
     case Capability::KoreaderSync:
       return isEnabled("koreader_sync");
     case Capability::LyraTheme:
       return isEnabled("lyra_theme");
+    case Capability::MarkdownSupport:
+      return isEnabled("markdown");
     case Capability::OtaUpdates:
       return isEnabled("ota_updates");
     case Capability::TodoPlanner:
@@ -56,6 +60,8 @@ bool FeatureModules::hasCapability(const Capability capability) {
       return isEnabled("web_pokedex_plugin");
     case Capability::WebWifiSetup:
       return isEnabled("web_wifi_setup");
+    case Capability::XtcSupport:
+      return isEnabled("xtc_support");
   }
   return false;
 }
