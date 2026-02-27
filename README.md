@@ -7,7 +7,8 @@ This is the **`fork-drift`** branch. It tracks upstream while adding fork-specif
 
 [![Build](https://github.com/Unintendedsideeffects/crosspoint-reader/actions/workflows/build.yml/badge.svg?branch=fork-drift)](https://github.com/Unintendedsideeffects/crosspoint-reader/actions/workflows/build.yml)
 
-![](./docs/images/cover.jpg)
+<img width="959" height="1008" alt="image" src="https://github.com/user-attachments/assets/b787388b-9dc6-43eb-9fcb-24b4d8fee604" />
+
 
 ## Build Configurator
 
