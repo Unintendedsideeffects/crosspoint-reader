@@ -512,7 +512,9 @@ void CrossPointWebServerActivity::renderFileTransferUI() const {
 
     startY += 6 * 29 + 3 * LINE_SPACING;
     // Show primary URL (hostname)
-    std::string hostnameUrl = std::string("http://") + HOSTNAME + ".local/";
+    char _hn[40];
+    NetworkNames::getDeviceHostname(_hn, sizeof(_hn));
+    std::string hostnameUrl = std::string("http://") + _hn + ".local/";
     renderer.drawCenteredText(UI_10_FONT_ID, startY + LINE_SPACING * 3, hostnameUrl.c_str(), true, EpdFontFamily::BOLD);
 
     // Show IP address as fallback
@@ -541,7 +543,9 @@ void CrossPointWebServerActivity::renderFileTransferUI() const {
     renderer.drawCenteredText(UI_10_FONT_ID, startY + LINE_SPACING * 2, webInfo.c_str(), true, EpdFontFamily::BOLD);
 
     // Also show hostname URL
-    std::string hostnameUrl = std::string(tr(STR_OR_HTTP_PREFIX)) + HOSTNAME + ".local/";
+    char _hn2[40];
+    NetworkNames::getDeviceHostname(_hn2, sizeof(_hn2));
+    std::string hostnameUrl = std::string(tr(STR_OR_HTTP_PREFIX)) + _hn2 + ".local/";
     renderer.drawCenteredText(SMALL_FONT_ID, startY + LINE_SPACING * 3, hostnameUrl.c_str());
 
     renderer.drawCenteredText(SMALL_FONT_ID, startY + LINE_SPACING * 4, tr(STR_OPEN_URL_HINT));
