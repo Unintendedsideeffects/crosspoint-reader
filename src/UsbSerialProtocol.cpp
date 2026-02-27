@@ -85,6 +85,7 @@ static void buildSettingsDoc(JsonDocument& doc) {
   doc["selectedOtaBundle"] = s.selectedOtaBundle;
   doc["installedOtaBundle"] = s.installedOtaBundle;
   doc["installedOtaFeatureFlags"] = s.installedOtaFeatureFlags;
+  doc["deviceName"] = s.deviceName;
 }
 
 // ── Command handlers ───────────────────────────────────────────────────────

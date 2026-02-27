@@ -408,6 +408,27 @@ void CrossPointSettings::validateAndClamp() {
   backgroundServerOnCharge = backgroundServerOnCharge ? 1 : 0;
   usbMscPromptOnConnect = usbMscPromptOnConnect ? 1 : 0;
 
+  // Sanitize deviceName: keep only [a-z0-9-], lowercase, max 24 usable chars.
+  {
+    char sanitized[25] = {};
+    size_t out = 0;
+    for (size_t i = 0; deviceName[i] != '\0' && out < 24; ++i) {
+      const char c = static_cast<char>(tolower(static_cast<unsigned char>(deviceName[i])));
+      if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+        sanitized[out++] = c;
+      }
+    }
+    // Strip leading/trailing hyphens
+    size_t start = 0;
+    while (start < out && sanitized[start] == '-') ++start;
+    while (out > start && sanitized[out - 1] == '-') --out;
+    memmove(sanitized, sanitized + start, out - start);
+    out -= start;
+    sanitized[out] = '\0';
+    strncpy(deviceName, sanitized, sizeof(deviceName) - 1);
+    deviceName[sizeof(deviceName) - 1] = '\0';
+  }
+
   enforceButtonLayoutConstraints();
 }
 

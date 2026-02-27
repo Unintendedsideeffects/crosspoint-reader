@@ -96,6 +96,7 @@ bool JsonSettingsIO::saveSettings(const CrossPointSettings& s, const char* path)
   doc["selectedOtaBundle"] = s.selectedOtaBundle;
   doc["installedOtaBundle"] = s.installedOtaBundle;
   doc["installedOtaFeatureFlags"] = s.installedOtaFeatureFlags;
+  doc["deviceName"] = s.deviceName;
 
   String json;
   serializeJson(doc, json);
@@ -216,6 +217,10 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   const char* installedOtaFeatureFlags = doc["installedOtaFeatureFlags"] | "";
   strncpy(s.installedOtaFeatureFlags, installedOtaFeatureFlags, sizeof(s.installedOtaFeatureFlags) - 1);
   s.installedOtaFeatureFlags[sizeof(s.installedOtaFeatureFlags) - 1] = '\0';
+
+  const char* deviceName = doc["deviceName"] | "";
+  strncpy(s.deviceName, deviceName, sizeof(s.deviceName) - 1);
+  s.deviceName[sizeof(s.deviceName) - 1] = '\0';
 
   LOG_DBG("CPS", "Settings loaded from file");
   return true;

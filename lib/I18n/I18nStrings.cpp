@@ -1089,6 +1089,7 @@ const char* const STRINGS_EN[] = {
     "OPDS Server URL",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_ES[] = {
@@ -1685,6 +1686,7 @@ const char* const STRINGS_ES[] = {
     "URL del servidor OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_FR[] = {
@@ -2507,6 +2509,7 @@ const char* const STRINGS_FR[] = {
     "URL du serveur OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_DE[] = {
@@ -3018,6 +3021,7 @@ const char* const STRINGS_DE[] = {
     "OPDS-Server-URL",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_CS[] = {
@@ -4651,6 +4655,7 @@ const char* const STRINGS_CS[] = {
     "URL serveru OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_PO[] = {
@@ -5311,6 +5316,7 @@ const char* const STRINGS_PO[] = {
     "URL do servidor OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_RU[] = {
@@ -13582,6 +13588,7 @@ const char* const STRINGS_RU[] = {
     "",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_SV[] = {
@@ -14439,6 +14446,7 @@ const char* const STRINGS_SV[] = {
     "OPDS-serveradress",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_RO[] = {
@@ -15458,6 +15466,7 @@ const char* const STRINGS_RO[] = {
     "URL server OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_CA[] = {
@@ -16093,6 +16102,7 @@ const char* const STRINGS_CA[] = {
     "URL del servidor OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_UK[] = {
@@ -25450,6 +25460,7 @@ const char* const STRINGS_UK[] = {
     " OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_BE[] = {
@@ -33813,6 +33824,7 @@ const char* const STRINGS_BE[] = {
     "",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_IT[] = {
@@ -34199,6 +34211,7 @@ const char* const STRINGS_IT[] = {
     "URL del Server OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_PL[] = {
@@ -35250,6 +35263,7 @@ const char* const STRINGS_PL[] = {
     "URL serwera OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_FI[] = {
@@ -36077,6 +36091,7 @@ const char* const STRINGS_FI[] = {
     "OPDS-palvelimen osoite",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 const char* const STRINGS_DA[] = {
@@ -36662,6 +36677,7 @@ const char* const STRINGS_DA[] = {
     "OPDS Server URL",
     "Dark Mode",
     "Background Server on Charge",
+    "Device Name",
 };
 
 }  // namespace i18n_strings

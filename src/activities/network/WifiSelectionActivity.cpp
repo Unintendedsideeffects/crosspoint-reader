@@ -15,6 +15,7 @@
 #include "components/UITheme.h"
 #include "core/features/FeatureModules.h"
 #include "fontIds.h"
+#include "util/NetworkNames.h"
 
 void WifiSelectionActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
@@ -266,11 +267,10 @@ void WifiSelectionActivity::attemptConnection() {
 
   WiFi.mode(WIFI_STA);
 
-  // Set hostname so routers show "CrossPoint-Reader-AABBCCDDEEFF" instead of "esp32-XXXXXXXXXXXX"
-  String mac = WiFi.macAddress();
-  mac.replace(":", "");
-  String hostname = "CrossPoint-Reader-" + mac;
-  WiFi.setHostname(hostname.c_str());
+  // Set DHCP hostname so the device is identifiable in the router's lease table.
+  char dhcpHostname[40];
+  NetworkNames::getDhcpHostname(dhcpHostname, sizeof(dhcpHostname));
+  WiFi.setHostname(dhcpHostname);
 
   if (selectedRequiresPassword && !enteredPassword.empty()) {
     WiFi.begin(selectedSSID.c_str(), enteredPassword.c_str());

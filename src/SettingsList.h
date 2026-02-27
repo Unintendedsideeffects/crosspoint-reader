@@ -125,6 +125,11 @@ inline std::vector<SettingInfo> getSettingsList() {
                                        StrId::STR_CAT_SYSTEM));
   }
 
+  // Device name for mDNS/DHCP/AP SSID — web-UI-editable via STR_CAT_SYSTEM.
+  // On-device the field is visible but not interactable (STRING type has no device handler).
+  list.push_back(SettingInfo::String(StrId::STR_DEVICE_NAME, SETTINGS.deviceName, sizeof(SETTINGS.deviceName),
+                                     "deviceName", StrId::STR_CAT_SYSTEM));
+
   if (core::FeatureModules::hasCapability(core::Capability::KoreaderSync)) {
     // --- KOReader Sync (web-only, persisted via FeatureModules) ---
     list.push_back(SettingInfo::DynamicString(

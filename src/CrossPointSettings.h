@@ -230,6 +230,9 @@ class CrossPointSettings {
   char selectedOtaBundle[32] = "";
   char installedOtaBundle[32] = "";
   char installedOtaFeatureFlags[192] = "";
+  // Network identity — used for mDNS hostname, DHCP hostname, and AP SSID.
+  // Only [a-z0-9-] chars; max 24 chars. Empty = fall back to last-4-MAC.
+  char deviceName[32] = "";
 
   ~CrossPointSettings() = default;
 

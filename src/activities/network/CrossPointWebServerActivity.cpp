@@ -16,13 +16,12 @@
 #include "WifiSelectionActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "util/NetworkNames.h"
 #include "util/TimeSync.h"
 
 namespace {
 // AP Mode configuration
-constexpr const char* AP_SSID = "CrossPoint-Reader";
 constexpr const char* AP_PASSWORD = nullptr;  // Open network for ease of use
-constexpr const char* HOSTNAME = "crosspoint";
 constexpr uint8_t AP_CHANNEL = 1;
 constexpr uint8_t AP_MAX_CONNECTIONS = 4;
 
@@ -149,8 +148,12 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
         "TimeSyncTask", 4096, nullptr, 1, nullptr);
 
     // Start mDNS for hostname resolution
-    if (MDNS.begin(HOSTNAME)) {
-      LOG_DBG("WEBACT", "mDNS started: http://%s.local/", HOSTNAME);
+    {
+      char hostname[40];
+      NetworkNames::getDeviceHostname(hostname, sizeof(hostname));
+      if (MDNS.begin(hostname)) {
+        LOG_DBG("WEBACT", "mDNS started: http://%s.local/", hostname);
+      }
     }
 
     // Start the web server
@@ -174,12 +177,14 @@ void CrossPointWebServerActivity::startAccessPoint() {
   delay(100);
 
   // Start soft AP
+  char apSsid[40];
+  NetworkNames::getApSsid(apSsid, sizeof(apSsid));
   bool apStarted;
   if (AP_PASSWORD && strlen(AP_PASSWORD) >= 8) {
-    apStarted = WiFi.softAP(AP_SSID, AP_PASSWORD, AP_CHANNEL, false, AP_MAX_CONNECTIONS);
+    apStarted = WiFi.softAP(apSsid, AP_PASSWORD, AP_CHANNEL, false, AP_MAX_CONNECTIONS);
   } else {
     // Open network (no password)
-    apStarted = WiFi.softAP(AP_SSID, nullptr, AP_CHANNEL, false, AP_MAX_CONNECTIONS);
+    apStarted = WiFi.softAP(apSsid, nullptr, AP_CHANNEL, false, AP_MAX_CONNECTIONS);
   }
 
   if (!apStarted) {
@@ -195,17 +200,21 @@ void CrossPointWebServerActivity::startAccessPoint() {
   char ipStr[16];
   snprintf(ipStr, sizeof(ipStr), "%d.%d.%d.%d", apIP[0], apIP[1], apIP[2], apIP[3]);
   connectedIP = ipStr;
-  connectedSSID = AP_SSID;
+  connectedSSID = apSsid;
 
   LOG_DBG("WEBACT", "Access Point started!");
-  LOG_DBG("WEBACT", "SSID: %s", AP_SSID);
+  LOG_DBG("WEBACT", "SSID: %s", apSsid);
   LOG_DBG("WEBACT", "IP: %s", connectedIP.c_str());
 
   // Start mDNS for hostname resolution
-  if (MDNS.begin(HOSTNAME)) {
-    LOG_DBG("WEBACT", "mDNS started: http://%s.local/", HOSTNAME);
-  } else {
-    LOG_DBG("WEBACT", "WARNING: mDNS failed to start");
+  {
+    char hostname[40];
+    NetworkNames::getDeviceHostname(hostname, sizeof(hostname));
+    if (MDNS.begin(hostname)) {
+      LOG_DBG("WEBACT", "mDNS started: http://%s.local/", hostname);
+    } else {
+      LOG_DBG("WEBACT", "WARNING: mDNS failed to start");
+    }
   }
 
   // Start DNS server for captive portal behavior

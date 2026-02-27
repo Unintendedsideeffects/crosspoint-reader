@@ -10,13 +10,14 @@
 
 #include <algorithm>
 
+#include "CrossPointSettings.h"
 #include "CrossPointWebServer.h"
 #include "FeatureFlags.h"
 #include "Logging.h"
+#include "util/NetworkNames.h"
 #include "util/TimeSync.h"
 
 namespace {
-constexpr const char* MDNS_HOSTNAME = "crosspoint";
 
 void ntpSyncTask(void* /*param*/) {
   TimeSync::syncTimeWithNtpLowMemory();
@@ -130,10 +131,8 @@ void BackgroundWebServer::startServer() {
     return;
   }
 
-  uint8_t mac[6] = {};
-  WiFi.macAddress(mac);
-  char hostname[32];
-  snprintf(hostname, sizeof(hostname), "%s-%02x%02x", MDNS_HOSTNAME, mac[4], mac[5]);
+  char hostname[40];
+  NetworkNames::getDeviceHostname(hostname, sizeof(hostname));
 
   if (MDNS.begin(hostname)) {
     mdnsStarted = true;
