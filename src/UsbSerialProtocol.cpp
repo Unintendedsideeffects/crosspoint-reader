@@ -16,25 +16,34 @@
 #include "WifiCredentialStore.h"
 #include "activities/todo/TodoPlannerStorage.h"
 #include "core/features/FeatureModules.h"
+#include "esp_ota_ops.h"
 #include "util/DateUtils.h"
 #include "util/PathUtils.h"
 
 namespace {
 
-// Sized to fit the largest incoming command: upload_chunk with a 512-char base64 payload
-// {"cmd":"upload_chunk","arg":{"data":"<512 chars>"}}  ≈ 555 bytes + null
-static char s_lineBuf[768];
+// Sized to fit the largest incoming command: ota_chunk with a 4096-char base64 payload
+// {"cmd":"ota_chunk","arg":{"data":"<4096 chars>"}}  ≈ 4130 bytes + null
+static char s_lineBuf[4200];
 static int s_lineLen = 0;
 
-// Upload state machine ────────────────────────────────────────────────────
+// File upload state machine ───────────────────────────────────────────────
 static FsFile s_uploadFile;
 static bool s_uploadInProgress = false;
 
-// Static buffers for base64 streaming (avoids heap allocation on ESP32-C3)
-// 576 raw bytes encodes to exactly 768 base64 chars; use for both download and cover.
+// OTA flash state machine ─────────────────────────────────────────────────
+static esp_ota_handle_t s_otaHandle = 0;
+static const esp_partition_t* s_otaPartition = nullptr;
+static bool s_otaInProgress = false;
+
+// Static buffers for base64 I/O (avoids heap allocation on ESP32-C3)
+// ─ Download/cover streaming: 576 raw → 768 base64 chars per iteration
 static uint8_t s_rawBuf[576];
-static uint8_t s_encBuf[780];     // 768 + padding
-static uint8_t s_decodeBuf[400];  // upload chunks ≤ 512 base64 chars → ≤ 384 decoded bytes
+static uint8_t s_encBuf[780];  // 768 base64 + padding
+// ─ File upload decode: upload_chunk ≤ 512 base64 chars → ≤ 384 decoded bytes
+static uint8_t s_decodeBuf[400];
+// ─ OTA decode: ota_chunk ≤ 4096 base64 chars → ≤ 3072 decoded bytes
+static uint8_t s_otaDecodeBuf[3200];
 
 // ── Response helpers ───────────────────────────────────────────────────────
 
@@ -579,6 +588,98 @@ static void handleWifiConnect(const char* ssid, const char* password) {
   sendOk();
 }
 
+// ── OTA flash over USB ─────────────────────────────────────────────────────
+//
+// Protocol (Android → device):
+//   {"cmd":"ota_begin","arg":{"size":<bytes>}}   — open next OTA partition
+//   {"cmd":"ota_chunk","arg":{"data":"<base64>"}} — write decoded bytes (≤3072/call)
+//   {"cmd":"ota_end"}                             — validate, set boot partition, reboot
+//   {"cmd":"ota_abort"}                           — cancel in-progress OTA
+//
+// After ota_end the device sends {"ok":true} then restarts ~200 ms later.
+
+static void handleOtaBegin(uint32_t /*sizeHint*/) {
+  // Clean up any previous partial OTA.
+  if (s_otaInProgress) {
+    esp_ota_abort(s_otaHandle);
+    s_otaHandle = 0;
+    s_otaInProgress = false;
+  }
+  s_otaPartition = esp_ota_get_next_update_partition(nullptr);
+  if (!s_otaPartition) {
+    sendError("no OTA partition available");
+    return;
+  }
+  // OTA_WITH_SEQUENTIAL_WRITES: erase sectors on demand — no upfront erase stall.
+  const esp_err_t err = esp_ota_begin(s_otaPartition, OTA_WITH_SEQUENTIAL_WRITES, &s_otaHandle);
+  if (err != ESP_OK) {
+    sendError(esp_err_to_name(err));
+    return;
+  }
+  s_otaInProgress = true;
+  sendOk();
+}
+
+static void handleOtaChunk(const char* b64data) {
+  if (!s_otaInProgress) {
+    sendError("no OTA in progress");
+    return;
+  }
+  const size_t b64len = strlen(b64data);
+  size_t decodedLen = 0;
+  const int rc =
+      mbedtls_base64_decode(s_otaDecodeBuf, sizeof(s_otaDecodeBuf), &decodedLen, (const uint8_t*)b64data, b64len);
+  if (rc != 0) {
+    esp_ota_abort(s_otaHandle);
+    s_otaHandle = 0;
+    s_otaInProgress = false;
+    sendError("base64 decode error");
+    return;
+  }
+  const esp_err_t err = esp_ota_write(s_otaHandle, s_otaDecodeBuf, decodedLen);
+  if (err != ESP_OK) {
+    esp_ota_abort(s_otaHandle);
+    s_otaHandle = 0;
+    s_otaInProgress = false;
+    sendError(esp_err_to_name(err));
+    return;
+  }
+  sendOk();
+}
+
+static void handleOtaEnd() {
+  if (!s_otaInProgress) {
+    sendError("no OTA in progress");
+    return;
+  }
+  esp_err_t err = esp_ota_end(s_otaHandle);
+  s_otaHandle = 0;
+  s_otaInProgress = false;
+  if (err != ESP_OK) {
+    sendError(esp_err_to_name(err));
+    return;
+  }
+  err = esp_ota_set_boot_partition(s_otaPartition);
+  if (err != ESP_OK) {
+    sendError(esp_err_to_name(err));
+    return;
+  }
+  // ACK before rebooting so Android receives the success response.
+  sendOk();
+  logSerial.flush();
+  delay(200);
+  esp_restart();
+}
+
+static void handleOtaAbort() {
+  if (s_otaInProgress) {
+    esp_ota_abort(s_otaHandle);
+    s_otaHandle = 0;
+    s_otaInProgress = false;
+  }
+  sendOk();  // idempotent: no-op if not in progress
+}
+
 // ── Command dispatcher ─────────────────────────────────────────────────────
 
 static void processCommand(const char* line) {
@@ -628,6 +729,14 @@ static void processCommand(const char* line) {
   } else if (strcmp(name, "todo_add") == 0) {
     const JsonObjectConst arg = cmd["arg"].as<JsonObjectConst>();
     handleTodoAdd(arg["text"] | "", arg["type"] | "todo");
+  } else if (strcmp(name, "ota_begin") == 0) {
+    handleOtaBegin(cmd["arg"]["size"] | (uint32_t)0);
+  } else if (strcmp(name, "ota_chunk") == 0) {
+    handleOtaChunk(cmd["arg"]["data"] | "");
+  } else if (strcmp(name, "ota_end") == 0) {
+    handleOtaEnd();
+  } else if (strcmp(name, "ota_abort") == 0) {
+    handleOtaAbort();
   } else {
     sendError("unknown command");
   }
@@ -662,6 +771,11 @@ void UsbSerialProtocol::reset() {
     SpiBusMutex::Guard guard;
     s_uploadFile.close();
     s_uploadInProgress = false;
+  }
+  if (s_otaInProgress) {
+    esp_ota_abort(s_otaHandle);
+    s_otaHandle = 0;
+    s_otaInProgress = false;
   }
 }
 
