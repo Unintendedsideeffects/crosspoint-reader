@@ -5,6 +5,7 @@
 #include <Logging.h>
 #include <WiFi.h>
 
+#include <algorithm>
 #include <map>
 
 #include "MappedInputManager.h"
@@ -463,6 +464,11 @@ void WifiSelectionActivity::loop() {
 
   // Handle network list state
   if (state == WifiSelectionState::NETWORK_LIST) {
+    const bool bleProvisioningEnabled = core::FeatureModules::hasCapability(core::Capability::BleWifiProvisioning);
+    const bool allVisibleNetworksHaveSavedPasswords =
+        !networks.empty() &&
+        std::all_of(networks.begin(), networks.end(), [](const WifiNetworkInfo& net) { return net.hasSavedPassword; });
+
     // Check for Back button to exit (cancel)
     if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
       onComplete(false);
@@ -480,7 +486,11 @@ void WifiSelectionActivity::loop() {
     }
 
     if (mappedInput.wasPressed(MappedInputManager::Button::Right)) {
-      startWifiScan();
+      if (bleProvisioningEnabled && allVisibleNetworksHaveSavedPasswords) {
+        startBleProvisioning();
+      } else {
+        startWifiScan();
+      }
       return;
     }
 
@@ -494,7 +504,7 @@ void WifiSelectionActivity::loop() {
         requestUpdate();
         return;
       }
-      if (core::FeatureModules::hasCapability(core::Capability::BleWifiProvisioning)) {
+      if (bleProvisioningEnabled) {
         startBleProvisioning();
         return;
       }
@@ -650,10 +660,20 @@ void WifiSelectionActivity::renderNetworkList() const {
   // Draw help text
   renderer.drawText(SMALL_FONT_ID, 20, pageHeight - 75, tr(STR_NETWORK_LEGEND));
 
+  const bool bleProvisioningEnabled = core::FeatureModules::hasCapability(core::Capability::BleWifiProvisioning);
   const bool hasSavedPassword = !networks.empty() && networks[selectedNetworkIndex].hasSavedPassword;
-  const char* forgetLabel = hasSavedPassword ? tr(STR_FORGET_BUTTON) : "";
+  const bool allVisibleNetworksHaveSavedPasswords =
+      !networks.empty() &&
+      std::all_of(networks.begin(), networks.end(), [](const WifiNetworkInfo& net) { return net.hasSavedPassword; });
+  const char* leftLabel = "";
+  if (hasSavedPassword) {
+    leftLabel = tr(STR_FORGET_BUTTON);
+  } else if (bleProvisioningEnabled) {
+    leftLabel = "BLE";
+  }
+  const char* rightLabel = (bleProvisioningEnabled && allVisibleNetworksHaveSavedPasswords) ? "BLE" : tr(STR_RETRY);
 
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_CONNECT), forgetLabel, tr(STR_RETRY));
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_CONNECT), leftLabel, rightLabel);
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 

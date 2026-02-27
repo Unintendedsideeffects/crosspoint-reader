@@ -458,6 +458,7 @@ PROFILES = {
             'web_wifi_setup': True,
             'home_media_picker': True,
             'dark_mode': True,
+            'ble_wifi_provisioning': True,
             'user_fonts': True,
             'usb_mass_storage': True,
         },
