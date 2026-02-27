@@ -55,6 +55,7 @@ jobs:
               "03_settings_mock": "Settings",
               "04_factory_reset_mock": "Factory Reset",
               "05_reader_mock": "Reader",
+              "06_feature_store_mock": "Feature Store",
           }
 
           files = []

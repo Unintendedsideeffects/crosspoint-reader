@@ -234,50 +234,84 @@ void OtaUpdateActivity::render() {
   }
 
   if (state == SELECTING_FEATURE_STORE_BUNDLE) {
-    renderer.drawCenteredText(UI_10_FONT_ID, 60, "Feature Store", true, EpdFontFamily::BOLD);
-
     const auto& entries = updater.getFeatureStoreEntries();
-    int yPos = 100;
-    const int lineHeight = 22;
-    const int maxVisible = 8;
-    const size_t startIdx = selectedBundleIndex >= maxVisible ? selectedBundleIndex - maxVisible + 1 : 0;
+    const auto& entry = entries[selectedBundleIndex];
+    const bool isInstalled = (String(SETTINGS.installedOtaBundle) == entry.id);
 
-    for (size_t i = startIdx; i < entries.size() && i < startIdx + maxVisible; i++) {
-      const auto& entry = entries[i];
-      const bool selected = (i == selectedBundleIndex);
-      const char* marker = selected ? "> " : "  ";
+    // Section header + navigation counter
+    renderer.drawText(UI_10_FONT_ID, 15, 55, "Feature Store", true, EpdFontFamily::BOLD);
+    const String counter = String((int)(selectedBundleIndex + 1)) + " / " + String((int)entries.size());
+    const int counterW = renderer.getTextWidth(UI_10_FONT_ID, counter.c_str());
+    renderer.drawText(UI_10_FONT_ID, pageWidth - counterW - 15, 55, counter.c_str());
 
-      String line = String(marker) + entry.displayName;
-      if (!entry.compatible) {
-        line += " [!]";
-      }
-      renderer.drawText(UI_10_FONT_ID, 10, yPos, line.c_str(), selected, EpdFontFamily::BOLD);
-      yPos += lineHeight;
+    // Card border
+    const int cardX = 15;
+    const int cardY = 78;
+    const int cardW = pageWidth - 30;
+    const int cardH = 510;
+    renderer.drawRoundedRect(cardX, cardY, cardW, cardH, 2, 8, true);
 
-      if (selected) {
-        // Show details for selected bundle
-        String details = "  ID: " + entry.id + "  v" + entry.version;
-        renderer.drawText(UI_10_FONT_ID, 10, yPos, details.c_str());
-        yPos += lineHeight;
+    int y = cardY + 24;
+    const int textX = cardX + 14;
+    const int innerW = cardW - 28;
 
-        if (entry.binarySize > 0) {
-          String sizeStr = "  Size: " + String(entry.binarySize / 1024) + " KB";
-          renderer.drawText(UI_10_FONT_ID, 10, yPos, sizeStr.c_str());
-          yPos += lineHeight;
+    // Bundle name
+    const auto nameStr = renderer.truncatedText(UI_12_FONT_ID, entry.displayName.c_str(), innerW, EpdFontFamily::BOLD);
+    renderer.drawText(UI_12_FONT_ID, textX, y, nameStr.c_str(), true, EpdFontFamily::BOLD);
+    y += 32;
+
+    // Installed badge
+    if (isInstalled) {
+      renderer.drawText(UI_10_FONT_ID, textX, y, "* Installed *");
+      y += 22;
+    }
+
+    // Compatibility warning (shown early so user sees it before selecting)
+    if (!entry.compatible) {
+      const auto warnStr =
+          renderer.truncatedText(UI_10_FONT_ID, ("! " + entry.compatibilityError).c_str(), innerW, EpdFontFamily::BOLD);
+      renderer.drawText(UI_10_FONT_ID, textX, y, warnStr.c_str(), true, EpdFontFamily::BOLD);
+      y += 22;
+    }
+
+    // Version: add "v" prefix only for numeric-style versions (semver, date, commit count)
+    const String& ver = entry.version;
+    const String versionLabel = (!ver.isEmpty() && ver[0] >= '0' && ver[0] <= '9') ? "v" + ver : ver;
+    renderer.drawText(UI_10_FONT_ID, textX, y, versionLabel.c_str());
+    y += 26;
+
+    // Divider
+    renderer.drawLine(cardX + 10, y, cardX + cardW - 10, y);
+    y += 15;
+
+    // Feature flags: split on comma, strip "FEATURE_" prefix, replace '_' with ' '
+    {
+      String remaining = entry.featureFlags;
+      int featureCount = 0;
+      while (remaining.length() > 0 && featureCount < 12) {
+        const int commaIdx = remaining.indexOf(',');
+        String flag = (commaIdx >= 0) ? remaining.substring(0, commaIdx) : remaining;
+        if (flag.startsWith("FEATURE_")) {
+          flag = flag.substring(8);
         }
-
-        String features = "  Features: " + entry.featureFlags;
-        renderer.drawText(UI_10_FONT_ID, 10, yPos, features.c_str());
-        yPos += lineHeight;
-
-        if (!entry.compatible) {
-          renderer.drawText(UI_10_FONT_ID, 10, yPos, ("  Warning: " + entry.compatibilityError).c_str());
-          yPos += lineHeight;
+        flag.replace('_', ' ');
+        if (flag.length() > 0) {
+          renderer.drawText(UI_10_FONT_ID, textX + 6, y, ("• " + flag).c_str());
+          y += 20;
+          ++featureCount;
         }
+        if (commaIdx < 0) break;
+        remaining = remaining.substring(commaIdx + 1);
       }
     }
 
-    const auto labels = mappedInput.mapLabels("Back", "Select", "Up", "Down");
+    // Binary size (when known)
+    if (entry.binarySize > 0) {
+      y += 8;
+      renderer.drawText(UI_10_FONT_ID, textX, y, ("Size: " + String(entry.binarySize / 1024) + " KB").c_str());
+    }
+
+    const auto labels = mappedInput.mapLabels("Back", "Select", "Prev", "Next");
     renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;

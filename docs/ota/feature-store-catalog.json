@@ -21,6 +21,36 @@
       "downloadUrl": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/download/nightly/crosspoint-reader-nightly.bin",
       "checksum": "",
       "binarySize": 0
+    },
+    {
+      "id": "latest-standard",
+      "displayName": "Latest Standard (on push)",
+      "version": "dev",
+      "board": "esp32c3",
+      "featureFlags": "FEATURE_EPUB,FEATURE_FONTS,FEATURE_OTA,FEATURE_DARK_MODE,FEATURE_BLE_SETUP,FEATURE_WEB_SETUP,FEATURE_USB_STORAGE",
+      "downloadUrl": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/download/latest/crosspoint-standard.bin",
+      "checksum": "",
+      "binarySize": 0
+    },
+    {
+      "id": "latest-lean",
+      "displayName": "Latest Lean (on push)",
+      "version": "dev",
+      "board": "esp32c3",
+      "featureFlags": "FEATURE_EPUB",
+      "downloadUrl": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/download/latest/crosspoint-lean.bin",
+      "checksum": "",
+      "binarySize": 0
+    },
+    {
+      "id": "latest-full",
+      "displayName": "Latest Full (on push)",
+      "version": "dev",
+      "board": "esp32c3",
+      "featureFlags": "FEATURE_EPUB,FEATURE_FONTS,FEATURE_MARKDOWN,FEATURE_OTA,FEATURE_DARK_MODE,FEATURE_BLE_SETUP,FEATURE_WEB_SETUP,FEATURE_USB_STORAGE,FEATURE_KOREADER_SYNC,FEATURE_CALIBRE_SYNC,FEATURE_TODO_PLANNER",
+      "downloadUrl": "https://github.com/Unintendedsideeffects/crosspoint-reader/releases/download/latest/crosspoint-full.bin",
+      "checksum": "",
+      "binarySize": 0
     }
   ]
 }

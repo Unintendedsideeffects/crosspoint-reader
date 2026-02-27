@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-26T22:49:59.361399+00:00",
+  "generated_at": "2026-02-27T09:33:26.447246+00:00",
   "files": [
     {
       "name": "01_boot.png",
@@ -20,6 +20,10 @@
     {
       "name": "05_reader_mock.png",
       "label": "Reader"
+    },
+    {
+      "name": "06_feature_store_mock.png",
+      "label": "Feature Store"
     }
   ]
 }

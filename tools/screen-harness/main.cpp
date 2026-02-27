@@ -145,6 +145,53 @@ void drawReaderMock(GfxRenderer& renderer) {
   renderer.displayBuffer(HalDisplay::FAST_REFRESH);
 }
 
+void drawFeatureStoreMock(GfxRenderer& renderer) {
+  renderer.clearScreen();
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, "Update", true, EpdFontFamily::BOLD);
+
+  // Section header + navigation counter (mirrors OtaUpdateActivity SELECTING_FEATURE_STORE_BUNDLE)
+  renderer.drawText(UI_10_FONT_ID, 15, 55, "Feature Store", true, EpdFontFamily::BOLD);
+  const char* counter = "3 / 5";
+  const int counterW = renderer.getTextWidth(UI_10_FONT_ID, counter);
+  renderer.drawText(UI_10_FONT_ID, renderer.getScreenWidth() - counterW - 15, 55, counter);
+
+  // Card border
+  const int cardX = 15;
+  const int cardY = 78;
+  const int cardW = renderer.getScreenWidth() - 30;
+  const int cardH = 510;
+  renderer.drawRoundedRect(cardX, cardY, cardW, cardH, 2, 8, true);
+
+  int y = cardY + 24;
+  const int textX = cardX + 14;
+
+  // Bundle name
+  renderer.drawText(UI_12_FONT_ID, textX, y, "Latest Standard (on push)", true, EpdFontFamily::BOLD);
+  y += 32;
+
+  // Installed badge
+  renderer.drawText(UI_10_FONT_ID, textX, y, "* Installed *");
+  y += 22;
+
+  // Version (no "v" prefix — "dev" is a channel label, not a numeric version)
+  renderer.drawText(UI_10_FONT_ID, textX, y, "dev");
+  y += 26;
+
+  // Divider
+  renderer.drawLine(cardX + 10, y, cardX + cardW - 10, y);
+  y += 15;
+
+  // Feature bullets (FEATURE_ prefix stripped, underscores → spaces)
+  const char* features[] = {"• EPUB", "• FONTS", "• OTA", "• DARK MODE", "• BLE SETUP", "• WEB SETUP", "• USB STORAGE"};
+  for (const auto* f : features) {
+    renderer.drawText(UI_10_FONT_ID, textX + 6, y, f);
+    y += 20;
+  }
+
+  renderer.drawButtonHints(UI_10_FONT_ID, "Back", "Select", "Prev", "Next");
+  renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+}
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -173,6 +220,7 @@ int main(int argc, char* argv[]) {
       {"03_settings_mock", [&] { drawSettingsMock(renderer); }},
       {"04_factory_reset_mock", [&] { drawFactoryResetMock(renderer); }},
       {"05_reader_mock", [&] { drawReaderMock(renderer); }},
+      {"06_feature_store_mock", [&] { drawFeatureStoreMock(renderer); }},
   };
 
   for (const auto& [name, render] : scenarios) {
