@@ -215,6 +215,11 @@ void TodoActivity::processTaskLine(std::string& line) {
     item.checked = true;
     item.isHeader = false;
     item.text = line.substr(6);
+  } else if (line.rfind("> ", 0) == 0) {
+    // Markdown blockquote — agenda entry written when markdown is enabled.
+    item.checked = false;
+    item.isHeader = true;
+    item.text = line.substr(2);
   } else {
     item.checked = false;
     item.isHeader = true;
@@ -245,9 +250,14 @@ void TodoActivity::saveTasks() {
     return;
   }
 
+  const bool markdownFile = filePath.size() >= 3 && filePath.compare(filePath.size() - 3, 3, ".md") == 0;
   bool writeFailed = false;
   for (const auto& item : items) {
     if (item.isHeader) {
+      if (markdownFile && file.print("> ") == 0) {
+        writeFailed = true;
+        break;
+      }
       if (file.println(item.text.c_str()) == 0) {
         writeFailed = true;
         break;

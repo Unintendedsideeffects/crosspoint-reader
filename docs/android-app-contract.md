@@ -11,7 +11,7 @@ the two codebases. Keep it up to date when either side changes.
 | Transport | Android class | Status |
 |-----------|--------------|--------|
 | Wi-Fi HTTP/WS | `WifiTransport` | Implemented both sides |
-| USB serial JSON-RPC | `UsbTransport` | **Android done — firmware not yet on fork-drift** |
+| USB serial JSON-RPC | `UsbTransport` | Implemented both sides |
 | USB mass storage | `UsbMassStorageTransport` | Implemented both sides (libaums) |
 | BLE provisioning | `BleTransport` | Implemented both sides |
 
@@ -329,7 +329,85 @@ returns both camelCase and snake_case fields for compatibility.
 
 ---
 
-## 16. BLE WiFi provisioning
+## 16. POST /api/todo/entry, GET /api/todo/today, POST /api/todo/today
+
+All three endpoints are gated on the `todo_planner` feature flag / `TodoPlanner` capability.
+
+### Storage format
+
+Entries are appended to `/daily/YYYY-MM-DD.md` (or `.txt` if markdown is disabled):
+
+| Entry type | Markdown enabled | Plain text (`.txt`) |
+|------------|-----------------|---------------------|
+| Todo (unchecked) | `- [ ] text` | `- [ ] text` |
+| Todo (checked) | `- [x] text` | `- [x] text` |
+| Agenda entry | `> text` | `text` (plain line) |
+
+When markdown is enabled the `.md` file extension is used and agenda entries are stored as
+blockquotes (`> text`), which renders as a visually distinct non-checkbox line in markdown viewers
+and on the e-ink display. Without markdown support, agenda entries are stored as plain lines.
+
+Calendar events sent from the Android app use the format `[MM-dd HH:mm] Title`
+(all-day events omit the time: `[MM-dd] Title`).
+
+---
+
+**POST /api/todo/entry** — Append a single entry to today's daily file.
+
+Android sends (form-encoded):
+```
+text=<entry text>&type=<"todo"|"agenda">
+```
+
+- Max text length: 300 characters (enforced firmware-side).
+- `type=agenda` stores the text as a plain line; `type=todo` stores it as `- [ ] text`.
+
+Response: `{"ok":true}` or HTTP 400/404/503 on error.
+
+---
+
+**GET /api/todo/today** — Fetch today's parsed todo list.
+
+Response:
+```json
+{
+  "ok":   true,
+  "date": "2024-01-15",
+  "path": "/daily/2024-01-15.md",
+  "items": [
+    { "text": "Buy milk",        "type": "todo",   "checked": false, "isHeader": false },
+    { "text": "[10:00] Standup", "type": "agenda", "checked": false, "isHeader": true  },
+    { "text": "plain heading",   "type": "text",   "checked": false, "isHeader": true  }
+  ]
+}
+```
+
+`type` values:
+- `"todo"` — checkbox item (`- [ ]` / `- [x]`)
+- `"agenda"` — blockquote line (`> text`, written when markdown is enabled)
+- `"text"` — plain line (free text, written when markdown is disabled or manually entered)
+
+`isHeader` is `true` for both `"agenda"` and `"text"` items (backward compatibility).
+
+---
+
+**POST /api/todo/today** — Save the full reordered/edited list for today.
+
+Android sends (JSON body):
+```json
+{"items": [{"text": "Buy milk", "isHeader": false, "checked": false}, ...]}
+```
+
+Both `isHeader` and `is_header` are accepted. Response: `{"ok":true}`.
+
+---
+
+**Current status:** ✅ All three HTTP endpoints implemented.
+USB serial `todo_add` command also implemented (see §19).
+
+---
+
+## 18. BLE WiFi provisioning
 
 **Service UUID:** `41cb0001-b8f4-4e4a-9f49-ecb9d6fd4b90`
 **Characteristic UUID:** `41cb0002-b8f4-4e4a-9f49-ecb9d6fd4b90`
@@ -341,9 +419,14 @@ returns both camelCase and snake_case fields for compatibility.
 
 **Current status:** ✅ Firmware `BleWifiProvisioner` implements this service.
 
+**Note on legacy UUIDs:** The Android app also recognises an older UUID pair
+(`CCF00001-A1A2-B3B4-C5C6-D7D8E9F0A1B2` / `CCF00002-...`) for backward compatibility with
+pre-release firmware builds. The fork-drift firmware only advertises the `41cb…` UUIDs — no
+firmware change needed.
+
 ---
 
-## 17. USB serial JSON-RPC
+## 19. USB serial JSON-RPC
 
 **Android:** `UsbTransport` at 115200 baud, 8N1. Each message is a single JSON
 object terminated by `\n`. The firmware must reply with a single JSON object
@@ -373,6 +456,7 @@ terminated by `\n`.
 | `recent` | — | `{"ok":true,"books":[{"path":"...","title":"...","author":"...","last_position":"...","last_opened":0}]}` |
 | `cover` | `"/path/file.epub"` | `{"ok":true,"data":"<base64>"}` or `{"ok":false}` |
 | `wifi_connect` | `{"ssid":"...","password":"..."}` | `{"ok":true}` |
+| `todo_add` | `{"text":"...","type":"todo"\|"agenda"}` | `{"ok":true}` |
 
 **Error response** (for any command): `{"ok":false,"error":"<message>"}\n`
 

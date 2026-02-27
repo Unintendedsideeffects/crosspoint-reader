@@ -14,7 +14,9 @@
 #include "RecentBooksStore.h"
 #include "SpiBusMutex.h"
 #include "WifiCredentialStore.h"
+#include "activities/todo/TodoPlannerStorage.h"
 #include "core/features/FeatureModules.h"
+#include "util/DateUtils.h"
 #include "util/PathUtils.h"
 
 namespace {
@@ -507,6 +509,65 @@ static void handleCover(const char* path) {
   logSerial.print(F("\"}\n"));
 }
 
+// Append a todo or agenda entry to today's daily file.
+// Mirrors the logic in CrossPointWebServer::handleTodoEntry().
+static void handleTodoAdd(const char* text, const char* type) {
+  if (!core::FeatureModules::hasCapability(core::Capability::TodoPlanner)) {
+    sendError("todo_planner disabled");
+    return;
+  }
+
+  // Normalize: collapse newlines to spaces, trim whitespace
+  std::string normalized(text ? text : "");
+  for (char& c : normalized) {
+    if (c == '\r' || c == '\n') c = ' ';
+  }
+  const size_t s = normalized.find_first_not_of(" \t");
+  const size_t e = normalized.find_last_not_of(" \t");
+  if (s == std::string::npos) {
+    sendError("empty text");
+    return;
+  }
+  normalized = normalized.substr(s, e - s + 1);
+  if (normalized.size() > 300) normalized.resize(300);
+
+  const bool agendaEntry = type && strcmp(type, "agenda") == 0;
+  const std::string today = DateUtils::currentDate();
+  if (today.empty()) {
+    sendError("date unavailable");
+    return;
+  }
+
+  const std::string markdownPath = "/daily/" + today + ".md";
+  const std::string textPath = "/daily/" + today + ".txt";
+  const std::string dirPath = "/daily";
+  std::string content;
+  std::string targetPath;
+  bool writeOk = false;
+  {
+    SpiBusMutex::Guard guard;
+    const bool mdExists = Storage.exists(markdownPath.c_str());
+    const bool txtExists = Storage.exists(textPath.c_str());
+    targetPath = TodoPlannerStorage::dailyPath(
+        today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport), mdExists, txtExists);
+    if (!Storage.exists(dirPath.c_str())) Storage.mkdir(dirPath.c_str());
+    if (Storage.exists(targetPath.c_str())) {
+      content = Storage.readFile(targetPath.c_str()).c_str();
+      if (!content.empty() && content.back() != '\n') content.push_back('\n');
+    }
+    content += TodoPlannerStorage::formatEntry(normalized, agendaEntry,
+                                               core::FeatureModules::hasCapability(core::Capability::MarkdownSupport));
+    content.push_back('\n');
+    writeOk = Storage.writeFile(targetPath.c_str(), content.c_str());
+  }
+
+  if (!writeOk) {
+    sendError("write failed");
+    return;
+  }
+  sendOk();
+}
+
 // Saves credentials so they're picked up on next WiFi connection attempt.
 static void handleWifiConnect(const char* ssid, const char* password) {
   if (!ssid || ssid[0] == '\0') {
@@ -564,6 +625,9 @@ static void processCommand(const char* line) {
   } else if (strcmp(name, "wifi_connect") == 0) {
     const JsonObjectConst arg = cmd["arg"].as<JsonObjectConst>();
     handleWifiConnect(arg["ssid"] | "", arg["password"] | "");
+  } else if (strcmp(name, "todo_add") == 0) {
+    const JsonObjectConst arg = cmd["arg"].as<JsonObjectConst>();
+    handleTodoAdd(arg["text"] | "", arg["type"] | "todo");
   } else {
     sendError("unknown command");
   }

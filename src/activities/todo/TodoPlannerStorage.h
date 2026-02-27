@@ -17,9 +17,11 @@ inline std::string dailyPath(const std::string& date, const bool markdownEnabled
   return "/daily/" + date + (markdownEnabled ? ".md" : ".txt");
 }
 
-// Agenda entries are stored as plain text; TODO entries use markdown checkbox format.
-inline std::string formatEntry(const std::string& text, const bool agendaEntry) {
-  return agendaEntry ? text : "- [ ] " + text;
+// Agenda entries: blockquote ("> text") when markdown is enabled, plain text otherwise.
+// TODO entries always use markdown checkbox format ("- [ ] text").
+inline std::string formatEntry(const std::string& text, const bool agendaEntry, const bool markdownEnabled = false) {
+  if (agendaEntry) return markdownEnabled ? "> " + text : text;
+  return "- [ ] " + text;
 }
 
 }  // namespace TodoPlannerStorage

@@ -96,14 +96,23 @@ void appendTodoItemFromLine(JsonArray& array, std::string line) {
   JsonObject item = array.add<JsonObject>();
   if (line.rfind("- [ ] ", 0) == 0) {
     item["text"] = line.substr(6);
+    item["type"] = "todo";
     item["checked"] = false;
     item["isHeader"] = false;
   } else if (line.rfind("- [x] ", 0) == 0 || line.rfind("- [X] ", 0) == 0) {
     item["text"] = line.substr(6);
+    item["type"] = "todo";
     item["checked"] = true;
     item["isHeader"] = false;
+  } else if (line.rfind("> ", 0) == 0) {
+    // Markdown blockquote — agenda entry written when markdown is enabled.
+    item["text"] = line.substr(2);
+    item["type"] = "agenda";
+    item["checked"] = false;
+    item["isHeader"] = true;
   } else {
     item["text"] = line;
+    item["type"] = "text";
     item["checked"] = false;
     item["isHeader"] = true;
   }
@@ -481,7 +490,8 @@ void CrossPointWebServer::handleTodoEntry() {
         content.push_back('\n');
       }
     }
-    content += TodoPlannerStorage::formatEntry(text.c_str(), agendaEntry);
+    content += TodoPlannerStorage::formatEntry(text.c_str(), agendaEntry,
+                                               core::FeatureModules::hasCapability(core::Capability::MarkdownSupport));
     content.push_back('\n');
     writeOk = Storage.writeFile(targetPath.c_str(), content.c_str());
   }
@@ -594,7 +604,11 @@ void CrossPointWebServer::handleTodoTodaySave() const {
 
     const bool isHeader = item["isHeader"].is<bool>() ? item["isHeader"].as<bool>() : item["is_header"].as<bool>();
     const bool checked = item["checked"].as<bool>();
+    const char* itemType = item["type"] | "";
+    const bool isAgenda = isHeader && strcmp(itemType, "agenda") == 0;
+    const bool markdownEnabled = core::FeatureModules::hasCapability(core::Capability::MarkdownSupport);
     if (isHeader) {
+      if (isAgenda && markdownEnabled) content += "> ";
       content += text;
     } else {
       content += "- [";
