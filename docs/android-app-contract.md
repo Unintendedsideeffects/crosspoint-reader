@@ -44,7 +44,12 @@ discovered device list.
 **Firmware must:** call `MDNS.begin(<hostname>)` after WiFi connects so the device
 responds to `crosspoint.local` on the LAN.
 
-**Current status:** ❌ **Not implemented.** No `MDNS.begin()` call found on fork-drift.
+**Current status:** ✅ Implemented. `MDNS.begin(hostname)` is called after WiFi connects in all
+three network entry points (BackgroundWebServer, CrossPointWebServerActivity, CalibreConnectActivity).
+
+**Note:** The advertised hostname is dynamic — `crosspoint-{deviceName}` when a device name is
+configured, or `crosspoint-{last4mac}` otherwise. Android discovery should use the hostname
+returned by UDP discovery (§1) rather than assuming a fixed `crosspoint.local`.
 
 ---
 
@@ -370,8 +375,8 @@ terminated by `\n`.
   giving up on a response.
 - The `list` response must use `"dir"` not `"isDirectory"` (matches the HTTP contract).
 
-**Current status:** ❌ **Not implemented on fork-drift.** The pr-7-usb branch has
-a partial implementation. Needs to be merged or re-implemented.
+**Current status:** ✅ Implemented on fork-drift. Full protocol implemented in
+`src/UsbSerialProtocol.cpp` covering all commands in the table above.
 
 ---
 
@@ -379,9 +384,11 @@ a partial implementation. Needs to be merged or re-implemented.
 
 | # | Gap | Impact |
 |---|-----|--------|
-| 1 | USB serial JSON-RPC not implemented on fork-drift | **High** — USB serial transport non-functional; see protocol spec in §17 |
-| 2 | mDNS `crosspoint.local` not advertised | **Medium** — auto-discovery probe won't find the device; add `MDNS.begin(hostname)` after WiFi connects |
-| 3 | `/api/recent` missing `last_position` and `last_opened` | **Low** — book list displays but shows no reading position or date |
+| 1 | `/api/recent` missing `last_position` and `last_opened` | **Low** — book list displays but shows no reading position or date |
+
+Items resolved on the firmware side (fork-drift):
+- USB serial JSON-RPC — **implemented** in `src/UsbSerialProtocol.cpp`
+- mDNS hostname — **implemented**; hostname is `crosspoint-{name}` or `crosspoint-{last4mac}`
 
 Items previously listed as gaps that are now resolved on the Android side:
 - `/api/files` format (bare array, `isDirectory` field, path construction) — **fixed in Android**

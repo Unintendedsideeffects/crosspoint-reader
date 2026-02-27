@@ -6,18 +6,33 @@
 #include <HalStorage.h>
 #include <Logging.h>  // for logSerial (the real HWCDC)
 #include <ObfuscationUtils.h>
+#include <mbedtls/base64.h>
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "JsonSettingsIO.h"
 #include "RecentBooksStore.h"
 #include "SpiBusMutex.h"
+#include "WifiCredentialStore.h"
+#include "core/features/FeatureModules.h"
 #include "util/PathUtils.h"
 
 namespace {
 
-static char s_lineBuf[512];
+// Sized to fit the largest incoming command: upload_chunk with a 512-char base64 payload
+// {"cmd":"upload_chunk","arg":{"data":"<512 chars>"}}  ≈ 555 bytes + null
+static char s_lineBuf[768];
 static int s_lineLen = 0;
+
+// Upload state machine ────────────────────────────────────────────────────
+static FsFile s_uploadFile;
+static bool s_uploadInProgress = false;
+
+// Static buffers for base64 streaming (avoids heap allocation on ESP32-C3)
+// 576 raw bytes encodes to exactly 768 base64 chars; use for both download and cover.
+static uint8_t s_rawBuf[576];
+static uint8_t s_encBuf[780];     // 768 + padding
+static uint8_t s_decodeBuf[400];  // upload chunks ≤ 512 base64 chars → ≤ 384 decoded bytes
 
 // ── Response helpers ───────────────────────────────────────────────────────
 
@@ -88,6 +103,27 @@ static void buildSettingsDoc(JsonDocument& doc) {
   doc["deviceName"] = s.deviceName;
 }
 
+// ── Base64 streaming helper ────────────────────────────────────────────────
+// Opens a file and streams it base64-encoded directly to logSerial.
+// Caller must have written the JSON prefix (e.g. {"ok":true,"data":"} before calling,
+// and must write the closing +"}\n" after.
+
+static bool streamFileBase64(FsFile& file) {
+  while (true) {
+    size_t bytesRead = 0;
+    {
+      SpiBusMutex::Guard guard;
+      bytesRead = file.read(s_rawBuf, sizeof(s_rawBuf));
+    }
+    if (bytesRead == 0) break;
+
+    size_t encLen = 0;
+    mbedtls_base64_encode(s_encBuf, sizeof(s_encBuf), &encLen, s_rawBuf, bytesRead);
+    logSerial.write(s_encBuf, encLen);
+  }
+  return true;
+}
+
 // ── Command handlers ───────────────────────────────────────────────────────
 
 static void handleStatus() {
@@ -101,6 +137,7 @@ static void handleStatus() {
   logSerial.write('\n');
 }
 
+// Android expects: {"ok":true,"files":[{"name":"...","path":"...","dir":false,"size":...,"modified":0}]}
 static void handleList(const char* path) {
   if (!PathUtils::isValidSdPath(String(path))) {
     sendError("invalid path");
@@ -113,18 +150,14 @@ static void handleList(const char* path) {
     root = Storage.open(path);
   }
 
-  if (!root) {
-    sendError("cannot open directory");
-    return;
-  }
-
   bool isDir = false;
-  {
+  if (root) {
     SpiBusMutex::Guard guard;
     isDir = root.isDirectory();
   }
-  if (!isDir) {
-    {
+
+  if (!root || !isDir) {
+    if (root) {
       SpiBusMutex::Guard guard;
       root.close();
     }
@@ -134,6 +167,10 @@ static void handleList(const char* path) {
 
   logSerial.print(F("{\"ok\":true,\"files\":["));
   bool first = true;
+
+  // Normalize path for constructing full entry paths
+  String base(path);
+  if (!base.endsWith("/")) base += '/';
 
   while (true) {
     char name[256] = {0};
@@ -158,10 +195,13 @@ static void handleList(const char* path) {
     if (!first) logSerial.write(',');
     first = false;
 
+    String entryPath = base + name;
     JsonDocument entry;
     entry["name"] = name;
+    entry["path"] = entryPath.c_str();
+    entry["dir"] = entryIsDir;
     entry["size"] = entrySize;
-    entry["isDirectory"] = entryIsDir;
+    entry["modified"] = (uint32_t)0;
     serializeJson(entry, logSerial);
   }
 
@@ -172,7 +212,8 @@ static void handleList(const char* path) {
   logSerial.print(F("]}\n"));
 }
 
-static void handleRead(const char* path, uint32_t offset, uint32_t length) {
+// Android expects: {"ok":true,"data":"<base64-encoded file>"}
+static void handleDownload(const char* path) {
   if (!PathUtils::isValidSdPath(String(path))) {
     sendError("invalid path");
     return;
@@ -180,15 +221,11 @@ static void handleRead(const char* path, uint32_t offset, uint32_t length) {
 
   FsFile file;
   bool opened = false;
-  uint32_t fileSize = 0;
   bool isDir = false;
   {
     SpiBusMutex::Guard guard;
     opened = Storage.openFileForRead("USB", path, file);
-    if (opened) {
-      isDir = file.isDirectory();
-      fileSize = isDir ? 0 : (uint32_t)file.size();
-    }
+    if (opened) isDir = file.isDirectory();
   }
 
   if (!opened || isDir) {
@@ -200,49 +237,36 @@ static void handleRead(const char* path, uint32_t offset, uint32_t length) {
     return;
   }
 
-  if (offset > fileSize) offset = fileSize;
-  const uint32_t available = fileSize - offset;
-  if (length == 0 || length > available) length = available;
-
-  {
-    SpiBusMutex::Guard guard;
-    file.seek(offset);
-  }
-
-  // Send header before raw bytes
-  logSerial.printf("{\"ok\":true,\"bytes\":%lu}\n", (unsigned long)length);
-
-  uint8_t buf[512];
-  uint32_t remaining = length;
-  while (remaining > 0) {
-    const uint32_t toRead = remaining < sizeof(buf) ? remaining : sizeof(buf);
-    size_t bytesRead = 0;
-    {
-      SpiBusMutex::Guard guard;
-      bytesRead = file.read(buf, toRead);
-    }
-    if (bytesRead == 0) break;
-    logSerial.write(buf, bytesRead);
-    remaining -= (uint32_t)bytesRead;
-  }
-
+  logSerial.print(F("{\"ok\":true,\"data\":\""));
+  streamFileBase64(file);
   {
     SpiBusMutex::Guard guard;
     file.close();
   }
+  logSerial.print(F("\"}\n"));
 }
 
-static void handleWrite(const char* path, uint32_t size) {
-  if (!PathUtils::isValidSdPath(String(path))) {
+// Android sends: {"cmd":"upload_start","arg":{"name":"file.epub","path":"/dir","size":1234}}
+static void handleUploadStart(const char* name, const char* dir, uint32_t /*size*/) {
+  if (s_uploadInProgress) {
+    SpiBusMutex::Guard guard;
+    s_uploadFile.close();
+    s_uploadInProgress = false;
+  }
+
+  String destPath(dir);
+  if (!destPath.endsWith("/")) destPath += '/';
+  destPath += name;
+
+  if (!PathUtils::isValidSdPath(destPath)) {
     sendError("invalid path");
     return;
   }
 
-  FsFile file;
   bool opened = false;
   {
     SpiBusMutex::Guard guard;
-    opened = Storage.openFileForWrite("USB", path, file);
+    opened = Storage.openFileForWrite("USB", destPath.c_str(), s_uploadFile);
   }
 
   if (!opened) {
@@ -250,65 +274,80 @@ static void handleWrite(const char* path, uint32_t size) {
     return;
   }
 
-  logSerial.print(F("{\"ok\":true,\"ready\":true}\n"));
-  logSerial.flush();
-
-  logSerial.setTimeout(5000);
-
-  uint8_t buf[512];
-  uint32_t remaining = size;
-  while (remaining > 0) {
-    const uint32_t toRead = remaining < sizeof(buf) ? remaining : sizeof(buf);
-    const size_t bytesRead = logSerial.readBytes(buf, toRead);
-    if (bytesRead == 0) {
-      {
-        SpiBusMutex::Guard guard;
-        file.close();
-      }
-      logSerial.setTimeout(1000);
-      sendError("timeout reading data");
-      return;
-    }
-    bool writeOk = false;
-    {
-      SpiBusMutex::Guard guard;
-      writeOk = (file.write(buf, bytesRead) == bytesRead);
-    }
-    if (!writeOk) {
-      {
-        SpiBusMutex::Guard guard;
-        file.close();
-      }
-      logSerial.setTimeout(1000);
-      sendError("write failed");
-      return;
-    }
-    remaining -= (uint32_t)bytesRead;
-  }
-
-  {
-    SpiBusMutex::Guard guard;
-    file.close();
-  }
-  logSerial.setTimeout(1000);
+  s_uploadInProgress = true;
   sendOk();
 }
 
-static void handleDelete(const char* path) {
-  if (!PathUtils::isValidSdPath(String(path))) {
-    sendError("invalid path");
+// Android sends 512-char base64 chunks → decodes to ≤384 bytes
+static void handleUploadChunk(const char* b64data) {
+  if (!s_uploadInProgress) {
+    sendError("no upload in progress");
     return;
   }
-  bool ok = false;
+
+  const size_t b64len = strlen(b64data);
+  size_t decodedLen = 0;
+  const int rc = mbedtls_base64_decode(s_decodeBuf, sizeof(s_decodeBuf), &decodedLen, (const uint8_t*)b64data, b64len);
+  if (rc != 0) {
+    SpiBusMutex::Guard guard;
+    s_uploadFile.close();
+    s_uploadInProgress = false;
+    sendError("base64 decode error");
+    return;
+  }
+
+  bool writeOk = false;
   {
     SpiBusMutex::Guard guard;
-    ok = Storage.remove(path);
+    writeOk = (s_uploadFile.write(s_decodeBuf, decodedLen) == decodedLen);
   }
-  if (!ok) {
-    sendError("delete failed");
+
+  if (!writeOk) {
+    SpiBusMutex::Guard guard;
+    s_uploadFile.close();
+    s_uploadInProgress = false;
+    sendError("write failed");
     return;
   }
+
   sendOk();
+}
+
+static void handleUploadDone() {
+  if (!s_uploadInProgress) {
+    sendError("no upload in progress");
+    return;
+  }
+  {
+    SpiBusMutex::Guard guard;
+    s_uploadFile.close();
+  }
+  s_uploadInProgress = false;
+  sendOk();
+}
+
+// Android sends: {"cmd":"delete","arg":["/path/a","/path/b"]}
+static void handleDelete(JsonArrayConst paths) {
+  bool anyFailed = false;
+  for (JsonVariantConst entry : paths) {
+    const char* path = entry.as<const char*>();
+    if (!path || !PathUtils::isValidSdPath(String(path))) {
+      anyFailed = true;
+      continue;
+    }
+    bool ok = false;
+    {
+      SpiBusMutex::Guard guard;
+      ok = Storage.remove(path);
+      if (!ok) ok = Storage.removeDir(path);
+    }
+    if (!ok) anyFailed = true;
+  }
+  if (anyFailed) {
+    sendError("one or more deletes failed");
+  } else {
+    sendOk();
+  }
 }
 
 static void handleMkdir(const char* path) {
@@ -328,7 +367,52 @@ static void handleMkdir(const char* path) {
   sendOk();
 }
 
-static void handleGetSettings() {
+// Android sends: {"cmd":"rename","arg":{"from":"/old/path","to":"/new/path"}}
+static void handleRename(const char* from, const char* to) {
+  if (!PathUtils::isValidSdPath(String(from)) || !PathUtils::isValidSdPath(String(to))) {
+    sendError("invalid path");
+    return;
+  }
+  bool ok = false;
+  {
+    SpiBusMutex::Guard guard;
+    ok = Storage.rename(from, to);
+  }
+  if (!ok) {
+    sendError("rename failed");
+    return;
+  }
+  sendOk();
+}
+
+// Android sends: {"cmd":"move","arg":{"from":"/src/file.epub","to":"/dst/dir"}}
+// "to" is a destination directory; preserve the source filename.
+static void handleMove(const char* from, const char* toDir) {
+  if (!PathUtils::isValidSdPath(String(from)) || !PathUtils::isValidSdPath(String(toDir))) {
+    sendError("invalid path");
+    return;
+  }
+  String fromStr(from);
+  const int lastSlash = fromStr.lastIndexOf('/');
+  const String filename = (lastSlash >= 0) ? fromStr.substring(lastSlash + 1) : fromStr;
+
+  String dest(toDir);
+  if (!dest.endsWith("/")) dest += '/';
+  dest += filename;
+
+  bool ok = false;
+  {
+    SpiBusMutex::Guard guard;
+    ok = Storage.rename(from, dest.c_str());
+  }
+  if (!ok) {
+    sendError("move failed");
+    return;
+  }
+  sendOk();
+}
+
+static void handleSettingsGet() {
   JsonDocument doc;
   buildSettingsDoc(doc);
   logSerial.print(F("{\"ok\":true,\"settings\":"));
@@ -336,9 +420,7 @@ static void handleGetSettings() {
   logSerial.print(F("}\n"));
 }
 
-static void handleSetSettings(JsonObjectConst incoming) {
-  // Build the current settings as JSON, overlay the incoming changes,
-  // then round-trip through loadSettings to apply clamping and validation.
+static void handleSettingsSet(JsonObjectConst incoming) {
   JsonDocument merged;
   buildSettingsDoc(merged);
   for (auto kv : incoming) {
@@ -361,8 +443,10 @@ static void handleSetSettings(JsonObjectConst incoming) {
   sendOk();
 }
 
-static void handleGetRecent() {
-  logSerial.print(F("{\"ok\":true,\"recent\":["));
+// Android expects:
+// {"ok":true,"books":[{"path":"...","title":"...","author":"...","last_position":"...","last_opened":0}]}
+static void handleRecent() {
+  logSerial.print(F("{\"ok\":true,\"books\":["));
   bool first = true;
   for (const auto& book : RECENT_BOOKS.getBooks()) {
     if (!first) logSerial.write(',');
@@ -371,9 +455,67 @@ static void handleGetRecent() {
     entry["path"] = book.path.c_str();
     entry["title"] = book.title.c_str();
     entry["author"] = book.author.c_str();
+    entry["last_position"] = "";         // not yet persisted
+    entry["last_opened"] = (uint32_t)0;  // not yet persisted
     serializeJson(entry, logSerial);
   }
   logSerial.print(F("]}\n"));
+}
+
+// Android expects: {"ok":true,"data":"<base64-encoded BMP>"} or {"ok":false,"error":"..."}
+static void handleCover(const char* path) {
+  if (!PathUtils::isValidSdPath(String(path))) {
+    sendError("invalid path");
+    return;
+  }
+
+  // Find cached cover BMP path (check recent books first, then feature modules)
+  std::string coverPath;
+  for (const auto& book : RECENT_BOOKS.getBooks()) {
+    if (book.path == path && !book.coverBmpPath.empty()) {
+      coverPath = book.coverBmpPath;
+      break;
+    }
+  }
+  if (coverPath.empty()) {
+    core::FeatureModules::tryGetDocumentCoverPath(String(path), coverPath);
+  }
+
+  if (coverPath.empty()) {
+    sendError("no cover available");
+    return;
+  }
+
+  FsFile file;
+  bool opened = false;
+  {
+    SpiBusMutex::Guard guard;
+    opened = Storage.openFileForRead("USB", coverPath.c_str(), file);
+  }
+
+  if (!opened) {
+    sendError("cover file not found");
+    return;
+  }
+
+  logSerial.print(F("{\"ok\":true,\"data\":\""));
+  streamFileBase64(file);
+  {
+    SpiBusMutex::Guard guard;
+    file.close();
+  }
+  logSerial.print(F("\"}\n"));
+}
+
+// Saves credentials so they're picked up on next WiFi connection attempt.
+static void handleWifiConnect(const char* ssid, const char* password) {
+  if (!ssid || ssid[0] == '\0') {
+    sendError("SSID required");
+    return;
+  }
+  WIFI_STORE.addCredential(ssid, password ? password : "");
+  WIFI_STORE.saveToFile();
+  sendOk();
 }
 
 // ── Command dispatcher ─────────────────────────────────────────────────────
@@ -391,21 +533,37 @@ static void processCommand(const char* line) {
   if (strcmp(name, "status") == 0) {
     handleStatus();
   } else if (strcmp(name, "list") == 0) {
-    handleList(cmd["path"] | "/");
-  } else if (strcmp(name, "read") == 0) {
-    handleRead(cmd["path"] | "", cmd["offset"] | (uint32_t)0, cmd["length"] | (uint32_t)0);
-  } else if (strcmp(name, "write") == 0) {
-    handleWrite(cmd["path"] | "", cmd["size"] | (uint32_t)0);
+    handleList(cmd["arg"] | "/");
+  } else if (strcmp(name, "download") == 0) {
+    handleDownload(cmd["arg"] | "");
+  } else if (strcmp(name, "upload_start") == 0) {
+    const JsonObjectConst arg = cmd["arg"].as<JsonObjectConst>();
+    handleUploadStart(arg["name"] | "", arg["path"] | "/", arg["size"] | (uint32_t)0);
+  } else if (strcmp(name, "upload_chunk") == 0) {
+    handleUploadChunk(cmd["arg"]["data"] | "");
+  } else if (strcmp(name, "upload_done") == 0) {
+    handleUploadDone();
   } else if (strcmp(name, "delete") == 0) {
-    handleDelete(cmd["path"] | "");
+    handleDelete(cmd["arg"].as<JsonArrayConst>());
   } else if (strcmp(name, "mkdir") == 0) {
-    handleMkdir(cmd["path"] | "");
-  } else if (strcmp(name, "get_settings") == 0) {
-    handleGetSettings();
-  } else if (strcmp(name, "set_settings") == 0) {
-    handleSetSettings(cmd["settings"].as<JsonObjectConst>());
-  } else if (strcmp(name, "get_recent") == 0) {
-    handleGetRecent();
+    handleMkdir(cmd["arg"] | "");
+  } else if (strcmp(name, "rename") == 0) {
+    const JsonObjectConst arg = cmd["arg"].as<JsonObjectConst>();
+    handleRename(arg["from"] | "", arg["to"] | "");
+  } else if (strcmp(name, "move") == 0) {
+    const JsonObjectConst arg = cmd["arg"].as<JsonObjectConst>();
+    handleMove(arg["from"] | "", arg["to"] | "");
+  } else if (strcmp(name, "settings_get") == 0) {
+    handleSettingsGet();
+  } else if (strcmp(name, "settings_set") == 0) {
+    handleSettingsSet(cmd["arg"].as<JsonObjectConst>());
+  } else if (strcmp(name, "recent") == 0) {
+    handleRecent();
+  } else if (strcmp(name, "cover") == 0) {
+    handleCover(cmd["arg"] | "");
+  } else if (strcmp(name, "wifi_connect") == 0) {
+    const JsonObjectConst arg = cmd["arg"].as<JsonObjectConst>();
+    handleWifiConnect(arg["ssid"] | "", arg["password"] | "");
   } else {
     sendError("unknown command");
   }
@@ -434,6 +592,13 @@ void UsbSerialProtocol::loop() {
   }
 }
 
-void UsbSerialProtocol::reset() { s_lineLen = 0; }
+void UsbSerialProtocol::reset() {
+  s_lineLen = 0;
+  if (s_uploadInProgress) {
+    SpiBusMutex::Guard guard;
+    s_uploadFile.close();
+    s_uploadInProgress = false;
+  }
+}
 
 #endif  // ENABLE_USB_MASS_STORAGE
