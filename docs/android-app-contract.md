@@ -65,49 +65,30 @@ responds to `crosspoint.local` on the LAN.
 }
 ```
 
-**Current firmware response** (`handleStatus()`):
+**Firmware response** (`handleStatus()`) — canonical format:
 ```json
 {
-  "version":            "string",
-  "wifiStatus":         "...",
-  "ip":                 "...",
-  "mode":               "...",
-  "rssi":               -50,
-  "freeHeap":           204800,
-  "uptime":             3600,
-  "otaSelectedBundle":  "...",
-  "otaInstalledBundle": "...",
-  "otaInstalledFeatures": "..."
+  "version":              "string",
+  "wifiStatus":           "Connected | Disconnected | AP Mode",
+  "ip":                   "192.168.x.x",
+  "mode":                 "STA | AP",
+  "rssi":                 -50,
+  "freeHeap":             204800,
+  "uptime":               3600,
+  "otaSelectedBundle":    "string",
+  "otaInstalledBundle":   "string",
+  "otaInstalledFeatures": "string"
 }
 ```
 
-**Gaps:** ❌
-- `wifiStatus` → must be `wifi_status`
-- `freeHeap` → must be `free_heap`
-
-These are silent failures: Gson deserialises missing fields as empty string / 0,
-so the app shows blank version and zero heap without any error.
+**Current status:** ✅ Fixed on Android side — `StatusDto` now uses camelCase field names
+matching the firmware directly (no `@SerializedName` needed for `wifiStatus`/`freeHeap`).
 
 ---
 
 ## 4. GET /api/files?path=<path>
 
-**Android DTO** (`FilesResponseDto` / `FileDto` in `WifiTransport.kt`):
-```json
-{
-  "files": [
-    {
-      "name":        "book.epub",
-      "path":        "/Books/book.epub",
-      "dir":         false,
-      "size":        1048576,
-      "modified":    1700000000
-    }
-  ]
-}
-```
-
-**Current firmware response** (`handleFileListData()`):
+**Firmware response** (`handleFileListData()`) — this is the canonical format:
 ```json
 [
   {
@@ -119,29 +100,14 @@ so the app shows blank version and zero heap without any error.
 ]
 ```
 
-**Gaps:** ❌ (this breaks file listing entirely)
-- Outer wrapper missing: firmware returns a bare `[...]` array, Android expects `{"files":[...]}`.
-  Gson will deserialise the outer object as empty → the file browser always shows nothing.
-- `isDirectory` → must be `dir`
-- `path` field missing — Android uses the full path for download, delete, move, etc.
-  Without it every file operation will target the wrong path.
-- `modified` field missing — Android uses it for display; can default to 0 if unavailable.
-- `isEpub` is extra and harmless (Android ignores unknown fields).
+**Android adapter** (`WifiTransport.listFiles()`): deserialises the bare array directly,
+constructs `path` as `listingPath.trimEnd('/') + "/" + name` (same logic the web UI uses),
+and ignores `isEpub`.
 
-**Required firmware fix:**
-```json
-{
-  "files": [
-    {
-      "name":     "book.epub",
-      "path":     "/Books/book.epub",
-      "dir":      false,
-      "size":     1048576,
-      "modified": 0
-    }
-  ]
-}
-```
+**Current status:** ✅ Fixed on Android side — no firmware change needed.
+
+Fields Android reads: `name`, `isDirectory`, `size`, `modified` (defaults to 0 if absent).
+`isEpub` and any other extra fields are silently ignored by Gson.
 
 ---
 
@@ -409,12 +375,14 @@ a partial implementation. Needs to be merged or re-implemented.
 
 ---
 
-## Summary of gaps (priority order)
+## Summary of remaining gaps (firmware work needed)
 
 | # | Gap | Impact |
 |---|-----|--------|
-| 1 | `/api/files` wrong format (`isDirectory`→`dir`, missing `path`, missing `{"files":[]}` wrapper) | **Critical** — file browser shows nothing |
-| 2 | `/api/status` camelCase fields (`wifiStatus`→`wifi_status`, `freeHeap`→`free_heap`) | **High** — status info always blank |
-| 3 | USB serial JSON-RPC not implemented on fork-drift | **High** — USB serial transport non-functional |
-| 4 | mDNS `crosspoint.local` not advertised | **Medium** — auto-discovery misses the device |
-| 5 | `/api/recent` missing `last_position` and `last_opened` | **Low** — book list shows but no position/date |
+| 1 | USB serial JSON-RPC not implemented on fork-drift | **High** — USB serial transport non-functional; see protocol spec in §17 |
+| 2 | mDNS `crosspoint.local` not advertised | **Medium** — auto-discovery probe won't find the device; add `MDNS.begin(hostname)` after WiFi connects |
+| 3 | `/api/recent` missing `last_position` and `last_opened` | **Low** — book list displays but shows no reading position or date |
+
+Items previously listed as gaps that are now resolved on the Android side:
+- `/api/files` format (bare array, `isDirectory` field, path construction) — **fixed in Android**
+- `/api/status` camelCase field names (`wifiStatus`, `freeHeap`) — **fixed in Android**
