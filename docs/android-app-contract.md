@@ -135,21 +135,19 @@ Fields Android reads: `name`, `isDirectory`, `size`, `modified` (defaults to 0 i
 ```json
 [
   {
-    "path":     "/Books/book.epub",
-    "title":    "Title",
-    "author":   "Author",
-    "hasCover": true
+    "path":          "/Books/book.epub",
+    "title":         "Title",
+    "author":        "Author",
+    "last_position": "",
+    "last_opened":   0,
+    "hasCover":      true
   }
 ]
 ```
 
-**Gaps:** ⚠️ (partial — the book list shows correctly, but position/timestamp are blank)
-- `last_position` missing — Android shows last reading position; defaults to `""` without it.
-- `last_opened` missing — Android sorts/displays by date; defaults to `0` without it.
-- `hasCover` is extra and harmless.
-
-If the firmware stores last position and timestamp, add them. If not, omit and
-document as unimplemented — the app handles default values gracefully.
+**Current status:** ✅ Implemented. Firmware now returns placeholder
+`last_position` and `last_opened` values for compatibility (`""` and `0`).
+`hasCover` remains an extra field and is harmless.
 
 ---
 
@@ -246,6 +244,10 @@ paths=<json-encoded-array>  (form field, value is a JSON string)
 ```
 
 **Current status:** ✅ All four implemented on firmware.
+- `/mkdir` and `/delete` remain form-based as above.
+- `/rename` and `/move` now accept both:
+  - existing web UI form contract (`path` + `name`, `path` + `dest`)
+  - JSON body contract (`from` + `to`)
 
 ---
 
@@ -283,6 +285,8 @@ paths=<json-encoded-array>  (form field, value is a JSON string)
   {
     "ssid":      "MyNetwork",
     "rssi":      -60,
+    "encrypted": true,
+    "saved":     false,
     "secured":   true,
     "connected": false
   }
@@ -290,6 +294,7 @@ paths=<json-encoded-array>  (form field, value is a JSON string)
 ```
 
 **Current status:** ✅ All three implemented (gated on `WebWifiSetupApi` feature flag).
+`secured` aliases `encrypted`, and `connected` marks the active network match.
 
 ---
 
@@ -302,13 +307,16 @@ paths=<json-encoded-array>  (form field, value is a JSON string)
 {
   "status":         "idle | checking | done | error",
   "available":      false,
+  "latestVersion":  "1.2.0",
   "latest_version": "1.2.0",
+  "errorCode":      0,
   "error_code":     0,
   "message":        ""
 }
 ```
 
-**Current status:** ✅ Implemented (gated on `OtaApi` feature flag).
+**Current status:** ✅ Implemented (gated on `OtaApi` feature flag). Firmware
+returns both camelCase and snake_case fields for compatibility.
 
 ---
 
@@ -382,9 +390,7 @@ terminated by `\n`.
 
 ## Summary of remaining gaps (firmware work needed)
 
-| # | Gap | Impact |
-|---|-----|--------|
-| 1 | `/api/recent` missing `last_position` and `last_opened` | **Low** — book list displays but shows no reading position or date |
+No known backend gaps remain for the Android HTTP contract documented here.
 
 Items resolved on the firmware side (fork-drift):
 - USB serial JSON-RPC — **implemented** in `src/UsbSerialProtocol.cpp`

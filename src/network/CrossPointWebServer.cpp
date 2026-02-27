@@ -1032,14 +1032,31 @@ void CrossPointWebServer::handleCreateFolder() const {
 }
 
 void CrossPointWebServer::handleRename() const {
-  if (!server->hasArg("path") || !server->hasArg("name")) {
-    server->send(400, "text/plain", "Missing path or new name");
-    return;
+  String itemPath;
+  String renameTarget;
+  bool fromFormContract = false;
+
+  if (server->hasArg("path") && server->hasArg("name")) {
+    itemPath = PathUtils::urlDecode(server->arg("path"));
+    renameTarget = server->arg("name");
+    fromFormContract = true;
+  } else {
+    if (!server->hasArg("plain")) {
+      server->send(400, "text/plain", "Missing path or new name");
+      return;
+    }
+
+    JsonDocument body;
+    if (deserializeJson(body, server->arg("plain"))) {
+      server->send(400, "text/plain", "Invalid JSON body");
+      return;
+    }
+
+    itemPath = PathUtils::urlDecode(body["from"].as<String>());
+    renameTarget = body["to"].as<String>();
   }
 
-  String itemPath = PathUtils::urlDecode(server->arg("path"));
-  String newName = server->arg("name");
-  newName.trim();
+  renameTarget.trim();
 
   if (!PathUtils::isValidSdPath(itemPath)) {
     server->send(400, "text/plain", "Invalid path");
@@ -1055,20 +1072,71 @@ void CrossPointWebServer::handleRename() const {
     server->send(403, "text/plain", "Cannot rename protected item");
     return;
   }
+
+  String parentPath = itemPath.substring(0, itemPath.lastIndexOf('/'));
+  if (parentPath.isEmpty()) {
+    parentPath = "/";
+  }
+
+  String newPath;
+  String newName;
+  if (fromFormContract || (renameTarget.indexOf('/') < 0 && renameTarget.indexOf('\\') < 0)) {
+    newName = renameTarget;
+    if (newName.isEmpty()) {
+      server->send(400, "text/plain", "New name cannot be empty");
+      return;
+    }
+    if (newName.indexOf('/') >= 0 || newName.indexOf('\\') >= 0) {
+      server->send(400, "text/plain", "Invalid file name");
+      return;
+    }
+    if (newName.startsWith(".")) {
+      server->send(403, "text/plain", "Cannot rename to hidden name");
+      return;
+    }
+    if (isProtectedComponent(newName)) {
+      server->send(403, "text/plain", "Cannot rename to protected name");
+      return;
+    }
+
+    newPath = parentPath;
+    if (!newPath.endsWith("/")) {
+      newPath += "/";
+    }
+    newPath += newName;
+  } else {
+    String candidatePath = PathUtils::urlDecode(renameTarget);
+    if (!PathUtils::isValidSdPath(candidatePath)) {
+      server->send(400, "text/plain", "Invalid path");
+      return;
+    }
+    newPath = PathUtils::normalizePath(candidatePath);
+    if (newPath.isEmpty() || newPath == "/") {
+      server->send(400, "text/plain", "Invalid path");
+      return;
+    }
+    if (pathContainsProtectedItem(newPath)) {
+      server->send(403, "text/plain", "Cannot rename to protected path");
+      return;
+    }
+
+    newName = newPath.substring(newPath.lastIndexOf('/') + 1);
+    if (newName.isEmpty()) {
+      server->send(400, "text/plain", "Invalid file name");
+      return;
+    }
+    if (newName.startsWith(".")) {
+      server->send(403, "text/plain", "Cannot rename to hidden name");
+      return;
+    }
+    if (isProtectedComponent(newName)) {
+      server->send(403, "text/plain", "Cannot rename to protected name");
+      return;
+    }
+  }
+
   if (newName.isEmpty()) {
     server->send(400, "text/plain", "New name cannot be empty");
-    return;
-  }
-  if (newName.indexOf('/') >= 0 || newName.indexOf('\\') >= 0) {
-    server->send(400, "text/plain", "Invalid file name");
-    return;
-  }
-  if (newName.startsWith(".")) {
-    server->send(403, "text/plain", "Cannot rename to hidden name");
-    return;
-  }
-  if (isProtectedComponent(newName)) {
-    server->send(403, "text/plain", "Cannot rename to protected name");
     return;
   }
 
@@ -1114,16 +1182,6 @@ void CrossPointWebServer::handleRename() const {
     return;
   }
 
-  String parentPath = itemPath.substring(0, itemPath.lastIndexOf('/'));
-  if (parentPath.isEmpty()) {
-    parentPath = "/";
-  }
-  String newPath = parentPath;
-  if (!newPath.endsWith("/")) {
-    newPath += "/";
-  }
-  newPath += newName;
-
   bool targetExists = false;
   {
     SpiBusMutex::Guard guard;
@@ -1153,13 +1211,26 @@ void CrossPointWebServer::handleRename() const {
 }
 
 void CrossPointWebServer::handleMove() const {
-  if (!server->hasArg("path") || !server->hasArg("dest")) {
-    server->send(400, "text/plain", "Missing path or destination");
-    return;
-  }
+  String itemPath;
+  String destPath;
+  if (server->hasArg("path") && server->hasArg("dest")) {
+    itemPath = PathUtils::urlDecode(server->arg("path"));
+    destPath = PathUtils::urlDecode(server->arg("dest"));
+  } else {
+    if (!server->hasArg("plain")) {
+      server->send(400, "text/plain", "Missing path or destination");
+      return;
+    }
 
-  String itemPath = PathUtils::urlDecode(server->arg("path"));
-  String destPath = PathUtils::urlDecode(server->arg("dest"));
+    JsonDocument body;
+    if (deserializeJson(body, server->arg("plain"))) {
+      server->send(400, "text/plain", "Invalid JSON body");
+      return;
+    }
+
+    itemPath = PathUtils::urlDecode(body["from"].as<String>());
+    destPath = PathUtils::urlDecode(body["to"].as<String>());
+  }
 
   if (!PathUtils::isValidSdPath(itemPath) || !PathUtils::isValidSdPath(destPath)) {
     server->send(400, "text/plain", "Invalid path");
@@ -1785,6 +1856,8 @@ void CrossPointWebServer::handleRecentBooks() const {
     doc["path"] = book.path;
     doc["title"] = book.title;
     doc["author"] = book.author;
+    doc["last_position"] = "";
+    doc["last_opened"] = 0;
     doc["hasCover"] = !book.coverBmpPath.empty();
 
     const size_t written = serializeJson(doc, output, outputSize);
@@ -2183,15 +2256,21 @@ void CrossPointWebServer::handleWifiScan() const {
   }
 
   int n = WiFi.scanNetworks();
+  const bool staConnected = (WiFi.getMode() & WIFI_MODE_STA) && (WiFi.status() == WL_CONNECTED);
+  const String activeSsid = staConnected ? WiFi.SSID() : String();
   JsonDocument doc;
   JsonArray array = doc.to<JsonArray>();
 
   for (int i = 0; i < n; ++i) {
+    const String networkSsid = WiFi.SSID(i);
+    const bool encrypted = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
     JsonObject obj = array.add<JsonObject>();
-    obj["ssid"] = WiFi.SSID(i);
+    obj["ssid"] = networkSsid;
     obj["rssi"] = WiFi.RSSI(i);
-    obj["encrypted"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
-    obj["saved"] = WIFI_STORE.hasSavedCredential(WiFi.SSID(i).c_str());
+    obj["encrypted"] = encrypted;
+    obj["secured"] = encrypted;
+    obj["saved"] = WIFI_STORE.hasSavedCredential(networkSsid.c_str());
+    obj["connected"] = staConnected && (networkSsid == activeSsid);
   }
   WiFi.scanDelete();
 
@@ -2298,8 +2377,10 @@ void CrossPointWebServer::handleOtaCheckGet() const {
     doc["status"] = "done";
     doc["available"] = status.available;
     doc["latestVersion"] = status.latestVersion.c_str();
+    doc["latest_version"] = status.latestVersion.c_str();
     doc["message"] = status.message.c_str();
     doc["errorCode"] = status.errorCode;
+    doc["error_code"] = status.errorCode;
   } else {
     doc["status"] = "idle";
   }
