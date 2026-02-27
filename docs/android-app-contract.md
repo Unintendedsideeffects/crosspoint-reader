@@ -1,0 +1,420 @@
+# Android Companion App — Firmware Contract
+
+This file defines exactly what the Android companion app (ForkDriftApp) expects
+from the firmware. It is the authoritative reference for closing gaps between
+the two codebases. Keep it up to date when either side changes.
+
+---
+
+## Transport overview
+
+| Transport | Android class | Status |
+|-----------|--------------|--------|
+| Wi-Fi HTTP/WS | `WifiTransport` | Implemented both sides |
+| USB serial JSON-RPC | `UsbTransport` | **Android done — firmware not yet on fork-drift** |
+| USB mass storage | `UsbMassStorageTransport` | Implemented both sides (libaums) |
+| BLE provisioning | `BleTransport` | Implemented both sides |
+
+---
+
+## 1. UDP device discovery
+
+**Android:** `DeviceDiscovery.startScan()` — broadcasts `"crosspoint-discover"` to
+255.255.255.255:8134 and listens for 2 s.
+
+**Firmware must respond with (one UDP packet back to sender):**
+```
+crosspoint (on <hostname>);<wsPort>
+```
+Example: `crosspoint (on MyDevice);81`
+
+The Android parser splits on `;`, takes the WS port from part[1], and extracts
+the hostname from the substring after `"on "` up to `)`.
+
+**Current status:** ✅ Firmware implements this on UDP 8134.
+
+---
+
+## 2. mDNS hostname
+
+**Android:** `DeviceDiscovery.startScan()` also probes `http://crosspoint.local/api/status`
+(2 s timeout). If it responds 200 the device appears as `"crosspoint.local"` in the
+discovered device list.
+
+**Firmware must:** call `MDNS.begin(<hostname>)` after WiFi connects so the device
+responds to `crosspoint.local` on the LAN.
+
+**Current status:** ❌ **Not implemented.** No `MDNS.begin()` call found on fork-drift.
+
+---
+
+## 3. GET /api/status
+
+**Android DTO** (`StatusDto` in `WifiTransport.kt`):
+```json
+{
+  "version":            "string",
+  "wifi_status":        "Connected | Disconnected | AP Mode",
+  "ip":                 "192.168.x.x",
+  "mode":               "STA | AP",
+  "rssi":               -50,
+  "free_heap":          204800,
+  "uptime":             3600,
+  "otaSelectedBundle":  "string",
+  "otaInstalledBundle": "string"
+}
+```
+
+**Current firmware response** (`handleStatus()`):
+```json
+{
+  "version":            "string",
+  "wifiStatus":         "...",
+  "ip":                 "...",
+  "mode":               "...",
+  "rssi":               -50,
+  "freeHeap":           204800,
+  "uptime":             3600,
+  "otaSelectedBundle":  "...",
+  "otaInstalledBundle": "...",
+  "otaInstalledFeatures": "..."
+}
+```
+
+**Gaps:** ❌
+- `wifiStatus` → must be `wifi_status`
+- `freeHeap` → must be `free_heap`
+
+These are silent failures: Gson deserialises missing fields as empty string / 0,
+so the app shows blank version and zero heap without any error.
+
+---
+
+## 4. GET /api/files?path=<path>
+
+**Android DTO** (`FilesResponseDto` / `FileDto` in `WifiTransport.kt`):
+```json
+{
+  "files": [
+    {
+      "name":        "book.epub",
+      "path":        "/Books/book.epub",
+      "dir":         false,
+      "size":        1048576,
+      "modified":    1700000000
+    }
+  ]
+}
+```
+
+**Current firmware response** (`handleFileListData()`):
+```json
+[
+  {
+    "name":        "book.epub",
+    "size":        1048576,
+    "isDirectory": false,
+    "isEpub":      true
+  }
+]
+```
+
+**Gaps:** ❌ (this breaks file listing entirely)
+- Outer wrapper missing: firmware returns a bare `[...]` array, Android expects `{"files":[...]}`.
+  Gson will deserialise the outer object as empty → the file browser always shows nothing.
+- `isDirectory` → must be `dir`
+- `path` field missing — Android uses the full path for download, delete, move, etc.
+  Without it every file operation will target the wrong path.
+- `modified` field missing — Android uses it for display; can default to 0 if unavailable.
+- `isEpub` is extra and harmless (Android ignores unknown fields).
+
+**Required firmware fix:**
+```json
+{
+  "files": [
+    {
+      "name":     "book.epub",
+      "path":     "/Books/book.epub",
+      "dir":      false,
+      "size":     1048576,
+      "modified": 0
+    }
+  ]
+}
+```
+
+---
+
+## 5. GET /api/recent
+
+**Android DTO** (`RecentDto` in `WifiTransport.kt`):
+```json
+[
+  {
+    "path":          "/Books/book.epub",
+    "title":         "Title",
+    "author":        "Author",
+    "last_position": "epubcfi(...)",
+    "last_opened":   1700000000
+  }
+]
+```
+
+**Current firmware response** (`handleRecentBooks()`):
+```json
+[
+  {
+    "path":     "/Books/book.epub",
+    "title":    "Title",
+    "author":   "Author",
+    "hasCover": true
+  }
+]
+```
+
+**Gaps:** ⚠️ (partial — the book list shows correctly, but position/timestamp are blank)
+- `last_position` missing — Android shows last reading position; defaults to `""` without it.
+- `last_opened` missing — Android sorts/displays by date; defaults to `0` without it.
+- `hasCover` is extra and harmless.
+
+If the firmware stores last position and timestamp, add them. If not, omit and
+document as unimplemented — the app handles default values gracefully.
+
+---
+
+## 6. GET /api/plugins
+
+**Android DTO** (`PluginFlags` in `WifiTransport.kt`):
+```json
+{
+  "web_wifi_setup": false,
+  "ota_updates":    false,
+  "user_fonts":     false,
+  "todo_planner":   false
+}
+```
+
+**Current firmware response** (`handlePlugins()` → `FeatureModules::getFeatureMapJson()`):
+Returns the full feature catalog as a flat JSON object with snake_case keys.
+The four keys above are included when the corresponding feature is enabled.
+
+**Current status:** ✅ Matches as long as firmware uses the exact key names above.
+Verify: `web_wifi_setup`, `ota_updates`, `user_fonts`, `todo_planner`.
+
+---
+
+## 7. GET /api/settings
+
+**Android DTO** (`SettingDto` in `WifiTransport.kt`):
+```json
+[
+  {
+    "key":      "sleepScreen",
+    "type":     "toggle | enum | value | string",
+    "value":    1,
+    "options":  ["opt1", "opt2"],
+    "min":      0.0,
+    "max":      100.0,
+    "step":     1.0,
+    "category": "Display",
+    "hasValue": true
+  }
+]
+```
+
+**Current status:** ✅ Firmware returns this format from `handleGetSettings()`.
+
+---
+
+## 8. POST /api/settings
+
+**Android sends:** JSON body `{"key": value, ...}` (flat map, only changed keys).
+
+**Current status:** ✅ Firmware handles this in `handlePostSettings()`.
+
+---
+
+## 9. GET /api/cover?path=<encoded-path>
+
+**Android:** expects raw image bytes (any format). Uses it as a `Bitmap`.
+
+**Current status:** ✅ Firmware returns BMP bytes from cached cover path.
+
+---
+
+## 10. GET /download?path=<encoded-path>
+
+**Android:** expects raw file bytes as the response body.
+
+**Current status:** ✅ Implemented in `handleDownload()`.
+
+---
+
+## 11. POST /mkdir, /rename, /move, /delete
+
+**Android sends:**
+
+`/mkdir`
+```
+name=<name>&path=<parent-path>  (form-encoded)
+```
+
+`/rename`
+```json
+{"from": "/old/path", "to": "/new/path"}
+```
+
+`/move`
+```json
+{"from": "/src/path", "to": "/dst/dir"}
+```
+
+`/delete`
+```
+paths=<json-encoded-array>  (form field, value is a JSON string)
+```
+
+**Current status:** ✅ All four implemented on firmware.
+
+---
+
+## 12. WebSocket upload (port 81)
+
+**Android:** `WifiTransport.uploadFile()` connects to `ws://host:81`.
+
+**Protocol:**
+1. Client → `START:<filename>:<totalBytes>:<destPath>` (text)
+2. Server → `READY` (text)
+3. Client → binary chunks (4 KB each)
+4. Server → `PROGRESS:<receivedBytes>:<totalBytes>` (text, every 64 KB)
+5. Server → `DONE` (text) on completion
+6. Server → `ERROR:<message>` (text) on failure
+
+**Current status:** ✅ Firmware WebSocket server on port 81 implements this protocol.
+
+---
+
+## 13. GET /api/wifi/scan, POST /api/wifi/connect, POST /api/wifi/forget
+
+**Android sends for connect:**
+```json
+{"ssid": "MyNetwork", "password": "secret"}
+```
+
+**Android sends for forget:**
+```json
+{"ssid": "MyNetwork"}
+```
+
+**Scan response:**
+```json
+[
+  {
+    "ssid":      "MyNetwork",
+    "rssi":      -60,
+    "secured":   true,
+    "connected": false
+  }
+]
+```
+
+**Current status:** ✅ All three implemented (gated on `WebWifiSetupApi` feature flag).
+
+---
+
+## 14. POST /api/ota/check + GET /api/ota/check
+
+**POST** starts the check; **GET** polls the result.
+
+**GET response:**
+```json
+{
+  "status":         "idle | checking | done | error",
+  "available":      false,
+  "latest_version": "1.2.0",
+  "error_code":     0,
+  "message":        ""
+}
+```
+
+**Current status:** ✅ Implemented (gated on `OtaApi` feature flag).
+
+---
+
+## 15. POST /api/user-fonts/upload + POST /api/user-fonts/rescan
+
+**Upload:** multipart form, field name `file`, `.cpf` font file.
+**Rescan:** no body required.
+
+**Current status:** ✅ Implemented (gated on `UserFontsApi` feature flag).
+
+---
+
+## 16. BLE WiFi provisioning
+
+**Service UUID:** `41cb0001-b8f4-4e4a-9f49-ecb9d6fd4b90`
+**Characteristic UUID:** `41cb0002-b8f4-4e4a-9f49-ecb9d6fd4b90`
+
+**Android sends** (write to characteristic, JSON format):
+```json
+{"ssid": "MyNetwork", "password": "secret"}
+```
+
+**Current status:** ✅ Firmware `BleWifiProvisioner` implements this service.
+
+---
+
+## 17. USB serial JSON-RPC
+
+**Android:** `UsbTransport` at 115200 baud, 8N1. Each message is a single JSON
+object terminated by `\n`. The firmware must reply with a single JSON object
+terminated by `\n`.
+
+**Command format:**
+```json
+{"cmd": "<command>", "arg": <argument>}
+```
+
+### Commands the Android app sends
+
+| cmd | arg | Expected response |
+|-----|-----|-------------------|
+| `status` | — | `{"ok":true,"version":"...","freeHeap":...,"uptime":...}` |
+| `list` | `"/path"` | `{"ok":true,"files":[{"name":"...","path":"...","dir":false,"size":...,"modified":0}]}` |
+| `download` | `"/path/file.epub"` | `{"ok":true,"data":"<base64>"}` |
+| `upload_start` | `{"name":"file.epub","path":"/dir","size":1234}` | `{"ok":true}` |
+| `upload_chunk` | `{"data":"<base64-chunk>"}` | `{"ok":true}` |
+| `upload_done` | — | `{"ok":true}` |
+| `delete` | `["/path/a", "/path/b"]` | `{"ok":true}` |
+| `mkdir` | `"/new/dir"` | `{"ok":true}` |
+| `rename` | `{"from":"/old","to":"/new"}` | `{"ok":true}` |
+| `move` | `{"from":"/src","to":"/dst"}` | `{"ok":true}` |
+| `settings_get` | — | `{"ok":true,"settings":{"key":value,...}}` |
+| `settings_set` | `{"key":value,...}` | `{"ok":true}` |
+| `recent` | — | `{"ok":true,"books":[{"path":"...","title":"...","author":"...","last_position":"...","last_opened":0}]}` |
+| `cover` | `"/path/file.epub"` | `{"ok":true,"data":"<base64>"}` or `{"ok":false}` |
+| `wifi_connect` | `{"ssid":"...","password":"..."}` | `{"ok":true}` |
+
+**Error response** (for any command): `{"ok":false,"error":"<message>"}\n`
+
+**Notes:**
+- Upload is chunked: app sends base64 in 512-character string chunks, so each
+  `upload_chunk` carries ≈384 bytes of actual data.
+- The app reads with a 3 s timeout per window, up to 3 windows (9 s total) before
+  giving up on a response.
+- The `list` response must use `"dir"` not `"isDirectory"` (matches the HTTP contract).
+
+**Current status:** ❌ **Not implemented on fork-drift.** The pr-7-usb branch has
+a partial implementation. Needs to be merged or re-implemented.
+
+---
+
+## Summary of gaps (priority order)
+
+| # | Gap | Impact |
+|---|-----|--------|
+| 1 | `/api/files` wrong format (`isDirectory`→`dir`, missing `path`, missing `{"files":[]}` wrapper) | **Critical** — file browser shows nothing |
+| 2 | `/api/status` camelCase fields (`wifiStatus`→`wifi_status`, `freeHeap`→`free_heap`) | **High** — status info always blank |
+| 3 | USB serial JSON-RPC not implemented on fork-drift | **High** — USB serial transport non-functional |
+| 4 | mDNS `crosspoint.local` not advertised | **Medium** — auto-discovery misses the device |
+| 5 | `/api/recent` missing `last_position` and `last_opened` | **Low** — book list shows but no position/date |
