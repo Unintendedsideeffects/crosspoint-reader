@@ -9,6 +9,7 @@
 #include <esp_task_wdt.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 
 #include "CrossPointSettings.h"
@@ -53,6 +54,59 @@ void invalidateSleepCacheIfNeeded(const String& filePath) {
 void invalidateFeatureCachesIfNeeded(const String& filePath) {
   core::FeatureModules::onWebFileChanged(filePath);
   invalidateSleepCacheIfNeeded(filePath);
+}
+
+std::string normalizeTodoEntryText(const std::string& input) {
+  std::string normalized;
+  normalized.reserve(input.size());
+
+  for (const char c : input) {
+    if (c == '\r' || c == '\n') {
+      normalized.push_back(' ');
+    } else {
+      normalized.push_back(c);
+    }
+  }
+
+  size_t start = 0;
+  while (start < normalized.size() && std::isspace(static_cast<unsigned char>(normalized[start]))) {
+    start++;
+  }
+  size_t end = normalized.size();
+  while (end > start && std::isspace(static_cast<unsigned char>(normalized[end - 1]))) {
+    end--;
+  }
+
+  std::string trimmed = normalized.substr(start, end - start);
+  if (trimmed.size() > TODO_ENTRY_MAX_TEXT_LENGTH) {
+    trimmed.resize(TODO_ENTRY_MAX_TEXT_LENGTH);
+  }
+  return trimmed;
+}
+
+void appendTodoItemFromLine(JsonArray& array, std::string line) {
+  if (!line.empty() && line.back() == '\r') {
+    line.pop_back();
+  }
+
+  if (line.empty()) {
+    return;
+  }
+
+  JsonObject item = array.add<JsonObject>();
+  if (line.rfind("- [ ] ", 0) == 0) {
+    item["text"] = line.substr(6);
+    item["checked"] = false;
+    item["isHeader"] = false;
+  } else if (line.rfind("- [x] ", 0) == 0 || line.rfind("- [X] ", 0) == 0) {
+    item["text"] = line.substr(6);
+    item["checked"] = true;
+    item["isHeader"] = false;
+  } else {
+    item["text"] = line;
+    item["checked"] = false;
+    item["isHeader"] = true;
+  }
 }
 
 }  // namespace
@@ -114,6 +168,8 @@ void CrossPointWebServer::begin() {
   // Backward-compatible alias while tooling migrates terminology.
   server->on("/api/features", HTTP_GET, [this] { handlePlugins(); });
   server->on("/api/todo/entry", HTTP_POST, [this] { handleTodoEntry(); });
+  server->on("/api/todo/today", HTTP_GET, [this] { handleTodoTodayGet(); });
+  server->on("/api/todo/today", HTTP_POST, [this] { handleTodoTodaySave(); });
   server->on("/api/files", HTTP_GET, [this] { handleFileListData(); });
   server->on("/download", HTTP_GET, [this] { handleDownload(); });
 
@@ -436,6 +492,145 @@ void CrossPointWebServer::handleTodoEntry() {
   }
 
   server->send(200, "application/json", "{\"ok\":true}");
+}
+
+void CrossPointWebServer::handleTodoTodayGet() const {
+  if (!core::FeatureModules::hasCapability(core::Capability::TodoPlanner)) {
+    server->send(404, "text/plain", "TODO planner disabled");
+    return;
+  }
+
+  const std::string today = DateUtils::currentDate();
+  if (today.empty()) {
+    server->send(503, "text/plain", "Date unavailable");
+    return;
+  }
+
+  const std::string markdownPath = "/daily/" + today + ".md";
+  const std::string textPath = "/daily/" + today + ".txt";
+  std::string targetPath;
+  std::string content;
+  {
+    SpiBusMutex::Guard guard;
+    const bool markdownExists = Storage.exists(markdownPath.c_str());
+    const bool textExists = Storage.exists(textPath.c_str());
+    targetPath = TodoPlannerStorage::dailyPath(
+        today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport), markdownExists, textExists);
+    if (Storage.exists(targetPath.c_str())) {
+      content = Storage.readFile(targetPath.c_str()).c_str();
+    }
+  }
+
+  JsonDocument response;
+  response["ok"] = true;
+  response["date"] = today.c_str();
+  response["path"] = targetPath.c_str();
+  JsonArray items = response["items"].to<JsonArray>();
+
+  std::string line;
+  line.reserve(128);
+  for (const char c : content) {
+    if (c == '\n') {
+      appendTodoItemFromLine(items, line);
+      line.clear();
+    } else {
+      line.push_back(c);
+    }
+  }
+  if (!line.empty()) {
+    appendTodoItemFromLine(items, line);
+  }
+
+  String json;
+  serializeJson(response, json);
+  server->send(200, "application/json", json);
+}
+
+void CrossPointWebServer::handleTodoTodaySave() const {
+  if (!core::FeatureModules::hasCapability(core::Capability::TodoPlanner)) {
+    server->send(404, "text/plain", "TODO planner disabled");
+    return;
+  }
+
+  if (!server->hasArg("plain")) {
+    server->send(400, "text/plain", "Missing body");
+    return;
+  }
+
+  JsonDocument request;
+  if (deserializeJson(request, server->arg("plain"))) {
+    server->send(400, "text/plain", "Invalid JSON body");
+    return;
+  }
+
+  if (!request["items"].is<JsonArray>()) {
+    server->send(400, "text/plain", "Missing items array");
+    return;
+  }
+
+  const std::string today = DateUtils::currentDate();
+  if (today.empty()) {
+    server->send(503, "text/plain", "Date unavailable");
+    return;
+  }
+
+  const std::string markdownPath = "/daily/" + today + ".md";
+  const std::string textPath = "/daily/" + today + ".txt";
+  const std::string dirPath = "/daily";
+  std::string targetPath;
+  std::string content;
+
+  JsonArray items = request["items"].as<JsonArray>();
+  for (JsonVariant itemVar : items) {
+    if (!itemVar.is<JsonObject>()) {
+      continue;
+    }
+
+    JsonObject item = itemVar.as<JsonObject>();
+    const std::string text = normalizeTodoEntryText(item["text"].as<std::string>());
+    if (text.empty()) {
+      continue;
+    }
+
+    const bool isHeader = item["isHeader"].is<bool>() ? item["isHeader"].as<bool>() : item["is_header"].as<bool>();
+    const bool checked = item["checked"].as<bool>();
+    if (isHeader) {
+      content += text;
+    } else {
+      content += "- [";
+      content += checked ? "x" : " ";
+      content += "] ";
+      content += text;
+    }
+    content.push_back('\n');
+  }
+
+  bool writeOk = false;
+  {
+    SpiBusMutex::Guard guard;
+    const bool markdownExists = Storage.exists(markdownPath.c_str());
+    const bool textExists = Storage.exists(textPath.c_str());
+    targetPath = TodoPlannerStorage::dailyPath(
+        today, core::FeatureModules::hasCapability(core::Capability::MarkdownSupport), markdownExists, textExists);
+    if (!Storage.exists(dirPath.c_str())) {
+      Storage.mkdir(dirPath.c_str());
+    }
+    writeOk = Storage.writeFile(targetPath.c_str(), content.c_str());
+  }
+
+  if (!writeOk) {
+    server->send(500, "text/plain", "Failed to write TODO file");
+    return;
+  }
+
+  invalidateFeatureCachesIfNeeded(String(targetPath.c_str()));
+  JsonDocument response;
+  response["ok"] = true;
+  response["date"] = today.c_str();
+  response["path"] = targetPath.c_str();
+  String json;
+  serializeJson(response, json);
+  server->send(200, "application/json", json);
 }
 
 void CrossPointWebServer::scanFiles(const char* path, const std::function<void(FileInfo)>& callback) const {

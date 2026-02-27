@@ -4,6 +4,7 @@
 #include <HalStorage.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
 
 #include "CrossPointSettings.h"
@@ -19,8 +20,28 @@ constexpr int HEADER_HEIGHT = 50;
 constexpr int ITEM_HEIGHT = 35;
 constexpr int MARGIN_X = 10;
 constexpr int CHECKBOX_SIZE = 20;
+constexpr unsigned long LONG_CONFIRM_MS = 600;
+constexpr size_t TODO_ENTRY_MAX_TEXT_LENGTH = 300;
 
 bool isValidItemIndex(const int index, const size_t count) { return index >= 0 && static_cast<size_t>(index) < count; }
+
+std::string trimEntryText(const std::string& text) {
+  size_t start = 0;
+  while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
+    start++;
+  }
+
+  size_t end = text.size();
+  while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
+    end--;
+  }
+
+  std::string trimmed = text.substr(start, end - start);
+  if (trimmed.size() > TODO_ENTRY_MAX_TEXT_LENGTH) {
+    trimmed.resize(TODO_ENTRY_MAX_TEXT_LENGTH);
+  }
+  return trimmed;
+}
 }  // namespace
 
 TodoActivity::TodoActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string filePath,
@@ -68,6 +89,7 @@ void TodoActivity::loop() {
   const bool leftPressed = mappedInput.wasPressed(MappedInputManager::Button::Left);
   const bool rightPressed = mappedInput.wasPressed(MappedInputManager::Button::Right);
   const bool confirmReleased = mappedInput.wasReleased(MappedInputManager::Button::Confirm);
+  const bool longConfirm = confirmReleased && mappedInput.getHeldTime() >= LONG_CONFIRM_MS;
 
   const int taskCount = static_cast<int>(items.size());
   // +1 for the "Add New Task" button at the end
@@ -133,9 +155,14 @@ void TodoActivity::loop() {
   // Toggle / Select
   if (confirmReleased) {
     if (isValidItemIndex(selectedIndex, items.size())) {
-      toggleCurrentTask();
+      const bool isHeader = items[static_cast<size_t>(selectedIndex)].isHeader;
+      if (isHeader || longConfirm) {
+        editCurrentEntry();
+      } else {
+        toggleCurrentTask();
+      }
     } else {
-      addNewTask();
+      addNewEntry(longConfirm);
     }
   }
 }
@@ -273,19 +300,20 @@ void TodoActivity::toggleCurrentTask() {
   }
 }
 
-void TodoActivity::addNewTask() {
+void TodoActivity::addNewEntry(const bool agendaEntry) {
   exitActivity();  // Hide current activity during sub-activity
   enterNewActivity(new KeyboardEntryActivity(
-      renderer, mappedInput, "New Task", "", 10, 0, false,
-      [this](const std::string& text) {
-        if (!text.empty()) {
+      renderer, mappedInput, agendaEntry ? "New Agenda Entry" : "New Task", "", 10, TODO_ENTRY_MAX_TEXT_LENGTH, false,
+      [this, agendaEntry](const std::string& text) {
+        const std::string trimmedText = trimEntryText(text);
+        if (!trimmedText.empty()) {
           TodoItem newItem;
-          newItem.text = text;
+          newItem.text = trimmedText;
           newItem.checked = false;
-          newItem.isHeader = false;
+          newItem.isHeader = agendaEntry;
           items.push_back(newItem);
           saveTasks();
-          // Let's position on the new task so user can see it
+          // Position on the new entry so user can see it.
           selectedIndex = static_cast<int>(items.size()) - 1;
           const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
           if (selectedIndex >= scrollOffset + visibleItems) {
@@ -297,6 +325,52 @@ void TodoActivity::addNewTask() {
       },
       [this]() {
         exitActivity();  // Close keyboard
+        requestUpdate();
+      }));
+}
+
+void TodoActivity::editCurrentEntry() {
+  if (!isValidItemIndex(selectedIndex, items.size())) {
+    return;
+  }
+
+  const size_t editIndex = static_cast<size_t>(selectedIndex);
+  const bool isHeader = items[editIndex].isHeader;
+  const char* title = isHeader ? "Edit Agenda Entry" : "Edit Task";
+  const std::string initialText = items[editIndex].text;
+
+  exitActivity();
+  enterNewActivity(new KeyboardEntryActivity(
+      renderer, mappedInput, title, initialText, 10, TODO_ENTRY_MAX_TEXT_LENGTH, false,
+      [this, editIndex](const std::string& text) {
+        if (!isValidItemIndex(static_cast<int>(editIndex), items.size())) {
+          exitActivity();
+          requestUpdate();
+          return;
+        }
+
+        const std::string trimmedText = trimEntryText(text);
+        if (trimmedText.empty()) {
+          const auto removeAt = static_cast<std::vector<TodoItem>::difference_type>(editIndex);
+          items.erase(items.begin() + removeAt);
+          selectedIndex = std::min(selectedIndex, static_cast<int>(items.size()));
+        } else {
+          items[editIndex].text = trimmedText;
+        }
+
+        const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
+        if (selectedIndex < scrollOffset) {
+          scrollOffset = selectedIndex;
+        } else if (selectedIndex >= scrollOffset + visibleItems) {
+          scrollOffset = selectedIndex - visibleItems + 1;
+        }
+
+        saveTasks();
+        exitActivity();
+        requestUpdate();
+      },
+      [this]() {
+        exitActivity();
         requestUpdate();
       }));
 }
@@ -327,15 +401,18 @@ void TodoActivity::renderScreen() {
     if (isValidItemIndex(itemIndex, items.size())) {
       renderItem(y, items[static_cast<size_t>(itemIndex)], isSelected);
     } else {
-      // "Add New" button
-      renderer.drawCenteredText(UI_10_FONT_ID, y + 5, "+ Add New Task", !isSelected);
+      // "Add New" button (short Confirm = TODO, long Confirm = agenda/note).
+      renderer.drawCenteredText(UI_10_FONT_ID, y + 5, "+ Add New Entry", !isSelected);
     }
   }
 
   // Hints - show reorder hints for task items
-  const bool canReorder =
-      isValidItemIndex(selectedIndex, items.size()) && !items[static_cast<size_t>(selectedIndex)].isHeader;
-  const auto labels = mappedInput.mapLabels("Back", "Toggle", canReorder ? "Move Up" : "", canReorder ? "Move Dn" : "");
+  const bool hasSelection = isValidItemIndex(selectedIndex, items.size());
+  const bool canReorder = hasSelection && !items[static_cast<size_t>(selectedIndex)].isHeader;
+  const bool addNewSelected = !hasSelection;
+  const char* confirmLabel = addNewSelected ? "Add TODO" : (canReorder ? "Toggle" : "Edit");
+  const char* leftLabel = canReorder ? "Move Up" : (addNewSelected ? "Hold OK:Agenda" : "Hold OK:Edit");
+  const auto labels = mappedInput.mapLabels("Back", confirmLabel, leftLabel, canReorder ? "Move Dn" : "");
   renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

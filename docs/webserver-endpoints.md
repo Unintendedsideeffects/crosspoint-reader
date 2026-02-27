@@ -11,6 +11,8 @@ This document describes all HTTP and WebSocket endpoints available on the CrossP
     - [GET `/api/plugins` - Compile-Time Feature Manifest](#get-apiplugins---compile-time-feature-manifest)
     - [GET `/api/files` - List Files](#get-apifiles---list-files)
     - [POST `/api/todo/entry` - Add TODO or Agenda Entry](#post-apitodoentry---add-todo-or-agenda-entry)
+    - [GET `/api/todo/today` - Read Daily Planner Entries](#get-apitodotoday---read-daily-planner-entries)
+    - [POST `/api/todo/today` - Save Daily Planner Entries](#post-apitodotoday---save-daily-planner-entries)
     - [GET `/download` - Download File](#get-download---download-file)
     - [POST `/upload` - Upload File](#post-upload---upload-file)
     - [POST `/api/user-fonts/rescan` - Rescan SD User Fonts](#post-apiuser-fontsrescan---rescan-sd-user-fonts)
@@ -193,6 +195,84 @@ curl -X POST -d "type=agenda&text=Meeting at 14:00" http://crosspoint.local/api/
 | 404 | `TODO planner disabled` | Feature is not compiled in |
 | 503 | `Date unavailable` | Device date could not be resolved |
 | 500 | `Failed to write TODO entry` | SD write failed |
+
+---
+
+### GET `/api/todo/today` - Read Daily Planner Entries
+
+Returns today's TODO/agenda entries in structured form for web UI editing.
+
+**Request:**
+```bash
+curl http://crosspoint.local/api/todo/today
+```
+
+**Response (200 OK):**
+```json
+{
+  "ok": true,
+  "date": "2026-02-27",
+  "path": "/daily/2026-02-27.md",
+  "items": [
+    {"text": "Buy milk", "checked": false, "isHeader": false},
+    {"text": "Meeting at 14:00", "checked": false, "isHeader": true}
+  ]
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `date` | string | Current device date used for daily file selection |
+| `path` | string | Resolved daily planner file path (`.md`/`.txt`) |
+| `items[].text` | string | Entry text |
+| `items[].checked` | boolean | Checkbox state for TODO entries |
+| `items[].isHeader` | boolean | `true` for agenda/note entries |
+
+**Error Responses:**
+
+| Status | Body | Cause |
+| ------ | ---- | ----- |
+| 404 | `TODO planner disabled` | Feature is not compiled in |
+| 503 | `Date unavailable` | Device date could not be resolved |
+
+---
+
+### POST `/api/todo/today` - Save Daily Planner Entries
+
+Rewrites today's TODO/agenda list from a structured JSON payload.
+
+**Request:**
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"items":[{"text":"Buy milk","checked":false,"isHeader":false},{"text":"Meeting at 14:00","isHeader":true}]}' \
+  http://crosspoint.local/api/todo/today
+```
+
+**JSON Body:**
+
+| Field | Required | Description |
+| ----- | -------- | ----------- |
+| `items` | Yes | Array of planner entries |
+| `items[].text` | Yes | Entry text (trimmed, max 300 chars, empty entries ignored) |
+| `items[].checked` | No | Checkbox state for TODO entries |
+| `items[].isHeader` | No | `true` for agenda/note entries |
+
+**Response (200 OK):**
+```json
+{"ok":true,"date":"2026-02-27","path":"/daily/2026-02-27.md"}
+```
+
+**Error Responses:**
+
+| Status | Body | Cause |
+| ------ | ---- | ----- |
+| 400 | `Missing body` | Request body missing |
+| 400 | `Invalid JSON body` | Invalid JSON payload |
+| 400 | `Missing items array` | `items` key missing/not an array |
+| 404 | `TODO planner disabled` | Feature is not compiled in |
+| 503 | `Date unavailable` | Device date could not be resolved |
+| 500 | `Failed to write TODO file` | SD write failed |
 
 ---
 

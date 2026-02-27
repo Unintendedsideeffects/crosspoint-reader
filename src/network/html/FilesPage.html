@@ -404,6 +404,111 @@
       background: var(--white);
       color: var(--gray-3);
     }
+    .todo-planner-modal {
+      max-width: 760px;
+      width: min(95vw, 760px);
+    }
+    .todo-planner-meta {
+      color: var(--gray-4);
+      font-size: 0.75em;
+      margin: 0 0 10px 0;
+      word-break: break-all;
+    }
+    .todo-planner-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .todo-planner-btn {
+      background: var(--black);
+      color: var(--white);
+      border: 2px solid var(--black);
+      font-family: var(--font-mono);
+      font-size: 0.75em;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+    .todo-planner-btn:hover {
+      background: var(--white);
+      color: var(--black);
+    }
+    .todo-planner-btn.secondary {
+      background: var(--gray-3);
+      border-color: var(--gray-3);
+    }
+    .todo-planner-btn.secondary:hover {
+      color: var(--gray-3);
+    }
+    .todo-planner-btn.ghost {
+      background: var(--white);
+      color: var(--black);
+    }
+    .todo-planner-list {
+      max-height: 52vh;
+      overflow: auto;
+      border: 1px solid var(--gray-7);
+      background: var(--white);
+    }
+    .todo-planner-empty {
+      text-align: center;
+      color: var(--gray-5);
+      font-size: 0.8em;
+      padding: 20px;
+    }
+    .todo-entry-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-bottom: 1px solid var(--gray-8);
+    }
+    .todo-entry-row.header {
+      background: var(--gray-9);
+    }
+    .todo-entry-text {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--gray-6);
+      padding: 6px 8px;
+      font-family: var(--font-mono);
+      font-size: 0.8em;
+      background: var(--white);
+    }
+    .todo-entry-text:focus {
+      outline: none;
+      border-color: var(--gray-3);
+    }
+    .todo-entry-controls {
+      display: inline-flex;
+      gap: 4px;
+    }
+    .todo-icon-btn {
+      border: 1px solid var(--gray-6);
+      background: var(--white);
+      color: var(--black);
+      padding: 3px 6px;
+      cursor: pointer;
+      font-size: 0.78em;
+      font-family: var(--font-mono);
+    }
+    .todo-icon-btn:hover {
+      background: var(--black);
+      color: var(--white);
+      border-color: var(--black);
+    }
+    .todo-entry-type {
+      font-size: 0.64em;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gray-5);
+      min-width: 54px;
+      text-align: center;
+    }
     /* Action button styles */
     .delete-btn,
     .rename-btn,
@@ -723,6 +828,7 @@
     <button class="action-btn upload-action-btn" onclick="openUploadModal()">📤 Upload</button>
     <button class="action-btn folder-action-btn" onclick="openFolderModal()">📁 New Folder</button>
     <button class="action-btn" style="background-color:#e74c3c" onclick="openDeleteSelectedModal()">🗑️ Delete Selected</button>
+    <button class="action-btn plugin-action-btn" id="todoPlannerBtn" onclick="openTodoPlannerModal()" style="display:none;">🗂️ Planner</button>
     <button class="action-btn plugin-action-btn" id="todoEntryBtn" onclick="openTodoPrompt(false)" style="display:none;">📝 Add TODO</button>
     <button class="action-btn plugin-action-btn" id="agendaEntryBtn" onclick="openTodoPrompt(true)" style="display:none;">📅 Add Agenda</button>
     <button class="action-btn plugin-action-btn" id="pokedexPluginBtn" onclick="openPokedexPlugin()" style="display:none;">🧩 Pokedex</button>
@@ -833,6 +939,25 @@
       <button class="move-btn-confirm" onclick="confirmMove()">Move</button>
       <button class="delete-btn-cancel" onclick="closeMoveModal()">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- Todo Planner Modal -->
+<div class="modal-overlay" id="todoPlannerModal">
+  <div class="modal todo-planner-modal">
+    <button class="modal-close" onclick="closeTodoPlannerModal()">&times;</button>
+    <h3>🗂️ Daily Todo Planner</h3>
+    <p class="todo-planner-meta" id="todoPlannerMeta">Loading...</p>
+    <div class="todo-planner-toolbar">
+      <button class="todo-planner-btn" onclick="todoPlannerAddTodo()">+ TODO</button>
+      <button class="todo-planner-btn secondary" onclick="todoPlannerAddAgenda()">+ Agenda</button>
+      <button class="todo-planner-btn ghost" onclick="loadTodoPlanner()">Reload</button>
+      <button class="todo-planner-btn" onclick="saveTodoPlanner()">Save</button>
+    </div>
+    <div class="todo-planner-list" id="todoPlannerList"></div>
+    <p class="todo-planner-meta">
+      Tip: TODO rows use checkboxes. Agenda rows are plain notes. Empty rows are removed on save.
+    </p>
   </div>
 </div>
 
@@ -1097,6 +1222,7 @@
 
 let failedUploadsGlobal = [];
 let pluginCapabilities = {};
+let todoPlannerState = { date: '', path: '', items: [] };
 const WS_PORT = 81;
 const WS_CHUNK_SIZE = 4096; // 4KB chunks - smaller for ESP32 stability
 
@@ -1115,9 +1241,10 @@ async function loadPluginCapabilities() {
 
 function updatePluginButtons() {
   const pokedexButton = document.getElementById('pokedexPluginBtn');
+  const todoPlannerButton = document.getElementById('todoPlannerBtn');
   const todoEntryButton = document.getElementById('todoEntryBtn');
   const agendaEntryButton = document.getElementById('agendaEntryBtn');
-  if (!pokedexButton || !todoEntryButton || !agendaEntryButton) {
+  if (!pokedexButton || !todoPlannerButton || !todoEntryButton || !agendaEntryButton) {
     return;
   }
 
@@ -1128,9 +1255,11 @@ function updatePluginButtons() {
   }
 
   if (pluginCapabilities.todo_planner) {
+    todoPlannerButton.style.display = 'inline-flex';
     todoEntryButton.style.display = 'inline-flex';
     agendaEntryButton.style.display = 'inline-flex';
   } else {
+    todoPlannerButton.style.display = 'none';
     todoEntryButton.style.display = 'none';
     agendaEntryButton.style.display = 'none';
   }
@@ -1165,6 +1294,158 @@ async function openTodoPrompt(agendaEntry) {
     hydrate();
   } catch (error) {
     alert(`Failed to add entry: ${error.message}`);
+  }
+}
+
+function closeTodoPlannerModal() {
+  document.getElementById('todoPlannerModal').classList.remove('open');
+}
+
+async function openTodoPlannerModal() {
+  document.getElementById('todoPlannerModal').classList.add('open');
+  await loadTodoPlanner();
+}
+
+function escapeTodoValue(value) {
+  return (value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function normalizeTodoValue(value) {
+  return (value || '').replaceAll('\r', ' ').replaceAll('\n', ' ').trim().slice(0, 300);
+}
+
+function renderTodoPlanner() {
+  const list = document.getElementById('todoPlannerList');
+  const meta = document.getElementById('todoPlannerMeta');
+  if (!list || !meta) return;
+
+  const dateLabel = todoPlannerState.date || 'unknown';
+  const pathLabel = todoPlannerState.path || '/daily/unknown.txt';
+  meta.textContent = `Date: ${dateLabel} | File: ${pathLabel}`;
+
+  if (!todoPlannerState.items.length) {
+    list.innerHTML = '<div class="todo-planner-empty">No entries yet. Add TODO or agenda notes.</div>';
+    return;
+  }
+
+  let html = '';
+  todoPlannerState.items.forEach((item, index) => {
+    const isHeader = !!item.isHeader;
+    const rowClass = isHeader ? 'todo-entry-row header' : 'todo-entry-row';
+    const checkedAttr = item.checked ? ' checked' : '';
+    const typeLabel = isHeader ? 'Agenda' : 'Todo';
+    html += `<div class="${rowClass}">`;
+    if (isHeader) {
+      html += `<span class="todo-entry-type">${typeLabel}</span>`;
+    } else {
+      html += `<label class="todo-entry-type"><input type="checkbox"${checkedAttr} onchange="todoPlannerSetChecked(${index}, this.checked)"> ${typeLabel}</label>`;
+    }
+    html += `<input class="todo-entry-text" value="${escapeTodoValue(item.text || '')}" oninput="todoPlannerSetText(${index}, this.value)">`;
+    html += '<div class="todo-entry-controls">';
+    html += `<button class="todo-icon-btn" title="Move up" onclick="todoPlannerMove(${index}, -1)">↑</button>`;
+    html += `<button class="todo-icon-btn" title="Move down" onclick="todoPlannerMove(${index}, 1)">↓</button>`;
+    html += `<button class="todo-icon-btn" title="Delete" onclick="todoPlannerDelete(${index})">🗑️</button>`;
+    html += '</div>';
+    html += '</div>';
+  });
+
+  list.innerHTML = html;
+}
+
+async function loadTodoPlanner() {
+  const list = document.getElementById('todoPlannerList');
+  if (list) {
+    list.innerHTML = '<div class="todo-planner-empty">Loading...</div>';
+  }
+
+  try {
+    const response = await fetch('/api/todo/today');
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || 'Failed to load planner');
+    }
+    const data = await response.json();
+    todoPlannerState = {
+      date: data.date || '',
+      path: data.path || '',
+      items: Array.isArray(data.items) ? data.items.map((item) => ({
+        text: typeof item.text === 'string' ? item.text : '',
+        checked: !!item.checked,
+        isHeader: !!item.isHeader
+      })) : []
+    };
+    renderTodoPlanner();
+  } catch (error) {
+    if (list) {
+      list.innerHTML = `<div class="todo-planner-empty">${escapeTodoValue(error.message || 'Failed to load planner')}</div>`;
+    }
+  }
+}
+
+function todoPlannerSetText(index, value) {
+  if (!todoPlannerState.items[index]) return;
+  todoPlannerState.items[index].text = value;
+}
+
+function todoPlannerSetChecked(index, checked) {
+  if (!todoPlannerState.items[index]) return;
+  todoPlannerState.items[index].checked = !!checked;
+}
+
+function todoPlannerAddTodo() {
+  todoPlannerState.items.push({ text: '', checked: false, isHeader: false });
+  renderTodoPlanner();
+}
+
+function todoPlannerAddAgenda() {
+  todoPlannerState.items.push({ text: '', checked: false, isHeader: true });
+  renderTodoPlanner();
+}
+
+function todoPlannerDelete(index) {
+  if (index < 0 || index >= todoPlannerState.items.length) return;
+  todoPlannerState.items.splice(index, 1);
+  renderTodoPlanner();
+}
+
+function todoPlannerMove(index, delta) {
+  const target = index + delta;
+  if (index < 0 || target < 0 || index >= todoPlannerState.items.length || target >= todoPlannerState.items.length) {
+    return;
+  }
+  const item = todoPlannerState.items[index];
+  todoPlannerState.items[index] = todoPlannerState.items[target];
+  todoPlannerState.items[target] = item;
+  renderTodoPlanner();
+}
+
+async function saveTodoPlanner() {
+  const items = todoPlannerState.items
+    .map((item) => ({
+      text: normalizeTodoValue(item.text),
+      checked: !!item.checked,
+      isHeader: !!item.isHeader
+    }))
+    .filter((item) => item.text.length > 0);
+
+  try {
+    const response = await fetch('/api/todo/today', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items })
+    });
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || 'Failed to save planner');
+    }
+    await loadTodoPlanner();
+  } catch (error) {
+    alert(`Failed to save planner: ${error.message}`);
   }
 }
 

@@ -120,6 +120,8 @@ class CrossPointWebServer {
   void handleStatus() const;
   void handlePlugins() const;
   void handleTodoEntry();
+  void handleTodoTodayGet() const;
+  void handleTodoTodaySave() const;
   void handleFileList() const;
   void handleFileListData() const;
   void handleDownload() const;

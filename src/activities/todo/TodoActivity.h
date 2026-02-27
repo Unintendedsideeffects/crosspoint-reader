@@ -2,7 +2,6 @@
 
 #include <GfxRenderer.h>
 
-#include <atomic>
 #include <string>
 #include <vector>
 
@@ -38,8 +37,8 @@ class TodoActivity final : public ActivityWithSubactivity {
   void processTaskLine(std::string& line);
   void saveTasks();
   void toggleCurrentTask();
-  void addNewTask();
-  void showDeleteConfirmation();
+  void addNewEntry(bool agendaEntry);
+  void editCurrentEntry();
 
   void renderScreen();
   void renderItem(int y, const TodoItem& item, bool isSelected) const;
