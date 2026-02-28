@@ -2326,7 +2326,7 @@ void CrossPointWebServer::handleSleepCoverPin() {
       SpiBusMutex::Guard guard;
       FsFile src = Storage.open(coverPath.c_str());
       if (src) {
-        FsFile dst = Storage.open(kPinnedDest, FILE_WRITE);
+        FsFile dst = Storage.open(kPinnedDest, O_WRONLY | O_CREAT | O_TRUNC);
         if (dst) {
           uint8_t buf[512];
           size_t n;
