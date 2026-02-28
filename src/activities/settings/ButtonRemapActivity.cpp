@@ -41,7 +41,10 @@ void ButtonRemapActivity::loop() {
     SETTINGS.frontButtonLeft = CrossPointSettings::FRONT_HW_LEFT;
     SETTINGS.frontButtonRight = CrossPointSettings::FRONT_HW_RIGHT;
     SETTINGS.enforceButtonLayoutConstraints();
-    SETTINGS.saveToFile();
+    const bool saved = SETTINGS.saveToFile();
+    if (!saved) {
+      LOG_ERR("SET", "Failed to save default front button mapping");
+    }
     finish();
     return;
   }
@@ -75,7 +78,10 @@ void ButtonRemapActivity::loop() {
     if (currentStep >= kRoleCount) {
       // All roles assigned; save to settings and exit.
       applyTempMapping();
-      SETTINGS.saveToFile();
+      const bool saved = SETTINGS.saveToFile();
+      if (!saved) {
+        LOG_ERR("SET", "Failed to save front button mapping");
+      }
       finish();
       return;
     }

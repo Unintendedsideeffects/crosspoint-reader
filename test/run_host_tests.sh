@@ -3,8 +3,23 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build/host_tests"
+ARDUINOJSON_DIR="$ROOT_DIR/.pio/libdeps/default/ArduinoJson/src"
 
 mkdir -p "$BUILD_DIR"
+
+if [ ! -d "$ARDUINOJSON_DIR" ] && command -v pio >/dev/null 2>&1; then
+  echo "Bootstrapping ArduinoJson for host tests..."
+  (
+    cd "$ROOT_DIR"
+    pio pkg install -e default --library "bblanchon/ArduinoJson@7.4.2"
+  )
+fi
+
+if [ ! -d "$ARDUINOJSON_DIR" ]; then
+  echo "ArduinoJson headers not found: $ARDUINOJSON_DIR" >&2
+  echo "Install them with: pio pkg install -e default --library \"bblanchon/ArduinoJson@7.4.2\"" >&2
+  exit 1
+fi
 
 gcc -c "$ROOT_DIR/lib/md4c/md4c.c" -I"$ROOT_DIR/lib/md4c" -o "$BUILD_DIR/md4c.o"
 gcc -c "$ROOT_DIR/lib/md4c/entity.c" -I"$ROOT_DIR/lib/md4c" -o "$BUILD_DIR/entity.o"
@@ -18,7 +33,7 @@ g++ -std=c++20 -O2 \
   -I"$ROOT_DIR/lib/Serialization" \
   -I"$ROOT_DIR/include" \
   -I"$ROOT_DIR/src" \
-  -I"$ROOT_DIR/.pio/libdeps/default/ArduinoJson/src" \
+  -I"$ARDUINOJSON_DIR" \
   "$ROOT_DIR/test/HostTests.cpp" \
   "$ROOT_DIR/lib/FsHelpers/FsHelpers.cpp" \
   "$ROOT_DIR/lib/Markdown/MarkdownParser.cpp" \

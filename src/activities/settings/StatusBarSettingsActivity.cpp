@@ -111,7 +111,10 @@ void StatusBarSettingsActivity::handleSelection() {
     // Show Battery
     SETTINGS.statusBarBattery = (SETTINGS.statusBarBattery + 1) % 2;
   }
-  SETTINGS.saveToFile();
+  const bool saved = SETTINGS.saveToFile();
+  if (!saved) {
+    LOG_ERR("SET", "Failed to save status bar settings");
+  }
 }
 
 void StatusBarSettingsActivity::render(RenderLock&&) {

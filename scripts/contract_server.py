@@ -175,7 +175,7 @@ class ContractHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _json_response(self, obj, code: int = 200):
-        self._send_raw(code, "application/json", json.dumps(obj).encode())
+        self._send_raw(code, "application/json", json.dumps(obj, separators=(",", ":")).encode())
 
     def _text(self, body: str = "OK", code: int = 200):
         self._send_raw(code, "text/plain", body.encode())
