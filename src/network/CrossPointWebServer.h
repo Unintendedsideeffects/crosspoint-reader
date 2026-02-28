@@ -144,6 +144,9 @@ class CrossPointWebServer {
   // API handlers for web UI
   void handleRecentBooks() const;
   void handleCover() const;
+  void handleSleepImages() const;
+  void handleSleepCoverGet() const;
+  void handleSleepCoverPin();
 
   // WiFi handlers
   void handleWifiScan() const;

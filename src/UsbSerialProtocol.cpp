@@ -64,6 +64,7 @@ static void buildSettingsDoc(JsonDocument& doc) {
   const CrossPointSettings& s = SETTINGS;
   doc["sleepScreen"] = s.sleepScreen;
   doc["sleepScreenSource"] = s.sleepScreenSource;
+  doc["sleepPinnedPath"] = s.sleepPinnedPath;
   doc["sleepScreenCoverMode"] = s.sleepScreenCoverMode;
   doc["sleepScreenCoverFilter"] = s.sleepScreenCoverFilter;
   doc["statusBar"] = s.statusBar;
@@ -518,6 +519,109 @@ static void handleCover(const char* path) {
   logSerial.print(F("\"}\n"));
 }
 
+// Returns images in /sleep/ as {"ok":true,"images":[{"path":...,"name":...},...]}
+static void handleSleepList() {
+  FsFile dir;
+  {
+    SpiBusMutex::Guard guard;
+    dir = Storage.open("/sleep");
+  }
+
+  logSerial.print(F("{\"ok\":true,\"images\":["));
+  bool first = true;
+
+  if (dir && dir.isDirectory()) {
+    while (true) {
+      char name[256] = {0};
+      bool entryIsDir = false;
+
+      {
+        SpiBusMutex::Guard guard;
+        FsFile file = dir.openNextFile();
+        if (!file) break;
+        file.getName(name, sizeof(name));
+        entryIsDir = file.isDirectory();
+        file.close();
+      }
+
+      if (entryIsDir) continue;
+      if (name[0] == '.') continue;
+
+      String fname(name);
+      fname.toLowerCase();
+      bool supported = fname.endsWith(".bmp");
+#if ENABLE_IMAGE_SLEEP
+      supported = supported || fname.endsWith(".png") || fname.endsWith(".jpg") || fname.endsWith(".jpeg");
+#endif
+      if (!supported) continue;
+
+      if (!first) logSerial.write(',');
+      first = false;
+
+      JsonDocument entry;
+      entry["path"] = String("/sleep/") + name;
+      entry["name"] = name;
+      serializeJson(entry, logSerial);
+    }
+    {
+      SpiBusMutex::Guard guard;
+      dir.close();
+    }
+  }
+
+  logSerial.print(F("]}\n"));
+}
+
+// Returns the currently pinned sleep cover path (empty strings when no pin is set).
+static void handleSleepGetPinned() {
+  const char* path = SETTINGS.sleepPinnedPath;
+  const char* name = path;
+  for (const char* p = path; *p; ++p) {
+    if (*p == '/') name = p + 1;
+  }
+  JsonDocument resp;
+  resp["path"] = path;
+  resp["name"] = name;
+  serializeJson(resp, logSerial);
+  logSerial.write('\n');
+}
+
+// Pins the given sleep folder image, or clears the pin when path is empty.
+static void handleSleepPin(const char* path) {
+  if (!path) path = "";
+
+  if (path[0] != '\0') {
+    if (!PathUtils::isValidSdPath(String(path))) {
+      sendError("invalid path");
+      return;
+    }
+    bool exists = false;
+    {
+      SpiBusMutex::Guard guard;
+      exists = Storage.exists(path);
+    }
+    if (!exists) {
+      sendError("file not found");
+      return;
+    }
+    strncpy(SETTINGS.sleepPinnedPath, path, sizeof(SETTINGS.sleepPinnedPath) - 1);
+    SETTINGS.sleepPinnedPath[sizeof(SETTINGS.sleepPinnedPath) - 1] = '\0';
+  } else {
+    SETTINGS.sleepPinnedPath[0] = '\0';
+  }
+
+  bool saved = false;
+  {
+    SpiBusMutex::Guard guard;
+    saved = SETTINGS.saveToFile();
+  }
+  if (!saved) {
+    sendError("settings save failed");
+    return;
+  }
+  sendOk();
+}
+
 // Append a todo or agenda entry to today's daily file.
 // Mirrors the logic in CrossPointWebServer::handleTodoEntry().
 static void handleTodoAdd(const char* text, const char* type) {
@@ -723,6 +827,12 @@ static void processCommand(const char* line) {
     handleRecent();
   } else if (strcmp(name, "cover") == 0) {
     handleCover(cmd["arg"] | "");
+  } else if (strcmp(name, "sleep_list") == 0) {
+    handleSleepList();
+  } else if (strcmp(name, "sleep_get_pinned") == 0) {
+    handleSleepGetPinned();
+  } else if (strcmp(name, "sleep_pin") == 0) {
+    handleSleepPin(cmd["arg"]["path"] | "");
   } else if (strcmp(name, "wifi_connect") == 0) {
     const JsonObjectConst arg = cmd["arg"].as<JsonObjectConst>();
     handleWifiConnect(arg["ssid"] | "", arg["password"] | "");

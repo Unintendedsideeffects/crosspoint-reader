@@ -49,6 +49,7 @@ bool JsonSettingsIO::saveSettings(const CrossPointSettings& s, const char* path)
 
   doc["sleepScreen"] = s.sleepScreen;
   doc["sleepScreenSource"] = s.sleepScreenSource;
+  doc["sleepPinnedPath"] = s.sleepPinnedPath;
   doc["sleepScreenCoverMode"] = s.sleepScreenCoverMode;
   doc["sleepScreenCoverFilter"] = s.sleepScreenCoverFilter;
   doc["statusBar"] = s.statusBar;
@@ -118,6 +119,10 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   s.sleepScreen = clamp(doc["sleepScreen"] | (uint8_t)S::DARK, S::SLEEP_SCREEN_MODE_COUNT, S::DARK);
   s.sleepScreenSource = clamp(doc["sleepScreenSource"] | (uint8_t)S::SLEEP_SOURCE_SLEEP, S::SLEEP_SCREEN_SOURCE_COUNT,
                               S::SLEEP_SOURCE_SLEEP);
+  const char* sleepPinnedPath = doc["sleepPinnedPath"] | "";
+  strncpy(s.sleepPinnedPath, sleepPinnedPath, sizeof(s.sleepPinnedPath) - 1);
+  s.sleepPinnedPath[sizeof(s.sleepPinnedPath) - 1] = '\0';
+
   s.sleepScreenCoverMode =
       clamp(doc["sleepScreenCoverMode"] | (uint8_t)S::FIT, S::SLEEP_SCREEN_COVER_MODE_COUNT, S::FIT);
   s.sleepScreenCoverFilter =

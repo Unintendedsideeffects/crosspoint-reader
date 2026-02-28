@@ -304,6 +304,21 @@
     </div>
   </div>
 
+  <div class="card" id="sleep-cover-card" style="display:none;">
+    <h2>Sleep Cover &mdash; Pinned Image</h2>
+    <div id="sleep-pin-status" style="font-size:0.8em;padding:8px;background:var(--gray-10);border:1px solid var(--gray-7);margin-bottom:12px;">Loading...</div>
+    <div style="display:flex;margin-bottom:12px;">
+      <button id="sleep-tab-btn-folder" onclick="showSleepTab('folder')" style="flex:1;padding:8px;border:2px solid var(--black);border-right:none;background:var(--black);color:var(--white);font-family:var(--font-mono);font-size:0.75em;font-weight:700;text-transform:uppercase;cursor:pointer;">Sleep Folder</button>
+      <button id="sleep-tab-btn-books" onclick="showSleepTab('books')" style="flex:1;padding:8px;border:2px solid var(--black);background:var(--white);color:var(--black);font-family:var(--font-mono);font-size:0.75em;font-weight:700;text-transform:uppercase;cursor:pointer;">Book Covers</button>
+    </div>
+    <div id="sleep-tab-folder">
+      <div id="sleep-images-grid"></div>
+    </div>
+    <div id="sleep-tab-books" style="display:none;">
+      <div id="sleep-books-grid"></div>
+    </div>
+  </div>
+
   <div class="save-container" id="save-container" style="display:none;">
     <button class="save-btn" id="saveBtn" onclick="saveSettings()">Save Settings</button>
   </div>
@@ -396,6 +411,7 @@
   function markChanged(key) {
     if (key) touchedFields[key] = true;
     document.getElementById('saveBtn').disabled = false;
+    if (key === 'sleepScreen') onSleepScreenChange();
   }
 
   function displaySettingName(setting) {
@@ -457,6 +473,12 @@
       container.innerHTML = html;
       document.getElementById('save-container').style.display = '';
       document.getElementById('saveBtn').disabled = true;
+
+      // Show sleep cover picker when CUSTOM sleep mode is active
+      const sleepScreenEl = document.getElementById('setting-sleepScreen');
+      if (sleepScreenEl && parseInt(sleepScreenEl.value, 10) === 2) {
+        initSleepCoverPicker();
+      }
     } catch (e) {
       console.error(e);
       document.getElementById('settings-container').innerHTML =
@@ -689,6 +711,149 @@
 
     btn.disabled = false;
   }
+
+  // ── Sleep cover picker ──────────────────────────────────────────────
+  var sleepCurrentPin = '';
+  var sleepBooksLoaded = false;
+
+  function initSleepCoverPicker() {
+    document.getElementById('sleep-cover-card').style.display = '';
+    sleepBooksLoaded = false;
+    loadSleepPin();
+    loadSleepImages();
+  }
+
+  function hideSleepCoverPicker() {
+    document.getElementById('sleep-cover-card').style.display = 'none';
+    sleepBooksLoaded = false;
+  }
+
+  function onSleepScreenChange() {
+    var el = document.getElementById('setting-sleepScreen');
+    if (el && parseInt(el.value, 10) === 2) {
+      initSleepCoverPicker();
+    } else {
+      hideSleepCoverPicker();
+    }
+  }
+
+  async function loadSleepPin() {
+    try {
+      var resp = await fetch('/api/sleep-cover');
+      var data = await resp.json();
+      sleepCurrentPin = data.path || '';
+      updateSleepPinDisplay();
+    } catch(e) {
+      document.getElementById('sleep-pin-status').textContent = 'Error loading pin status';
+    }
+  }
+
+  function updateSleepPinDisplay() {
+    var el = document.getElementById('sleep-pin-status');
+    if (!sleepCurrentPin) {
+      el.textContent = 'No image pinned \u2014 random rotation active';
+    } else {
+      var name = sleepCurrentPin.split('/').pop();
+      el.innerHTML = 'Pinned: <strong>' + escapeHtml(name) + '</strong> &nbsp;' +
+        '<button onclick="clearSleepPin()" style="padding:2px 8px;font-family:var(--font-mono);font-size:0.85em;border:1px solid var(--black);background:var(--white);cursor:pointer;">Clear</button>';
+    }
+  }
+
+  function showSleepTab(tab) {
+    var isFolder = tab === 'folder';
+    document.getElementById('sleep-tab-folder').style.display = isFolder ? '' : 'none';
+    document.getElementById('sleep-tab-books').style.display = isFolder ? 'none' : '';
+    document.getElementById('sleep-tab-btn-folder').style.background = isFolder ? 'var(--black)' : 'var(--white)';
+    document.getElementById('sleep-tab-btn-folder').style.color = isFolder ? 'var(--white)' : 'var(--black)';
+    document.getElementById('sleep-tab-btn-books').style.background = isFolder ? 'var(--white)' : 'var(--black)';
+    document.getElementById('sleep-tab-btn-books').style.color = isFolder ? 'var(--black)' : 'var(--white)';
+    if (!isFolder && !sleepBooksLoaded) loadBookCovers();
+  }
+
+  function renderSleepGrid(containerId, items, imgSrcFn, pinCallFn) {
+    var grid = document.getElementById(containerId);
+    if (!items.length) {
+      grid.innerHTML = '<p style="font-size:0.8em;color:var(--gray-5);text-align:center;padding:12px;">No images found</p>';
+      return;
+    }
+    var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+    items.forEach(function(item) {
+      html += '<div style="text-align:center;">' +
+        '<img src="' + escapeHtml(imgSrcFn(item)) + '" style="width:100%;aspect-ratio:3/4;object-fit:cover;border:2px solid var(--gray-7);display:block;" onerror="this.style.display=\'none\'">' +
+        '<button onclick="' + pinCallFn(item) + '" style="width:100%;margin-top:4px;padding:4px;font-family:var(--font-mono);font-size:0.7em;border:1px solid var(--black);background:var(--white);cursor:pointer;">Pin</button>' +
+        '</div>';
+    });
+    html += '</div>';
+    grid.innerHTML = html;
+  }
+
+  async function loadSleepImages() {
+    var grid = document.getElementById('sleep-images-grid');
+    grid.innerHTML = '<div class="loader-container"><span class="loader" style="width:24px;height:24px;"></span></div>';
+    try {
+      var resp = await fetch('/api/sleep-images');
+      var images = await resp.json();
+      renderSleepGrid('sleep-images-grid', images,
+        function(img) { return '/download?path=' + encodeURIComponent(img.path); },
+        function(img) { return 'pinSleepImage(' + JSON.stringify(img.path) + ')'; }
+      );
+    } catch(e) {
+      grid.innerHTML = '<p style="font-size:0.8em;text-align:center;padding:12px;">Error loading images</p>';
+    }
+  }
+
+  async function loadBookCovers() {
+    sleepBooksLoaded = true;
+    var grid = document.getElementById('sleep-books-grid');
+    grid.innerHTML = '<div class="loader-container"><span class="loader" style="width:24px;height:24px;"></span></div>';
+    try {
+      var resp = await fetch('/api/recent');
+      var books = await resp.json();
+      var withCovers = books.filter(function(b) { return b.hasCover; });
+      renderSleepGrid('sleep-books-grid', withCovers,
+        function(b) { return '/api/cover?path=' + encodeURIComponent(b.path); },
+        function(b) { return 'pinBookCover(' + JSON.stringify(b.path) + ')'; }
+      );
+    } catch(e) {
+      grid.innerHTML = '<p style="font-size:0.8em;text-align:center;padding:12px;">Error loading books</p>';
+    }
+  }
+
+  async function pinSleepImage(path) {
+    try {
+      var resp = await fetch('/api/sleep-cover/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: path })
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      sleepCurrentPin = path;
+      updateSleepPinDisplay();
+      showMessage(path ? 'Sleep cover pinned!' : 'Sleep cover cleared.', false);
+    } catch(e) {
+      showMessage('Error: ' + e.message, true);
+    }
+  }
+
+  async function pinBookCover(bookPath) {
+    try {
+      var resp = await fetch('/api/sleep-cover/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookPath: bookPath })
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      var data = await resp.json();
+      sleepCurrentPin = data.pinnedPath || '';
+      updateSleepPinDisplay();
+      showMessage('Book cover pinned as sleep image!', false);
+    } catch(e) {
+      showMessage('Error: ' + e.message, true);
+    }
+  }
+
+  function clearSleepPin() { pinSleepImage(''); }
+  // ────────────────────────────────────────────────────────────────────
 
   loadSettings();
 </script>

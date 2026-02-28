@@ -248,6 +248,29 @@ void SleepActivity::onEnter() {
 void SleepActivity::renderCustomSleepScreen() const {
   SpiBusMutex::Guard guard;
   SleepCacheMutex::Guard cacheGuard;
+
+  // Use pinned cover if set
+  if (SETTINGS.sleepPinnedPath[0] != '\0') {
+    const std::string pinnedPath(SETTINGS.sleepPinnedPath);
+    LOG_INF("SLP", "Using pinned sleep cover: %s", pinnedPath.c_str());
+    if (isBmpFile(pinnedPath)) {
+      FsFile file;
+      if (Storage.openFileForRead("SLP", pinnedPath, file)) {
+        Bitmap bitmap(file, true);
+        if (bitmap.parseHeaders() == BmpReaderError::Ok) {
+          renderBitmapSleepScreen(bitmap);
+          file.close();
+          return;
+        }
+        file.close();
+      }
+    } else {
+      renderImageSleepScreen(pinnedPath);
+      return;
+    }
+    LOG_WRN("SLP", "Pinned sleep cover failed, falling back to random");
+  }
+
   validateSleepImagesOnce();
   const auto numFiles = sleepImageCache.validFiles.size();
   if (numFiles > 0) {

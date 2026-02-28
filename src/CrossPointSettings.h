@@ -160,6 +160,8 @@ class CrossPointSettings {
   uint8_t sleepScreenCoverFilter = NO_FILTER;
   // Sleep screen custom-image source
   uint8_t sleepScreenSource = SLEEP_SOURCE_SLEEP;
+  // Pinned sleep cover path — if non-empty and sleepScreen==CUSTOM, always use this image.
+  char sleepPinnedPath[256] = "";
   // Status bar settings (statusBar retained for migration only)
   uint8_t statusBar = FULL;
   uint8_t statusBarChapterPageCount = 1;

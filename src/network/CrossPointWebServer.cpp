@@ -216,9 +216,12 @@ void CrossPointWebServer::begin() {
     server->on("/api/wifi/forget", HTTP_POST, [this] { handleWifiForget(); });
   }
 
-  // API endpoints for web UI (recent books, cover images)
+  // API endpoints for web UI (recent books, cover images, sleep cover picker)
   server->on("/api/recent", HTTP_GET, [this] { handleRecentBooks(); });
   server->on("/api/cover", HTTP_GET, [this] { handleCover(); });
+  server->on("/api/sleep-images", HTTP_GET, [this] { handleSleepImages(); });
+  server->on("/api/sleep-cover", HTTP_GET, [this] { handleSleepCoverGet(); });
+  server->on("/api/sleep-cover/pin", HTTP_POST, [this] { handleSleepCoverPin(); });
   if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::OtaApi)) {
     server->on("/api/ota/check", HTTP_POST, [this] { handleOtaCheckPost(); });
     server->on("/api/ota/check", HTTP_GET, [this] { handleOtaCheckGet(); });
@@ -2172,6 +2175,239 @@ void CrossPointWebServer::handleCover() const {
     SpiBusMutex::Guard guard;
     file.close();
   }
+}
+
+void CrossPointWebServer::handleSleepImages() const {
+  FsFile dir;
+  {
+    SpiBusMutex::Guard guard;
+    dir = Storage.open("/sleep");
+  }
+
+  server->setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server->send(200, "application/json", "");
+  server->sendContent("[");
+
+  if (dir && dir.isDirectory()) {
+    char output[300];
+    constexpr size_t outputSize = sizeof(output);
+    bool seenFirst = false;
+    JsonDocument doc;
+
+#if ENABLE_IMAGE_SLEEP
+    const char* ALLOWED_EXTS[] = {".bmp", ".png", ".jpg", ".jpeg"};
+#else
+    const char* ALLOWED_EXTS[] = {".bmp"};
+#endif
+    constexpr int NUM_ALLOWED = sizeof(ALLOWED_EXTS) / sizeof(ALLOWED_EXTS[0]);
+
+    while (true) {
+      std::string entryName;
+      bool isEntryDir = false;
+      bool done = false;
+
+      {
+        SpiBusMutex::Guard guard;
+        FsFile file = dir.openNextFile();
+        if (!file) {
+          done = true;
+        } else {
+          char name[500];
+          file.getName(name, sizeof(name));
+          entryName = name;
+          isEntryDir = file.isDirectory();
+          file.close();
+        }
+      }
+
+      if (done) break;
+      if (isEntryDir) continue;
+      if (entryName.empty() || entryName[0] == '.') continue;
+
+      std::string lower = entryName;
+      std::transform(lower.begin(), lower.end(), lower.begin(),
+                     [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+      bool supported = false;
+      for (int i = 0; i < NUM_ALLOWED; i++) {
+        const size_t extLen = strlen(ALLOWED_EXTS[i]);
+        if (lower.size() >= extLen && lower.substr(lower.size() - extLen) == ALLOWED_EXTS[i]) {
+          supported = true;
+          break;
+        }
+      }
+      if (!supported) continue;
+
+      doc.clear();
+      doc["path"] = std::string("/sleep/") + entryName;
+      doc["name"] = entryName;
+
+      const size_t written = serializeJson(doc, output, outputSize);
+      if (written >= outputSize) continue;
+
+      if (seenFirst)
+        server->sendContent(",");
+      else
+        seenFirst = true;
+      server->sendContent(output);
+    }
+
+    {
+      SpiBusMutex::Guard guard;
+      dir.close();
+    }
+  }
+
+  server->sendContent("]");
+  server->sendContent("");
+}
+
+void CrossPointWebServer::handleSleepCoverGet() const {
+  JsonDocument doc;
+  doc["path"] = SETTINGS.sleepPinnedPath;
+  const std::string p(SETTINGS.sleepPinnedPath);
+  const size_t slash = p.find_last_of('/');
+  doc["name"] = (slash == std::string::npos) ? p : p.substr(slash + 1);
+  char buf[320];
+  serializeJson(doc, buf, sizeof(buf));
+  server->send(200, "application/json", buf);
+}
+
+void CrossPointWebServer::handleSleepCoverPin() {
+  // Parse JSON body
+  if (!server->hasArg("plain")) {
+    server->send(400, "text/plain", "Missing body");
+    return;
+  }
+  const String& body = server->arg("plain");
+  JsonDocument reqDoc;
+  if (deserializeJson(reqDoc, body)) {
+    server->send(400, "text/plain", "Invalid JSON");
+    return;
+  }
+
+  // --- Mode B: pin a book cover ---
+  if (!reqDoc["bookPath"].isNull()) {
+    const String rawBookPath = reqDoc["bookPath"].as<String>();
+    if (!PathUtils::isValidSdPath(rawBookPath)) {
+      server->send(400, "text/plain", "Invalid bookPath");
+      return;
+    }
+    const String bookPath = PathUtils::normalizePath(rawBookPath);
+
+    // Resolve cover BMP
+    std::string coverPath;
+    const auto& books = RECENT_BOOKS.getBooks();
+    for (const auto& book : books) {
+      if (book.path == bookPath.c_str()) {
+        coverPath = book.coverBmpPath;
+        break;
+      }
+    }
+    if (coverPath.empty()) {
+      core::FeatureModules::tryGetDocumentCoverPath(bookPath, coverPath);
+    }
+    if (coverPath.empty()) {
+      server->send(404, "text/plain", "No cover available for this book");
+      return;
+    }
+
+    // Ensure /sleep/ directory exists
+    {
+      SpiBusMutex::Guard guard;
+      if (!Storage.exists("/sleep")) {
+        Storage.mkdir("/sleep");
+      }
+    }
+
+    // Copy cover BMP to /sleep/.pinned-cover.bmp
+    constexpr const char* kPinnedDest = "/sleep/.pinned-cover.bmp";
+    bool copyOk = false;
+    {
+      SpiBusMutex::Guard guard;
+      FsFile src = Storage.open(coverPath.c_str());
+      if (src) {
+        FsFile dst = Storage.open(kPinnedDest, FILE_WRITE);
+        if (dst) {
+          uint8_t buf[512];
+          size_t n;
+          while ((n = src.read(buf, sizeof(buf))) > 0) {
+            dst.write(buf, n);
+          }
+          dst.close();
+          copyOk = true;
+        }
+        src.close();
+      }
+    }
+    if (!copyOk) {
+      server->send(500, "text/plain", "Failed to copy cover");
+      return;
+    }
+
+    strncpy(SETTINGS.sleepPinnedPath, kPinnedDest, sizeof(SETTINGS.sleepPinnedPath) - 1);
+    SETTINGS.sleepPinnedPath[sizeof(SETTINGS.sleepPinnedPath) - 1] = '\0';
+    bool saved = false;
+    {
+      SpiBusMutex::Guard guard;
+      saved = SETTINGS.saveToFile();
+    }
+    if (!saved) {
+      server->send(500, "text/plain", "Failed to save settings");
+      return;
+    }
+
+    JsonDocument respDoc;
+    respDoc["pinnedPath"] = SETTINGS.sleepPinnedPath;
+    char respBuf[300];
+    serializeJson(respDoc, respBuf, sizeof(respBuf));
+    server->send(200, "application/json", respBuf);
+    return;
+  }
+
+  // --- Mode A: pin a sleep-folder image (or clear) ---
+  const String rawPath = reqDoc["path"].as<String>();
+
+  if (rawPath.isEmpty()) {
+    // Clear pin
+    SETTINGS.sleepPinnedPath[0] = '\0';
+    bool saved = false;
+    {
+      SpiBusMutex::Guard guard;
+      saved = SETTINGS.saveToFile();
+    }
+    server->send(saved ? 200 : 500, "text/plain", saved ? "Cleared" : "Failed to save");
+    return;
+  }
+
+  if (!PathUtils::isValidSdPath(rawPath)) {
+    server->send(400, "text/plain", "Invalid path");
+    return;
+  }
+  const String pinnedPath = PathUtils::normalizePath(rawPath);
+
+  bool exists = false;
+  {
+    SpiBusMutex::Guard guard;
+    exists = Storage.exists(pinnedPath.c_str());
+  }
+  if (!exists) {
+    server->send(404, "text/plain", "File not found");
+    return;
+  }
+
+  strncpy(SETTINGS.sleepPinnedPath, pinnedPath.c_str(), sizeof(SETTINGS.sleepPinnedPath) - 1);
+  SETTINGS.sleepPinnedPath[sizeof(SETTINGS.sleepPinnedPath) - 1] = '\0';
+  bool saved = false;
+  {
+    SpiBusMutex::Guard guard;
+    saved = SETTINGS.saveToFile();
+  }
+
+  JsonDocument respDoc;
+  respDoc["pinnedPath"] = SETTINGS.sleepPinnedPath;
+  char respBuf[300];
+  serializeJson(respDoc, respBuf, sizeof(respBuf));
+  server->send(saved ? 200 : 500, "application/json", respBuf);
 }
 
 // WebSocket callback trampoline
