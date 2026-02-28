@@ -6,6 +6,8 @@
 - [x] Fix web UI blocking: /api/ota/check is now non-blocking (POST starts, GET polls)
 - [x] Add HTTP timeout (15s) to prevent indefinite blocking
 - [x] Increase OTA display task stack: 2048 → 4096
+- [x] Fix `RELEASE_STABLE` pointing to non-existent `tags/release` → now uses `tags/stable`
+- [x] Fix `latest` and `stable` channels missing `firmware.bin` — OTA never found updates on default channel
 
 ## Fork Drift Homescreen Theme
 

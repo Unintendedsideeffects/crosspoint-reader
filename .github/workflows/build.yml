@@ -242,13 +242,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p channel
+          cp artifacts/latest-standard/firmware.bin channel/firmware.bin
           cp artifacts/latest-standard/firmware.bin channel/crosspoint-standard.bin
           cp artifacts/latest-standard/partitions.bin channel/crosspoint-partitions.bin
           cp artifacts/lean/firmware.bin channel/crosspoint-lean.bin
           cp artifacts/full/firmware.bin channel/crosspoint-full.bin
-          # lean-reset intentionally reuses the lean profile firmware.
           cp artifacts/lean/firmware.bin channel/crosspoint-lean-reset.bin
-          # full-reset intentionally reuses the full profile firmware.
           cp artifacts/full/firmware.bin channel/crosspoint-full-reset.bin
           ls -lh channel
 
@@ -379,6 +378,7 @@ jobs:
           draft: false
           generate_release_notes: false
           files: |
+            firmware.bin
             crosspoint-standard.bin
             crosspoint-partitions.bin
             crosspoint-lean.bin

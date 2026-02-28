@@ -17,7 +17,7 @@
 
 namespace {
 constexpr char releaseChannelUrl[] =
-    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/release";
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/stable";
 constexpr char nightlyChannelUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/nightly";
 constexpr char latestChannelUrl[] =
