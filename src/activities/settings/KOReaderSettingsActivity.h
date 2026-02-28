@@ -1,38 +1,22 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
-#include <atomic>
-#include <functional>
-
-#include "activities/ActivityWithSubactivity.h"
+#include "activities/Activity.h"
 
 /**
  * Submenu for KOReader Sync settings.
  * Shows username, password, and authenticate options.
  */
-class KOReaderSettingsActivity final : public ActivityWithSubactivity {
+class KOReaderSettingsActivity final : public Activity {
  public:
-  explicit KOReaderSettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                    const std::function<void()>& onBack)
-      : ActivityWithSubactivity("KOReaderSettings", renderer, mappedInput), onBack(onBack) {}
+  explicit KOReaderSettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
+      : Activity("KOReaderSettings", renderer, mappedInput) {}
 
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(RenderLock&&) override;
 
  private:
-  TaskHandle_t displayTaskHandle = nullptr;
-  std::atomic<bool> exitTaskRequested{false};
-  std::atomic<bool> taskHasExited{false};
-  std::atomic<bool> updateRequired{false};
-
   size_t selectedIndex = 0;
-  const std::function<void()> onBack;
-
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();
-  void render();
   void handleSelection();
 };

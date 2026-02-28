@@ -1,82 +1,28 @@
 #include "Activity.h"
 
-#include <HalPowerManager.h>
+#include "ActivityManager.h"
 
-void Activity::renderTaskTrampoline(void* param) {
-  auto* self = static_cast<Activity*>(param);
-  self->renderTaskLoop();
-}
+void Activity::onEnter() { LOG_DBG("ACT", "Entering activity: %s", name.c_str()); }
 
-void Activity::renderTaskLoop() {
-  while (true) {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    {
-      HalPowerManager::Lock powerLock;  // Ensure we don't go into low-power mode while rendering
-      RenderLock lock(*this);
-      render(std::move(lock));
-    }
+void Activity::onExit() { LOG_DBG("ACT", "Exiting activity: %s", name.c_str()); }
 
-    renderPending = false;
-    TaskHandle_t waitingTask = pendingUpdateAckTask.exchange(nullptr);
-    if (waitingTask) {
-      xTaskNotify(waitingTask, 1, eIncrement);
-    }
-  }
-}
-
-void Activity::onEnter() {
-  xTaskCreate(&renderTaskTrampoline, name.c_str(),
-              8192,              // Stack size
-              this,              // Parameters
-              1,                 // Priority
-              &renderTaskHandle  // Task handle
-  );
-  assert(renderTaskHandle != nullptr && "Failed to create render task");
-  LOG_DBG("ACT", "Entering activity: %s", name.c_str());
-}
-
-void Activity::onExit() {
-  RenderLock lock(*this);  // Ensure we don't delete the task while it's rendering
-  if (renderTaskHandle) {
-    vTaskDelete(renderTaskHandle);
-    renderTaskHandle = nullptr;
-  }
-
-  LOG_DBG("ACT", "Exiting activity: %s", name.c_str());
-}
-
-void Activity::requestUpdate() {
-  // Using direct notification to signal the render task to update
-  // Increment counter so multiple rapid calls won't be lost
-  if (renderTaskHandle) {
-    renderPending = true;
-    xTaskNotify(renderTaskHandle, 1, eIncrement);
-  }
-}
+void Activity::requestUpdate(bool immediate) { activityManager.requestUpdate(immediate); }
 
 void Activity::requestUpdateAndWait() {
-  if (!renderTaskHandle) {
-    return;
-  }
-
-  const TaskHandle_t currentTask = xTaskGetCurrentTaskHandle();
-  if (currentTask == renderTaskHandle) {
-    requestUpdate();
-    return;
-  }
-
-  pendingUpdateAckTask.store(currentTask);
-  xTaskNotify(renderTaskHandle, 1, eIncrement);
-  ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(200));
-
-  TaskHandle_t expected = currentTask;
-  pendingUpdateAckTask.compare_exchange_strong(expected, nullptr);
+  // FIXME @ngxson : properly implement this using freeRTOS notification
+  activityManager.requestUpdate(true);
+  delay(100);
 }
 
-// RenderLock
+void Activity::onGoHome() { activityManager.goHome(); }
 
-Activity::RenderLock::RenderLock(Activity& activity) : activity(activity) {
-  xSemaphoreTake(activity.renderingMutex, portMAX_DELAY);
+void Activity::onSelectBook(const std::string& path) { activityManager.goToReader(path); }
+
+void Activity::startActivityForResult(std::unique_ptr<Activity>&& activity, ActivityResultHandler resultHandler) {
+  this->resultHandler = std::move(resultHandler);
+  activityManager.pushActivity(std::move(activity));
 }
 
-Activity::RenderLock::~RenderLock() { xSemaphoreGive(activity.renderingMutex); }
+void Activity::setResult(ActivityResult&& result) { this->result = std::move(result); }
+
+void Activity::finish() { activityManager.popActivity(); }

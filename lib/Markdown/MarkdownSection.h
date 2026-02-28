@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDCardManager.h>
+#include <HalStorage.h>
 
 #include <functional>
 #include <memory>
@@ -38,7 +38,7 @@ class MarkdownSection {
   std::string contentBasePath;
   GfxRenderer& renderer;
   std::string filePath;
-  FsFile file;
+  HalFile file;
   bool fileOpenForReading = false;
   std::vector<size_t> nodeToPageMap;
 

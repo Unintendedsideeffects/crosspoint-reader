@@ -6,7 +6,7 @@
 #include <string>
 
 #include "NetworkModeSelectionActivity.h"
-#include "activities/ActivityWithSubactivity.h"
+#include "activities/Activity.h"
 #include "network/CrossPointWebServer.h"
 
 // Web server activity states
@@ -28,9 +28,8 @@ enum class WebServerActivityState {
  * This consolidates the previous separate CalibreConnectActivity into a single activity
  * with mode-specific UI rendering.
  */
-class CrossPointWebServerActivity final : public ActivityWithSubactivity {
+class CrossPointWebServerActivity final : public Activity {
   WebServerActivityState state = WebServerActivityState::MODE_SELECTION;
-  const std::function<void()> onGoBack;
 
   // Network mode
   NetworkMode networkMode = NetworkMode::JOIN_NETWORK;
@@ -64,13 +63,12 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   void updateUploadProgress();
 
  public:
-  explicit CrossPointWebServerActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                       const std::function<void()>& onGoBack)
-      : ActivityWithSubactivity("CrossPointWebServer", renderer, mappedInput), onGoBack(onGoBack) {}
+  explicit CrossPointWebServerActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
+      : Activity("CrossPointWebServer", renderer, mappedInput) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&& lock) override;
+  void render(RenderLock&&) override;
   bool skipLoopDelay() override { return webServer && webServer->isRunning(); }
   bool preventAutoSleep() override { return webServer && webServer->isRunning(); }
   bool blocksBackgroundServer() override { return true; }

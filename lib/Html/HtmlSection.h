@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDCardManager.h>
+#include <HalStorage.h>
 
 #include <functional>
 #include <memory>
@@ -33,7 +33,7 @@ class HtmlSection {
   std::string contentBasePath;
   GfxRenderer& renderer;
   std::string filePath;
-  FsFile file;
+  HalFile file;
   bool fileOpenForReading = false;
 
   void writeSectionFileHeader(int fontId, float lineCompression, bool extraParagraphSpacing, uint8_t paragraphAlignment,

@@ -1,7 +1,6 @@
 #include "KeyboardEntryActivity.h"
 
 #include "MappedInputManager.h"
-#include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -15,50 +14,14 @@ const char* const KeyboardEntryActivity::keyboard[NUM_ROWS] = {
 const char* const KeyboardEntryActivity::keyboardShift[NUM_ROWS] = {"~!@#$%^&*()_+", "QWERTYUIOP{}|", "ASDFGHJKL:\"",
                                                                     "ZXCVBNM<>?", "SPECIAL ROW"};
 
-void KeyboardEntryActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<KeyboardEntryActivity*>(param);
-  self->displayTaskLoop();
-}
-
-void KeyboardEntryActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
 void KeyboardEntryActivity::onEnter() {
   Activity::onEnter();
 
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
-
   // Trigger first update
-  updateRequired = true;
-
-  xTaskCreate(&KeyboardEntryActivity::taskTrampoline, "KeyboardEntryActivity",
-              2048,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
-void KeyboardEntryActivity::onExit() {
-  Activity::onExit();
-
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-}
+void KeyboardEntryActivity::onExit() { Activity::onExit(); }
 
 int KeyboardEntryActivity::getRowLength(const int row) const {
   if (row < 0 || row >= NUM_ROWS) return 0;
@@ -89,13 +52,13 @@ char KeyboardEntryActivity::getSelectedChar() const {
   return layout[selectedRow][selectedCol];
 }
 
-void KeyboardEntryActivity::handleKeyPress() {
+bool KeyboardEntryActivity::handleKeyPress() {
   // Handle special row (bottom row with shift, space, backspace, done)
   if (selectedRow == SPECIAL_ROW) {
     if (selectedCol >= SHIFT_COL && selectedCol < SPACE_COL) {
       // Shift toggle
       shiftActive = !shiftActive;
-      return;
+      return true;
     }
 
     if (selectedCol >= SPACE_COL && selectedCol < BACKSPACE_COL) {
@@ -103,7 +66,7 @@ void KeyboardEntryActivity::handleKeyPress() {
       if (maxLength == 0 || text.length() < maxLength) {
         text += ' ';
       }
-      return;
+      return true;
     }
 
     if (selectedCol >= BACKSPACE_COL && selectedCol < DONE_COL) {
@@ -111,22 +74,20 @@ void KeyboardEntryActivity::handleKeyPress() {
       if (!text.empty()) {
         text.pop_back();
       }
-      return;
+      return true;
     }
 
     if (selectedCol >= DONE_COL) {
       // Done button
-      if (onComplete) {
-        onComplete(text);
-      }
-      return;
+      onComplete(text);
+      return false;
     }
   }
 
   // Regular character
   const char c = getSelectedChar();
   if (c == '\0') {
-    return;
+    return true;
   }
 
   if (maxLength == 0 || text.length() < maxLength) {
@@ -136,6 +97,8 @@ void KeyboardEntryActivity::handleKeyPress() {
       shiftActive = false;
     }
   }
+
+  return true;
 }
 
 void KeyboardEntryActivity::loop() {
@@ -152,7 +115,7 @@ void KeyboardEntryActivity::loop() {
       const int maxCol = getRowLength(selectedRow) - 1;
       if (selectedCol > maxCol) selectedCol = maxCol;
     }
-    updateRequired = true;
+    requestUpdate();
   }
 
   if (mappedInput.wasPressed(MappedInputManager::Button::Down)) {
@@ -166,7 +129,7 @@ void KeyboardEntryActivity::loop() {
       const int maxCol = getRowLength(selectedRow) - 1;
       if (selectedCol > maxCol) selectedCol = maxCol;
     }
-    updateRequired = true;
+    requestUpdate();
   }
 
   if (mappedInput.wasPressed(MappedInputManager::Button::Left)) {
@@ -188,7 +151,7 @@ void KeyboardEntryActivity::loop() {
         // At done button, move to backspace
         selectedCol = BACKSPACE_COL;
       }
-      updateRequired = true;
+      requestUpdate();
       return;
     }
 
@@ -198,7 +161,7 @@ void KeyboardEntryActivity::loop() {
       // Wrap to end of current row
       selectedCol = maxCol;
     }
-    updateRequired = true;
+    requestUpdate();
   }
 
   if (mappedInput.wasPressed(MappedInputManager::Button::Right)) {
@@ -220,7 +183,7 @@ void KeyboardEntryActivity::loop() {
         // At done button, wrap to beginning of row
         selectedCol = SHIFT_COL;
       }
-      updateRequired = true;
+      requestUpdate();
       return;
     }
 
@@ -230,28 +193,27 @@ void KeyboardEntryActivity::loop() {
       // Wrap to beginning of current row
       selectedCol = 0;
     }
-    updateRequired = true;
+    requestUpdate();
   }
 
   // Selection
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    handleKeyPress();
-    updateRequired = true;
+  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    if (handleKeyPress()) {
+      requestUpdate();
+    }
+    // If handleKeyPress returns false, it means onComplete was triggered, no update needed
   }
 
   // Cancel
-  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    if (onCancel) {
-      onCancel();
-    }
-    updateRequired = true;
+  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    onCancel();
   }
 }
 
-void KeyboardEntryActivity::render() const {
-  const auto pageWidth = renderer.getScreenWidth();
-
+void KeyboardEntryActivity::render(RenderLock&&) {
   renderer.clearScreen();
+
+  const auto pageWidth = renderer.getScreenWidth();
 
   // Draw title
   renderer.drawCenteredText(UI_10_FONT_ID, startY, title.c_str());
@@ -279,7 +241,7 @@ void KeyboardEntryActivity::render() const {
     const int textWidth = renderer.getTextWidth(UI_10_FONT_ID, lineText.c_str());
     if (textWidth <= pageWidth - 40) {
       renderer.drawText(UI_10_FONT_ID, 20, inputEndY, lineText.c_str());
-      if (lineEndIdx == displayText.length()) {
+      if (lineEndIdx == static_cast<int>(displayText.length())) {
         break;
       }
 
@@ -371,4 +333,16 @@ void KeyboardEntryActivity::renderItemWithSelector(const int x, const int y, con
     renderer.drawText(UI_10_FONT_ID, x + itemWidth, y, "]");
   }
   renderer.drawText(UI_10_FONT_ID, x, y, item);
+}
+
+void KeyboardEntryActivity::onComplete(std::string completedText) {
+  setResult(KeyboardResult{std::move(completedText)});
+  finish();
+}
+
+void KeyboardEntryActivity::onCancel() {
+  ActivityResult result;
+  result.isCancelled = true;
+  setResult(std::move(result));
+  finish();
 }

@@ -90,6 +90,7 @@ const char* const LANGUAGE_NAMES[] = {
     "Polski",
     "Suomi",
     "Dansk",
+    "Nederlands",
 };
 
 // Character sets for each language
@@ -242,7 +243,7 @@ const char* const CHARACTER_SETS[] = {
     "\x80"
     "\x91"
     "",  // Português (Brasil)
-    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvwxyz|\xC2"
+    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvxyz|\xC2"
     "\xAB"
     "\xC2"
     "\xBB"
@@ -430,7 +431,7 @@ const char* const CHARACTER_SETS[] = {
     "\xC3"
     "\xBC"
     "",  // Català
-    " !\"%'()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[\\]abcdefhiklmnoprstuvwxyz|\xC2"
+    " !\"%'()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[\\]abcdefghiklmnoprstuvxyz|\xC2"
     "\xAB"
     "\xD0"
     "\x86"
@@ -551,7 +552,7 @@ const char* const CHARACTER_SETS[] = {
     "\xD1"
     "\x97"
     "",  // Українська
-    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefhiklmnoprstuvwxyz|\xC2"
+    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvwxyz|\xC2"
     "\xAB"
     "\xC2"
     "\xBB"
@@ -691,7 +692,7 @@ const char* const CHARACTER_SETS[] = {
     "\x86"
     "\xBB"
     "",  // Italiano
-    " !\"%'()*+,./012345:=?ABCDEFGHIJKLMNOPQRSTUWXZ[\\]abcdefghijklmnoprstuvwxyz|\xC2"
+    " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUWXZ[\\]abcdefghijklmnoprstuvwxyz|\xC2"
     "\xAB"
     "\xC3"
     "\xB3"
@@ -742,6 +743,15 @@ const char* const CHARACTER_SETS[] = {
     "\xC3"
     "\xB8"
     "",  // Dansk
+    " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXZ[\\]abcdefghijklmnopqrstuvwxyz|\xC2"
+    "\xAB"
+    "\xC3"
+    "\xAB"
+    "\xC3"
+    "\xAF"
+    "\xC3"
+    "\xBC"
+    "",  // Nederlands
 };
 
 namespace i18n_strings {
@@ -983,6 +993,7 @@ const char* const STRINGS_EN[] = {
     "\xAB"
     " Save",
     "Select",
+    "Selected",
     "Toggle",
     "Confirm",
     "Cancel",
@@ -996,7 +1007,6 @@ const char* const STRINGS_EN[] = {
     "Hide",
     "ON",
     "OFF",
-    "Set",
     "Not Set",
     "Left",
     "Right",
@@ -1005,7 +1015,6 @@ const char* const STRINGS_EN[] = {
     "CAPS",
     "caps",
     "OK",
-    "[ON]",
     "Sleep Screen Cover Filter",
     "Contrast",
     "Customise Status Bar",
@@ -1056,6 +1065,7 @@ const char* const STRINGS_EN[] = {
     "Go Home",
     "Sync Progress",
     "Delete Book Cache",
+    "Delete",
     "Show page as QR",
     "Chapter: ",
     " pages  |  ",
@@ -1093,6 +1103,12 @@ const char* const STRINGS_EN[] = {
     "Background Server on Charge",
     "Validate Sleep Images",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_ES[] = {
@@ -1517,6 +1533,7 @@ const char* const STRINGS_ES[] = {
     "\xAB"
     " Guardar",
     "Seleccionar",
+    "Selected",
     "Cambiar",
     "Confirmar",
     "Cancelar",
@@ -1530,9 +1547,8 @@ const char* const STRINGS_ES[] = {
     "No",
     "Show",
     "Hide",
-    "ENCENDIDO",
-    "APAGADO",
-    "Configurar",
+    "Activado",
+    "Desactivado",
     "No configurado",
     "Izquierda",
     "Derecha",
@@ -1543,10 +1559,9 @@ const char* const STRINGS_ES[] = {
     "SCULAS",
     "caps",
     "OK",
-    "[ENCENDIDO]",
-    "Filtro de salva pantalla y protecci\xC3"
+    "Filtro de pantalla de suspensi\xC3"
     "\xB3"
-    "n de la pantalla",
+    "n",
     "Contraste",
     "Personalizar barra de estado",
     "P\xC3"
@@ -1640,18 +1655,15 @@ const char* const STRINGS_ES[] = {
     "n)",
     "Ir a %",
     "Volver a inicio",
-    "Progreso de s\xC3"
-    "\xAD"
-    "ncronizaci\xC3"
-    "\xB3"
-    "n",
-    "Borrar cache del libro",
+    "Sincronizar progreso de lectura",
+    "Borrar cach\xC3"
+    "\xA9"
+    " del libro",
+    "Borrar",
     "Mostrar p\xC3"
     "\xA1"
     "gina como QR",
-    "Cap\xC3"
-    "\xAD"
-    "tulo:",
+    "Cap.:",
     " P\xC3"
     "\xA1"
     "ginas |",
@@ -1711,6 +1723,12 @@ const char* const STRINGS_ES[] = {
     "\xA1"
     "genes de reposo",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_FR[] = {
@@ -2317,6 +2335,7 @@ const char* const STRINGS_FR[] = {
     "\xAB"
     " Sauver",
     "OK",
+    "Selected",
     "Modifier",
     "Confirmer",
     "Annuler",
@@ -2336,9 +2355,6 @@ const char* const STRINGS_FR[] = {
     "Hide",
     "ON",
     "OFF",
-    "D\xC3"
-    "\xA9"
-    "fini",
     "Non d\xC3"
     "\xA9"
     "fini",
@@ -2349,8 +2365,9 @@ const char* const STRINGS_FR[] = {
     "MAJ",
     "maj",
     "OK",
-    "[ON]",
-    "Filtre affichage veille",
+    "Filtre \xC3"
+    "\xA9"
+    "cran de veille",
     "Contraste",
     "Personnaliser la barre d'\xC3"
     "\xA9"
@@ -2456,14 +2473,10 @@ const char* const STRINGS_FR[] = {
     "Aller \xC3"
     "\xA0"
     " %",
-    "Aller \xC3"
-    "\xA0"
-    " l\xE2"
-    "\x80"
-    "\x99"
-    "accueil",
-    "Synchroniser la progression",
-    "Supprimer le cache du livre",
+    "Retour Accueil",
+    "Synchro progression",
+    "Supprimer cache livre",
+    "Supprimer",
     "Afficher page en QR",
     "Chapitre : ",
     " pages  |  ",
@@ -2543,6 +2556,12 @@ const char* const STRINGS_FR[] = {
     "Background Server on Charge",
     "Valider les images de veille",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_DE[] = {
@@ -2912,6 +2931,9 @@ const char* const STRINGS_DE[] = {
     "\xAB"
     " Speichern",
     "Auswahl",
+    "Ausgew\xC3"
+    "\xA4"
+    "hlt",
     "\xC3"
     "\x84"
     "ndern",
@@ -2931,7 +2953,6 @@ const char* const STRINGS_DE[] = {
     "Hide",
     "An",
     "Aus",
-    "Gesetzt",
     "Leer",
     "Links",
     "Rechts",
@@ -2940,7 +2961,6 @@ const char* const STRINGS_DE[] = {
     "UMSCH",
     "umsch",
     "OK",
-    "[AN]",
     "Standby-Coverfilter",
     "Kontrast",
     "Statusleiste anpassen",
@@ -3008,6 +3028,9 @@ const char* const STRINGS_DE[] = {
     "Zum Anfang",
     "Fortschritt synchronisieren",
     "Buch-Cache leeren",
+    "L\xC3"
+    "\xB6"
+    "schen",
     "Seite als QR anzeigen",
     "Kapitel:",
     " Seiten  |  ",
@@ -3058,6 +3081,12 @@ const char* const STRINGS_DE[] = {
     "Background Server on Charge",
     "Schlafbilder validieren",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_CS[] = {
@@ -4271,6 +4300,7 @@ const char* const STRINGS_CS[] = {
     "\xBE"
     "it",
     "Vybrat",
+    "Selected",
     "P\xC5"
     "\x99"
     "epnout",
@@ -4296,7 +4326,6 @@ const char* const STRINGS_CS[] = {
     "Hide",
     "ZAP",
     "VYP",
-    "Nastavit",
     "Nenastaveno",
     "Vlevo",
     "Vpravo",
@@ -4311,7 +4340,6 @@ const char* const STRINGS_CS[] = {
     "\xAD"
     "smo",
     "OK",
-    "[ZAP]",
     "Filtr obrazovky sp\xC3"
     "\xA1"
     "nku",
@@ -4576,6 +4604,7 @@ const char* const STRINGS_CS[] = {
     "\xC5"
     "\xA5"
     " knihy",
+    "Smazat",
     "Zobrazit str\xC3"
     "\xA1"
     "nku jako QR",
@@ -4745,6 +4774,12 @@ const char* const STRINGS_CS[] = {
     "\xA1"
     "nku",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_PO[] = {
@@ -5217,6 +5252,7 @@ const char* const STRINGS_PO[] = {
     "\xAB"
     " Salvar",
     "Escolher",
+    "Selected",
     "Alternar",
     "Confirmar",
     "Cancelar",
@@ -5232,7 +5268,6 @@ const char* const STRINGS_PO[] = {
     "Hide",
     "LIG.",
     "DESL.",
-    "Definir",
     "N\xC3"
     "\xA3"
     "o definido",
@@ -5243,7 +5278,6 @@ const char* const STRINGS_PO[] = {
     "CAPS",
     "caps",
     "OK",
-    "[LIGADO]",
     "Filtro capa tela repouso",
     "Contraste",
     "Personalizar barra de estado",
@@ -5366,6 +5400,7 @@ const char* const STRINGS_PO[] = {
     "cio",
     "Sincronizar progresso",
     "Excluir cache do livro",
+    "Excluir",
     "Mostrar p\xC3"
     "\xA1"
     "gina como QR",
@@ -5427,6 +5462,12 @@ const char* const STRINGS_PO[] = {
     "Background Server on Charge",
     "Validar imagens de sono",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_RU[] = {
@@ -11526,6 +11567,19 @@ const char* const STRINGS_RU[] = {
     "\x8B"
     "\xD0"
     "\xB1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "",
+    "\xD0"
+    "\x92"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xB1"
     "\xD0"
     "\xBE"
     "\xD1"
@@ -11627,8 +11681,36 @@ const char* const STRINGS_RU[] = {
     "\xD1"
     "\x82"
     "",
-    "Show",
-    "Hide",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8B"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    "",
     "\xD0"
     "\x92"
     "\xD0"
@@ -11644,29 +11726,6 @@ const char* const STRINGS_RU[] = {
     "\x9A"
     "\xD0"
     "\x9B"
-    "",
-    "\xD0"
-    "\xA3"
-    "\xD1"
-    "\x81"
-    "\xD1"
-    "\x82"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB2"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB5"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xBE"
     "",
     "\xD0"
     "\x9D"
@@ -11742,13 +11801,6 @@ const char* const STRINGS_RU[] = {
     "CAPS",
     "caps",
     "OK",
-    "[\xD0"
-    "\x92"
-    "\xD0"
-    "\x9A"
-    "\xD0"
-    "\x9B"
-    "]",
     "\xD0"
     "\xA4"
     "\xD0"
@@ -11810,11 +11862,11 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xBE"
     "\xD0"
-    "\xB8"
-    "\xD1"
-    "\x82"
-    "\xD1"
-    "\x8C"
+    "\xB9"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
     " \xD1"
     "\x81"
     "\xD1"
@@ -11825,8 +11877,8 @@ const char* const STRINGS_RU[] = {
     "\xBE"
     "\xD0"
     "\xBA"
-    "\xD1"
-    "\x83"
+    "\xD0"
+    "\xB8"
     " \xD1"
     "\x81"
     "\xD0"
@@ -11847,7 +11899,27 @@ const char* const STRINGS_RU[] = {
     "\x8F"
     "",
     "\xD0"
-    "\xA1"
+    "\x9A"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x87"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xBE"
+    " \xD1"
+    "\x81"
     "\xD1"
     "\x82"
     "\xD1"
@@ -11861,8 +11933,6 @@ const char* const STRINGS_RU[] = {
     "\xD1"
     "\x86"
     " \xD0"
-    "\xB2"
-    " \xD0"
     "\xB3"
     "\xD0"
     "\xBB"
@@ -11870,23 +11940,50 @@ const char* const STRINGS_RU[] = {
     "\xB0"
     "\xD0"
     "\xB2"
-    "\xD0"
-    "\xB5"
+    "\xD1"
+    "\x8B"
     "",
-    "\xD0"
-    "\x9F"
+    "% \xD0"
+    "\xBF"
     "\xD1"
     "\x80"
     "\xD0"
     "\xBE"
     "\xD1"
-    "\x86"
+    "\x87"
+    "\xD1"
+    "\x82"
     "\xD0"
     "\xB5"
     "\xD0"
     "\xBD"
+    "\xD0"
+    "\xB8"
     "\xD1"
-    "\x82"
+    "\x8F"
+    " \xD0"
+    "\xBA"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xB8"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xB0"
     " \xD0"
     "\xBF"
     "\xD1"
@@ -11905,39 +12002,6 @@ const char* const STRINGS_RU[] = {
     "\x81"
     "\xD0"
     "\xB0"
-    " \xD0"
-    "\xBA"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB8"
-    "\xD0"
-    "\xB3"
-    "\xD0"
-    "\xB8"
-    "",
-    "\xD0"
-    "\x9F"
-    "\xD1"
-    "\x80"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB3"
-    "\xD1"
-    "\x80"
-    "\xD0"
-    "\xB5"
-    "\xD1"
-    "\x81"
-    "\xD1"
-    "\x81"
-    "-\xD0"
-    "\xB1"
-    "\xD0"
-    "\xB0"
-    "\xD1"
-    "\x80"
     "",
     "\xD0"
     "\xA2"
@@ -11954,6 +12018,26 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB0"
     " \xD0"
+    "\xB8"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    " \xD0"
     "\xBF"
     "\xD1"
     "\x80"
@@ -11969,12 +12053,6 @@ const char* const STRINGS_RU[] = {
     "\x81"
     "\xD1"
     "\x81"
-    "-\xD0"
-    "\xB1"
-    "\xD0"
-    "\xB0"
-    "\xD1"
-    "\x80"
     "\xD0"
     "\xB0"
     "",
@@ -11987,9 +12065,9 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xBA"
     "\xD0"
-    "\xB0"
-    "\xD1"
-    "\x8F"
+    "\xB8"
+    "\xD0"
+    "\xB9"
     "",
     "\xD0"
     "\xA1"
@@ -12001,10 +12079,10 @@ const char* const STRINGS_RU[] = {
     "\xB4"
     "\xD0"
     "\xBD"
-    "\xD1"
-    "\x8F"
-    "\xD1"
-    "\x8F"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB9"
     "",
     "\xD0"
     "\xA2"
@@ -12016,10 +12094,10 @@ const char* const STRINGS_RU[] = {
     "\x81"
     "\xD1"
     "\x82"
-    "\xD0"
-    "\xB0"
     "\xD1"
-    "\x8F"
+    "\x8B"
+    "\xD0"
+    "\xB9"
     "",
     "\xD0"
     "\x9A"
@@ -12113,17 +12191,15 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB3"
     "\xD0"
-    "\xBE"
-    "\xD0"
     "\xBB"
     "\xD0"
-    "\xBE"
+    "\xB0"
     "\xD0"
     "\xB2"
     "\xD0"
-    "\xBE"
+    "\xB8"
     "\xD0"
-    "\xBA"
+    "\xB5"
     "",
     "\xD0"
     "\x91"
@@ -13132,6 +13208,21 @@ const char* const STRINGS_RU[] = {
     "\xB8"
     "",
     "\xD0"
+    "\xA3"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    "",
+    "\xD0"
     "\x9F"
     "\xD0"
     "\xBE"
@@ -13164,12 +13255,24 @@ const char* const STRINGS_RU[] = {
     "\xD1"
     "\x83"
     " \xD0"
+    "\xB2"
+    " \xD0"
+    "\xB2"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xB5"
+    " QR-\xD0"
     "\xBA"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB4"
     "\xD0"
     "\xB0"
-    "\xD0"
-    "\xBA"
-    " QR",
+    "",
     "\xD0"
     "\x93"
     "\xD0"
@@ -14150,6 +14253,12 @@ const char* const STRINGS_RU[] = {
     "\xB0"
     "",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_SV[] = {
@@ -14781,6 +14890,7 @@ const char* const STRINGS_SV[] = {
     "V\xC3"
     "\xA4"
     "lj ",
+    "Selected",
     "V\xC3"
     "\xA4"
     "xla",
@@ -14806,9 +14916,6 @@ const char* const STRINGS_SV[] = {
     "\x85"
     "",
     "AV",
-    "Inst\xC3"
-    "\xA4"
-    "lld",
     "Inte inst\xC3"
     "\xA4"
     "lld",
@@ -14823,9 +14930,6 @@ const char* const STRINGS_SV[] = {
     "VERSALER",
     "versaler",
     "Okej",
-    "[P\xC3"
-    "\x85"
-    "]",
     "Vilosk\xC3"
     "\xA4"
     "rmens omslagsfilter",
@@ -14945,6 +15049,7 @@ const char* const STRINGS_SV[] = {
     " Hem",
     "Synkroniseringsframsteg",
     "Radera bokcache",
+    "Radera",
     "Visa sida som QR",
     "Kapitel:",
     " sidor  |  ",
@@ -15021,6 +15126,12 @@ const char* const STRINGS_SV[] = {
     "\xA4"
     "gesbilder",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_RO[] = {
@@ -15782,6 +15893,7 @@ const char* const STRINGS_RO[] = {
     "Selecteaz\xC4"
     "\x83"
     "",
+    "Selectat",
     "Schimb\xC4"
     "\x83"
     "",
@@ -15807,7 +15919,6 @@ const char* const STRINGS_RO[] = {
     "Ascunde",
     "Pornit",
     "Oprit",
-    "Setare",
     "Neconfigurat",
     "St\xC3"
     "\xA2"
@@ -15818,7 +15929,6 @@ const char* const STRINGS_RO[] = {
     "CAPS",
     "caps",
     "OK",
-    "[ON]",
     "Filtru ecran de repaus",
     "Contrast",
     "Customiza\xC5"
@@ -15939,6 +16049,7 @@ const char* const STRINGS_RO[] = {
     "r\xC5"
     "\xA3"
     "i",
+    "Delete",
     "Afi\xC8"
     "\x99"
     "a\xC8"
@@ -16054,6 +16165,12 @@ const char* const STRINGS_RO[] = {
     "rcare",
     "Validare imagini repaus",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_CA[] = {
@@ -16505,6 +16622,7 @@ const char* const STRINGS_CA[] = {
     "\xAB"
     " Desa",
     "Selecciona",
+    "Selected",
     "Canvia",
     "Confirma",
     "Cancel\xC2"
@@ -16522,7 +16640,6 @@ const char* const STRINGS_CA[] = {
     "Hide",
     "ON",
     "OFF",
-    "Establert",
     "No establert",
     "Esquerra",
     "Dreta",
@@ -16531,7 +16648,6 @@ const char* const STRINGS_CA[] = {
     "MAJS",
     "majs",
     "OK",
-    "[ON]",
     "Filtre de pantalla de rep\xC3"
     "\xB2"
     "s",
@@ -16640,6 +16756,7 @@ const char* const STRINGS_CA[] = {
     "Esborra la mem\xC3"
     "\xB2"
     "ria cau del llibre",
+    "Delete",
     "Mostra p\xC3"
     "\xA0"
     "gina com a QR",
@@ -16721,6 +16838,12 @@ const char* const STRINGS_CA[] = {
     "\xB2"
     "s",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_UK[] = {
@@ -23701,6 +23824,21 @@ const char* const STRINGS_UK[] = {
     "\xB8"
     "",
     "\xD0"
+    "\x92"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBE"
+    "",
+    "\xD0"
     "\x9E"
     "\xD0"
     "\xB1"
@@ -23823,8 +23961,38 @@ const char* const STRINGS_UK[] = {
     "\xD1"
     "\x96"
     "",
-    "Show",
-    "Hide",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB8"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD1"
+    "\x85"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB8"
+    "",
     "\xD0"
     "\xA3"
     "\xD0"
@@ -23844,27 +24012,6 @@ const char* const STRINGS_UK[] = {
     "\x9C"
     "\xD0"
     "\x9A"
-    "",
-    "\xD0"
-    "\x92"
-    "\xD1"
-    "\x81"
-    "\xD1"
-    "\x82"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB2"
-    "\xD0"
-    "\xB8"
-    "\xD1"
-    "\x82"
-    "\xD0"
-    "\xB8"
     "",
     "\xD0"
     "\x9D"
@@ -23956,17 +24103,6 @@ const char* const STRINGS_UK[] = {
     "\x96"
     "",
     "OK",
-    "[\xD0"
-    "\xA3"
-    "\xD0"
-    "\x92"
-    "\xD0"
-    "\x86"
-    "\xD0"
-    "\x9C"
-    "\xD0"
-    "\x9A"
-    "]",
     "\xD0"
     "\xA4"
     "\xD1"
@@ -24057,18 +24193,16 @@ const char* const STRINGS_UK[] = {
     "\x82"
     "\xD0"
     "\xB8"
-    " \xD0"
-    "\xBF"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB5"
-    "\xD0"
-    "\xBB"
+    " \xD1"
+    "\x80"
     "\xD1"
-    "\x8C"
+    "\x8F"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
     " \xD1"
     "\x81"
     "\xD1"
@@ -24081,7 +24215,25 @@ const char* const STRINGS_UK[] = {
     "\x83"
     "",
     "\xD0"
-    "\xA1"
+    "\x9A"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8C"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x96"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    " \xD1"
+    "\x81"
     "\xD1"
     "\x82"
     "\xD0"
@@ -24097,8 +24249,6 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\xBA"
     " \xD1"
-    "\x83"
-    " \xD1"
     "\x80"
     "\xD0"
     "\xBE"
@@ -24111,7 +24261,7 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\xBB"
     "\xD1"
-    "\x96"
+    "\x83"
     "",
     "\xD0"
     "\x92"
@@ -24135,39 +24285,33 @@ const char* const STRINGS_UK[] = {
     "\x80"
     "\xD0"
     "\xBE"
-    "\xD0"
-    "\xB3"
     "\xD1"
-    "\x80"
-    "\xD0"
-    "\xB5"
-    "\xD1"
-    "\x81"
-    "\xD1"
-    "\x83"
-    " \xD0"
-    "\xBA"
-    "\xD0"
-    "\xBD"
+    "\x87"
     "\xD0"
     "\xB8"
-    "\xD0"
-    "\xB3"
-    "\xD0"
-    "\xB8"
-    "",
-    "\xD0"
-    "\x9F"
+    "\xD1"
+    "\x82"
     "\xD0"
     "\xB0"
     "\xD0"
     "\xBD"
     "\xD0"
-    "\xB5"
+    "\xBE"
     "\xD0"
-    "\xBB"
+    "\xB3"
+    "\xD0"
+    "\xBE"
+    "",
+    "\xD0"
+    "\xA0"
     "\xD1"
-    "\x8C"
+    "\x8F"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
     " \xD0"
     "\xBF"
     "\xD1"
@@ -24199,18 +24343,16 @@ const char* const STRINGS_UK[] = {
     "\xBD"
     "\xD0"
     "\xB0"
-    " \xD0"
-    "\xBF"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB5"
-    "\xD0"
-    "\xBB"
+    " \xD1"
+    "\x80"
     "\xD1"
-    "\x96"
+    "\x8F"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x83"
     " \xD0"
     "\xBF"
     "\xD1"
@@ -24237,7 +24379,9 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\xBA"
     "\xD0"
-    "\xB0"
+    "\xB8"
+    "\xD0"
+    "\xB9"
     "",
     "\xD0"
     "\xA1"
@@ -24252,20 +24396,22 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\xBD"
     "\xD1"
-    "\x8F"
+    "\x96"
+    "\xD0"
+    "\xB9"
     "",
     "\xD0"
-    "\xA2"
+    "\x96"
     "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xB2"
+    "\xB8"
     "\xD1"
-    "\x81"
-    "\xD1"
-    "\x82"
+    "\x80"
     "\xD0"
-    "\xB0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB9"
     "",
     "\xD0"
     "\x9A"
@@ -24328,26 +24474,6 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\x9F"
     "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xBF"
-    "\xD0"
-    "\xB5"
-    "\xD1"
-    "\x80"
-    "\xD0"
-    "\xB5"
-    "\xD0"
-    "\xB4"
-    "\xD0"
-    "\xBD"
-    "\xD1"
-    "\x96"
-    "\xD0"
-    "\xB9"
-    " \xD0"
-    "\xBF"
-    "\xD0"
     "\xB5"
     "\xD1"
     "\x80"
@@ -24363,38 +24489,36 @@ const char* const STRINGS_UK[] = {
     "\xB4"
     "",
     "\xD0"
-    "\x97"
+    "\x9D"
     "\xD0"
     "\xB0"
     "\xD0"
-    "\xB3"
-    "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xBE"
+    "\xB7"
     "\xD0"
     "\xB2"
     "\xD0"
-    "\xBE"
-    "\xD0"
-    "\xBA"
+    "\xB0"
     "",
     "\xD0"
-    "\x91"
+    "\x90"
     "\xD0"
-    "\xB0"
+    "\xBA"
+    "\xD1"
+    "\x83"
+    "\xD0"
+    "\xBC"
+    "\xD1"
+    "\x83"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8F"
     "\xD1"
     "\x82"
     "\xD0"
-    "\xB0"
+    "\xBE"
     "\xD1"
     "\x80"
-    "\xD0"
-    "\xB5"
-    "\xD1"
-    "\x8F"
     "",
     "\xD0"
     "\xA2"
@@ -25461,6 +25585,7 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\xB8"
     "",
+    "Delete",
     "\xD0"
     "\x9F"
     "\xD0"
@@ -25497,7 +25622,13 @@ const char* const STRINGS_UK[] = {
     "\x8F"
     "\xD0"
     "\xBA"
-    " QR",
+    " QR-\xD0"
+    "\xBA"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB4"
+    "",
     "\xD0"
     "\xA0"
     "\xD0"
@@ -26648,6 +26779,114 @@ const char* const STRINGS_UK[] = {
     "\x83"
     "",
     "Device Name",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB8"
+    "",
+    "\xD0"
+    "\x9D"
+    "\xD0"
+    "\xB0"
+    " \xD1"
+    "\x86"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xB9"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x96"
+    " \xD0"
+    "\xBD"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x94"
+    " \xD0"
+    "\xB7"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "",
+    "[\xD0"
+    "\xBF"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    "]",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    " \xD0"
+    "\xB5"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    "",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_BE[] = {
@@ -32843,6 +33082,7 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x8C"
     "",
+    "Selected",
     "\xD0"
     "\x92"
     "\xD1"
@@ -32973,29 +33213,6 @@ const char* const STRINGS_BE[] = {
     "\x9B"
     "",
     "\xD0"
-    "\xA3"
-    "\xD1"
-    "\x81"
-    "\xD1"
-    "\x82"
-    "\xD0"
-    "\xB0"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xBE"
-    "\xD1"
-    "\x9E"
-    "\xD0"
-    "\xBB"
-    "\xD0"
-    "\xB5"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xB0"
-    "",
-    "\xD0"
     "\x9D"
     "\xD0"
     "\xB5"
@@ -33069,13 +33286,6 @@ const char* const STRINGS_BE[] = {
     "CAPS",
     "caps",
     "OK",
-    "[\xD0"
-    "\xA3"
-    "\xD0"
-    "\x9A"
-    "\xD0"
-    "\x9B"
-    "]",
     "\xD0"
     "\xA4"
     "\xD1"
@@ -34474,6 +34684,7 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x96"
     "",
+    "Delete",
     "\xD0"
     "\x9F"
     "\xD0"
@@ -35549,6 +35760,12 @@ const char* const STRINGS_BE[] = {
     "\x83"
     "",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_IT[] = {
@@ -35807,6 +36024,7 @@ const char* const STRINGS_IT[] = {
     "\xAB"
     " Salva",
     "Seleziona",
+    "Selezionato",
     "Attiva/Disattiva",
     "Conferma",
     "Annulla",
@@ -35822,7 +36040,6 @@ const char* const STRINGS_IT[] = {
     "Hide",
     "ON",
     "OFF",
-    "Imposta",
     "Non impostato",
     "Sinist.",
     "Dest.",
@@ -35833,7 +36050,6 @@ const char* const STRINGS_IT[] = {
     "MAIUSC",
     "maiusc",
     "OK",
-    "[ON]",
     "Filtro copertina modalit\xC3"
     "\xA0"
     " sleep",
@@ -35898,6 +36114,7 @@ const char* const STRINGS_IT[] = {
     "Vai alla Home",
     "Sincronizza Progressi",
     "Elimina Cache Libro",
+    "Delete",
     "Mostra pagina come QR",
     "Capitolo: ",
     " pagine  |  ",
@@ -35939,6 +36156,12 @@ const char* const STRINGS_IT[] = {
     "Server in background in carica",
     "Convalida immagini sospensione",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_PL[] = {
@@ -36193,7 +36416,7 @@ const char* const STRINGS_PL[] = {
     "Wprowad\xC5"
     "\xBA"
     " tekst",
-    "do ",
+    "Z ",
     "Odkrywanie Calibre...",
     "\xC5"
     "\x81"
@@ -36261,13 +36484,9 @@ const char* const STRINGS_PL[] = {
     "Sterowanie",
     "System",
     "Wygaszacz ekranu",
-    "Tryb ekranu u\xC5"
-    "\x9B"
-    "pienia z ok\xC5"
+    "Ok\xC5"
     "\x82"
-    "adk\xC4"
-    "\x85"
-    "",
+    "adki wygaszacza",
     "Status Bar",
     "Ukryj % baterii",
     "Dodatkowe odst\xC4"
@@ -36284,7 +36503,7 @@ const char* const STRINGS_PL[] = {
     "\x9B"
     "ni\xC4"
     "\x99"
-    "cie przycisku zasilania",
+    "cie zasilania",
     "Uk\xC5"
     "\x82"
     "ad czytania",
@@ -36297,7 +36516,7 @@ const char* const STRINGS_PL[] = {
     "\x82"
     "ad przycisk\xC3"
     "\xB3"
-    "w bocznych(czytnik)",
+    "w bocznych",
     "Przytrzymaj aby przeskoczy\xC4"
     "\x87"
     " rozdzia\xC5"
@@ -36309,7 +36528,7 @@ const char* const STRINGS_PL[] = {
     "trzna czcionka czytnika",
     "Czcionka czytnika",
     "Czcionka UI",
-    "Rozmiar czcionki UI",
+    "Rozmiar czcionki",
     "Odst\xC4"
     "\x99"
     "py mi\xC4"
@@ -36516,15 +36735,13 @@ const char* const STRINGS_PL[] = {
     "U\xC5"
     "\x9B"
     "pienie",
-    "Obr\xC3"
-    "\xB3"
-    "t strony",
+    "Nast. str.",
     "Pionowo",
-    "Poziomo L",
+    "Poziomo P",
     "Odwr\xC3"
     "\xB3"
     "cony",
-    "Poziomo P",
+    "Poziomo L",
     "Wstecz, Potwierd\xC5"
     "\xBA"
     ", Lewo, Prawo",
@@ -36534,12 +36751,8 @@ const char* const STRINGS_PL[] = {
     "Lewo, Wstecz, Potwierd\xC5"
     "\xBA"
     ", Prawo",
-    "Poprzedni/Nast\xC4"
-    "\x99"
-    "pny",
-    "Nast\xC4"
-    "\x99"
-    "pny/Poprzedni",
+    "Poprz./Nast.",
+    "Nast./Poprz.",
     "Bookerly",
     "Noto Sans",
     "Open Dyslexic",
@@ -36555,17 +36768,21 @@ const char* const STRINGS_PL[] = {
     "B. du\xC5"
     "\xBC"
     "y",
-    "Ciasno",
-    "Normalnie",
-    "Szeroko",
+    "Ma\xC5"
+    "\x82"
+    "e",
+    "Normalne",
+    "Du\xC5"
+    "\xBC"
+    "e",
     "Wyr\xC3"
     "\xB3"
-    "wnanie",
-    "Lewej",
+    "wnane",
+    "Lewo",
     "\xC5"
     "\x9A"
-    "rodkuj",
-    "Prawej",
+    "rodek",
+    "Prawo",
     "1 min",
     "5 min",
     "10 min",
@@ -36680,7 +36897,7 @@ const char* const STRINGS_PL[] = {
     "\xC4"
     "\x85"
     "czenia",
-    "karta S",
+    "Karta SD",
     "\xC2"
     "\xAB"
     " Wstecz",
@@ -36696,11 +36913,10 @@ const char* const STRINGS_PL[] = {
     "\xAB"
     " Zapisz",
     "Wybierz",
-    "Prze\xC5"
-    "\x82"
-    "\xC4"
-    "\x85"
-    "cz",
+    "Wybrano",
+    "Zmie\xC5"
+    "\x84"
+    "",
     "Potwierd\xC5"
     "\xBA"
     "",
@@ -36723,9 +36939,12 @@ const char* const STRINGS_PL[] = {
     "\xBC"
     "",
     "Ukryj",
-    "ON",
-    "OFF",
-    "Ustawiono",
+    "W\xC5"
+    "\x82"
+    ".",
+    "Wy\xC5"
+    "\x82"
+    ".",
     "Nie ustawiono",
     "Lewo",
     "Prawo",
@@ -36740,20 +36959,17 @@ const char* const STRINGS_PL[] = {
     "CAPS",
     "caps",
     "OK",
-    "[ON]",
     "Filtr ok\xC5"
     "\x82"
-    "adki u\xC5"
-    "\x9B"
-    "pionego ekranu",
+    "adek wygaszacza",
     "Kontrast",
     "Dostosowanie paska statusu",
     "Strona rozdzia\xC5"
     "\x82"
     "u",
-    "Pasek post\xC4"
+    "Post\xC4"
     "\x99"
-    "pu ksi\xC4"
+    "p ksi\xC4"
     "\x85"
     "\xC5"
     "\xBC"
@@ -36907,6 +37123,7 @@ const char* const STRINGS_PL[] = {
     "\xC5"
     "\xBC"
     "ek",
+    "Delete",
     "Poka\xC5"
     "\xBC"
     " stron\xC4"
@@ -36914,8 +37131,8 @@ const char* const STRINGS_PL[] = {
     " jako kod QR",
     "Rozdzia\xC5"
     "\x82"
-    "y: ",
-    " strony  |  ",
+    ": ",
+    " stron  |  ",
     "Ksi\xC4"
     "\x85"
     "\xC5"
@@ -36925,9 +37142,15 @@ const char* const STRINGS_PL[] = {
     "SHIFT",
     "LOCK",
     "Dla Calibre, dodaj /opds do adresu URL",
-    "Left/Right: 1%  Up/Down: 10%",
+    "Lewo/Prawo: 1%  G\xC3"
+    "\xB3"
+    "ra/D\xC3"
+    "\xB3"
+    "\xC5"
+    "\x82"
+    ": 10%",
     "Synchronizacja czasu...",
-    "Obliczanie sumu kontrolnekj...",
+    "Obliczanie sumy kontrolnej...",
     "B\xC5"
     "\x82"
     "\xC4"
@@ -36998,7 +37221,7 @@ const char* const STRINGS_PL[] = {
     "\xC5"
     "\xBC"
     "ki",
-    "Styl wbudowany",
+    "Style wbudowane w EPUB",
     "URL serwera OPDS",
     "Tryb ciemny",
     "Serwer w tle podczas \xC5"
@@ -37008,6 +37231,16 @@ const char* const STRINGS_PL[] = {
     "\x9B"
     "pienia",
     "Device Name",
+    "Przypisy",
+    "Brak przypis\xC3"
+    "\xB3"
+    "w na tej stronie",
+    "[link]",
+    "Zr\xC3"
+    "\xB3"
+    "b zrzut ekranu",
+    "Auto-kartkowanie: ",
+    "Auto-kartkowanie (str./min)",
 };
 
 const char* const STRINGS_FI[] = {
@@ -37591,6 +37824,7 @@ const char* const STRINGS_FI[] = {
     "\xAB"
     " Tallenna",
     "Valitse",
+    "Selected",
     "Vaihda",
     "Vahvista",
     "Peruuta",
@@ -37616,7 +37850,6 @@ const char* const STRINGS_FI[] = {
     "\x84"
     "",
     "POIS",
-    "Asetettu",
     "Ei asetettu",
     "Vasen",
     "Oikea",
@@ -37627,13 +37860,6 @@ const char* const STRINGS_FI[] = {
     "ISOT",
     "pienet",
     "OK",
-    "[P\xC3"
-    "\x84"
-    "\xC3"
-    "\x84"
-    "LL\xC3"
-    "\x84"
-    "]",
     "Lepotilan\xC3"
     "\xA4"
     "yt\xC3"
@@ -37742,6 +37968,7 @@ const char* const STRINGS_FI[] = {
     "Poista kirjan v\xC3"
     "\xA4"
     "limuisti",
+    "Delete",
     "N\xC3"
     "\xA4"
     "yt\xC3"
@@ -37853,6 +38080,12 @@ const char* const STRINGS_FI[] = {
     "\xB6"
     "kuvat",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 const char* const STRINGS_DA[] = {
@@ -38284,6 +38517,7 @@ const char* const STRINGS_DA[] = {
     "V\xC3"
     "\xA6"
     "lg",
+    "Selected",
     "Skift",
     "Bekr\xC3"
     "\xA6"
@@ -38305,7 +38539,6 @@ const char* const STRINGS_DA[] = {
     "\x86"
     "NDT",
     "SLUKKET",
-    "Indstil",
     "Ikke indstillet",
     "Venstre",
     "H\xC3"
@@ -38316,7 +38549,6 @@ const char* const STRINGS_DA[] = {
     "CAPS",
     "caps",
     "OK",
-    "[ON]",
     "Hvile-sk\xC3"
     "\xA6"
     "rm omslag-filter",
@@ -38401,6 +38633,7 @@ const char* const STRINGS_DA[] = {
     " til start",
     "Synkroniser fremskridt",
     "Slet bogcache",
+    "Delete",
     "Vis side som QR",
     "Kapitel: ",
     " sider  |  ",
@@ -38448,6 +38681,373 @@ const char* const STRINGS_DA[] = {
     "Baggrundserver under opladning",
     "Valider hvile-billeder",
     "Device Name",
+    "Footnotes",
+    "No footnotes on this page",
+    "[link]",
+    "Take screenshot",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
+};
+
+const char* const STRINGS_NL[] = {
+    "CrossPoint",
+    "OPSTARTEN",
+    "SLAAPSTAND",
+    "Gaat in slaapstand",
+    "Bestanden bladeren",
+    "Bestandsoverdracht",
+    "Instellingen",
+    "Calibre Bibliotheek",
+    "Verder lezen",
+    "Geen geopend boek",
+    "Begin hieronder met lezen",
+    "Boeken",
+    "Geen boeken gevonden",
+    "Selecteer hoofdstuk",
+    "Geen hoofdstukken",
+    "Einde van boek",
+    "Leeg hoofdstuk",
+    "Indexeren",
+    "Geheugenfout",
+    "Fout bij laden pagina",
+    "Leeg bestand",
+    "Buiten bereik",
+    "Laden...",
+    "Laden",
+    "Laden XTC mislukt",
+    "Laden TXT mislukt",
+    "Laden EPUB mislukt",
+    "SD-kaart fout",
+    "Wifi-netwerken",
+    "Geen netwerken gevonden",
+    "%zu netwerken gevonden",
+    "Scannen...",
+    "Verbinden...",
+    "Verbonden!",
+    "Verbinding mislukt",
+    "Verbindingstime-out",
+    "Netwerk vergeten?",
+    "Wachtwoord opslaan voor volgende keer?",
+    "Opgeslagen wachtwoord verwijderen?",
+    "Druk op OK om opnieuw te scannen",
+    "Druk op een knop om door te gaan",
+    "LINKS/RECHTS: Selecteer | OK: Bevestig",
+    "Hoe wil je verbinding maken?",
+    "Verbind met netwerk",
+    "Hotspot maken",
+    "Verbind met een bestaand wifi-netwerk",
+    "Maak een wifi-netwerk waar anderen mee kunnen verbinden",
+    "Hotspot starten...",
+    "Hotspot-modus",
+    "Verbind je apparaat met dit wifi-netwerk",
+    "Open deze URL in je browser",
+    "of http://",
+    "of scan de QR-code met je telefoon:",
+    "Calibre Wireless",
+    "Calibre Web URL",
+    "Verbind als draadloos apparaat",
+    "* = Beveiligd | + = Opgeslagen",
+    "MAC-adres:",
+    "Wifi controleren...",
+    "Voer wifi-wachtwoord in",
+    "Tekst invoeren",
+    "met ",
+    "Calibre zoeken...",
+    "Verbinden met ",
+    "Verbonden met ",
+    "Wachten op opdrachten...",
+    "(Verbinding mislukt, opnieuw proberen)",
+    "Calibre verbinding verbroken",
+    "Wachten op overdracht...",
+    "Als de overdracht mislukt, schakel dan\n'Ignore free space' in bij de Calibre\nSmartDevice plugin instellingen.",
+    "Bezig met ontvangen: ",
+    "Ontvangen: ",
+    "Wachten op meer...",
+    "Bestand aanmaken mislukt",
+    "Wachtwoord vereist",
+    "Overdracht onderbroken",
+    "1) Installeer CrossPoint Reader plugin",
+    "2) Gebruik hetzelfde wifi-netwerk",
+    "3) In Calibre: \"Send to device\"",
+    "\"Houd dit scherm open tijdens verzenden\"",
+    "Scherm",
+    "Lezer",
+    "Bediening",
+    "Systeem",
+    "Slaapscherm",
+    "Slaapscherm omslag-modus",
+    "Statusbalk",
+    "Batterij % verbergen",
+    "Extra regelafstand alinea",
+    "Tekst Anti-Aliasing",
+    "Korte klik aan/uit-knop",
+    "Leesstand",
+    "Indeling knoppen voorzijde",
+    "Indeling zijknoppen (lezer)",
+    "Hoofdstuk overslaan (lang indrukken)",
+    "Lettertype lezer",
+    "Extern lettertype lezer",
+    "Lettertype lezer",
+    "UI Lettertype",
+    "Lettergrootte lezer",
+    "Regelafstand lezer",
+    "ASCII Letterafstand",
+    "ASCII Cijferafstand",
+    "CJK Afstand",
+    "Kleurmodus",
+    "Schermmarge lezer",
+    "Uitlijning alinea lezer",
+    "Woordafbreking",
+    "Tijd tot slaapstand",
+    "Verversingsfrequentie",
+    "Calibre instellingen",
+    "KOReader Sync",
+    "Controleren op updates",
+    "Taal",
+    "Achtergrond selecteren",
+    "Factory Reset",
+    "Leescache wissen",
+    "Calibre",
+    "Gebruikersnaam",
+    "Wachtwoord",
+    "Sync-server URL",
+    "Documentkoppeling",
+    "Authenticatie",
+    "KOReader gebruikersnaam",
+    "KOReader wachtwoord",
+    "Bestandsnaam",
+    "Binair",
+    "Stel eerst inloggegevens in",
+    "Wifi-verbinding mislukt",
+    "Authenticeren...",
+    "Authenticatie geslaagd!",
+    "KOReader-authenticatie",
+    "KOReader sync is klaar voor gebruik",
+    "Authenticatie mislukt",
+    "Klaar",
+    "Dit wist alle gecachte boekgegevens.",
+    "Alle leesvoortgang gaat verloren!",
+    "Boeken moeten opnieuw worden ge\xC3"
+    "\xAF"
+    "ndexeerd",
+    "wanneer ze weer worden geopend.",
+    "Cache wissen...",
+    "Cache gewist",
+    "items verwijderd",
+    "mislukt",
+    "Cache wissen mislukt",
+    "Check seri\xC3"
+    "\xAB"
+    "le output voor details",
+    "Donker",
+    "Licht",
+    "Aangepast",
+    "Image Source",
+    "Pokedex",
+    "All",
+    "Omslag",
+    "Geen",
+    "Passend",
+    "Bijsnijden",
+    "Geen voortgang",
+    "Volledig",
+    "Nooit",
+    "In lezer",
+    "Altijd",
+    "Negeren",
+    "Slaap",
+    "Pagina omslaan",
+    "Staand",
+    "Liggend (rechtsom)",
+    "Omgekeerd",
+    "Liggend (linksom)",
+    "Terug, Bev., Links, Rechts",
+    "Links, Rechts, Terug, Bev.",
+    "Links, Terug, Bev., Rechts",
+    "Vorige/Volgende",
+    "Volgende/Vorige",
+    "Bookerly",
+    "Noto Sans",
+    "Open Dyslexic",
+    "Klein",
+    "Gemiddeld",
+    "Groot",
+    "Extra groot",
+    "Smal",
+    "Normaal",
+    "Breed",
+    "Uitvullen",
+    "Links",
+    "Centreren",
+    "Rechts",
+    "1 min",
+    "5 min",
+    "10 min",
+    "15 min",
+    "30 min",
+    "1 pagina",
+    "5 pagina's",
+    "10 pagina's",
+    "15 pagina's",
+    "30 pagina's",
+    "Update",
+    "Controleren op update...",
+    "Nieuwe update beschikbaar!",
+    "Huidige versie: ",
+    "Nieuwe versie: ",
+    "Updaten...",
+    "Geen update beschikbaar",
+    "Update mislukt",
+    "Update voltooid",
+    "Houd de aan/uit-knop ingedrukt om in te schakelen",
+    "Extern lettertype",
+    "Ingebouwd (Uitgeschakeld)",
+    "Geen items gevonden",
+    "Downloaden...",
+    "Download mislukt",
+    "Fout:",
+    "Naamloos",
+    "Geen server-URL ingesteld",
+    "Ophalen feed mislukt",
+    "Verwerken feed mislukt",
+    "Netwerk: ",
+    "IP-adres: ",
+    "of scan de QR-code met je telefoon voor wifi-verbinding.",
+    "Fout: Algemene fout",
+    "Fout: Netwerk niet gevonden",
+    "Fout: Verbindingstime-out",
+    "SD-kaart",
+    "\xC2"
+    "\xAB"
+    " Terug",
+    "\xC2"
+    "\xAB"
+    " Sluit",
+    "\xC2"
+    "\xAB"
+    " Home",
+    "\xC2"
+    "\xAB"
+    " Opslaan",
+    "Kies",
+    "Selected",
+    "Wissel",
+    "Bevestig",
+    "Annuleer",
+    "Verbind",
+    "Open",
+    "Download",
+    "Opnieuw",
+    "Ja",
+    "Nee",
+    "Toon",
+    "Verberg",
+    "AAN",
+    "UIT",
+    "Niet ingesteld",
+    "Links",
+    "Rechts",
+    "Omhoog",
+    "Omlaag",
+    "CAPS",
+    "caps",
+    "OK",
+    "Slaapscherm omslag-filter",
+    "Contrast",
+    "Statusbalk aanpassen",
+    "Paginanummering hoofdstuk",
+    "Percentage voortgang boek",
+    "Voortgangsbalk",
+    "Dikte voortgangsbalk",
+    "Dun",
+    "Gemiddeld",
+    "Dik",
+    "Boek",
+    "Hoofdstuk",
+    "Hoofdstuk 21",
+    "Boektitel",
+    "Voorbeeld",
+    "Titel",
+    "Batterij",
+    "UI Thema",
+    "Klassiek",
+    "Lyra",
+    "Lyra Uitgebreid",
+    "Fork Drift",
+    "Zonlicht vervaging fix",
+    "Knoppen voorzijde wijzigen",
+    "OPDS-browser",
+    "Omslag + Aangepast",
+    "Recent",
+    "Recente boeken",
+    "Geen recente boeken",
+    "Gebruik Calibre draadloze overdracht",
+    "Netwerk vergeten en wachtwoord verwijderen?",
+    "Vergeet",
+    "Calibre starten...",
+    "Installatie",
+    "Status",
+    "Wis",
+    "Standaard",
+    "Druk op een knop voorop voor elke functie",
+    "Niet toegewezen",
+    "Al toegewezen",
+    "Zijknop Omhoog: Standaardindeling herstellen",
+    "Zijknop Omlaag: Toewijzen annuleren",
+    "Terug (1e knop)",
+    "Bevestig (2e knop)",
+    "Links (3e knop)",
+    "Rechts (4e knop)",
+    "Ga naar %",
+    "Naar Home",
+    "Voortgang synchroniseren",
+    "Boekcache verwijderen",
+    "Delete",
+    "Pagina als QR tonen",
+    "Hoofdstuk: ",
+    " pagina's  |  ",
+    "Boek: ",
+    "shift",
+    "SHIFT",
+    "LOCK",
+    "Voeg voor Calibre /opds toe aan de URL",
+    "Links/Rechts: 1%  Omhoog/Omlaag: 10%",
+    "Tijd synchroniseren...",
+    "Document-hash berekenen...",
+    "Document-hash berekenen mislukt",
+    "Voortgang ophalen...",
+    "Voortgang uploaden...",
+    "Geen inloggegevens ingesteld",
+    "Stel KOReader-account in bij Instellingen",
+    "Voortgang gevonden!",
+    "Extern:",
+    "Lokaal:",
+    "Pagina %d, %.2f%% totaal",
+    "Pagina %d/%d, %.2f%% totaal",
+    "  Van: %s",
+    "Externe voortgang toepassen",
+    "Lokale voortgang uploaden",
+    "Geen externe voortgang gevonden",
+    "Huidige positie uploaden?",
+    "Voortgang ge\xC3"
+    "\xBC"
+    "pload!",
+    "Sync mislukt",
+    "Sectie ",
+    "Uploaden",
+    "Stijl van boek",
+    "Ingebedde stijl",
+    "OPDS-server URL",
+    "Dark Mode",
+    "Background Server on Charge",
+    "Validate Sleep Images",
+    "Device Name",
+    "Voetnoten",
+    "Geen voetnoten op deze pagina",
+    "[link]",
+    "Screenshot maken",
+    "Auto Turn Enabled: ",
+    "Auto Turn (Pages Per Minute)",
 };
 
 }  // namespace i18n_strings
@@ -38501,3 +39101,6 @@ static_assert(sizeof(i18n_strings::STRINGS_FI) / sizeof(i18n_strings::STRINGS_FI
 static_assert(sizeof(i18n_strings::STRINGS_DA) / sizeof(i18n_strings::STRINGS_DA[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_DA size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_NL) / sizeof(i18n_strings::STRINGS_NL[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_NL size mismatch");

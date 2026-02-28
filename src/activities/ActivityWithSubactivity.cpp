@@ -1,22 +1,5 @@
 #include "ActivityWithSubactivity.h"
 
-#include <HalPowerManager.h>
-
-void ActivityWithSubactivity::renderTaskLoop() {
-  while (true) {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    {
-      HalPowerManager::Lock powerLock;  // Ensure we don't go into low-power mode while rendering
-      RenderLock lock(*this);
-      if (!subActivity) {
-        render(std::move(lock));
-      }
-      // If subActivity is set, consume the notification but skip parent render
-      // Note: the sub-activity will call its render() from its own display task
-    }
-  }
-}
-
 void ActivityWithSubactivity::exitActivity() {
   if (!subActivity) {
     return;
@@ -85,9 +68,9 @@ void ActivityWithSubactivity::loop() {
   }
 }
 
-void ActivityWithSubactivity::requestUpdate() {
+void ActivityWithSubactivity::requestUpdate(const bool immediate) {
   if (!subActivity) {
-    Activity::requestUpdate();
+    Activity::requestUpdate(immediate);
   }
   // Sub-activity should call their own requestUpdate() from their loop() function
 }

@@ -26,20 +26,12 @@ constexpr unsigned long skipPageMs = 700;
 constexpr unsigned long goHomeMs = 1000;
 }  // namespace
 
-void XtcReaderActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<XtcReaderActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void XtcReaderActivity::onEnter() {
-  ActivityWithSubactivity::onEnter();
+  Activity::onEnter();
 
   if (!xtc) {
     return;
   }
-
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
 
   xtc->setupCacheDir();
 
@@ -51,59 +43,39 @@ void XtcReaderActivity::onEnter() {
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(xtc->getPath(), xtc->getTitle(), xtc->getAuthor(), xtc->getThumbBmpPath());
 
-  // Trigger first update
-  updateRequired = true;
-
-  xTaskCreate(&XtcReaderActivity::taskTrampoline, "XtcReaderActivityTask",
-              4096,               // Stack size (smaller than EPUB since no parsing needed)
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
 void XtcReaderActivity::onExit() {
-  ActivityWithSubactivity::onExit();
+  Activity::onExit();
 
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
   xtc.reset();
 }
 
 void XtcReaderActivity::loop() {
-  ActivityWithSubactivity::loop();
-  if (subActivity) {
-    return;
-  }
-
   // Enter chapter selection activity
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     if (xtc && xtc->hasChapters() && !xtc->getChapters().empty()) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      exitActivity();
-      enterNewActivity(new XtcReaderChapterSelectionActivity(
-          this->renderer, this->mappedInput, xtc, currentPage,
-          [this] {
-            exitActivity();
-            updateRequired = true;
-          },
-          [this](const uint32_t newPage) {
-            currentPage = newPage;
-            exitActivity();
-            updateRequired = true;
-          }));
-      xSemaphoreGive(renderingMutex);
+      startActivityForResult(
+          std::make_unique<XtcReaderChapterSelectionActivity>(renderer, mappedInput, xtc, currentPage),
+          [this](const ActivityResult& result) {
+            if (!result.isCancelled) {
+              currentPage = std::get<PageResult>(result.data).page;
+              requestUpdate();
+            }
+          });
     }
   }
 
   // Long press BACK (1s+) goes directly to home
   if (mappedInput.isPressed(MappedInputManager::Button::Back) && mappedInput.getHeldTime() >= goHomeMs) {
-    onGoHome();
+    activityManager.goToMyLibrary(xtc ? xtc->getPath() : "");
     return;
   }
 
-  // Short press BACK goes to file selection
+  // Short press BACK goes to home
   if (mappedInput.wasReleased(MappedInputManager::Button::Back) && mappedInput.getHeldTime() < goHomeMs) {
-    onGoBack();
+    onGoHome();
     return;
   }
 
@@ -132,7 +104,7 @@ void XtcReaderActivity::loop() {
   // Handle end of book
   if (currentPage >= xtc->getPageCount()) {
     currentPage = xtc->getPageCount() - 1;
-    updateRequired = true;
+    requestUpdate();
     return;
   }
 
@@ -145,36 +117,17 @@ void XtcReaderActivity::loop() {
     } else {
       currentPage = 0;
     }
-    updateRequired = true;
+    requestUpdate();
   } else if (nextTriggered) {
     currentPage += skipAmount;
     if (currentPage >= xtc->getPageCount()) {
       currentPage = xtc->getPageCount();  // Allow showing "End of book"
     }
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
-void XtcReaderActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        renderInProgress = true;
-        renderScreen();
-        renderInProgress = false;
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-void XtcReaderActivity::renderScreen() {
+void XtcReaderActivity::render(RenderLock&&) {
   if (!xtc) {
     return;
   }

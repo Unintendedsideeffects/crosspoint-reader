@@ -1,38 +1,22 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
-#include <atomic>
-#include <functional>
-
-#include "activities/ActivityWithSubactivity.h"
+#include "activities/Activity.h"
 
 /**
  * Submenu for OPDS Browser settings.
  * Shows OPDS Server URL and HTTP authentication options.
  */
-class CalibreSettingsActivity final : public ActivityWithSubactivity {
+class CalibreSettingsActivity final : public Activity {
  public:
-  explicit CalibreSettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                   const std::function<void()>& onBack)
-      : ActivityWithSubactivity("CalibreSettings", renderer, mappedInput), onBack(onBack) {}
+  explicit CalibreSettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
+      : Activity("CalibreSettings", renderer, mappedInput) {}
 
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(RenderLock&&) override;
 
  private:
-  TaskHandle_t displayTaskHandle = nullptr;
-  std::atomic<bool> exitTaskRequested{false};
-  std::atomic<bool> taskHasExited{false};
-  std::atomic<bool> updateRequired{false};
-
   size_t selectedIndex = 0;
-  const std::function<void()> onBack;
-
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();
-  void render();
   void handleSelection();
 };

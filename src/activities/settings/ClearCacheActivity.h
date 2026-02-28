@@ -1,39 +1,25 @@
 #pragma once
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
+#include "activities/Activity.h"
 
-#include <atomic>
-#include <functional>
-
-#include "activities/ActivityWithSubactivity.h"
-
-class ClearCacheActivity final : public ActivityWithSubactivity {
+class ClearCacheActivity final : public Activity {
  public:
-  explicit ClearCacheActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                              const std::function<void()>& goBack)
-      : ActivityWithSubactivity("ClearCache", renderer, mappedInput), goBack(goBack) {}
+  explicit ClearCacheActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
+      : Activity("ClearCache", renderer, mappedInput) {}
 
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  bool skipLoopDelay() override { return true; }
+  void render(RenderLock&&) override;
 
  private:
   enum State { WARNING, CLEARING, SUCCESS, FAILED };
 
   State state = WARNING;
-  TaskHandle_t displayTaskHandle = nullptr;
-  std::atomic<bool> exitTaskRequested{false};
-  std::atomic<bool> taskHasExited{false};
-  std::atomic<bool> updateRequired{false};
-  const std::function<void()> goBack;
-
   int clearedCount = 0;
   int failedCount = 0;
 
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();
-  void render();
+  void goBack() { finish(); }
   void clearCache();
 };

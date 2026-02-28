@@ -10,6 +10,7 @@
 
 #include <cstddef>
 
+#include "CalibreConnectActivity.h"
 #include "MappedInputManager.h"
 #include "NetworkModeSelectionActivity.h"
 #include "ScreenComponents.h"
@@ -35,7 +36,7 @@ constexpr int TASK_EXIT_POLL_MS = 10;
 }  // namespace
 
 void CrossPointWebServerActivity::onEnter() {
-  ActivityWithSubactivity::onEnter();
+  Activity::onEnter();
 
   LOG_DBG("WEBACT", "Free heap at onEnter: %d bytes", ESP.getFreeHeap());
 
@@ -50,14 +51,18 @@ void CrossPointWebServerActivity::onEnter() {
 
   // Launch network mode selection subactivity
   LOG_DBG("WEBACT", "Launching NetworkModeSelectionActivity...");
-  enterNewActivity(new NetworkModeSelectionActivity(
-      renderer, mappedInput, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
-      [this]() { onGoBack(); }  // Cancel goes back to home
-      ));
+  startActivityForResult(std::make_unique<NetworkModeSelectionActivity>(renderer, mappedInput),
+                         [this](const ActivityResult& result) {
+                           if (result.isCancelled) {
+                             onGoHome();
+                           } else {
+                             onNetworkModeSelected(std::get<NetworkModeResult>(result.data).mode);
+                           }
+                         });
 }
 
 void CrossPointWebServerActivity::onExit() {
-  ActivityWithSubactivity::onExit();
+  Activity::onExit();
 
   LOG_DBG("WEBACT", "Free heap at onExit start: %d bytes", ESP.getFreeHeap());
 
@@ -109,16 +114,39 @@ void CrossPointWebServerActivity::onNetworkModeSelected(const NetworkMode mode) 
   networkMode = mode;
   isApMode = (mode == NetworkMode::CREATE_HOTSPOT);
 
-  // Exit mode selection subactivity
-  exitActivity();
+  if (mode == NetworkMode::CONNECT_CALIBRE) {
+    startActivityForResult(
+        std::make_unique<CalibreConnectActivity>(renderer, mappedInput), [this](const ActivityResult& result) {
+          state = WebServerActivityState::MODE_SELECTION;
 
-  if (mode == NetworkMode::JOIN_NETWORK || mode == NetworkMode::CONNECT_CALIBRE) {
-    // STA mode - launch WiFi selection.
-    // WiFi mode is set by WifiSelectionActivity (startWifiScan / attemptConnection).
+          startActivityForResult(std::make_unique<NetworkModeSelectionActivity>(renderer, mappedInput),
+                                 [this](const ActivityResult& result) {
+                                   if (result.isCancelled) {
+                                     onGoHome();
+                                   } else {
+                                     onNetworkModeSelected(std::get<NetworkModeResult>(result.data).mode);
+                                   }
+                                 });
+        });
+    return;
+  }
+
+  if (mode == NetworkMode::JOIN_NETWORK) {
+    // STA mode - launch WiFi selection
+    LOG_DBG("WEBACT", "Turning on WiFi (STA mode)...");
+    WiFi.mode(WIFI_STA);
+
     state = WebServerActivityState::WIFI_SELECTION;
     LOG_DBG("WEBACT", "Launching WifiSelectionActivity...");
-    enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
-                                               [this](const bool connected) { onWifiSelectionComplete(connected); }));
+    startActivityForResult(std::make_unique<WifiSelectionActivity>(renderer, mappedInput),
+                           [this](const ActivityResult& result) {
+                             if (!result.isCancelled) {
+                               const auto& wifi = std::get<WifiResult>(result.data);
+                               connectedIP = wifi.ip;
+                               connectedSSID = wifi.ssid;
+                             }
+                             onWifiSelectionComplete(!result.isCancelled);
+                           });
   } else {
     // AP mode - start access point
     state = WebServerActivityState::AP_STARTING;
@@ -132,11 +160,7 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
 
   if (connected) {
     // Get connection info before exiting subactivity
-    connectedIP = static_cast<WifiSelectionActivity*>(subActivity.get())->getConnectedIP();
-    connectedSSID = WiFi.SSID().c_str();
     isApMode = false;
-
-    exitActivity();
 
     // Sync time via NTP in a background task — syncTimeWithNtpLowMemory() blocks up to 3s
     // and accesses the SD card (SETTINGS.saveToFile), so run it off the main task.
@@ -160,11 +184,16 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
     startWebServer();
   } else {
     // User cancelled - go back to mode selection
-    exitActivity();
     state = WebServerActivityState::MODE_SELECTION;
-    enterNewActivity(new NetworkModeSelectionActivity(
-        renderer, mappedInput, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
-        [this]() { onGoBack(); }));
+
+    startActivityForResult(std::make_unique<NetworkModeSelectionActivity>(renderer, mappedInput),
+                           [this](const ActivityResult& result) {
+                             if (result.isCancelled) {
+                               onGoHome();
+                             } else {
+                               onNetworkModeSelected(std::get<NetworkModeResult>(result.data).mode);
+                             }
+                           });
   }
 }
 
@@ -189,7 +218,7 @@ void CrossPointWebServerActivity::startAccessPoint() {
 
   if (!apStarted) {
     LOG_ERR("WEBACT", "ERROR: Failed to start Access Point!");
-    onGoBack();
+    onGoHome();
     return;
   }
 
@@ -243,16 +272,12 @@ void CrossPointWebServerActivity::startWebServer() {
 
     // Force an immediate render since we're transitioning from a subactivity
     // that had its own rendering task. We need to make sure our display is shown.
-    {
-      RenderLock lock(*this);
-      render(std::move(lock));
-    }
-    LOG_DBG("WEBACT", "Rendered File Transfer screen");
+    requestUpdate();
   } else {
     LOG_ERR("WEBACT", "ERROR: Failed to start web server!");
     webServer.reset();
     // Go back on error
-    onGoBack();
+    onGoHome();
   }
 }
 
@@ -305,15 +330,6 @@ void CrossPointWebServerActivity::updateUploadProgress() {
 }
 
 void CrossPointWebServerActivity::loop() {
-  if (subActivity) {
-    // Use ActivityWithSubactivity::loop() so isLoopingSubActivity is set properly.
-    // This defers exitActivity()/enterNewActivity() calls that originate inside the
-    // subactivity's loop() until after it returns, avoiding UB and ensuring the
-    // pending-transition machinery (applyPendingSubActivityTransition) fires.
-    ActivityWithSubactivity::loop();
-    return;
-  }
-
   // Handle different states
   if (state == WebServerActivityState::SERVER_RUNNING) {
     // Handle DNS requests for captive portal (AP mode only)
@@ -370,8 +386,8 @@ void CrossPointWebServerActivity::loop() {
           // for back button checking
           mappedInput.update();
           // Check for exit button inside loop for responsiveness
-          if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-            onGoBack();
+          if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+            onGoHome();
             return;
           }
         }
@@ -383,14 +399,14 @@ void CrossPointWebServerActivity::loop() {
     }
 
     // Handle exit on Back button (also check outside loop)
-    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-      onGoBack();
+    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+      onGoHome();
       return;
     }
   }
 }
 
-void CrossPointWebServerActivity::render(Activity::RenderLock&&) {
+void CrossPointWebServerActivity::render(RenderLock&&) {
   // Only render our own UI when server is running
   // Subactivities handle their own rendering
   if (state == WebServerActivityState::SERVER_RUNNING) {

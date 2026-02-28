@@ -7,27 +7,21 @@
 
 class ButtonRemapActivity final : public Activity {
  public:
-  explicit ButtonRemapActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                               const std::function<void()>& onBack)
-      : Activity("ButtonRemap", renderer, mappedInput), onBack(onBack) {}
+  explicit ButtonRemapActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
+      : Activity("ButtonRemap", renderer, mappedInput) {}
 
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&& lock) override;
+  void render(RenderLock&&) override;
 
  private:
-  // Callback used to exit the remap flow back to the settings list.
-  const std::function<void()> onBack;
   // Index of the logical role currently awaiting input.
   uint8_t currentStep = 0;
   // Temporary mapping from logical role -> hardware button index.
   uint8_t tempMapping[4] = {0xFF, 0xFF, 0xFF, 0xFF};
-  // Error banner timing (used when reassigning duplicate buttons).
-  unsigned long errorUntil = 0;
+  // Error banner for reassigning duplicate buttons.
   std::string errorMessage;
-
-  void renderScreen();
 
   // Commit temporary mapping to settings.
   void applyTempMapping();

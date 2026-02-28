@@ -2,119 +2,83 @@
 
 #include <GfxRenderer.h>
 #include <HalStorage.h>
+#include <I18n.h>
 #include <Logging.h>
 
+#include <string>
+
 #include "MappedInputManager.h"
-#include "SpiBusMutex.h"
-#include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
-void ClearCacheActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<ClearCacheActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void ClearCacheActivity::onEnter() {
-  ActivityWithSubactivity::onEnter();
-
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
+  Activity::onEnter();
   state = WARNING;
-  updateRequired = true;
-
-  xTaskCreate(&ClearCacheActivity::taskTrampoline, "ClearCacheActivityTask",
-              4096,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
-void ClearCacheActivity::onExit() {
-  ActivityWithSubactivity::onExit();
+void ClearCacheActivity::onExit() { Activity::onExit(); }
 
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-}
-
-void ClearCacheActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-void ClearCacheActivity::render() {
+void ClearCacheActivity::render(RenderLock&&) {
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, "Clear Cache", true, EpdFontFamily::BOLD);
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_CLEAR_READING_CACHE));
 
   if (state == WARNING) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 60, "This will clear all cached book data.", true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 30, "All reading progress will be lost!", true,
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 60, tr(STR_CLEAR_CACHE_WARNING_1), true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 30, tr(STR_CLEAR_CACHE_WARNING_2), true,
                               EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, "Books will need to be re-indexed", true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 30, "when opened again.", true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, tr(STR_CLEAR_CACHE_WARNING_3), true);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 30, tr(STR_CLEAR_CACHE_WARNING_4), true);
 
-    const auto labels = mappedInput.mapLabels("« Cancel", "Clear", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    const auto labels = mappedInput.mapLabels(tr(STR_CANCEL), tr(STR_CLEAR_BUTTON), "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
 
   if (state == CLEARING) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, "Clearing cache...", true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, tr(STR_CLEARING_CACHE));
     renderer.displayBuffer();
     return;
   }
 
   if (state == SUCCESS) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, "Cache Cleared", true, EpdFontFamily::BOLD);
-    String resultText = String(clearedCount) + " items removed";
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, tr(STR_CACHE_CLEARED), true, EpdFontFamily::BOLD);
+    std::string resultText = std::to_string(clearedCount) + " " + std::string(tr(STR_ITEMS_REMOVED));
     if (failedCount > 0) {
-      resultText += ", " + String(failedCount) + " failed";
+      resultText += ", " + std::to_string(failedCount) + " " + std::string(tr(STR_FAILED_LOWER));
     }
     renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, resultText.c_str());
 
-    const auto labels = mappedInput.mapLabels("« Back", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
 
-  if (state == FAILED) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, "Failed to clear cache", true, EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, "Check serial output for details");
+  renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, tr(STR_CLEAR_CACHE_FAILED), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, tr(STR_CHECK_SERIAL_OUTPUT));
 
-    const auto labels = mappedInput.mapLabels("« Back", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-    renderer.displayBuffer();
-    return;
-  }
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  renderer.displayBuffer();
 }
 
 void ClearCacheActivity::clearCache() {
-  LOG_INF("CLEAR_CACHE", "Clearing cache...");
+  LOG_DBG("CLEAR_CACHE", "Clearing cache...");
 
-  SpiBusMutex::Guard guard;
-  // Open .crosspoint directory
   auto root = Storage.open("/.crosspoint");
   if (!root || !root.isDirectory()) {
-    LOG_ERR("CLEAR_CACHE", "Failed to open cache directory");
-    if (root) root.close();
+    LOG_DBG("CLEAR_CACHE", "Failed to open cache directory");
+    if (root) {
+      root.close();
+    }
     state = FAILED;
-    updateRequired = true;
+    requestUpdate();
     return;
   }
 
@@ -122,17 +86,15 @@ void ClearCacheActivity::clearCache() {
   failedCount = 0;
   char name[128];
 
-  // Iterate through all entries in the directory
   for (auto file = root.openNextFile(); file; file = root.openNextFile()) {
     file.getName(name, sizeof(name));
     String itemName(name);
 
-    // Only delete directories starting with epub_ or xtc_
     if (file.isDirectory() && (itemName.startsWith("epub_") || itemName.startsWith("xtc_"))) {
       String fullPath = "/.crosspoint/" + itemName;
-      LOG_INF("CLEAR_CACHE", "Removing cache: %s", fullPath.c_str());
+      LOG_DBG("CLEAR_CACHE", "Removing cache: %s", fullPath.c_str());
 
-      file.close();  // Close before attempting to delete
+      file.close();
 
       if (Storage.removeDir(fullPath.c_str())) {
         clearedCount++;
@@ -146,36 +108,31 @@ void ClearCacheActivity::clearCache() {
   }
   root.close();
 
-  LOG_INF("CLEAR_CACHE", "Cache cleared: %d removed, %d failed", clearedCount, failedCount);
-
+  LOG_DBG("CLEAR_CACHE", "Cache cleared: %d removed, %d failed", clearedCount, failedCount);
   state = SUCCESS;
-  updateRequired = true;
+  requestUpdate();
 }
 
 void ClearCacheActivity::loop() {
   if (state == WARNING) {
     if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-      LOG_INF("CLEAR_CACHE", "User confirmed, starting cache clear");
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      state = CLEARING;
-      xSemaphoreGive(renderingMutex);
-      updateRequired = true;
-      vTaskDelay(10 / portTICK_PERIOD_MS);
-
+      LOG_DBG("CLEAR_CACHE", "User confirmed, starting cache clear");
+      {
+        RenderLock lock(*this);
+        state = CLEARING;
+      }
+      requestUpdateAndWait();
       clearCache();
     }
 
     if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-      LOG_INF("CLEAR_CACHE", "User cancelled");
+      LOG_DBG("CLEAR_CACHE", "User cancelled");
       goBack();
     }
     return;
   }
 
-  if (state == SUCCESS || state == FAILED) {
-    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-      goBack();
-    }
-    return;
+  if ((state == SUCCESS || state == FAILED) && mappedInput.wasReleased(MappedInputManager::Button::Back)) {
+    goBack();
   }
 }

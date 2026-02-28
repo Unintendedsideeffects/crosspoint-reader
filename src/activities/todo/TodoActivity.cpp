@@ -311,11 +311,15 @@ void TodoActivity::toggleCurrentTask() {
 }
 
 void TodoActivity::addNewEntry(const bool agendaEntry) {
-  exitActivity();  // Hide current activity during sub-activity
-  enterNewActivity(new KeyboardEntryActivity(
-      renderer, mappedInput, agendaEntry ? "New Agenda Entry" : "New Task", "", 10, TODO_ENTRY_MAX_TEXT_LENGTH, false,
-      [this, agendaEntry](const std::string& text) {
-        const std::string trimmedText = trimEntryText(text);
+  startActivityForResult(
+      std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, agendaEntry ? "New Agenda Entry" : "New Task", "",
+                                              TODO_ENTRY_MAX_TEXT_LENGTH, false, 10),
+      [this, agendaEntry](const ActivityResult& result) {
+        if (result.isCancelled) {
+          return;
+        }
+
+        const std::string trimmedText = trimEntryText(std::get<KeyboardResult>(result.data).text);
         if (!trimmedText.empty()) {
           TodoItem newItem;
           newItem.text = trimmedText;
@@ -323,20 +327,13 @@ void TodoActivity::addNewEntry(const bool agendaEntry) {
           newItem.isHeader = agendaEntry;
           items.push_back(newItem);
           saveTasks();
-          // Position on the new entry so user can see it.
           selectedIndex = static_cast<int>(items.size()) - 1;
           const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
           if (selectedIndex >= scrollOffset + visibleItems) {
             scrollOffset = selectedIndex - visibleItems + 1;
           }
         }
-        exitActivity();  // Close keyboard
-        requestUpdate();
-      },
-      [this]() {
-        exitActivity();  // Close keyboard
-        requestUpdate();
-      }));
+      });
 }
 
 void TodoActivity::editCurrentEntry() {
@@ -349,40 +346,35 @@ void TodoActivity::editCurrentEntry() {
   const char* title = isHeader ? "Edit Agenda Entry" : "Edit Task";
   const std::string initialText = items[editIndex].text;
 
-  exitActivity();
-  enterNewActivity(new KeyboardEntryActivity(
-      renderer, mappedInput, title, initialText, 10, TODO_ENTRY_MAX_TEXT_LENGTH, false,
-      [this, editIndex](const std::string& text) {
-        if (!isValidItemIndex(static_cast<int>(editIndex), items.size())) {
-          exitActivity();
-          requestUpdate();
-          return;
-        }
+  startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, title, initialText,
+                                                                 TODO_ENTRY_MAX_TEXT_LENGTH, false, 10),
+                         [this, editIndex](const ActivityResult& result) {
+                           if (result.isCancelled) {
+                             return;
+                           }
 
-        const std::string trimmedText = trimEntryText(text);
-        if (trimmedText.empty()) {
-          const auto removeAt = static_cast<std::vector<TodoItem>::difference_type>(editIndex);
-          items.erase(items.begin() + removeAt);
-          selectedIndex = std::min(selectedIndex, static_cast<int>(items.size()));
-        } else {
-          items[editIndex].text = trimmedText;
-        }
+                           if (!isValidItemIndex(static_cast<int>(editIndex), items.size())) {
+                             return;
+                           }
 
-        const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
-        if (selectedIndex < scrollOffset) {
-          scrollOffset = selectedIndex;
-        } else if (selectedIndex >= scrollOffset + visibleItems) {
-          scrollOffset = selectedIndex - visibleItems + 1;
-        }
+                           const std::string trimmedText = trimEntryText(std::get<KeyboardResult>(result.data).text);
+                           if (trimmedText.empty()) {
+                             const auto removeAt = static_cast<std::vector<TodoItem>::difference_type>(editIndex);
+                             items.erase(items.begin() + removeAt);
+                             selectedIndex = std::min(selectedIndex, static_cast<int>(items.size()));
+                           } else {
+                             items[editIndex].text = trimmedText;
+                           }
 
-        saveTasks();
-        exitActivity();
-        requestUpdate();
-      },
-      [this]() {
-        exitActivity();
-        requestUpdate();
-      }));
+                           const int visibleItems = (renderer.getScreenHeight() - HEADER_HEIGHT) / ITEM_HEIGHT;
+                           if (selectedIndex < scrollOffset) {
+                             scrollOffset = selectedIndex;
+                           } else if (selectedIndex >= scrollOffset + visibleItems) {
+                             scrollOffset = selectedIndex - visibleItems + 1;
+                           }
+
+                           saveTasks();
+                         });
 }
 
 void TodoActivity::render(Activity::RenderLock&& lock) { renderScreen(); }

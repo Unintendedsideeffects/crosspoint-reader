@@ -38,13 +38,14 @@ class HomeActivity final : public Activity {
   std::string lastBookAuthor;
   std::string coverBmpPath;
   std::vector<RecentBook> recentBooks;
-
-  const std::function<void()> onContinueReading;
-  const std::function<void()> onMyLibraryOpen;
-  const std::function<void()> onSettingsOpen;
-  const std::function<void()> onFileTransferOpen;
-  const std::function<void()> onOpdsBrowserOpen;
-  const std::function<void()> onTodoOpen;
+  void onContinueReading();
+  void onSelectBook(const std::string& path);
+  void onMyLibraryOpen();
+  void onRecentsOpen();
+  void onSettingsOpen();
+  void onFileTransferOpen();
+  void onOpdsBrowserOpen();
+  void onTodoOpen();
 
   void freeCoverBuffer();  // Free the stored cover buffer
 
@@ -63,19 +64,10 @@ class HomeActivity final : public Activity {
   static std::string fallbackAuthor(const RecentBook& book);
 
  public:
-  explicit HomeActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                        const std::function<void()>& onContinueReading, const std::function<void()>& onMyLibraryOpen,
-                        const std::function<void()>& onSettingsOpen, const std::function<void()>& onFileTransferOpen,
-                        const std::function<void()>& onOpdsBrowserOpen, const std::function<void()>& onTodoOpen)
-      : Activity("Home", renderer, mappedInput),
-        onContinueReading(onContinueReading),
-        onMyLibraryOpen(onMyLibraryOpen),
-        onSettingsOpen(onSettingsOpen),
-        onFileTransferOpen(onFileTransferOpen),
-        onOpdsBrowserOpen(onOpdsBrowserOpen),
-        onTodoOpen(onTodoOpen) {}
+  explicit HomeActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
+      : Activity("Home", renderer, mappedInput) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
+  void render(RenderLock&&) override;
 };

@@ -506,7 +506,7 @@ void MarkdownReaderActivity::saveProgress() const {
   }
   const int currentPage = getActiveCurrentPage();
   SpiBusMutex::Guard guard;
-  FsFile f;
+  HalFile f;
   if (Storage.openFileForWrite("MDR", markdown->getCachePath() + "/progress.bin", f)) {
     uint8_t data[4];
     data[0] = currentPage & 0xFF;
@@ -524,7 +524,7 @@ void MarkdownReaderActivity::loadProgress() {
   }
 
   SpiBusMutex::Guard guard;
-  FsFile f;
+  HalFile f;
   if (Storage.openFileForRead("MDR", markdown->getCachePath() + "/progress.bin", f)) {
     uint8_t data[4];
     if (f.read(data, 4) == 4) {

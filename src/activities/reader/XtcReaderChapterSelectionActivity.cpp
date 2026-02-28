@@ -3,7 +3,6 @@
 #include <GfxRenderer.h>
 
 #include "MappedInputManager.h"
-#include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -40,11 +39,6 @@ int XtcReaderChapterSelectionActivity::findChapterIndexForPage(uint32_t page) co
   return 0;
 }
 
-void XtcReaderChapterSelectionActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<XtcReaderChapterSelectionActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void XtcReaderChapterSelectionActivity::onEnter() {
   Activity::onEnter();
 
@@ -52,26 +46,11 @@ void XtcReaderChapterSelectionActivity::onEnter() {
     return;
   }
 
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
   selectorIndex = findChapterIndexForPage(currentPage);
-
-  updateRequired = true;
-  xTaskCreate(&XtcReaderChapterSelectionActivity::taskTrampoline, "XtcReaderChapterSelectionActivityTask",
-              4096,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
-void XtcReaderChapterSelectionActivity::onExit() {
-  Activity::onExit();
-
-  if (displayTaskHandle != nullptr) {
-    TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-  }
-}
+void XtcReaderChapterSelectionActivity::onExit() { Activity::onExit(); }
 
 void XtcReaderChapterSelectionActivity::loop() {
   const bool prevReleased = mappedInput.wasReleased(MappedInputManager::Button::Up) ||
@@ -85,10 +64,14 @@ void XtcReaderChapterSelectionActivity::loop() {
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     const auto& chapters = xtc->getChapters();
     if (!chapters.empty() && selectorIndex >= 0 && selectorIndex < static_cast<int>(chapters.size())) {
-      onSelectPage(chapters[selectorIndex].startPage);
+      setResult(PageResult{chapters[selectorIndex].startPage});
+      finish();
     }
   } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    onGoBack();
+    ActivityResult result;
+    result.isCancelled = true;
+    setResult(std::move(result));
+    finish();
   } else if (prevReleased) {
     const int total = static_cast<int>(xtc->getChapters().size());
     if (total == 0) {
@@ -99,7 +82,7 @@ void XtcReaderChapterSelectionActivity::loop() {
     } else {
       selectorIndex = (selectorIndex + total - 1) % total;
     }
-    updateRequired = true;
+    requestUpdate();
   } else if (nextReleased) {
     const int total = static_cast<int>(xtc->getChapters().size());
     if (total == 0) {
@@ -110,28 +93,11 @@ void XtcReaderChapterSelectionActivity::loop() {
     } else {
       selectorIndex = (selectorIndex + 1) % total;
     }
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
-void XtcReaderChapterSelectionActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        renderScreen();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-void XtcReaderChapterSelectionActivity::renderScreen() {
+void XtcReaderChapterSelectionActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();

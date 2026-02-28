@@ -1,4 +1,5 @@
 #pragma once
+
 #include <functional>
 #include <string>
 #include <vector>
@@ -13,6 +14,10 @@ class MyLibraryActivity final : public Activity {
   enum class ViewMode { List, Grid };
 
  private:
+  // Deletion
+  bool pendingSubActivityExit = false;
+  void clearFileMetadata(const std::string& fullPath);
+
   ButtonNavigator buttonNavigator;
 
   size_t selectorIndex = 0;
@@ -25,10 +30,6 @@ class MyLibraryActivity final : public Activity {
   // Files tab state (from FileSelectionActivity)
   std::string basepath = "/";
   std::vector<std::string> files;
-
-  // Callbacks
-  const std::function<void()> onGoHome;
-  const std::function<void(const std::string& path, Tab fromTab)> onSelectBook;
 
   // Data loading
   void loadRecentBooks();
@@ -59,17 +60,10 @@ class MyLibraryActivity final : public Activity {
   int getPageItems() const;
 
  public:
-  explicit MyLibraryActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                             const std::function<void()>& onGoHome,
-                             const std::function<void(const std::string& path, Tab fromTab)>& onSelectBook,
-                             Tab initialTab = Tab::Recent, std::string initialPath = "/")
-      : Activity("MyLibrary", renderer, mappedInput),
-        currentTab(initialTab),
-        basepath(initialPath.empty() ? "/" : std::move(initialPath)),
-        onGoHome(onGoHome),
-        onSelectBook(onSelectBook) {}
+  explicit MyLibraryActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string initialPath = "/")
+      : Activity("MyLibrary", renderer, mappedInput), basepath(initialPath.empty() ? "/" : std::move(initialPath)) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&& lock) override;
+  void render(RenderLock&&) override;
 };

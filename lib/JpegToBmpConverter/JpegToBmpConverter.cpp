@@ -2,7 +2,6 @@
 
 #include <HardwareSerial.h>
 #include <Logging.h>
-#include <SdFat.h>
 #include <picojpeg.h>
 
 #include <cstdio>

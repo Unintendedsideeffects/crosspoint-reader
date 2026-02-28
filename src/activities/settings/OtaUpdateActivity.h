@@ -1,15 +1,14 @@
 #pragma once
 #include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
 #include <freertos/task.h>
 
 #include <atomic>
 #include <cstddef>
 
-#include "activities/ActivityWithSubactivity.h"
+#include "activities/Activity.h"
 #include "network/OtaUpdater.h"
 
-class OtaUpdateActivity : public ActivityWithSubactivity {
+class OtaUpdateActivity : public Activity {
   enum State {
     WIFI_SELECTION,
     LOADING_FEATURE_STORE,
@@ -28,40 +27,33 @@ class OtaUpdateActivity : public ActivityWithSubactivity {
 
   enum class OtaWorkerCmd { NONE, LOAD_CATALOG, CHECK_UPDATE, INSTALL_UPDATE };
 
-  TaskHandle_t displayTaskHandle = nullptr;
-  std::atomic<bool> exitTaskRequested{false};
-  std::atomic<bool> taskHasExited{false};
-  std::atomic<bool> updateRequired{false};
-
-  TaskHandle_t otaWorkerTaskHandle = nullptr;
-  std::atomic<bool> workerExitRequested{false};
-  std::atomic<bool> workerHasExited{false};
-  std::atomic<OtaWorkerCmd> workerCmd{OtaWorkerCmd::NONE};
-
-  const std::function<void()> goBack;
   State state = WIFI_SELECTION;
   unsigned int lastUpdaterPercentage = UNINITIALIZED_PERCENTAGE;
   OtaUpdater updater;
   size_t selectedBundleIndex = 0;
   bool usingFeatureStore = false;
 
+  // Worker task for background OTA operations
+  TaskHandle_t otaWorkerTaskHandle = nullptr;
+  std::atomic<bool> workerExitRequested{false};
+  std::atomic<bool> workerHasExited{false};
+  std::atomic<OtaWorkerCmd> workerCmd{OtaWorkerCmd::NONE};
+
   void onWifiSelectionComplete(bool success);
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();
-  void render();
   static void otaWorkerTrampoline(void* param);
   void otaWorkerLoop();
   void dispatchWorker(OtaWorkerCmd cmd);
 
  public:
-  explicit OtaUpdateActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                             const std::function<void()>& goBack)
-      : ActivityWithSubactivity("OtaUpdate", renderer, mappedInput), goBack(goBack), updater() {}
+  explicit OtaUpdateActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
+      : Activity("OtaUpdate", renderer, mappedInput), updater() {}
   void onEnter() override;
   void onExit() override;
   void loop() override;
+  void render(RenderLock&&) override;
   bool preventAutoSleep() override {
     return state == LOADING_FEATURE_STORE || state == CHECKING_FOR_UPDATE || state == UPDATE_IN_PROGRESS;
   }
+  bool skipLoopDelay() override { return true; }  // Prevent power-saving mode
   bool blocksBackgroundServer() override { return true; }
 };

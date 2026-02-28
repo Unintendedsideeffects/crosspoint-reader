@@ -3,10 +3,19 @@
 #include <GfxRenderer.h>
 #include <Logging.h>
 
+#include "ButtonRemapActivity.h"
+#include "CalibreSettingsActivity.h"
+#include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
+#include "FactoryResetActivity.h"
+#include "KOReaderSettingsActivity.h"
+#include "LanguageSelectActivity.h"
 #include "MappedInputManager.h"
+#include "OtaUpdateActivity.h"
 #include "SettingsList.h"
-#include "activities/TaskShutdown.h"
+#include "StatusBarSettingsActivity.h"
+#include "ValidateSleepImagesActivity.h"
+#include "activities/network/WifiSelectionActivity.h"
 #include "components/UITheme.h"
 #include "core/features/FeatureModules.h"
 #include "fontIds.h"
@@ -55,6 +64,7 @@ void SettingsActivity::onEnter() {
   if (core::FeatureModules::supportsSettingAction(SettingAction::Language)) {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
   }
+  readerSettings.push_back(SettingInfo::Action(StrId::STR_CUSTOMISE_STATUS_BAR, SettingAction::CustomiseStatusBar));
 
   // Reset selection to first category
   selectedCategoryIndex = 0;
@@ -69,16 +79,12 @@ void SettingsActivity::onEnter() {
 }
 
 void SettingsActivity::onExit() {
-  ActivityWithSubactivity::onExit();
+  Activity::onExit();
 
   UITheme::getInstance().reload();  // Re-apply theme in case it was changed
 }
 
 void SettingsActivity::loop() {
-  ActivityWithSubactivity::loop();
-  if (subActivity) {
-    return;
-  }
   bool hasChangedCategory = false;
 
   // Handle actions with early return
@@ -237,26 +243,48 @@ void SettingsActivity::toggleCurrentSetting() {
       SETTINGS.*(setting.valuePtr) = currentValue + setting.valueRange.step;
     }
   } else if (setting.type == SettingType::ACTION) {
-    auto enterSubActivity = [this](Activity* activity) {
-      exitActivity();
-      enterNewActivity(activity);
-    };
+    auto resultHandler = [this](const ActivityResult&) { SETTINGS.saveToFile(); };
 
-    auto onComplete = [this] {
-      exitActivity();
-      requestUpdate();
-    };
-
-    auto onCompleteBool = [this](bool) {
-      exitActivity();
-      requestUpdate();
-    };
-
-    Activity* subactivity = core::FeatureModules::createSettingsSubActivity(setting.action, renderer, mappedInput,
-                                                                            onComplete, onCompleteBool);
-    if (subactivity != nullptr) {
-      enterSubActivity(subactivity);
+    switch (setting.action) {
+      case SettingAction::RemapFrontButtons:
+        startActivityForResult(std::make_unique<ButtonRemapActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::CustomiseStatusBar:
+        startActivityForResult(std::make_unique<StatusBarSettingsActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::KOReaderSync:
+        startActivityForResult(std::make_unique<KOReaderSettingsActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::OPDSBrowser:
+        startActivityForResult(std::make_unique<CalibreSettingsActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::Network:
+        startActivityForResult(std::make_unique<WifiSelectionActivity>(renderer, mappedInput, false), resultHandler);
+        break;
+      case SettingAction::ClearCache:
+        startActivityForResult(std::make_unique<ClearCacheActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::CheckForUpdates:
+        startActivityForResult(std::make_unique<OtaUpdateActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::Language:
+        startActivityForResult(std::make_unique<LanguageSelectActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::FactoryReset:
+        startActivityForResult(
+            std::make_unique<FactoryResetActivity>(renderer, mappedInput, [] { activityManager.popActivity(); }),
+            resultHandler);
+        break;
+      case SettingAction::ValidateSleepImages:
+        startActivityForResult(
+            std::make_unique<ValidateSleepImagesActivity>(renderer, mappedInput, [] { activityManager.popActivity(); }),
+            resultHandler);
+        break;
+      case SettingAction::None:
+        // Do nothing
+        break;
     }
+    return;  // Results will be handled in the result handler, so we can return early here
   } else {
     return;
   }
@@ -268,7 +296,7 @@ void SettingsActivity::toggleCurrentSetting() {
   }
 }
 
-void SettingsActivity::render(Activity::RenderLock&&) {
+void SettingsActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();

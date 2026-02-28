@@ -1,9 +1,8 @@
 #pragma once
 
+#include <HalStorage.h>
 #include <HardwareSerial.h>
 #include <Logging.h>
-#include <SDCardManager.h>
-#include <SdFat.h>
 #include <stdint.h>
 
 #include <cstring>

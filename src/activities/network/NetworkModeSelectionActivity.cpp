@@ -1,67 +1,30 @@
 #include "NetworkModeSelectionActivity.h"
 
 #include <GfxRenderer.h>
+#include <I18n.h>
 
 #include "MappedInputManager.h"
-#include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
 namespace {
 constexpr int MENU_ITEM_COUNT = 3;
-const char* MENU_ITEMS[MENU_ITEM_COUNT] = {"Join a Network", "Connect to Calibre", "Create Hotspot"};
-const char* MENU_DESCRIPTIONS[MENU_ITEM_COUNT] = {
-    "Connect to an existing WiFi network",
-    "Use Calibre wireless device transfers",
-    "Create a WiFi network others can join",
-};
 }  // namespace
-
-void NetworkModeSelectionActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<NetworkModeSelectionActivity*>(param);
-  self->displayTaskLoop();
-}
 
 void NetworkModeSelectionActivity::onEnter() {
   Activity::onEnter();
-
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
-
-  // Reset selection
   selectedIndex = 0;
-
-  // Trigger first update
-  updateRequired = true;
-
-  xTaskCreate(&NetworkModeSelectionActivity::taskTrampoline, "NetworkModeTask",
-              8192,               // Stack size - must match standard render tasks; 2048 is too small for EPD render
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
-void NetworkModeSelectionActivity::onExit() {
-  // Signal the display task to stop *before* acquiring the rendering mutex.
-  // Without this, Activity::onExit() releases the mutex after deleting the render
-  // task, the display task then starts a fresh EPD refresh, and TaskShutdown has
-  // to wait up to ~2 s for that render to complete before exitTaskRequested is set.
-  exitTaskRequested.store(true);
-  updateRequired = false;
-
-  Activity::onExit();
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-}
+void NetworkModeSelectionActivity::onExit() { Activity::onExit(); }
 
 void NetworkModeSelectionActivity::loop() {
-  // Handle back button - cancel (use wasReleased for power button SELECT mode support)
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     onCancel();
     return;
   }
 
-  // Handle confirm button - select current option (use wasReleased for power button SELECT mode support)
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     NetworkMode mode = NetworkMode::JOIN_NETWORK;
     if (selectedIndex == 1) {
@@ -73,73 +36,55 @@ void NetworkModeSelectionActivity::loop() {
     return;
   }
 
-  // Handle navigation
-  const bool prevPressed = mappedInput.wasPressed(MappedInputManager::Button::Up) ||
-                           mappedInput.wasPressed(MappedInputManager::Button::Left);
-  const bool nextPressed = mappedInput.wasPressed(MappedInputManager::Button::Down) ||
-                           mappedInput.wasPressed(MappedInputManager::Button::Right);
+  buttonNavigator.onNext([this] {
+    selectedIndex = ButtonNavigator::nextIndex(selectedIndex, MENU_ITEM_COUNT);
+    requestUpdate();
+  });
 
-  if (prevPressed) {
-    selectedIndex = (selectedIndex + MENU_ITEM_COUNT - 1) % MENU_ITEM_COUNT;
-    updateRequired = true;
-  } else if (nextPressed) {
-    selectedIndex = (selectedIndex + 1) % MENU_ITEM_COUNT;
-    updateRequired = true;
-  }
+  buttonNavigator.onPrevious([this] {
+    selectedIndex = ButtonNavigator::previousIndex(selectedIndex, MENU_ITEM_COUNT);
+    requestUpdate();
+  });
 }
 
-void NetworkModeSelectionActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-void NetworkModeSelectionActivity::render() const {
+void NetworkModeSelectionActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
-  // Draw header
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, "File Transfer", true, EpdFontFamily::BOLD);
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_FILE_TRANSFER));
 
-  // Draw subtitle
-  renderer.drawCenteredText(UI_10_FONT_ID, 50, "How would you like to connect?");
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
 
-  // Draw menu items centered on screen
-  constexpr int itemHeight = 50;  // Height for each menu item (including description)
-  const int startY = (pageHeight - (MENU_ITEM_COUNT * itemHeight)) / 2 + 10;
+  static constexpr StrId menuItems[MENU_ITEM_COUNT] = {StrId::STR_JOIN_NETWORK, StrId::STR_CALIBRE_WIRELESS,
+                                                       StrId::STR_CREATE_HOTSPOT};
+  static constexpr StrId menuDescs[MENU_ITEM_COUNT] = {StrId::STR_JOIN_DESC, StrId::STR_CALIBRE_DESC,
+                                                       StrId::STR_HOTSPOT_DESC};
+  static constexpr UIIcon menuIcons[MENU_ITEM_COUNT] = {UIIcon::Wifi, UIIcon::Library, UIIcon::Hotspot};
 
-  for (int i = 0; i < MENU_ITEM_COUNT; i++) {
-    const int itemY = startY + i * itemHeight;
-    const bool isSelected = (i == selectedIndex);
+  GUI.drawList(
+      renderer, Rect{0, contentTop, pageWidth, contentHeight}, MENU_ITEM_COUNT, selectedIndex,
+      [](const int index) { return std::string(I18N.get(menuItems[index])); },
+      [](const int index) { return std::string(I18N.get(menuDescs[index])); },
+      [](const int index) { return menuIcons[index]; });
 
-    // Draw selection highlight (black fill) for selected item
-    if (isSelected) {
-      renderer.fillRect(20, itemY - 2, pageWidth - 40, itemHeight - 6);
-    }
-
-    // Draw text: black=false (white text) when selected (on black background)
-    //            black=true (black text) when not selected (on white background)
-    renderer.drawText(UI_10_FONT_ID, 30, itemY, MENU_ITEMS[i], /*black=*/!isSelected);
-    renderer.drawText(SMALL_FONT_ID, 30, itemY + 22, MENU_DESCRIPTIONS[i], /*black=*/!isSelected);
-  }
-
-  // Draw help text at bottom
-  const auto labels = mappedInput.mapLabels("« Back", "Select", "", "");
-  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
+}
+
+void NetworkModeSelectionActivity::onModeSelected(const NetworkMode mode) {
+  setResult(NetworkModeResult{mode});
+  finish();
+}
+
+void NetworkModeSelectionActivity::onCancel() {
+  ActivityResult result;
+  result.isCancelled = true;
+  setResult(std::move(result));
+  finish();
 }

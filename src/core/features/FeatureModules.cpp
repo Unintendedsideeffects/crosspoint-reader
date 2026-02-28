@@ -258,6 +258,9 @@ String FeatureModules::getFeatureMapJson() { return FeatureCatalog::toJson(); }
 FeatureModules::ReaderOpenResult FeatureModules::createReaderActivityForPath(
     const std::string& path, GfxRenderer& renderer, MappedInputManager& mappedInput,
     const std::function<void(const std::string&)>& onBackToLibraryPath, const std::function<void()>& onBackHome) {
+  (void)onBackToLibraryPath;
+  (void)onBackHome;
+
   if (path.empty()) {
     return {};
   }
@@ -273,12 +276,9 @@ FeatureModules::ReaderOpenResult FeatureModules::createReaderActivityForPath(
       return {};
     }
 
-    const std::string xtcPath = xtc->getPath();
     return {
         ReaderOpenStatus::Opened,
-        new XtcReaderActivity(
-            renderer, mappedInput, std::move(xtc), [onBackToLibraryPath, xtcPath] { onBackToLibraryPath(xtcPath); },
-            onBackHome),
+        new XtcReaderActivity(renderer, mappedInput, std::move(xtc)),
         nullptr,
         nullptr,
     };
@@ -320,12 +320,9 @@ FeatureModules::ReaderOpenResult FeatureModules::createReaderActivityForPath(
       return {};
     }
 
-    const std::string txtPath = txt->getPath();
     return {
         ReaderOpenStatus::Opened,
-        new TxtReaderActivity(
-            renderer, mappedInput, std::move(txt), [onBackToLibraryPath, txtPath] { onBackToLibraryPath(txtPath); },
-            onBackHome),
+        new TxtReaderActivity(renderer, mappedInput, std::move(txt)),
         nullptr,
         nullptr,
     };
@@ -346,12 +343,9 @@ FeatureModules::ReaderOpenResult FeatureModules::createReaderActivityForPath(
     return {};
   }
 
-  const std::string epubPath = epub->getPath();
   return {
       ReaderOpenStatus::Opened,
-      new EpubReaderActivity(
-          renderer, mappedInput, std::move(epub), [onBackToLibraryPath, epubPath] { onBackToLibraryPath(epubPath); },
-          onBackHome),
+      new EpubReaderActivity(renderer, mappedInput, std::move(epub)),
       nullptr,
       nullptr,
   };
@@ -529,33 +523,33 @@ Activity* FeatureModules::createSettingsSubActivity(const SettingAction action, 
 
   switch (action) {
     case SettingAction::RemapFrontButtons:
-      return new ButtonRemapActivity(renderer, mappedInput, onComplete);
+      return new ButtonRemapActivity(renderer, mappedInput);
     case SettingAction::Network:
-      return new WifiSelectionActivity(renderer, mappedInput, onCompleteBool, false);
+      return new WifiSelectionActivity(renderer, mappedInput, false);
     case SettingAction::ClearCache:
-      return new ClearCacheActivity(renderer, mappedInput, onComplete);
+      return new ClearCacheActivity(renderer, mappedInput);
     case SettingAction::FactoryReset:
       return new FactoryResetActivity(renderer, mappedInput, onComplete);
     case SettingAction::KOReaderSync:
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-      return new KOReaderSettingsActivity(renderer, mappedInput, onComplete);
+      return new KOReaderSettingsActivity(renderer, mappedInput);
 #else
       return nullptr;
 #endif
     case SettingAction::OPDSBrowser:
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-      return new CalibreSettingsActivity(renderer, mappedInput, onComplete);
+      return new CalibreSettingsActivity(renderer, mappedInput);
 #else
       return nullptr;
 #endif
     case SettingAction::CheckForUpdates:
 #if ENABLE_OTA_UPDATES
-      return new OtaUpdateActivity(renderer, mappedInput, onComplete);
+      return new OtaUpdateActivity(renderer, mappedInput);
 #else
       return nullptr;
 #endif
     case SettingAction::Language:
-      return new LanguageSelectActivity(renderer, mappedInput, onComplete);
+      return new LanguageSelectActivity(renderer, mappedInput);
     case SettingAction::ValidateSleepImages:
       return new ValidateSleepImagesActivity(renderer, mappedInput, onComplete);
     case SettingAction::None:

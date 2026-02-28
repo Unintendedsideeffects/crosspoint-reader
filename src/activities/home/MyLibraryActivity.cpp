@@ -1,5 +1,6 @@
 #include "MyLibraryActivity.h"
 
+#include <Epub.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <I18n.h>
@@ -8,6 +9,7 @@
 #include <cctype>
 #include <utility>
 
+#include "../util/ConfirmationActivity.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
@@ -199,90 +201,124 @@ void MyLibraryActivity::onExit() {
   files.clear();
 }
 
+void MyLibraryActivity::clearFileMetadata(const std::string& fullPath) {
+  // Only clear cache for .epub files
+  if (StringUtils::checkFileExtension(fullPath, ".epub")) {
+    Epub(fullPath, "/.crosspoint").clearCache();
+    LOG_DBG("MyLibrary", "Cleared metadata cache for: %s", fullPath.c_str());
+  }
+}
+
 void MyLibraryActivity::loop() {
   const int itemCount = getCurrentItemCount();
   const int pageItems = getPageItems();
 
-  // Long press BACK (1s+) in Files tab goes to root folder
-  if (currentTab == Tab::Files && mappedInput.isPressed(MappedInputManager::Button::Back) &&
-      mappedInput.getHeldTime() >= GO_HOME_MS) {
-    if (basepath != "/") {
-      basepath = "/";
-      loadFiles();
+  if (currentTab == Tab::Recent) {
+    // Confirm button - open selected item
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+      if (!recentBooks.empty() && selectorIndex < static_cast<int>(recentBooks.size())) {
+        onSelectBook(recentBooks[selectorIndex].path);
+      }
+      return;
+    }
+
+    // Back button - go home
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
+      onGoHome();
+      return;
+    }
+
+    // Tab switching
+    if (mappedInput.wasReleased(MappedInputManager::Button::Right)) {
+      currentTab = Tab::Files;
       selectorIndex = 0;
       requestUpdate();
+      return;
     }
-    return;
-  }
+  } else {
+    // Files tab
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+      if (files.empty()) return;
 
-  const bool upReleased = mappedInput.wasReleased(MappedInputManager::Button::Up);
-  const bool downReleased = mappedInput.wasReleased(MappedInputManager::Button::Down);
-  const bool leftReleased = mappedInput.wasReleased(MappedInputManager::Button::Left);
-  const bool rightReleased = mappedInput.wasReleased(MappedInputManager::Button::Right);
+      const std::string& entry = files[selectorIndex];
+      bool isDirectory = (entry.back() == '/');
 
-  // Confirm button - open selected item
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    if (currentTab == Tab::Recent) {
-      if (!recentBooks.empty() && selectorIndex < static_cast<int>(recentBooks.size())) {
-        onSelectBook(recentBooks[selectorIndex].path, currentTab);
-      }
-    } else {
-      // Files tab
-      if (!files.empty() && selectorIndex < static_cast<int>(files.size())) {
+      if (mappedInput.getHeldTime() >= GO_HOME_MS && !isDirectory) {
+        // --- LONG PRESS ACTION: DELETE FILE ---
+        std::string cleanBasePath = basepath;
+        if (cleanBasePath.back() != '/') cleanBasePath += "/";
+        const std::string fullPath = cleanBasePath + entry;
+
+        auto handler = [this, fullPath](const ActivityResult& res) {
+          if (!res.isCancelled) {
+            LOG_DBG("MyLibrary", "Attempting to delete: %s", fullPath.c_str());
+            clearFileMetadata(fullPath);
+            if (Storage.remove(fullPath.c_str())) {
+              LOG_DBG("MyLibrary", "Deleted successfully");
+              loadFiles();
+              if (files.empty()) {
+                selectorIndex = 0;
+              } else if (selectorIndex >= files.size()) {
+                selectorIndex = files.size() - 1;
+              }
+              requestUpdate(true);
+            } else {
+              LOG_ERR("MyLibrary", "Failed to delete file: %s", fullPath.c_str());
+            }
+          } else {
+            LOG_DBG("MyLibrary", "Delete cancelled by user");
+          }
+        };
+
+        std::string heading = tr(STR_DELETE) + std::string("? ");
+        startActivityForResult(std::make_unique<ConfirmationActivity>(renderer, mappedInput, heading, entry), handler);
+        return;
+      } else {
+        // --- SHORT PRESS ACTION: OPEN/NAVIGATE ---
         if (basepath.back() != '/') basepath += "/";
-        if (files[selectorIndex].back() == '/') {
-          // Enter directory
-          basepath += files[selectorIndex].substr(0, files[selectorIndex].length() - 1);
+
+        if (isDirectory) {
+          basepath += entry.substr(0, entry.length() - 1);
           loadFiles();
           selectorIndex = 0;
           requestUpdate();
         } else {
-          // Open file
-          const auto fullPath = basepath + files[selectorIndex];
-          LOG_INF("LIB", "Opening file: %s", fullPath.c_str());
-          onSelectBook(fullPath, currentTab);
+          onSelectBook(basepath + entry);
         }
       }
+      return;
     }
-    return;
-  }
 
-  // Back button
-  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    if (mappedInput.getHeldTime() < GO_HOME_MS) {
-      if (currentTab == Tab::Files && basepath != "/") {
-        // Go up one directory, remembering the directory we came from
-        const std::string oldPath = basepath;
-        basepath.replace(basepath.find_last_of('/'), std::string::npos, "");
-        if (basepath.empty()) basepath = "/";
-        loadFiles();
+    // Back button
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
+      if (mappedInput.getHeldTime() < GO_HOME_MS) {
+        if (basepath != "/") {
+          // Go up one directory, remembering the directory we came from
+          const std::string oldPath = basepath;
+          basepath.replace(basepath.find_last_of('/'), std::string::npos, "");
+          if (basepath.empty()) basepath = "/";
+          loadFiles();
 
-        // Select the directory we just came from
-        const auto pos = oldPath.find_last_of('/');
-        const std::string dirName = oldPath.substr(pos + 1) + "/";
-        selectorIndex = static_cast<int>(findEntry(dirName));
+          // Select the directory we just came from
+          const auto pos = oldPath.find_last_of('/');
+          const std::string dirName = oldPath.substr(pos + 1) + "/";
+          selectorIndex = static_cast<int>(findEntry(dirName));
 
-        requestUpdate();
-      } else {
-        // Go home
-        onGoHome();
+          requestUpdate();
+        } else {
+          onGoHome();
+        }
       }
+      return;
     }
-    return;
-  }
 
-  // Tab switching: Left/Right always control tabs
-  if (leftReleased && currentTab == Tab::Files) {
-    currentTab = Tab::Recent;
-    selectorIndex = 0;
-    requestUpdate();
-    return;
-  }
-  if (rightReleased && currentTab == Tab::Recent) {
-    currentTab = Tab::Files;
-    selectorIndex = 0;
-    requestUpdate();
-    return;
+    // Tab switching
+    if (mappedInput.wasReleased(MappedInputManager::Button::Left)) {
+      currentTab = Tab::Recent;
+      selectorIndex = 0;
+      requestUpdate();
+      return;
+    }
   }
 
   if (core::FeatureModules::hasCapability(core::Capability::VisualCoverPicker) && mappedInput.getHeldTime() >= 500 &&
@@ -315,7 +351,15 @@ void MyLibraryActivity::loop() {
   });
 }
 
-void MyLibraryActivity::render(Activity::RenderLock&& lock) {
+std::string getFileName(std::string filename) {
+  if (filename.back() == '/') {
+    return filename.substr(0, filename.length() - 1);
+  }
+  const auto pos = filename.rfind('.');
+  return filename.substr(0, pos);
+}
+
+void MyLibraryActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();

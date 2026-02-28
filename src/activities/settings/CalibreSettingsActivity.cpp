@@ -1,12 +1,12 @@
 #include "CalibreSettingsActivity.h"
 
 #include <GfxRenderer.h>
+#include <I18n.h>
 
 #include <cstring>
 
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
-#include "activities/TaskShutdown.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "fontIds.h"
 
@@ -15,41 +15,18 @@ constexpr int MENU_ITEMS = 3;
 const char* menuNames[MENU_ITEMS] = {"OPDS Server URL", "Username", "Password"};
 }  // namespace
 
-void CalibreSettingsActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<CalibreSettingsActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void CalibreSettingsActivity::onEnter() {
-  ActivityWithSubactivity::onEnter();
+  Activity::onEnter();
 
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
   selectedIndex = 0;
-  updateRequired = true;
-
-  xTaskCreate(&CalibreSettingsActivity::taskTrampoline, "CalibreSettingsTask",
-              4096,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
-void CalibreSettingsActivity::onExit() {
-  ActivityWithSubactivity::onExit();
-
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-}
+void CalibreSettingsActivity::onExit() { Activity::onExit(); }
 
 void CalibreSettingsActivity::loop() {
-  if (subActivity) {
-    subActivity->loop();
-    return;
-  }
-
-  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    onBack();
+  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    finish();
     return;
   }
 
@@ -61,100 +38,55 @@ void CalibreSettingsActivity::loop() {
   if (mappedInput.wasPressed(MappedInputManager::Button::Up) ||
       mappedInput.wasPressed(MappedInputManager::Button::Left)) {
     selectedIndex = (selectedIndex + MENU_ITEMS - 1) % MENU_ITEMS;
-    updateRequired = true;
+    requestUpdate();
   } else if (mappedInput.wasPressed(MappedInputManager::Button::Down) ||
              mappedInput.wasPressed(MappedInputManager::Button::Right)) {
     selectedIndex = (selectedIndex + 1) % MENU_ITEMS;
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
 void CalibreSettingsActivity::handleSelection() {
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-
   if (selectedIndex == 0) {
     // OPDS Server URL
-    exitActivity();
-    enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, "OPDS Server URL", SETTINGS.opdsServerUrl, 10,
-        127,    // maxLength
-        false,  // not password
-        [this](const std::string& url) {
-          strncpy(SETTINGS.opdsServerUrl, url.c_str(), sizeof(SETTINGS.opdsServerUrl) - 1);
-          SETTINGS.opdsServerUrl[sizeof(SETTINGS.opdsServerUrl) - 1] = '\0';
-          if (!SETTINGS.saveToFile()) {
-            LOG_WRN("CALIBRE", "Failed to persist OPDS server URL to SD card");
-          }
-          exitActivity();
-          updateRequired = true;
-        },
-        [this]() {
-          exitActivity();
-          updateRequired = true;
-        }));
+    startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_CALIBRE_WEB_URL),
+                                                                   SETTINGS.opdsServerUrl, 127, false),
+                           [this](const ActivityResult& result) {
+                             if (!result.isCancelled) {
+                               const auto& kb = std::get<KeyboardResult>(result.data);
+                               strncpy(SETTINGS.opdsServerUrl, kb.text.c_str(), sizeof(SETTINGS.opdsServerUrl) - 1);
+                               SETTINGS.opdsServerUrl[sizeof(SETTINGS.opdsServerUrl) - 1] = '\0';
+                               SETTINGS.saveToFile();
+                             }
+                           });
   } else if (selectedIndex == 1) {
     // Username
-    exitActivity();
-    enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, "Username", SETTINGS.opdsUsername, 10,
-        63,     // maxLength
-        false,  // not password
-        [this](const std::string& username) {
-          strncpy(SETTINGS.opdsUsername, username.c_str(), sizeof(SETTINGS.opdsUsername) - 1);
-          SETTINGS.opdsUsername[sizeof(SETTINGS.opdsUsername) - 1] = '\0';
-          if (!SETTINGS.saveToFile()) {
-            LOG_WRN("CALIBRE", "Failed to persist OPDS username to SD card");
-          }
-          exitActivity();
-          updateRequired = true;
-        },
-        [this]() {
-          exitActivity();
-          updateRequired = true;
-        }));
+    startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_USERNAME),
+                                                                   SETTINGS.opdsUsername, 63, false),
+                           [this](const ActivityResult& result) {
+                             if (!result.isCancelled) {
+                               const auto& kb = std::get<KeyboardResult>(result.data);
+                               strncpy(SETTINGS.opdsUsername, kb.text.c_str(), sizeof(SETTINGS.opdsUsername) - 1);
+                               SETTINGS.opdsUsername[sizeof(SETTINGS.opdsUsername) - 1] = '\0';
+                               SETTINGS.saveToFile();
+                             }
+                           });
   } else if (selectedIndex == 2) {
     // Password
-    exitActivity();
-    enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, "Password", SETTINGS.opdsPassword, 10,
-        63,     // maxLength
-        false,  // not password mode
-        [this](const std::string& password) {
-          strncpy(SETTINGS.opdsPassword, password.c_str(), sizeof(SETTINGS.opdsPassword) - 1);
-          SETTINGS.opdsPassword[sizeof(SETTINGS.opdsPassword) - 1] = '\0';
-          if (!SETTINGS.saveToFile()) {
-            LOG_WRN("CALIBRE", "Failed to persist OPDS password to SD card");
-          }
-          exitActivity();
-          updateRequired = true;
-        },
-        [this]() {
-          exitActivity();
-          updateRequired = true;
-        }));
+    startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_PASSWORD),
+                                                                   SETTINGS.opdsPassword, 63, false),
+                           [this](const ActivityResult& result) {
+                             if (!result.isCancelled) {
+                               const auto& kb = std::get<KeyboardResult>(result.data);
+                               strncpy(SETTINGS.opdsPassword, kb.text.c_str(), sizeof(SETTINGS.opdsPassword) - 1);
+                               SETTINGS.opdsPassword[sizeof(SETTINGS.opdsPassword) - 1] = '\0';
+                               SETTINGS.saveToFile();
+                             }
+                           });
   }
-
-  xSemaphoreGive(renderingMutex);
 }
 
-void CalibreSettingsActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired && !subActivity) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-void CalibreSettingsActivity::render() {
+void CalibreSettingsActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();

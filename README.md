@@ -50,20 +50,27 @@ For the full rationale, see [`docs/fork-strategy.md`](./docs/fork-strategy.md).
 
 ## Features & Usage
 
-- EPUB parsing/rendering (EPUB 2 and EPUB 3)
-- Image support within EPUB
-- Saved reading position
-- File explorer with nested folders and cover-art picker
-- Custom sleep screens (cover/BMP/PNG/JPEG; optional plugin hooks)
-- Wi-Fi book upload + OTA updates
-- Configurable font/layout/display options (including user-provided CPF fonts)
-- Screen rotation and dark mode
-- Optional Markdown/Obsidian reader flow
-- Optional KOReader + Calibre integration flows
-- Optional TODO planner flow
-- Optional USB Mass Storage mode
+- [x] EPUB parsing and rendering (EPUB 2 and EPUB 3)
+- [x] Image support within EPUB
+- [x] Saved reading position
+- [x] File explorer with file picker
+  - [x] Basic EPUB picker from root directory
+  - [x] Support nested folders
+  - [ ] EPUB picker with cover art
+- [x] Custom sleep screen
+  - [x] Cover sleep screen
+- [x] Wifi book upload
+- [x] Wifi OTA updates
+- [x] KOReader Sync integration for cross-device reading progress
+- [x] Configurable font, layout, and display options
+  - [ ] User provided fonts
+  - [ ] Full UTF support
+- [x] Screen rotation
 
-See [the user guide](./USER_GUIDE.md) for instructions on operating CrossPoint. 
+Multi-language support: Read EPUBs in various languages, including English, Spanish, French, German, Italian, Portuguese, Russian, Ukrainian, Polish, Swedish, Norwegian, [and more](./USER_GUIDE.md#supported-languages).
+
+See [the user guide](./USER_GUIDE.md) for instructions on operating CrossPoint, including the
+[KOReader Sync quick setup](./USER_GUIDE.md#365-koreader-sync-quick-setup).
 
 For scope/constraints, see [SCOPE.md](SCOPE.md).
 

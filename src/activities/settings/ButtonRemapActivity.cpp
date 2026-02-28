@@ -12,8 +12,6 @@ namespace {
 constexpr uint8_t kRoleCount = 4;
 // Marker used when a role has not been assigned yet.
 constexpr uint8_t kUnassigned = 0xFF;
-// Duration to show temporary error text when reassigning a button.
-constexpr unsigned long kErrorDisplayMs = 1500;
 }  // namespace
 
 void ButtonRemapActivity::onEnter() {
@@ -26,7 +24,6 @@ void ButtonRemapActivity::onEnter() {
   tempMapping[2] = kUnassigned;
   tempMapping[3] = kUnassigned;
   errorMessage.clear();
-  errorUntil = 0;
   requestUpdate();
 }
 
@@ -44,59 +41,50 @@ void ButtonRemapActivity::loop() {
     SETTINGS.frontButtonLeft = CrossPointSettings::FRONT_HW_LEFT;
     SETTINGS.frontButtonRight = CrossPointSettings::FRONT_HW_RIGHT;
     SETTINGS.enforceButtonLayoutConstraints();
-    if (!SETTINGS.saveToFile()) {
-      LOG_WRN("REMAP", "Failed to persist button layout reset to SD card");
-    }
-    onBack();
+    SETTINGS.saveToFile();
+    finish();
     return;
   }
 
   if (mappedInput.wasPressed(MappedInputManager::Button::Down)) {
     // Exit without changing settings.
-    onBack();
+    finish();
     return;
   }
 
-  // Clear any temporary warning after its timeout.
-  if (errorUntil > 0 && millis() > errorUntil) {
-    errorMessage.clear();
-    errorUntil = 0;
-    requestUpdate();
-  }
+  {
+    // Make sure UI done rendering before accepting another assignment.
+    // This avoids rapid double-presses that can advance the step without a visible redraw.
+    RenderLock lock(*this);
 
-  // Wait for a front button press to assign to the current role.
-  // Intentionally reads raw hardware indices — bypasses logical mapping so the user
-  // can press any physical button regardless of the current (pre-remap) assignment.
-  const int pressedButton = mappedInput.getPressedFrontButton();
-  if (pressedButton < 0) {
-    return;
-  }
-
-  // Update temporary mapping and advance the remap step.
-  // Only accept the press if this hardware button isn't already assigned elsewhere.
-  if (!validateUnassigned(static_cast<uint8_t>(pressedButton))) {
-    requestUpdate();
-    return;
-  }
-  tempMapping[currentStep] = static_cast<uint8_t>(pressedButton);
-  currentStep++;
-
-  if (currentStep >= kRoleCount) {
-    // All roles assigned; save to settings and exit.
-    applyTempMapping();
-    if (!SETTINGS.saveToFile()) {
-      LOG_WRN("REMAP", "Failed to persist button remap to SD card");
+    // Wait for a front button press to assign to the current role.
+    const int pressedButton = mappedInput.getPressedFrontButton();
+    if (pressedButton < 0) {
+      return;
     }
-    onBack();
-    return;
-  }
 
-  requestUpdate();
+    // Update temporary mapping and advance the remap step.
+    // Only accept the press if this hardware button isn't already assigned elsewhere.
+    if (!validateUnassigned(static_cast<uint8_t>(pressedButton))) {
+      requestUpdate();
+      return;
+    }
+    tempMapping[currentStep] = static_cast<uint8_t>(pressedButton);
+    currentStep++;
+
+    if (currentStep >= kRoleCount) {
+      // All roles assigned; save to settings and exit.
+      applyTempMapping();
+      SETTINGS.saveToFile();
+      finish();
+      return;
+    }
+
+    requestUpdate();
+  }
 }
 
-void ButtonRemapActivity::render(Activity::RenderLock&& lock) { renderScreen(); }
-
-void ButtonRemapActivity::renderScreen() {
+void ButtonRemapActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
@@ -164,7 +152,6 @@ bool ButtonRemapActivity::validateUnassigned(const uint8_t pressedButton) {
   for (uint8_t i = 0; i < kRoleCount; i++) {
     if (tempMapping[i] == pressedButton && i != currentStep) {
       errorMessage = "Already assigned";
-      errorUntil = millis() + kErrorDisplayMs;
       return false;
     }
   }

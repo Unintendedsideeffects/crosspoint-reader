@@ -6,32 +6,26 @@
 #include "KOReaderCredentialStore.h"
 #include "KOReaderSyncClient.h"
 #include "MappedInputManager.h"
-#include "activities/TaskShutdown.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "fontIds.h"
 
-void KOReaderAuthActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<KOReaderAuthActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void KOReaderAuthActivity::onWifiSelectionComplete(const bool success) {
-  exitActivity();
-
   if (!success) {
-    xSemaphoreTake(renderingMutex, portMAX_DELAY);
-    state = FAILED;
-    errorMessage = "WiFi connection failed";
-    xSemaphoreGive(renderingMutex);
-    updateRequired = true;
+    {
+      RenderLock lock(*this);
+      state = FAILED;
+      errorMessage = "WiFi connection failed";
+    }
+    requestUpdate();
     return;
   }
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  state = AUTHENTICATING;
-  statusMessage = "Authenticating...";
-  xSemaphoreGive(renderingMutex);
-  updateRequired = true;
+  {
+    RenderLock lock(*this);
+    state = AUTHENTICATING;
+    statusMessage = "Authenticating...";
+  }
+  requestUpdate();
 
   performAuthentication();
 }
@@ -39,30 +33,21 @@ void KOReaderAuthActivity::onWifiSelectionComplete(const bool success) {
 void KOReaderAuthActivity::performAuthentication() {
   const auto result = KOReaderSyncClient::authenticate();
 
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (result == KOReaderSyncClient::OK) {
-    state = SUCCESS;
-    statusMessage = "Successfully authenticated!";
-  } else {
-    state = FAILED;
-    errorMessage = KOReaderSyncClient::errorString(result);
+  {
+    RenderLock lock(*this);
+    if (result == KOReaderSyncClient::OK) {
+      state = SUCCESS;
+      statusMessage = "Successfully authenticated!";
+    } else {
+      state = FAILED;
+      errorMessage = KOReaderSyncClient::errorString(result);
+    }
   }
-  xSemaphoreGive(renderingMutex);
-  updateRequired = true;
+  requestUpdate();
 }
 
 void KOReaderAuthActivity::onEnter() {
-  ActivityWithSubactivity::onEnter();
-
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
-
-  xTaskCreate(&KOReaderAuthActivity::taskTrampoline, "KOAuthTask",
-              4096,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  Activity::onEnter();
 
   // Turn on WiFi
   WiFi.mode(WIFI_STA);
@@ -71,7 +56,7 @@ void KOReaderAuthActivity::onEnter() {
   if (WiFi.status() == WL_CONNECTED) {
     state = AUTHENTICATING;
     statusMessage = "Authenticating...";
-    updateRequired = true;
+    requestUpdate();
 
     // Perform authentication in a separate task
     xTaskCreate(
@@ -85,44 +70,21 @@ void KOReaderAuthActivity::onEnter() {
   }
 
   // Launch WiFi selection
-  enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
-                                             [this](const bool connected) { onWifiSelectionComplete(connected); }));
+  startActivityForResult(std::make_unique<WifiSelectionActivity>(renderer, mappedInput),
+                         [this](const ActivityResult& result) { onWifiSelectionComplete(!result.isCancelled); });
 }
 
 void KOReaderAuthActivity::onExit() {
-  ActivityWithSubactivity::onExit();
+  Activity::onExit();
 
   // Turn off wifi
   WiFi.disconnect(false);
   delay(100);
   WiFi.mode(WIFI_OFF);
   delay(100);
-
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
 }
 
-void KOReaderAuthActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired && !subActivity) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-void KOReaderAuthActivity::render() {
-  if (subActivity) {
-    return;
-  }
-
+void KOReaderAuthActivity::render(RenderLock&&) {
   renderer.clearScreen();
   renderer.drawCenteredText(UI_12_FONT_ID, 15, "KOReader Auth", true, EpdFontFamily::BOLD);
 
@@ -154,15 +116,10 @@ void KOReaderAuthActivity::render() {
 }
 
 void KOReaderAuthActivity::loop() {
-  if (subActivity) {
-    subActivity->loop();
-    return;
-  }
-
   if (state == SUCCESS || state == FAILED) {
-    if (mappedInput.wasReleased(MappedInputManager::Button::Back) ||
-        mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-      onComplete();
+    if (mappedInput.wasPressed(MappedInputManager::Button::Back) ||
+        mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+      finish();
     }
   }
 }

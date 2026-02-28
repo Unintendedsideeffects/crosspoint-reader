@@ -1,31 +1,20 @@
 #pragma once
 #include <Epub.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 
-#include <atomic>
 #include <memory>
 
-#include "../ActivityWithSubactivity.h"
+#include "../Activity.h"
+#include "../ActivityResult.h"
 #include "util/ButtonNavigator.h"
 
-class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity {
+class EpubReaderChapterSelectionActivity final : public Activity {
   std::shared_ptr<Epub> epub;
   std::string epubPath;
-  ButtonNavigator buttonNavigator;
+  ButtonNavigator buttonNavigator{700, 700};
   int currentSpineIndex = 0;
   int currentPage = 0;
   int totalPagesInSpine = 0;
   int selectorIndex = 0;
-  TaskHandle_t displayTaskHandle = nullptr;
-  std::atomic<bool> exitTaskRequested{false};
-  std::atomic<bool> taskHasExited{false};
-  std::atomic<bool> updateRequired{false};
-
-  const std::function<void()> onGoBack;
-  const std::function<void(int newSpineIndex)> onSelectSpineIndex;
-  const std::function<void(int newSpineIndex, int newPage)> onSyncPosition;
 
   // Number of items that fit on a page, derived from logical screen height.
   // This adapts automatically when switching between portrait and landscape.
@@ -36,30 +25,23 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
 
   bool hasSyncOption() const;
   int tocIndexFromItemIndex(int itemIndex) const;
-  static void taskTrampoline(void* param);
-  void displayTaskLoop();
-  void renderScreen();
   bool isSyncItem(int index) const;
   void launchSyncActivity();
+  void onSyncPosition(int newSpineIndex, int newPage);
 
  public:
   explicit EpubReaderChapterSelectionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                               const std::shared_ptr<Epub>& epub, const std::string& epubPath,
-                                              const int currentSpineIndex, const int currentPage,
-                                              const int totalPagesInSpine, const std::function<void()>& onGoBack,
-                                              const std::function<void(int newSpineIndex)>& onSelectSpineIndex,
-                                              const std::function<void(int newSpineIndex, int newPage)>& onSyncPosition)
-      : ActivityWithSubactivity("EpubReaderChapterSelection", renderer, mappedInput),
+                                              const int currentSpineIndex, const int currentPage = 0,
+                                              const int totalPagesInSpine = 0)
+      : Activity("EpubReaderChapterSelection", renderer, mappedInput),
         epub(epub),
         epubPath(epubPath),
         currentSpineIndex(currentSpineIndex),
         currentPage(currentPage),
-        totalPagesInSpine(totalPagesInSpine),
-        onGoBack(onGoBack),
-        onSelectSpineIndex(onSelectSpineIndex),
-        onSyncPosition(onSyncPosition) {}
+        totalPagesInSpine(totalPagesInSpine) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  void render(Activity::RenderLock&&) override;
+  void render(RenderLock&&) override;
 };

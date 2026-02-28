@@ -7,7 +7,6 @@
 #include "KOReaderAuthActivity.h"
 #include "KOReaderCredentialStore.h"
 #include "MappedInputManager.h"
-#include "activities/TaskShutdown.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "fontIds.h"
 
@@ -16,41 +15,18 @@ constexpr int MENU_ITEMS = 5;
 const char* menuNames[MENU_ITEMS] = {"Username", "Password", "Sync Server URL", "Document Matching", "Authenticate"};
 }  // namespace
 
-void KOReaderSettingsActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<KOReaderSettingsActivity*>(param);
-  self->displayTaskLoop();
-}
-
 void KOReaderSettingsActivity::onEnter() {
-  ActivityWithSubactivity::onEnter();
+  Activity::onEnter();
 
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
   selectedIndex = 0;
-  updateRequired = true;
-
-  xTaskCreate(&KOReaderSettingsActivity::taskTrampoline, "KOReaderSettingsTask",
-              4096,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
-void KOReaderSettingsActivity::onExit() {
-  ActivityWithSubactivity::onExit();
-
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
-}
+void KOReaderSettingsActivity::onExit() { Activity::onExit(); }
 
 void KOReaderSettingsActivity::loop() {
-  if (subActivity) {
-    subActivity->loop();
-    return;
-  }
-
-  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    onBack();
+  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    finish();
     return;
   }
 
@@ -62,72 +38,57 @@ void KOReaderSettingsActivity::loop() {
   if (mappedInput.wasPressed(MappedInputManager::Button::Up) ||
       mappedInput.wasPressed(MappedInputManager::Button::Left)) {
     selectedIndex = (selectedIndex + MENU_ITEMS - 1) % MENU_ITEMS;
-    updateRequired = true;
+    requestUpdate();
   } else if (mappedInput.wasPressed(MappedInputManager::Button::Down) ||
              mappedInput.wasPressed(MappedInputManager::Button::Right)) {
     selectedIndex = (selectedIndex + 1) % MENU_ITEMS;
-    updateRequired = true;
+    requestUpdate();
   }
 }
 
 void KOReaderSettingsActivity::handleSelection() {
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-
   if (selectedIndex == 0) {
     // Username
-    exitActivity();
-    enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, "KOReader Username", KOREADER_STORE.getUsername(), 10,
-        64,     // maxLength
-        false,  // not password
-        [this](const std::string& username) {
-          KOREADER_STORE.setCredentials(username, KOREADER_STORE.getPassword());
-          KOREADER_STORE.saveToFile();
-          exitActivity();
-          updateRequired = true;
-        },
-        [this]() {
-          exitActivity();
-          updateRequired = true;
-        }));
+    startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, "KOReader Username",
+                                                                   KOREADER_STORE.getUsername(),
+                                                                   64,      // maxLength
+                                                                   false),  // not password
+                           [this](const ActivityResult& result) {
+                             if (!result.isCancelled) {
+                               const auto& kb = std::get<KeyboardResult>(result.data);
+                               KOREADER_STORE.setCredentials(kb.text, KOREADER_STORE.getPassword());
+                               KOREADER_STORE.saveToFile();
+                             }
+                           });
   } else if (selectedIndex == 1) {
     // Password
-    exitActivity();
-    enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, "KOReader Password", KOREADER_STORE.getPassword(), 10,
-        64,     // maxLength
-        false,  // show characters
-        [this](const std::string& password) {
-          KOREADER_STORE.setCredentials(KOREADER_STORE.getUsername(), password);
-          KOREADER_STORE.saveToFile();
-          exitActivity();
-          updateRequired = true;
-        },
-        [this]() {
-          exitActivity();
-          updateRequired = true;
-        }));
+    startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, "KOReader Password",
+                                                                   KOREADER_STORE.getPassword(),
+                                                                   64,      // maxLength
+                                                                   false),  // show characters
+                           [this](const ActivityResult& result) {
+                             if (!result.isCancelled) {
+                               const auto& kb = std::get<KeyboardResult>(result.data);
+                               KOREADER_STORE.setCredentials(KOREADER_STORE.getUsername(), kb.text);
+                               KOREADER_STORE.saveToFile();
+                             }
+                           });
   } else if (selectedIndex == 2) {
     // Sync Server URL - prefill with https:// if empty to save typing
     const std::string currentUrl = KOREADER_STORE.getServerUrl();
     const std::string prefillUrl = currentUrl.empty() ? "https://" : currentUrl;
-    exitActivity();
-    enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, "Sync Server URL", prefillUrl, 10,
-        128,    // maxLength - URLs can be long
-        false,  // not password
-        [this](const std::string& url) {
-          // Clear if user just left the prefilled https://
-          const std::string urlToSave = (url == "https://" || url == "http://") ? "" : url;
-          KOREADER_STORE.setServerUrl(urlToSave);
-          KOREADER_STORE.saveToFile();
-          exitActivity();
-          updateRequired = true;
-        },
-        [this]() {
-          exitActivity();
-          updateRequired = true;
-        }));
+    startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, "Sync Server URL", prefillUrl,
+                                                                   128,     // maxLength - URLs can be long
+                                                                   false),  // not password
+                           [this](const ActivityResult& result) {
+                             if (!result.isCancelled) {
+                               const auto& kb = std::get<KeyboardResult>(result.data);
+                               const std::string urlToSave =
+                                   (kb.text == "https://" || kb.text == "http://") ? "" : kb.text;
+                               KOREADER_STORE.setServerUrl(urlToSave);
+                               KOREADER_STORE.saveToFile();
+                             }
+                           });
   } else if (selectedIndex == 3) {
     // Document Matching - toggle between Filename and Binary
     const auto current = KOREADER_STORE.getMatchMethod();
@@ -135,42 +96,18 @@ void KOReaderSettingsActivity::handleSelection() {
         (current == DocumentMatchMethod::FILENAME) ? DocumentMatchMethod::BINARY : DocumentMatchMethod::FILENAME;
     KOREADER_STORE.setMatchMethod(newMethod);
     KOREADER_STORE.saveToFile();
-    updateRequired = true;
+    requestUpdate();
   } else if (selectedIndex == 4) {
     // Authenticate
     if (!KOREADER_STORE.hasCredentials()) {
       // Can't authenticate without credentials - just show message briefly
-      xSemaphoreGive(renderingMutex);
       return;
     }
-    exitActivity();
-    enterNewActivity(new KOReaderAuthActivity(renderer, mappedInput, [this] {
-      exitActivity();
-      updateRequired = true;
-    }));
+    startActivityForResult(std::make_unique<KOReaderAuthActivity>(renderer, mappedInput), [](const ActivityResult&) {});
   }
-
-  xSemaphoreGive(renderingMutex);
 }
 
-void KOReaderSettingsActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired && !subActivity) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        render();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
-}
-
-void KOReaderSettingsActivity::render() {
+void KOReaderSettingsActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();

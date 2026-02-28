@@ -1,223 +1,184 @@
 #include "EpubReaderChapterSelectionActivity.h"
 
 #include <GfxRenderer.h>
+#include <I18n.h>
 
+#include <algorithm>
+
+#include "KOReaderSyncActivity.h"
 #include "MappedInputManager.h"
-#include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
 #include "core/features/FeatureModules.h"
 #include "fontIds.h"
-
-namespace {
-// Time threshold for treating a long press as a page-up/page-down
-constexpr int SKIP_PAGE_MS = 700;
-}  // namespace
 
 bool EpubReaderChapterSelectionActivity::hasSyncOption() const {
   return core::FeatureModules::hasKoreaderSyncCredentials();
 }
 
 int EpubReaderChapterSelectionActivity::getTotalItems() const {
-  // Add 2 for sync options (top and bottom) if credentials are configured
   const int syncCount = hasSyncOption() ? 2 : 0;
   return epub->getTocItemsCount() + syncCount;
 }
 
 bool EpubReaderChapterSelectionActivity::isSyncItem(int index) const {
-  if (!hasSyncOption()) return false;
-  // First item and last item are sync options
+  if (!hasSyncOption()) {
+    return false;
+  }
   return index == 0 || index == getTotalItems() - 1;
 }
 
 int EpubReaderChapterSelectionActivity::tocIndexFromItemIndex(int itemIndex) const {
-  // Account for the sync option at the top
   const int offset = hasSyncOption() ? 1 : 0;
   return itemIndex - offset;
 }
 
 int EpubReaderChapterSelectionActivity::getPageItems() const {
-  // Layout constants used in renderScreen
-  constexpr int startY = 60;
   constexpr int lineHeight = 30;
 
   const int screenHeight = renderer.getScreenHeight();
-  const int endY = screenHeight - lineHeight;
-
-  const int availableHeight = endY - startY;
-  int items = availableHeight / lineHeight;
-
-  // Ensure we always have at least one item per page to avoid division by zero
-  if (items < 1) {
-    items = 1;
-  }
-  return items;
-}
-
-void EpubReaderChapterSelectionActivity::taskTrampoline(void* param) {
-  auto* self = static_cast<EpubReaderChapterSelectionActivity*>(param);
-  self->displayTaskLoop();
+  const auto orientation = renderer.getOrientation();
+  const bool isPortraitInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
+  const int hintGutterHeight = isPortraitInverted ? 50 : 0;
+  const int startY = 60 + hintGutterHeight;
+  const int availableHeight = screenHeight - startY - lineHeight;
+  return std::max(1, availableHeight / lineHeight);
 }
 
 void EpubReaderChapterSelectionActivity::onEnter() {
-  ActivityWithSubactivity::onEnter();
+  Activity::onEnter();
 
   if (!epub) {
     return;
   }
 
-  exitTaskRequested.store(false);
-  taskHasExited.store(false);
-
-  // Account for sync option offset when finding current TOC index
   const int syncOffset = hasSyncOption() ? 1 : 0;
   selectorIndex = epub->getTocIndexForSpineIndex(currentSpineIndex);
   if (selectorIndex == -1) {
     selectorIndex = 0;
   }
-  selectorIndex += syncOffset;  // Offset for top sync option
+  selectorIndex += syncOffset;
 
-  // Trigger first update
-  updateRequired = true;
-  xTaskCreate(&EpubReaderChapterSelectionActivity::taskTrampoline, "EpubReaderChapterSelectionActivityTask",
-              4096,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
+  requestUpdate();
 }
 
-void EpubReaderChapterSelectionActivity::onExit() {
-  ActivityWithSubactivity::onExit();
+void EpubReaderChapterSelectionActivity::onExit() { Activity::onExit(); }
 
-  TaskShutdown::requestExit(exitTaskRequested, taskHasExited, displayTaskHandle);
+void EpubReaderChapterSelectionActivity::onSyncPosition(int newSpineIndex, int newPage) {
+  (void)newPage;
+  setResult(ChapterResult{newSpineIndex});
+  finish();
 }
 
 void EpubReaderChapterSelectionActivity::launchSyncActivity() {
-  Activity* syncActivity = core::FeatureModules::createKoreaderSyncActivity(
-      renderer, mappedInput, epub, epubPath, currentSpineIndex, currentPage, totalPagesInSpine,
-      [this]() {
-        // On cancel
-        exitActivity();
-        updateRequired = true;
-      },
-      [this](int newSpineIndex, int newPage) {
-        // On sync complete
-        exitActivity();
-        onSyncPosition(newSpineIndex, newPage);
-      });
-
-  if (syncActivity == nullptr) {
-    return;
-  }
-
-  exitActivity();
-  enterNewActivity(syncActivity);
+  startActivityForResult(std::make_unique<KOReaderSyncActivity>(renderer, mappedInput, epub, epubPath,
+                                                                currentSpineIndex, currentPage, totalPagesInSpine),
+                         [this](const ActivityResult& result) {
+                           if (!result.isCancelled) {
+                             const auto& sync = std::get<SyncResult>(result.data);
+                             onSyncPosition(sync.spineIndex, sync.page);
+                           } else {
+                             requestUpdate();
+                           }
+                         });
 }
 
 void EpubReaderChapterSelectionActivity::loop() {
-  if (subActivity) {
-    subActivity->loop();
-    return;
-  }
-
-  const bool prevReleased = mappedInput.wasReleased(MappedInputManager::Button::Up) ||
-                            mappedInput.wasReleased(MappedInputManager::Button::Left);
-  const bool nextReleased = mappedInput.wasReleased(MappedInputManager::Button::Down) ||
-                            mappedInput.wasReleased(MappedInputManager::Button::Right);
-
-  const bool skipPage = mappedInput.getHeldTime() > SKIP_PAGE_MS;
   const int pageItems = getPageItems();
   const int totalItems = getTotalItems();
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    // Check if sync option is selected (first or last item)
     if (isSyncItem(selectorIndex)) {
       launchSyncActivity();
       return;
     }
 
-    // Get TOC index (account for top sync offset)
     const int tocIndex = tocIndexFromItemIndex(selectorIndex);
     const auto newSpineIndex = epub->getSpineIndexForTocIndex(tocIndex);
     if (newSpineIndex == -1) {
-      onGoBack();
+      ActivityResult result;
+      result.isCancelled = true;
+      setResult(std::move(result));
+      finish();
     } else {
-      onSelectSpineIndex(newSpineIndex);
+      setResult(ChapterResult{newSpineIndex});
+      finish();
     }
   } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    onGoBack();
-  } else if (prevReleased) {
-    if (skipPage) {
-      selectorIndex = ((selectorIndex / pageItems - 1) * pageItems + totalItems) % totalItems;
-    } else {
-      selectorIndex = (selectorIndex + totalItems - 1) % totalItems;
-    }
-    updateRequired = true;
-  } else if (nextReleased) {
-    if (skipPage) {
-      selectorIndex = ((selectorIndex / pageItems + 1) * pageItems) % totalItems;
-    } else {
-      selectorIndex = (selectorIndex + 1) % totalItems;
-    }
-    updateRequired = true;
-  }
-}
-
-void EpubReaderChapterSelectionActivity::render(Activity::RenderLock&& lock) { renderScreen(); }
-
-void EpubReaderChapterSelectionActivity::displayTaskLoop() {
-  while (!exitTaskRequested.load()) {
-    if (updateRequired && !subActivity) {
-      updateRequired = false;
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      if (!exitTaskRequested.load()) {
-        renderScreen();
-      }
-      xSemaphoreGive(renderingMutex);
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    ActivityResult result;
+    result.isCancelled = true;
+    setResult(std::move(result));
+    finish();
   }
 
-  taskHasExited.store(true);
-  vTaskDelete(nullptr);
+  buttonNavigator.onNextRelease([this, totalItems] {
+    selectorIndex = ButtonNavigator::nextIndex(selectorIndex, totalItems);
+    requestUpdate();
+  });
+
+  buttonNavigator.onPreviousRelease([this, totalItems] {
+    selectorIndex = ButtonNavigator::previousIndex(selectorIndex, totalItems);
+    requestUpdate();
+  });
+
+  buttonNavigator.onNextContinuous([this, totalItems, pageItems] {
+    selectorIndex = ButtonNavigator::nextPageIndex(selectorIndex, totalItems, pageItems);
+    requestUpdate();
+  });
+
+  buttonNavigator.onPreviousContinuous([this, totalItems, pageItems] {
+    selectorIndex = ButtonNavigator::previousPageIndex(selectorIndex, totalItems, pageItems);
+    requestUpdate();
+  });
 }
 
-void EpubReaderChapterSelectionActivity::renderScreen() {
+void EpubReaderChapterSelectionActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
+  const auto orientation = renderer.getOrientation();
+  const bool isLandscapeCw = orientation == GfxRenderer::Orientation::LandscapeClockwise;
+  const bool isLandscapeCcw = orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
+  const bool isPortraitInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
+  const int hintGutterWidth = (isLandscapeCw || isLandscapeCcw) ? 30 : 0;
+  const int contentX = isLandscapeCw ? hintGutterWidth : 0;
+  const int contentWidth = pageWidth - hintGutterWidth;
+  const int hintGutterHeight = isPortraitInverted ? 50 : 0;
+  const int contentY = hintGutterHeight;
   const int pageItems = getPageItems();
   const int totalItems = getTotalItems();
 
-  const std::string title =
-      renderer.truncatedText(UI_12_FONT_ID, epub->getTitle().c_str(), pageWidth - 40, EpdFontFamily::BOLD);
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, title.c_str(), true, EpdFontFamily::BOLD);
+  const int titleX =
+      contentX + (contentWidth - renderer.getTextWidth(UI_12_FONT_ID, tr(STR_SELECT_CHAPTER), EpdFontFamily::BOLD)) / 2;
+  renderer.drawText(UI_12_FONT_ID, titleX, 15 + contentY, tr(STR_SELECT_CHAPTER), true, EpdFontFamily::BOLD);
 
-  const auto pageStartIndex = selectorIndex / pageItems * pageItems;
-  renderer.fillRect(0, 60 + (selectorIndex % pageItems) * 30 - 2, pageWidth - 1, 30);
+  const int pageStartIndex = selectorIndex / pageItems * pageItems;
+  renderer.fillRect(contentX, 60 + contentY + (selectorIndex % pageItems) * 30 - 2, contentWidth - 1, 30);
 
   for (int i = 0; i < pageItems; i++) {
-    int itemIndex = pageStartIndex + i;
-    if (itemIndex >= totalItems) break;
-    const int displayY = 60 + i * 30;
-    const bool isSelected = (itemIndex == selectorIndex);
+    const int itemIndex = pageStartIndex + i;
+    if (itemIndex >= totalItems) {
+      break;
+    }
+
+    const int displayY = 60 + contentY + i * 30;
+    const bool isSelected = itemIndex == selectorIndex;
 
     if (isSyncItem(itemIndex)) {
-      renderer.drawText(UI_10_FONT_ID, 20, displayY, ">> Sync Progress", !isSelected);
-    } else {
-      const int tocIndex = tocIndexFromItemIndex(itemIndex);
-      auto item = epub->getTocItem(tocIndex);
-
-      const int indentSize = 20 + (item.level - 1) * 15;
-      const std::string chapterName =
-          renderer.truncatedText(UI_10_FONT_ID, item.title.c_str(), pageWidth - 40 - indentSize);
-
-      renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
+      renderer.drawText(UI_10_FONT_ID, contentX + 20, displayY, tr(STR_SYNC_PROGRESS), !isSelected);
+      continue;
     }
+
+    const int tocIndex = tocIndexFromItemIndex(itemIndex);
+    const auto item = epub->getTocItem(tocIndex);
+    const int indentSize = contentX + 20 + (item.level - 1) * 15;
+    const int chapterWidth = std::max(10, contentX + contentWidth - 20 - indentSize);
+    const std::string chapterName = renderer.truncatedText(UI_10_FONT_ID, item.title.c_str(), chapterWidth);
+
+    renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
   }
 
-  const auto labels = mappedInput.mapLabels("« Back", "Select", "Up", "Down");
-  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }

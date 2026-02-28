@@ -2,7 +2,6 @@
 
 #include <JpegToBmpConverter.h>
 #include <PngToBmpConverter.h>
-#include <SdFat.h>
 
 #include <algorithm>
 #include <cctype>

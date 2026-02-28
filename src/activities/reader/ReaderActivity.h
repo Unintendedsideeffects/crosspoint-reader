@@ -1,31 +1,34 @@
 #pragma once
-#include "../ActivityWithSubactivity.h"
-#include "activities/home/MyLibraryActivity.h"
+#include <memory>
 
-class ReaderActivity final : public ActivityWithSubactivity {
+#include "../Activity.h"
+
+class Epub;
+class Xtc;
+class Txt;
+
+class ReaderActivity final : public Activity {
   std::string initialBookPath;
-  MyLibraryActivity::Tab fromTab;  // Remember which tab we came from
-  bool pendingGoHome = false;
-  bool pendingGoToLibrary = false;
-  std::string pendingLibraryPath;
-  const std::function<void()> onGoBack;
-  const std::function<void(const std::string&, MyLibraryActivity::Tab)> onGoToLibrary;
+  std::string currentBookPath;  // Track current book path for navigation
+  static std::unique_ptr<Epub> loadEpub(const std::string& path);
+  static std::unique_ptr<Xtc> loadXtc(const std::string& path);
+  static std::unique_ptr<Txt> loadTxt(const std::string& path);
+  static bool isXtcFile(const std::string& path);
+  static bool isTxtFile(const std::string& path);
+  static bool isBmpFile(const std::string& path);
 
   static std::string extractFolderPath(const std::string& filePath);
   void goToLibrary(const std::string& fromBookPath = "");
-  void requestGoHome();
-  void requestGoToLibrary(const std::string& fromBookPath = "");
+
+  void onGoBack();
+  void onGoToEpubReader(std::unique_ptr<Epub> epub);
+  void onGoToBmpViewer(const std::string& path);
+  void onGoToXtcReader(std::unique_ptr<Xtc> xtc);
+  void onGoToTxtReader(std::unique_ptr<Txt> txt);
 
  public:
-  explicit ReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string initialBookPath,
-                          MyLibraryActivity::Tab fromTab, const std::function<void()>& onGoBack,
-                          const std::function<void(const std::string&, MyLibraryActivity::Tab)>& onGoToLibrary)
-      : ActivityWithSubactivity("Reader", renderer, mappedInput),
-        initialBookPath(std::move(initialBookPath)),
-        fromTab(fromTab),
-        onGoBack(onGoBack),
-        onGoToLibrary(onGoToLibrary) {}
+  explicit ReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string initialBookPath)
+      : Activity("Reader", renderer, mappedInput), initialBookPath(std::move(initialBookPath)) {}
   void onEnter() override;
-  void loop() override;
   bool isReaderActivity() const override { return true; }
 };

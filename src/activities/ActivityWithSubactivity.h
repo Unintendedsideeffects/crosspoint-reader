@@ -12,7 +12,6 @@ class ActivityWithSubactivity : public Activity {
   void exitActivity();
   void applyPendingSubActivityTransition();
   void enterNewActivity(Activity* activity);
-  void renderTaskLoop() override;
 
  public:
   explicit ActivityWithSubactivity(std::string name, GfxRenderer& renderer, MappedInputManager& mappedInput)
@@ -20,6 +19,6 @@ class ActivityWithSubactivity : public Activity {
   void loop() override;
   // Note: when a subactivity is active, parent requestUpdate() calls are ignored;
   // the subactivity should request its own renders. This pauses parent rendering until exit.
-  void requestUpdate() override;
+  void requestUpdate(bool immediate = false) override;
   void onExit() override;
 };
