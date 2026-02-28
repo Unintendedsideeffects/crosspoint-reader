@@ -16,6 +16,9 @@ This document describes all HTTP and WebSocket endpoints available on the CrossP
     - [GET `/download` - Download File](#get-download---download-file)
     - [POST `/upload` - Upload File](#post-upload---upload-file)
     - [POST `/api/user-fonts/rescan` - Rescan SD User Fonts](#post-apiuser-fontsrescan---rescan-sd-user-fonts)
+    - [GET `/api/sleep-images` - List Sleep Images](#get-apisleep-images---list-sleep-images)
+    - [GET `/api/sleep-cover` - Get Pinned Sleep Cover](#get-apisleep-cover---get-pinned-sleep-cover)
+    - [POST `/api/sleep-cover/pin` - Pin Sleep Cover](#post-apisleep-coverpin---pin-sleep-cover)
     - [POST `/mkdir` - Create Folder](#post-mkdir---create-folder)
     - [POST `/delete` - Delete File or Folder](#post-delete---delete-file-or-folder)
   - [WebSocket Endpoint](#websocket-endpoint)
@@ -380,6 +383,83 @@ curl -X POST http://crosspoint.local/api/user-fonts/rescan
 | -------------- | ------- | ----------- |
 | `families`     | number  | Number of discovered font families |
 | `activeLoaded` | boolean | `true` when the active external font could be loaded after rescan |
+
+---
+
+### GET `/api/sleep-images` - List Sleep Images
+
+Returns a JSON array of images in the `/sleep/` folder on the SD card.
+
+**Request:**
+```bash
+curl http://crosspoint.local/api/sleep-images
+```
+
+**Response (200 OK):**
+```json
+[
+  {"path": "/sleep/foo.bmp", "name": "foo.bmp"},
+  {"path": "/sleep/bar.bmp", "name": "bar.bmp"}
+]
+```
+
+**Notes:**
+- Returns an empty array `[]` if the `/sleep/` folder does not exist or contains no images.
+
+---
+
+### GET `/api/sleep-cover` - Get Pinned Sleep Cover
+
+Returns the currently pinned sleep cover image path.
+
+**Request:**
+```bash
+curl http://crosspoint.local/api/sleep-cover
+```
+
+**Response (200 OK):**
+```json
+{
+  "path": "/sleep/foo.bmp",
+  "name": "foo.bmp"
+}
+```
+
+**Notes:**
+- If no image is pinned, `path` and `name` will be empty strings.
+
+---
+
+### POST `/api/sleep-cover/pin` - Pin Sleep Cover
+
+Sets a specific image or book cover to be displayed every time the device sleeps.
+
+**Request (Mode A - Pin Sleep Folder Image):**
+```bash
+# Pin an image from the /sleep/ folder
+curl -X POST -H "Content-Type: application/json" -d '{"path": "/sleep/foo.bmp"}' http://crosspoint.local/api/sleep-cover/pin
+
+# Clear the pin (revert to random rotation)
+curl -X POST -H "Content-Type: application/json" -d '{"path": ""}' http://crosspoint.local/api/sleep-cover/pin
+```
+
+**Request (Mode B - Pin Book Cover):**
+```bash
+# Pin the cover of a specific book
+curl -X POST -H "Content-Type: application/json" -d '{"bookPath": "/books/mybook.epub"}' http://crosspoint.local/api/sleep-cover/pin
+```
+
+**Response (200 OK):**
+```json
+{
+  "pinnedPath": "/sleep/foo.bmp"
+}
+```
+
+**Notes:**
+- **Mode A (Image Path):** Pins the specified file. If an empty path is sent, the pin is cleared. On success, the clearing request returns the plain text "Cleared".
+- **Mode B (Book Path):** Copies the book's cover BMP to `/sleep/.pinned-cover.bmp` and sets that as the pinned image.
+- When a cover is pinned, it will be used regardless of the random rotation setting, provided the **Sleep Screen** is set to **Custom**.
 
 ---
 

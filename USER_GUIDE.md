@@ -21,6 +21,7 @@ Welcome to the **CrossPoint** firmware. This guide outlines the hardware control
       - [3.6.3 Controls](#363-controls)
       - [3.6.4 System](#364-system)
     - [3.7 Sleep Screen](#37-sleep-screen)
+      - [3.7.1 Pinning a Sleep Cover Image](#371-pinning-a-sleep-cover-image)
   - [4. Reading Mode](#4-reading-mode)
     - [Page Turning](#page-turning)
     - [Chapter Navigation](#chapter-navigation)
@@ -211,6 +212,23 @@ You can customize the sleep screen by placing custom images in specific location
 > For best results:
 > - Use uncompressed BMP files with 24-bit color depth
 > - Use a resolution of 480x800 pixels to match the device's screen resolution.
+
+#### 3.7.1 Pinning a Sleep Cover Image
+
+You can choose to pin a specific image or book cover to always be shown when the device is sleeping, instead of the random rotation.
+
+- **Requirement:** Set the **Sleep Screen** setting to **Custom** in the **[Display Settings](#361-display)**.
+- **How to Use:**
+  1. Open the device's web UI by going to the **File Transfer** screen.
+  2. Navigate to **Settings** in the web interface.
+  3. A **Sleep Cover - Pinned Image** card will appear when **Custom** is selected.
+  4. You will see two tabs:
+     - **Sleep Folder:** Images currently located in the `/sleep/` folder on your SD card.
+     - **Book Covers:** Covers from your recently read books.
+  5. Click the **Pin** button on any image to set it as your sleep cover.
+- **Clearing the Pin:** Click the **Clear** button on the pinned image card to revert to the default behavior (random rotation from the `/sleep/` folder).
+- **Book Cover Pinning:** When you pin a book cover, the device automatically copies it to a file named `/sleep/.pinned-cover.bmp`.
+- **Note:** If the pinned image file is deleted from the SD card, the device will automatically fall back to the random rotation behavior without crashing.
 
 ---
 
