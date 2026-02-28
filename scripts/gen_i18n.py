@@ -455,11 +455,13 @@ def generate_keys_header(
     sorted_enums = ", ".join(
         f"static_cast<uint8_t>(Language::{languages[i]})" for i in sorted_indices
     )
+    lines.append("// clang-format off")
     lines.append(
         "constexpr uint8_t SORTED_LANGUAGE_INDICES[] = {"
         f"{sorted_enums}"
         "};"
     )
+    lines.append("// clang-format on")
     lines.append("")
     lines.append(
         "static_assert(sizeof(SORTED_LANGUAGE_INDICES) / sizeof(SORTED_LANGUAGE_INDICES[0]) == getLanguageCount(),"
