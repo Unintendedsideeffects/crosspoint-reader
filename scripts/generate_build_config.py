@@ -31,7 +31,7 @@ FEATURES = {
     'notosans_fonts': Feature(
         name='Noto Sans Fonts',
         flag='ENABLE_NOTOSANS_FONTS',
-        size_kb=1085,
+        size_kb=1086,
         description='12/16/18pt Noto Sans family'
     ),
     'opendyslexic_fonts': Feature(
@@ -55,7 +55,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=285,
+        size_kb=-2,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -67,13 +67,13 @@ FEATURES = {
     'koreader_sync': Feature(
         name='KOReader Sync',
         flag='ENABLE_KOREADER_SYNC',
-        size_kb=153,
+        size_kb=0,
         description='Sync reading progress with KOReader'
     ),
     'calibre_sync': Feature(
         name='Calibre Sync',
         flag='ENABLE_CALIBRE_SYNC',
-        size_kb=239,
+        size_kb=0,
         description='Calibre OPDS browser and metadata sync settings'
     ),
     'background_server': Feature(
@@ -121,7 +121,7 @@ FEATURES = {
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=242,
+        size_kb=0,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
@@ -145,13 +145,13 @@ FEATURES = {
     'ble_wifi_provisioning': Feature(
         name='BLE WiFi Provisioning',
         flag='ENABLE_BLE_WIFI_PROVISIONING',
-        size_kb=668,
+        size_kb=671,
         description='Initial WiFi setup via Bluetooth LE'
     ),
     'user_fonts': Feature(
         name='User Fonts',
         flag='ENABLE_USER_FONTS',
-        size_kb=8,
+        size_kb=6,
         description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
     ),
     'web_wifi_setup': Feature(
@@ -163,7 +163,7 @@ FEATURES = {
     'usb_mass_storage': Feature(
         name='USB Mass Storage',
         flag='ENABLE_USB_MASS_STORAGE',
-        size_kb=22,
+        size_kb=20,
         description='On-device prompt for USB SD card access as mass storage'
     ),
 }
@@ -512,7 +512,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 2.10  # Lean profile size baseline (measured)
+    base_size_mb = 2.67  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
