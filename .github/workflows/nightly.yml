@@ -51,7 +51,9 @@ jobs:
           echo "CHANNEL_VERSION=${DATE}" >> $GITHUB_ENV
 
       - name: Build firmware (nightly)
-        run: uv run pio run -e gh_nightly | tee pio.log
+        run: |
+          set -o pipefail
+          uv run pio run -e gh_nightly | tee pio.log
 
       - name: Enforce flash headroom
         run: |

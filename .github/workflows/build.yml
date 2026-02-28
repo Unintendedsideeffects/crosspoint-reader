@@ -112,7 +112,9 @@ jobs:
           grep CROSSPOINT_VERSION platformio-custom.ini
 
       - name: Build firmware
-        run: uv run pio run -e custom | tee pio.log
+        run: |
+          set -o pipefail
+          uv run pio run -e custom | tee pio.log
 
       - name: Enforce flash headroom
         run: |
@@ -192,7 +194,9 @@ jobs:
           echo "GIT_COMMIT_COUNT=${COUNT}" >> $GITHUB_ENV
 
       - name: Build firmware (gh_latest)
-        run: uv run pio run -e gh_latest | tee pio.log
+        run: |
+          set -o pipefail
+          uv run pio run -e gh_latest | tee pio.log
 
       - name: Enforce flash headroom
         run: |

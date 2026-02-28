@@ -565,7 +565,8 @@ Activity* FeatureModules::createOpdsBrowserActivity(GfxRenderer& renderer, Mappe
   if (!hasCapability(Capability::CalibreSync)) {
     return nullptr;
   }
-  return new OpdsBookBrowserActivity(renderer, mappedInput, onBack);
+  (void)onBack;
+  return new OpdsBookBrowserActivity(renderer, mappedInput);
 #else
   (void)renderer;
   (void)mappedInput;
@@ -594,8 +595,10 @@ Activity* FeatureModules::createKoreaderSyncActivity(GfxRenderer& renderer, Mapp
   if (!hasKoreaderSyncCredentials()) {
     return nullptr;
   }
+  (void)onCancel;
+  (void)onSyncComplete;
   return new KOReaderSyncActivity(renderer, mappedInput, epub, epubPath, currentSpineIndex, currentPage,
-                                  totalPagesInSpine, onCancel, onSyncComplete);
+                                  totalPagesInSpine);
 #else
   (void)renderer;
   (void)mappedInput;
