@@ -66,6 +66,91 @@ jobs:
       - name: Run host tests
         run: bash test/run_host_tests.sh
 
+  contract-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Start contract server
+        run: |
+          python3 scripts/contract_server.py --port 8765 &
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:8765/_test/ping > /dev/null; then break; fi
+            sleep 1
+          done
+
+      - name: Verify endpoint shapes
+        run: |
+          set -euo pipefail
+
+          BASE="http://127.0.0.1:8765"
+
+          check() {
+            local desc="$1" url="$2" expected="$3"
+            local body; body=$(curl -sf "$url")
+            if echo "$body" | grep -qF "$expected"; then
+              echo "PASS: $desc"
+            else
+              echo "FAIL: $desc — expected '$expected' in: $body"
+              exit 1
+            fi
+          }
+
+          # Reset to clean state
+          curl -sf -X POST "$BASE/_test/reset"
+
+          # /api/status returns required fields
+          check "status has version"   "$BASE/api/status"  '"version"'
+          check "status has wifiStatus" "$BASE/api/status" '"wifiStatus"'
+          check "status has ip"        "$BASE/api/status"  '"ip"'
+
+          # /api/plugins returns snake_case flags
+          check "plugins has ota_updates"    "$BASE/api/plugins" '"ota_updates"'
+          check "plugins has user_fonts"     "$BASE/api/plugins" '"user_fonts"'
+          check "plugins has web_wifi_setup" "$BASE/api/plugins" '"web_wifi_setup"'
+
+          # /api/sleep-images returns empty array by default
+          check "sleep-images empty" "$BASE/api/sleep-images" "[]"
+
+          # /api/sleep-cover returns {path, name} shape
+          check "sleep-cover has path" "$BASE/api/sleep-cover" '"path"'
+          check "sleep-cover has name" "$BASE/api/sleep-cover" '"name"'
+
+          # Seed sleep images and re-check
+          curl -sf -X POST -H "Content-Type: application/json" \
+            -d '{"sleepImages":[{"path":"/sleep/a.bmp","name":"a.bmp"}]}' \
+            "$BASE/_test/seed"
+          check "sleep-images has entry" "$BASE/api/sleep-images" '"path":"/sleep/a.bmp"'
+
+          # Pin Mode A: path → firmware returns {"pinnedPath":"..."}
+          curl -sf -X POST -H "Content-Type: application/json" \
+            -d '{"path":"/sleep/a.bmp"}' "$BASE/api/sleep-cover/pin" | grep -q '"pinnedPath"'
+          echo "PASS: pin Mode A returns pinnedPath JSON"
+
+          # Pin Mode A: clear → firmware returns plain text "Cleared"
+          clear_resp=$(curl -sf -X POST -H "Content-Type: application/json" \
+            -d '{"path":""}' "$BASE/api/sleep-cover/pin")
+          if [ "$clear_resp" = "Cleared" ]; then
+            echo "PASS: pin clear returns Cleared"
+          else
+            echo "FAIL: pin clear returned: $clear_resp"
+            exit 1
+          fi
+
+          # Pin Mode B: bookPath → firmware returns {"pinnedPath":"..."}
+          curl -sf -X POST -H "Content-Type: application/json" \
+            -d '{"bookPath":"/books/dune.epub"}' "$BASE/api/sleep-cover/pin" | grep -q '"pinnedPath"'
+          echo "PASS: pin Mode B returns pinnedPath JSON"
+
+          # Mutations endpoint returns expected keys
+          check "mutations has pinRequests" "$BASE/_test/mutations" '"pinRequests"'
+
+          echo "All contract server checks passed."
+
   hardware-patterns:
     runs-on: ubuntu-latest
     steps:
@@ -165,6 +250,7 @@ jobs:
       - clang-format
       - feature-sync
       - host-tests
+      - contract-server
       - hardware-patterns
       - cppcheck
     if: always()
