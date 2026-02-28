@@ -227,6 +227,13 @@ void invalidateSleepImageCache() {
   LOG_INF("SLP", "Sleep image cache invalidated");
 }
 
+int validateAndCountSleepImages() {
+  invalidateSleepImageCache();
+  validateSleepImagesOnce();
+  SleepCacheMutex::Guard guard;
+  return static_cast<int>(sleepImageCache.validFiles.size());
+}
+
 void SleepActivity::onEnter() {
   Activity::onEnter();
   // Skip the "Entering Sleep..." popup to avoid unnecessary screen refresh

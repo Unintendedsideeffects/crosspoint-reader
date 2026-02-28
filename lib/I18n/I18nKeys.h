@@ -388,6 +388,7 @@ enum class StrId : uint16_t {
   STR_OPDS_SERVER_URL,
   STR_DARK_MODE,
   STR_BACKGROUND_SERVER_ON_CHARGE,
+  STR_VALIDATE_SLEEP_IMAGES,
   STR_DEVICE_NAME,
   // Sentinel - must be last
   _COUNT

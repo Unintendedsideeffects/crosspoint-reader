@@ -5,8 +5,8 @@
 
 class Bitmap;
 
-// Call this when /sleep/ folder or sleep images are modified via web interface
 void invalidateSleepImageCache();
+int validateAndCountSleepImages();
 
 class SleepActivity final : public Activity {
  public:

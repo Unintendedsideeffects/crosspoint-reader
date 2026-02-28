@@ -23,18 +23,24 @@
 
 - [ ] Flash `fork-drift` to hardware device (`pio run --target upload` or OTA from Android app)
 - [ ] Smoke-test with Android app after flash: Wi-Fi API, USB serial, sleep cover pin/clear
-- [ ] Merge `fork-drift` → `master` once device smoke test passes (~20 commits ahead of master; all Android-facing APIs missing from master)
+  - Android app (ForkDriftApp) is now in shape for testing: release signing, API 34 CI, custom icon, improved empty states
+- [ ] Merge `fork-drift` → `master` once device smoke test passes (1173 commits ahead of master)
+- [ ] Commit uncommitted `lib/I18n/I18nKeys.h` style revert — `SORTED_LANGUAGE_INDICES` reformatted back to single-line (matches `42a791b` clang-format commit; was regenerated multi-line in `c2c6144`)
 
 ## i18n / translations
 
-- [ ] Fill in missing translations for new keys (currently English fallback):
-  - `STR_SLEEP_SOURCE` — missing in all non-English languages
-  - `STR_FACTORY_RESET` — missing in RO, CA, UK, BE, IT, PL, FI, DA
-  - `STR_THEME_FORK_DRIFT` — missing in BE, IT, PL, FI, DA
-  - `STR_DARK_MODE`, `STR_DISPLAY_QR`, `STR_CUSTOMISE_STATUS_BAR` — several languages missing
-- [ ] Clean up orphaned keys present in non-EN translations but absent from EN (`STR_STATUS_BAR_FULL_PERCENT` etc.) — add EN strings or remove orphans
+- [x] Fill in missing translations for new keys across 15 non-English language files:
+  - `STR_SLEEP_SOURCE`, `STR_FACTORY_RESET`, `STR_THEME_FORK_DRIFT`, `STR_DARK_MODE`, `STR_BACKGROUND_SERVER_ON_CHARGE`
+  - `STR_DISPLAY_QR` and entire `STR_CUSTOMISE_STATUS_BAR` section (13 languages)
+  - `STR_VALIDATE_SLEEP_IMAGES` (new key, added to all 15 languages)
+- [x] Clean up orphaned keys — removed `STR_SCREENSHOT_BUTTON` and `STR_STATUS_BAR_FULL_PERCENT` family from all affected languages
+- [ ] `STR_HIDE` missing in many languages (English fallback used for status bar hide option)
 
 ## Technical debt
 
-- [ ] `CROSSPOINT_VERSION` macro redefinition warnings at compile time — consolidate definition point
-- [ ] Hardware smoke test — hook into Android app's self-hosted runner workflow for nightly end-to-end validation
+- [x] `CROSSPOINT_VERSION` macro redefinition warnings — removed redundant fallback `-D` flags from `platformio.ini`; script in `gen_version.py` is now the sole definition point for dynamic environments
+- [ ] Hardware smoke test — `hardware-smoke-test.yml` scaffold exists in ForkDriftApp; needs self-hosted runner with device connected via USB and secrets `CROSSPOINT_DEVICE_HOST`, `CROSSPOINT_BLE_TARGET`, `CROSSPOINT_TEST_WIFI_SSID/PASSWORD`
+
+## Sleep Images
+
+- [x] Add "Validate Sleep Images" setting action — scans `/sleep` folder, reports valid image count, pre-populates cache for faster first sleep transition

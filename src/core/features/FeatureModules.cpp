@@ -32,6 +32,7 @@
 #include "activities/settings/FactoryResetActivity.h"
 #include "activities/settings/LanguageSelectActivity.h"
 #include "activities/settings/SettingsActivity.h"
+#include "activities/settings/ValidateSleepImagesActivity.h"
 #include "core/features/FeatureCatalog.h"
 #include "util/StringUtils.h"
 #if ENABLE_MARKDOWN
@@ -502,6 +503,7 @@ bool FeatureModules::supportsSettingAction(const SettingAction action) {
     case SettingAction::Network:
     case SettingAction::ClearCache:
     case SettingAction::FactoryReset:
+    case SettingAction::ValidateSleepImages:
       return true;
     case SettingAction::KOReaderSync:
       return hasCapability(Capability::KoreaderSync);
@@ -554,6 +556,8 @@ Activity* FeatureModules::createSettingsSubActivity(const SettingAction action, 
 #endif
     case SettingAction::Language:
       return new LanguageSelectActivity(renderer, mappedInput, onComplete);
+    case SettingAction::ValidateSleepImages:
+      return new ValidateSleepImagesActivity(renderer, mappedInput, onComplete);
     case SettingAction::None:
       return nullptr;
   }

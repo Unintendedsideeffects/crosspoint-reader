@@ -142,7 +142,7 @@ const char* const CHARACTER_SETS[] = {
     "\x80"
     "\xA6"
     "",  // Français
-    " !\"%&'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]abcdefghiklmnoprstuvwxyz|\xC2"
+    " !\"%&'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]abcdefghiklmnopqrstuvwxyz|\xC2"
     "\xAB"
     "\xC3"
     "\x84"
@@ -430,7 +430,7 @@ const char* const CHARACTER_SETS[] = {
     "\xC3"
     "\xBC"
     "",  // Català
-    " !\"%'()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[\\]abcdefghiklmnoprstuvwxyz|\xC2"
+    " !\"%'()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[\\]abcdefhiklmnoprstuvwxyz|\xC2"
     "\xAB"
     "\xD0"
     "\x86"
@@ -551,7 +551,7 @@ const char* const CHARACTER_SETS[] = {
     "\xD1"
     "\x97"
     "",  // Українська
-    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvwxyz|\xC2"
+    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefhiklmnoprstuvwxyz|\xC2"
     "\xAB"
     "\xC2"
     "\xBB"
@@ -711,6 +711,8 @@ const char* const CHARACTER_SETS[] = {
     "\x9A"
     "\xC5"
     "\x9B"
+    "\xC5"
+    "\xB9"
     "\xC5"
     "\xBA"
     "\xC5"
@@ -1089,6 +1091,7 @@ const char* const STRINGS_EN[] = {
     "OPDS Server URL",
     "Dark Mode",
     "Background Server on Charge",
+    "Validate Sleep Images",
     "Device Name",
 };
 
@@ -1376,7 +1379,9 @@ const char* const STRINGS_ES[] = {
     "Oscuro",
     "Claro",
     "Personalizado",
-    "Image Source",
+    "Fuente de im\xC3"
+    "\xA1"
+    "genes",
     "Pokedex",
     "All",
     "Portada",
@@ -1543,21 +1548,35 @@ const char* const STRINGS_ES[] = {
     "\xB3"
     "n de la pantalla",
     "Contraste",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "Personalizar barra de estado",
+    "P\xC3"
+    "\xA1"
+    "ginas del cap\xC3"
+    "\xAD"
+    "tulo",
+    "Porcentaje de progreso del libro",
+    "Barra de progreso",
+    "Grosor de la barra de progreso",
+    "Fina",
+    "Media",
+    "Gruesa",
+    "Libro",
+    "Cap\xC3"
+    "\xAD"
+    "tulo",
+    "Cap\xC3"
+    "\xAD"
+    "tulo 21",
+    "T\xC3"
+    "\xAD"
+    "tulo del libro",
+    "Vista previa",
+    "T\xC3"
+    "\xAD"
+    "tulo",
+    "Bater\xC3"
+    "\xAD"
+    "a",
     "Estilo de pantalla",
     "Cl\xC3"
     "\xA1"
@@ -1627,7 +1646,9 @@ const char* const STRINGS_ES[] = {
     "\xB3"
     "n",
     "Borrar cache del libro",
-    "Show page as QR",
+    "Mostrar p\xC3"
+    "\xA1"
+    "gina como QR",
     "Cap\xC3"
     "\xAD"
     "tulo:",
@@ -1686,6 +1707,9 @@ const char* const STRINGS_ES[] = {
     "URL del servidor OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Validar im\xC3"
+    "\xA1"
+    "genes de reposo",
     "Device Name",
 };
 
@@ -2110,7 +2134,7 @@ const char* const STRINGS_FR[] = {
     "Sombre",
     "Clair",
     "Custom",
-    "Image Source",
+    "Source d'images",
     "Pokedex",
     "All",
     "Couverture",
@@ -2328,21 +2352,29 @@ const char* const STRINGS_FR[] = {
     "[ON]",
     "Filtre affichage veille",
     "Contraste",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "Personnaliser la barre d'\xC3"
+    "\xA9"
+    "tat",
+    "Pages du chapitre",
+    "Pourcentage de progression du livre",
+    "Barre de progression",
+    "\xC3"
+    "\x89"
+    "paisseur de la barre de progression",
+    "Fine",
+    "Moyen",
+    "\xC3"
+    "\x89"
+    "pais",
+    "Livre",
+    "Chapitre",
+    "Chapitre 21",
+    "Titre du livre",
+    "Aper\xC3"
+    "\xA7"
+    "u",
+    "Titre",
+    "Batterie",
     "Th\xC3"
     "\xA8"
     "me de l\xE2"
@@ -2432,7 +2464,7 @@ const char* const STRINGS_FR[] = {
     "accueil",
     "Synchroniser la progression",
     "Supprimer le cache du livre",
-    "Show page as QR",
+    "Afficher page en QR",
     "Chapitre : ",
     " pages  |  ",
     "Livre : ",
@@ -2509,6 +2541,7 @@ const char* const STRINGS_FR[] = {
     "URL du serveur OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Valider les images de veille",
     "Device Name",
 };
 
@@ -2750,7 +2783,7 @@ const char* const STRINGS_DE[] = {
     "Dunkel",
     "Hell",
     "Eigenes",
-    "Image Source",
+    "Bildquelle",
     "Pokedex",
     "All",
     "Umschlag",
@@ -2910,21 +2943,23 @@ const char* const STRINGS_DE[] = {
     "[AN]",
     "Standby-Coverfilter",
     "Kontrast",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "Statusleiste anpassen",
+    "Kapitelseiten",
+    "Buchfortschritt in Prozent",
+    "Fortschrittsleiste",
+    "Dicke der Fortschrittsleiste",
+    "D\xC3"
+    "\xBC"
+    "nn",
+    "Mittel",
+    "Dick",
+    "Buch",
+    "Kapitel",
+    "Kapitel 21",
+    "Buchtitel",
+    "Vorschau",
+    "Titel",
+    "Akku",
     "System-Design",
     "Klassisch",
     "Lyra",
@@ -2973,7 +3008,7 @@ const char* const STRINGS_DE[] = {
     "Zum Anfang",
     "Fortschritt synchronisieren",
     "Buch-Cache leeren",
-    "Show page as QR",
+    "Seite als QR anzeigen",
     "Kapitel:",
     " Seiten  |  ",
     "Buch: ",
@@ -3021,6 +3056,7 @@ const char* const STRINGS_DE[] = {
     "OPDS-Server-URL",
     "Dark Mode",
     "Background Server on Charge",
+    "Schlafbilder validieren",
     "Device Name",
 };
 
@@ -3896,7 +3932,11 @@ const char* const STRINGS_CS[] = {
     "Vlastn\xC3"
     "\xAD"
     "",
-    "Image Source",
+    "Zdroj obr\xC3"
+    "\xA1"
+    "zk\xC5"
+    "\xAF"
+    "",
     "Pokedex",
     "All",
     "Ob\xC3"
@@ -4276,21 +4316,59 @@ const char* const STRINGS_CS[] = {
     "\xA1"
     "nku",
     "Kontrast",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "P\xC5"
+    "\x99"
+    "izp\xC5"
+    "\xAF"
+    "sobit stavov\xC3"
+    "\xBD"
+    " \xC5"
+    "\x99"
+    "\xC3"
+    "\xA1"
+    "dek",
+    "Str\xC3"
+    "\xA1"
+    "nek v kapitole",
+    "Procento postupu knihy",
+    "Ukazatel pr\xC5"
+    "\xAF"
+    "b\xC4"
+    "\x9B"
+    "hu",
+    "Tlou\xC5"
+    "\xA1"
+    "\xC5"
+    "\xA5"
+    "ka ukazatele pr\xC5"
+    "\xAF"
+    "b\xC4"
+    "\x9B"
+    "hu",
+    "Tenk\xC3"
+    "\xBD"
+    "",
+    "St\xC5"
+    "\x99"
+    "edn\xC3"
+    "\xAD"
+    "",
+    "Tlust\xC3"
+    "\xBD"
+    "",
+    "Kniha",
+    "Kapitola",
+    "Kapitola 21",
+    "N\xC3"
+    "\xA1"
+    "zev knihy",
+    "N\xC3"
+    "\xA1"
+    "hled",
+    "N\xC3"
+    "\xA1"
+    "zev",
+    "Baterie",
     "\xC5"
     "\xA0"
     "ablona rozhran\xC3"
@@ -4498,7 +4576,9 @@ const char* const STRINGS_CS[] = {
     "\xC5"
     "\xA5"
     " knihy",
-    "Show page as QR",
+    "Zobrazit str\xC3"
+    "\xA1"
+    "nku jako QR",
     "Kapitola:",
     "str\xC3"
     "\xA1"
@@ -4655,6 +4735,15 @@ const char* const STRINGS_CS[] = {
     "URL serveru OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Ov\xC4"
+    "\x9B"
+    "\xC5"
+    "\x99"
+    "it obr\xC3"
+    "\xA1"
+    "zky sp\xC3"
+    "\xA1"
+    "nku",
     "Device Name",
 };
 
@@ -4977,7 +5066,7 @@ const char* const STRINGS_PO[] = {
     "Escuro",
     "Claro",
     "Personalizado",
-    "Image Source",
+    "Fonte de imagens",
     "Pokedex",
     "All",
     "Capa",
@@ -5157,21 +5246,39 @@ const char* const STRINGS_PO[] = {
     "[LIGADO]",
     "Filtro capa tela repouso",
     "Contraste",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "Personalizar barra de estado",
+    "P\xC3"
+    "\xA1"
+    "ginas do cap\xC3"
+    "\xAD"
+    "tulo",
+    "Percentagem de progresso do livro",
+    "Barra de progresso",
+    "Espessura da barra de progresso",
+    "Fino",
+    "M\xC3"
+    "\xA9"
+    "dio",
+    "Espesso",
+    "Livro",
+    "Cap\xC3"
+    "\xAD"
+    "tulo",
+    "Cap\xC3"
+    "\xAD"
+    "tulo 21",
+    "T\xC3"
+    "\xAD"
+    "tulo do livro",
+    "Visualiza\xC3"
+    "\xA7"
+    "\xC3"
+    "\xA3"
+    "o",
+    "T\xC3"
+    "\xAD"
+    "tulo",
+    "Bateria",
     "Tema da interface",
     "Cl\xC3"
     "\xA1"
@@ -5259,7 +5366,9 @@ const char* const STRINGS_PO[] = {
     "cio",
     "Sincronizar progresso",
     "Excluir cache do livro",
-    "Show page as QR",
+    "Mostrar p\xC3"
+    "\xA1"
+    "gina como QR",
     "Cap\xC3"
     "\xAD"
     "tulo:",
@@ -5316,6 +5425,7 @@ const char* const STRINGS_PO[] = {
     "URL do servidor OPDS",
     "Dark Mode",
     "Background Server on Charge",
+    "Validar imagens de sono",
     "Device Name",
 };
 
@@ -9738,7 +9848,45 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB9"
     "",
-    "Image Source",
+    "\xD0"
+    "\x98"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x87"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBA"
+    " \xD0"
+    "\xB8"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB6"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB9"
+    "",
     "Pokedex",
     "All",
     "\xD0"
@@ -11649,21 +11797,349 @@ const char* const STRINGS_RU[] = {
     "\xD1"
     "\x82"
     "",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "\xD0"
+    "\x9D"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x83"
+    " \xD1"
+    "\x81"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x8F"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x86"
+    " \xD0"
+    "\xB2"
+    " \xD0"
+    "\xB3"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB5"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x86"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x82"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xBA"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xB8"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x81"
+    "-\xD0"
+    "\xB1"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x89"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x81"
+    "-\xD0"
+    "\xB1"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\x9A"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\x93"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\x93"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    " 21",
+    "\xD0"
+    "\x9D"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB5"
+    " \xD0"
+    "\xBA"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xB8"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x80"
+    "",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "",
+    "\xD0"
+    "\x91"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x8F"
+    "",
     "\xD0"
     "\xA2"
     "\xD0"
@@ -12655,7 +13131,45 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB8"
     "",
-    "Show page as QR",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x83"
+    " \xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    " QR",
     "\xD0"
     "\x93"
     "\xD0"
@@ -13588,6 +14102,53 @@ const char* const STRINGS_RU[] = {
     "",
     "Dark Mode",
     "Background Server on Charge",
+    "\xD0"
+    "\x9F"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    " \xD0"
+    "\xB8"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB6"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x8F"
+    " \xD1"
+    "\x81"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    "",
     "Device Name",
 };
 
@@ -14045,7 +14606,9 @@ const char* const STRINGS_SV[] = {
     "rk",
     "Ljus",
     "Valfri",
-    "Image Source",
+    "Bildk\xC3"
+    "\xA4"
+    "lla",
     "Pokedex",
     "All",
     "Omslag",
@@ -14267,21 +14830,29 @@ const char* const STRINGS_SV[] = {
     "\xA4"
     "rmens omslagsfilter",
     "Kontrast",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "Anpassa statusf\xC3"
+    "\xA4"
+    "lt",
+    "Kapitel sidantal",
+    "Bokens procentuella progress",
+    "F\xC3"
+    "\xB6"
+    "rloppsindikator",
+    "F\xC3"
+    "\xB6"
+    "rloppsindikatorns tjocklek",
+    "Tunn",
+    "Medel",
+    "Tjock",
+    "Bok",
+    "Kapitel",
+    "Kapitel 21",
+    "Boktitel",
+    "F\xC3"
+    "\xB6"
+    "rhandsvisning",
+    "Titel",
+    "Batteri",
     "Anv\xC3"
     "\xA4"
     "ndargr\xC3"
@@ -14374,7 +14945,7 @@ const char* const STRINGS_SV[] = {
     " Hem",
     "Synkroniseringsframsteg",
     "Radera bokcache",
-    "Show page as QR",
+    "Visa sida som QR",
     "Kapitel:",
     " sidor  |  ",
     "Bok:",
@@ -14446,6 +15017,9 @@ const char* const STRINGS_SV[] = {
     "OPDS-serveradress",
     "Dark Mode",
     "Background Server on Charge",
+    "Validera vilol\xC3"
+    "\xA4"
+    "gesbilder",
     "Device Name",
 };
 
@@ -14883,7 +15457,9 @@ const char* const STRINGS_RO[] = {
     "Selecta\xC5"
     "\xA3"
     "i imaginea de fundal",
-    "Factory Reset",
+    "Resetare fabric\xC4"
+    "\x83"
+    "",
     "Goli\xC5"
     "\xA3"
     "i cache-ul de lectur\xC4"
@@ -14990,7 +15566,9 @@ const char* const STRINGS_RO[] = {
     "ntunecat",
     "Luminos",
     "Personalizat",
-    "Image Source",
+    "Surs\xC4"
+    "\x83"
+    " imagini",
     "Pokedex",
     "All",
     "Copert\xC4"
@@ -15366,7 +15944,7 @@ const char* const STRINGS_RO[] = {
     "a\xC8"
     "\x9B"
     "i pagina ca cod QR",
-    "Chapter: ",
+    "Capitol: ",
     " pagini  |  ",
     "Carte: ",
     "shift",
@@ -15464,8 +16042,17 @@ const char* const STRINGS_RO[] = {
     "\xAE"
     "ncorporat",
     "URL server OPDS",
-    "Dark Mode",
-    "Background Server on Charge",
+    "Mod \xC3"
+    "\xAE"
+    "ntunecat",
+    "Server \xC3"
+    "\xAE"
+    "n fundal la \xC3"
+    "\xAE"
+    "nc\xC4"
+    "\x83"
+    "rcare",
+    "Validare imagini repaus",
     "Device Name",
 };
 
@@ -15707,7 +16294,11 @@ const char* const STRINGS_CA[] = {
     "Comprova si hi ha actualitzacions",
     "Idioma",
     "Selecciona un fons de pantalla",
-    "Factory Reset",
+    "Restauraci\xC3"
+    "\xB3"
+    " de f\xC3"
+    "\xA0"
+    "brica",
     "Esborra la mem\xC3"
     "\xB2"
     "ria cau de lectura",
@@ -15780,7 +16371,7 @@ const char* const STRINGS_CA[] = {
     "Fosc",
     "Clar",
     "Personalitzat",
-    "Image Source",
+    "Font d'imatges",
     "Pokedex",
     "All",
     "Portada",
@@ -15945,21 +16536,41 @@ const char* const STRINGS_CA[] = {
     "\xB2"
     "s",
     "Contrast",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "Personalitza la barra d'estat",
+    "P\xC3"
+    "\xA0"
+    "gines del cap\xC3"
+    "\xAD"
+    "tol",
+    "Percentatge de progr\xC3"
+    "\xA9"
+    "s del llibre",
+    "Barra de progr\xC3"
+    "\xA9"
+    "s",
+    "Gruix de la barra de progr\xC3"
+    "\xA9"
+    "s",
+    "Fina",
+    "Mitjana",
+    "Gruixuda",
+    "Llibre",
+    "Cap\xC3"
+    "\xAD"
+    "tol",
+    "Cap\xC3"
+    "\xAD"
+    "tol 21",
+    "T\xC3"
+    "\xAD"
+    "tol del llibre",
+    "Previsualitzaci\xC3"
+    "\xB3"
+    "",
+    "T\xC3"
+    "\xAD"
+    "tol",
+    "Bateria",
     "Tema de la interf\xC3"
     "\xAD"
     "cie",
@@ -16029,7 +16640,9 @@ const char* const STRINGS_CA[] = {
     "Esborra la mem\xC3"
     "\xB2"
     "ria cau del llibre",
-    "Show page as QR",
+    "Mostra p\xC3"
+    "\xA0"
+    "gina com a QR",
     "Cap\xC3"
     "\xAD"
     "tol: ",
@@ -16100,8 +16713,13 @@ const char* const STRINGS_CA[] = {
     "Estil del llibre",
     "Estil incrustat",
     "URL del servidor OPDS",
-    "Dark Mode",
-    "Background Server on Charge",
+    "Mode fosc",
+    "Servidor en segon pla en c\xC3"
+    "\xA0"
+    "rrega",
+    "Valida imatges de rep\xC3"
+    "\xB2"
+    "s",
     "Device Name",
 };
 
@@ -20045,7 +20663,47 @@ const char* const STRINGS_UK[] = {
     "\xD1"
     "\x83"
     "",
-    "Factory Reset",
+    "\xD0"
+    "\xA1"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    " \xD0"
+    "\xB4"
+    "\xD0"
+    "\xBE"
+    " \xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x8C"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x85"
+    "",
     "\xD0"
     "\x9E"
     "\xD1"
@@ -21156,7 +21814,39 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\xB9"
     "",
-    "Image Source",
+    "\xD0"
+    "\x94"
+    "\xD0"
+    "\xB6"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xBE"
+    " \xD0"
+    "\xB7"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB6"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8C"
+    "",
     "Pokedex",
     "All",
     "\xD0"
@@ -23345,21 +24035,367 @@ const char* const STRINGS_UK[] = {
     "\xD1"
     "\x82"
     "",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "\xD0"
+    "\x9D"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x88"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x83"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB8"
+    " \xD0"
+    "\xBF"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8C"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x83"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    " \xD1"
+    "\x83"
+    " \xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x96"
+    "",
+    "\xD0"
+    "\x92"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x83"
+    " \xD0"
+    "\xBA"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xB8"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8C"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x83"
+    "",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD1"
+    "\x89"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xBF"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x96"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x83"
+    "",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\x9A"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\xA0"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBB"
+    "",
+    "\xD0"
+    "\xA0"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBB"
+    " 21",
+    "\xD0"
+    "\x9D"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xBA"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xB8"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBF"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xB9"
+    " \xD0"
+    "\xBF"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8F"
+    "\xD0"
+    "\xB4"
+    "",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "",
+    "\xD0"
+    "\x91"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x8F"
+    "",
     "\xD0"
     "\xA2"
     "\xD0"
@@ -24425,7 +25461,43 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\xB8"
     "",
-    "Show page as QR",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB8"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x83"
+    " \xD1"
+    "\x8F"
+    "\xD0"
+    "\xBA"
+    " QR",
     "\xD0"
     "\xA0"
     "\xD0"
@@ -25458,8 +26530,123 @@ const char* const STRINGS_UK[] = {
     "\xD0"
     "\xB0"
     " OPDS",
-    "Dark Mode",
-    "Background Server on Charge",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB9"
+    " \xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xB6"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBC"
+    "",
+    "\xD0"
+    "\xA4"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB9"
+    " \xD1"
+    "\x81"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB8"
+    " \xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8F"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x96"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xB2"
+    "\xD1"
+    "\x96"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB8"
+    " \xD0"
+    "\xB7"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB6"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    " \xD1"
+    "\x81"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x83"
+    "",
     "Device Name",
 };
 
@@ -28941,7 +30128,31 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x8B"
     "",
-    "Factory Reset",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x96"
+    " \xD1"
+    "\x81"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xB4"
+    "",
     "\xD0"
     "\x90"
     "\xD1"
@@ -29930,7 +31141,37 @@ const char* const STRINGS_BE[] = {
     "\xD0"
     "\xB9"
     "",
-    "Image Source",
+    "\xD0"
+    "\x9A"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x96"
+    "\xD1"
+    "\x86"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xBC"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8E"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x9E"
+    "",
     "Pokedex",
     "All",
     "\xD0"
@@ -31883,21 +33124,365 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x82"
     "",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "\xD0"
+    "\x9D"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x96"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    " \xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x83"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    " \xD1"
+    "\x83"
+    " \xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB5"
+    "",
+    "\xD0"
+    "\x90"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8D"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x83"
+    " \xD0"
+    "\xBA"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x96"
+    "",
+    "\xD0"
+    "\xA8"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8D"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x83"
+    "",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x9E"
+    "\xD1"
+    "\x88"
+    "\xD1"
+    "\x87"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    " \xD1"
+    "\x88"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8B"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8D"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x83"
+    "",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD1"
+    "\x8F"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8D"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\xA2"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x9E"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\x9A"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\xA0"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    "",
+    "\xD0"
+    "\xA0"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    " 21",
+    "\xD0"
+    "\x9D"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xBA"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xB3"
+    "\xD1"
+    "\x96"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBF"
+    "\xD1"
+    "\x8F"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8D"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x96"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8F"
+    "\xD0"
+    "\xB4"
+    "",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    "",
+    "\xD0"
+    "\x91"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8D"
+    "\xD1"
+    "\x8F"
+    "",
     "\xD0"
     "\xA2"
     "\xD1"
@@ -32889,7 +34474,43 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x96"
     "",
-    "Show page as QR",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x83"
+    " \xD1"
+    "\x8F"
+    "\xD0"
+    "\xBA"
+    " QR",
     "\xD0"
     "\xA0"
     "\xD0"
@@ -33822,8 +35443,111 @@ const char* const STRINGS_BE[] = {
     "\xD0"
     "\xB0"
     "",
-    "Dark Mode",
-    "Background Server on Charge",
+    "\xD0"
+    "\xA6"
+    "\xD1"
+    "\x91"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8B"
+    " \xD1"
+    "\x80"
+    "\xD1"
+    "\x8D"
+    "\xD0"
+    "\xB6"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xBC"
+    "",
+    "\xD0"
+    "\xA4"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD1"
+    "\x8B"
+    " \xD1"
+    "\x81"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8B"
+    " \xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8B"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8B"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    " \xD0"
+    "\xBC"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8E"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x96"
+    " \xD1"
+    "\x81"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x83"
+    "",
     "Device Name",
 };
 
@@ -33954,7 +35678,7 @@ const char* const STRINGS_IT[] = {
     "Cerca aggiornamenti",
     "Lingua",
     "Seleziona sfondo",
-    "Factory Reset",
+    "Ripristino di fabbrica",
     "Svuota cache di lettura",
     "Calibre",
     "Nome utente",
@@ -33989,7 +35713,7 @@ const char* const STRINGS_IT[] = {
     "Scuro",
     "Chiaro",
     "Personalizzato",
-    "Image Source",
+    "Sorgente immagini",
     "Pokedex",
     "All",
     "Copertina",
@@ -34114,21 +35838,21 @@ const char* const STRINGS_IT[] = {
     "\xA0"
     " sleep",
     "Contrasto",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "Personalizza barra di stato",
+    "Pagine del capitolo",
+    "Percentuale avanzamento libro",
+    "Barra di avanzamento",
+    "Spessore barra di avanzamento",
+    "Sottile",
+    "Media",
+    "Spessa",
+    "Libro",
+    "Capitolo",
+    "Capitolo 21",
+    "Titolo del libro",
+    "Anteprima",
+    "Titolo",
+    "Batteria",
     "Tema UI",
     "Classico",
     "Lyra",
@@ -34174,7 +35898,7 @@ const char* const STRINGS_IT[] = {
     "Vai alla Home",
     "Sincronizza Progressi",
     "Elimina Cache Libro",
-    "Show page as QR",
+    "Mostra pagina come QR",
     "Capitolo: ",
     " pagine  |  ",
     "Libro: ",
@@ -34209,8 +35933,11 @@ const char* const STRINGS_IT[] = {
     "Stile del Libro",
     "Stile Integrato",
     "URL del Server OPDS",
-    "Dark Mode",
-    "Background Server on Charge",
+    "Modalit\xC3"
+    "\xA0"
+    " scura",
+    "Server in background in carica",
+    "Convalida immagini sospensione",
     "Device Name",
 };
 
@@ -34630,7 +36357,11 @@ const char* const STRINGS_PL[] = {
     "Wybierz tapet\xC4"
     "\x99"
     "",
-    "Factory Reset",
+    "Przywr\xC3"
+    "\xB3"
+    "\xC4"
+    "\x87"
+    " ustawienia fabryczne",
     "Wyczy\xC5"
     "\x9B"
     "\xC4"
@@ -34755,7 +36486,15 @@ const char* const STRINGS_PL[] = {
     "W\xC5"
     "\x82"
     "asny",
-    "Image Source",
+    "\xC5"
+    "\xB9"
+    "r\xC3"
+    "\xB3"
+    "d\xC5"
+    "\x82"
+    "o obraz\xC3"
+    "\xB3"
+    "w",
     "Pokedex",
     "All",
     "Ok\xC5"
@@ -35261,8 +37000,13 @@ const char* const STRINGS_PL[] = {
     "ki",
     "Styl wbudowany",
     "URL serwera OPDS",
-    "Dark Mode",
-    "Background Server on Charge",
+    "Tryb ciemny",
+    "Serwer w tle podczas \xC5"
+    "\x82"
+    "adowania",
+    "Waliduj obrazy u\xC5"
+    "\x9B"
+    "pienia",
     "Device Name",
 };
 
@@ -35552,7 +37296,7 @@ const char* const STRINGS_FI[] = {
     "ivitykset",
     "Kieli",
     "Valitse taustakuva",
-    "Factory Reset",
+    "Tehdasasetukset",
     "Tyhjenn\xC3"
     "\xA4"
     " lukuv\xC3"
@@ -35645,7 +37389,9 @@ const char* const STRINGS_FI[] = {
     "Tumma",
     "Vaalea",
     "Mukautettu",
-    "Image Source",
+    "Kuval\xC3"
+    "\xA4"
+    "hde",
     "Pokedex",
     "All",
     "Kansi",
@@ -35894,21 +37640,27 @@ const char* const STRINGS_FI[] = {
     "\xB6"
     "n kansisuodatin",
     "Kontrasti",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "Muokkaa tilapalkkia",
+    "Kappaleen sivum\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA4"
+    "r\xC3"
+    "\xA4"
+    "",
+    "Kirjan edistymisprosentti",
+    "Edistymispalkki",
+    "Edistymispalkin paksuus",
+    "Ohut",
+    "Keskikokoinen",
+    "Paksu",
+    "Kirja",
+    "Luku",
+    "Luku 21",
+    "Kirjan otsikko",
+    "Esikatselu",
+    "Otsikko",
+    "Akku",
     "K\xC3"
     "\xA4"
     "ytt\xC3"
@@ -35990,7 +37742,11 @@ const char* const STRINGS_FI[] = {
     "Poista kirjan v\xC3"
     "\xA4"
     "limuisti",
-    "Show page as QR",
+    "N\xC3"
+    "\xA4"
+    "yt\xC3"
+    "\xA4"
+    " sivu QR-koodina",
     "Luku: ",
     " sivua  |  ",
     "Kirja: ",
@@ -36089,8 +37845,13 @@ const char* const STRINGS_FI[] = {
     "Kirjan tyyli",
     "Upotettu tyyli",
     "OPDS-palvelimen osoite",
-    "Dark Mode",
-    "Background Server on Charge",
+    "Tumma tila",
+    "Taustapalvelin latauksessa",
+    "Validoi lepotilan\xC3"
+    "\xA4"
+    "ytt\xC3"
+    "\xB6"
+    "kuvat",
     "Device Name",
 };
 
@@ -36348,7 +38109,7 @@ const char* const STRINGS_DA[] = {
     "V\xC3"
     "\xA6"
     "lg baggrundsbillede",
-    "Factory Reset",
+    "Fabriksindstillinger",
     "Ryd l\xC3"
     "\xA6"
     "secache",
@@ -36401,7 +38162,7 @@ const char* const STRINGS_DA[] = {
     "rk",
     "Lys",
     "Brugerdefineret",
-    "Image Source",
+    "Billedkilde",
     "Pokedex",
     "All",
     "Omslag",
@@ -36560,21 +38321,27 @@ const char* const STRINGS_DA[] = {
     "\xA6"
     "rm omslag-filter",
     "Kontrast",
-    "Customise Status Bar",
-    "Chapter Page Count",
-    "Book Progress Percentage",
-    "Progress Bar",
-    "Progress Bar Thickness",
-    "Thin",
-    "Medium",
-    "Thick",
-    "Book",
-    "Chapter",
-    "Chapter 21",
-    "Book Title",
-    "Preview",
-    "Title",
-    "Battery",
+    "Tilpas statuslinje",
+    "Kapitel sidetal",
+    "Bogfremskridtsprocent",
+    "Fremdriftsbj\xC3"
+    "\xA6"
+    "lke",
+    "Fremdriftsbj\xC3"
+    "\xA6"
+    "lkens tykkelse",
+    "Tynd",
+    "Mellem",
+    "Tyk",
+    "Bog",
+    "Kapitel",
+    "Kapitel 21",
+    "Bogtitel",
+    "Forh\xC3"
+    "\xA5"
+    "ndsvisning",
+    "Titel",
+    "Batteri",
     "Brugergr\xC3"
     "\xA6"
     "nseflade tema",
@@ -36634,7 +38401,7 @@ const char* const STRINGS_DA[] = {
     " til start",
     "Synkroniser fremskridt",
     "Slet bogcache",
-    "Show page as QR",
+    "Vis side som QR",
     "Kapitel: ",
     " sider  |  ",
     "Bog: ",
@@ -36675,8 +38442,11 @@ const char* const STRINGS_DA[] = {
     "Bogens stil",
     "Indlejret stil",
     "OPDS Server URL",
-    "Dark Mode",
-    "Background Server on Charge",
+    "M\xC3"
+    "\xB8"
+    "rk tilstand",
+    "Baggrundserver under opladning",
+    "Valider hvile-billeder",
     "Device Name",
 };
 

@@ -24,6 +24,7 @@ enum class SettingAction {
   CheckForUpdates,
   Language,
   FactoryReset,
+  ValidateSleepImages,
 };
 
 struct SettingInfo {
