@@ -126,8 +126,8 @@ inline std::vector<SettingInfo> getSettingsList() {
                                        StrId::STR_CAT_SYSTEM));
   }
 
-  // Device name for mDNS/DHCP/AP SSID — web-UI-editable via STR_CAT_SYSTEM.
-  // On-device the field is visible but not interactable (STRING type has no device handler).
+  // Device name for mDNS/DHCP/AP SSID. Editable on-device via keyboard (STRING handler).
+  // Input is sanitized to [a-z0-9-], max 24 chars, via validateAndClamp() on save.
   list.push_back(SettingInfo::String(StrId::STR_DEVICE_NAME, SETTINGS.deviceName, sizeof(SETTINGS.deviceName),
                                      "deviceName", StrId::STR_CAT_SYSTEM));
 

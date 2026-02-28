@@ -16,6 +16,7 @@
 #include "StatusBarSettingsActivity.h"
 #include "ValidateSleepImagesActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
+#include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
 #include "core/features/FeatureModules.h"
 #include "fontIds.h"
@@ -242,6 +243,35 @@ void SettingsActivity::toggleCurrentSetting() {
     } else {
       SETTINGS.*(setting.valuePtr) = currentValue + setting.valueRange.step;
     }
+  } else if (setting.type == SettingType::STRING) {
+    char* const stringPtr = setting.stringPtr;
+    const size_t stringMaxLen = setting.stringMaxLen;
+    auto stringSetter = setting.stringSetter;
+    std::string currentValue;
+    if (setting.stringGetter) {
+      currentValue = setting.stringGetter();
+    } else if (stringPtr) {
+      currentValue = stringPtr;
+    }
+    startActivityForResult(
+        std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, std::string(I18N.get(setting.nameId)),
+                                                currentValue, stringMaxLen > 0 ? stringMaxLen - 1 : 64, false),
+        [this, stringPtr, stringMaxLen, stringSetter](const ActivityResult& result) {
+          if (!result.isCancelled) {
+            const auto& kb = std::get<KeyboardResult>(result.data);
+            if (stringSetter) {
+              stringSetter(kb.text);
+            } else if (stringPtr && stringMaxLen > 0) {
+              strncpy(stringPtr, kb.text.c_str(), stringMaxLen - 1);
+              stringPtr[stringMaxLen - 1] = '\0';
+              SETTINGS.validateAndClamp();
+            }
+            if (!SETTINGS.saveToFile()) {
+              LOG_WRN("SETTINGS", "Failed to persist string setting");
+            }
+          }
+        });
+    return;
   } else if (setting.type == SettingType::ACTION) {
     auto resultHandler = [this](const ActivityResult&) { SETTINGS.saveToFile(); };
 
@@ -354,6 +384,12 @@ void SettingsActivity::render(RenderLock&&) {
           }
         } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
           valueText = std::to_string(SETTINGS.*(setting.valuePtr));
+        } else if (setting.type == SettingType::STRING) {
+          if (setting.stringGetter) {
+            valueText = setting.stringGetter();
+          } else if (setting.stringPtr) {
+            valueText = setting.stringPtr;
+          }
         }
         return valueText;
       },
