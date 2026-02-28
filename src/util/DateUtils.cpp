@@ -20,7 +20,7 @@ std::string currentDate() {
   }
 
   const auto mode = static_cast<CrossPointSettings::TIME_MODE>(SETTINGS.timeMode);
-  if (mode == CrossPointSettings::TIME_LOCAL) {
+  if (mode == CrossPointSettings::TIME_MODE_LOCAL) {
     now += SETTINGS.getTimeZoneOffsetSeconds();
   }
 

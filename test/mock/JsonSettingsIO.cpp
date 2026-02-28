@@ -7,8 +7,7 @@
 #include "src/JsonSettingsIO.h"
 
 #include <ArduinoJson.h>
-// pthread.h (pulled in transitively by ArduinoJson) defines TIME_UTC as a macro,
-// which conflicts with the CrossPointSettings::TIME_UTC enum value.
+// Keep this undef as a defensive guard for host builds that include pthread/time headers.
 #undef TIME_UTC
 #include <HalStorage.h>
 #include <Logging.h>
@@ -129,7 +128,8 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   s.hyphenationEnabled = doc["hyphenationEnabled"] | (uint8_t)0;
   s.backgroundServerOnCharge = doc["backgroundServerOnCharge"] | (uint8_t)0;
   s.todoFallbackCover = doc["todoFallbackCover"] | (uint8_t)0;
-  s.timeMode = clamp(doc["timeMode"] | (uint8_t)S::TIME_UTC, static_cast<uint8_t>(S::TIME_MANUAL + 1), S::TIME_UTC);
+  s.timeMode = clamp(doc["timeMode"] | (uint8_t)S::TIME_MODE_UTC, static_cast<uint8_t>(S::TIME_MODE_MANUAL + 1),
+                     S::TIME_MODE_UTC);
   s.timeZoneOffset = doc["timeZoneOffset"] | (uint8_t)12;
   s.lastTimeSyncEpoch = doc["lastTimeSyncEpoch"] | (uint32_t)0;
   s.releaseChannel =

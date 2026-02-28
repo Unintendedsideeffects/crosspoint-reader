@@ -386,7 +386,7 @@ void CrossPointSettings::validateAndClamp() {
   if (refreshFrequency > REFRESH_30) refreshFrequency = REFRESH_15;
   if (shortPwrBtn > SELECT) shortPwrBtn = IGNORE;
   if (hideBatteryPercentage > HIDE_ALWAYS) hideBatteryPercentage = HIDE_NEVER;
-  if (timeMode > TIME_MANUAL) timeMode = TIME_UTC;
+  if (timeMode > TIME_MODE_MANUAL) timeMode = TIME_MODE_UTC;
   if (todoFallbackCover > 1) todoFallbackCover = 0;
   if (releaseChannel >= RELEASE_CHANNEL_COUNT) releaseChannel = RELEASE_STABLE;
 

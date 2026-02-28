@@ -16,9 +16,7 @@
 #include "test/mock/Arduino.h"
 #include "test/mock/HalStorage.h"
 #include "test/mock/SpiBusMutex.h"
-// TIME_UTC is defined as a macro by glibc/libstdc++ threading headers pulled in via
-// <iostream>/<memory>. Undefine it before CrossPointSettings.h so that the
-// CrossPointSettings::TIME_MODE enum compiles correctly on host.
+// Keep this undef as a defensive guard for host builds that include pthread/time headers.
 #undef TIME_UTC
 #include "src/CrossPointSettings.h"
 #include "src/activities/todo/TodoPlannerStorage.h"
@@ -244,7 +242,7 @@ void testSettingsRoundTrip() {
   s.longPressChapterSkip = 0;
   s.backgroundServerOnCharge = 1;
   s.todoFallbackCover = 1;
-  s.timeMode = CrossPointSettings::TIME_LOCAL;
+  s.timeMode = CrossPointSettings::TIME_MODE_LOCAL;
   s.timeZoneOffset = 14;
   s.lastTimeSyncEpoch = 1700000000UL;
   s.releaseChannel = CrossPointSettings::RELEASE_NIGHTLY;
@@ -289,7 +287,7 @@ void testSettingsRoundTrip() {
   s.longPressChapterSkip = 1;
   s.backgroundServerOnCharge = 0;
   s.todoFallbackCover = 0;
-  s.timeMode = CrossPointSettings::TIME_UTC;
+  s.timeMode = CrossPointSettings::TIME_MODE_UTC;
   s.timeZoneOffset = 12;
   s.lastTimeSyncEpoch = 0;
   s.releaseChannel = CrossPointSettings::RELEASE_STABLE;
@@ -326,7 +324,7 @@ void testSettingsRoundTrip() {
   assert(s.longPressChapterSkip == 0);
   assert(s.backgroundServerOnCharge == 1);
   assert(s.todoFallbackCover == 1);
-  assert(s.timeMode == CrossPointSettings::TIME_LOCAL);
+  assert(s.timeMode == CrossPointSettings::TIME_MODE_LOCAL);
   assert(s.timeZoneOffset == 14);
   assert(s.lastTimeSyncEpoch == 1700000000UL);
   assert(s.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY);

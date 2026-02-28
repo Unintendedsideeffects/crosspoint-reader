@@ -179,7 +179,8 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   s.hyphenationEnabled = doc["hyphenationEnabled"] | (uint8_t)0;
   s.backgroundServerOnCharge = doc["backgroundServerOnCharge"] | (uint8_t)0;
   s.todoFallbackCover = doc["todoFallbackCover"] | (uint8_t)0;
-  s.timeMode = clamp(doc["timeMode"] | (uint8_t)S::TIME_UTC, static_cast<uint8_t>(S::TIME_MANUAL + 1), S::TIME_UTC);
+  s.timeMode = clamp(doc["timeMode"] | (uint8_t)S::TIME_MODE_UTC, static_cast<uint8_t>(S::TIME_MODE_MANUAL + 1),
+                     S::TIME_MODE_UTC);
   s.timeZoneOffset = doc["timeZoneOffset"] | (uint8_t)12;
   s.lastTimeSyncEpoch = doc["lastTimeSyncEpoch"] | (uint32_t)0;
   s.releaseChannel =

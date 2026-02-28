@@ -141,7 +141,7 @@ class CrossPointSettings {
   enum UI_THEME { CLASSIC = 0, LYRA = 1, LYRA_EXTENDED = 2, FORK_DRIFT = 3 };
 
   // Time mode options
-  enum TIME_MODE { TIME_UTC = 0, TIME_LOCAL = 1, TIME_MANUAL = 2 };
+  enum TIME_MODE { TIME_MODE_UTC = 0, TIME_MODE_LOCAL = 1, TIME_MODE_MANUAL = 2 };
 
   // Release channel options
   enum RELEASE_CHANNEL {
@@ -219,7 +219,7 @@ class CrossPointSettings {
   // Deprecated: persisted for backward compat, not consumed at runtime
   uint8_t todoFallbackCover = 0;
   // Time settings
-  uint8_t timeMode = TIME_UTC;
+  uint8_t timeMode = TIME_MODE_UTC;
   // Timezone offset index: 0 = UTC-12, 12 = UTC+0, 26 = UTC+14
   uint8_t timeZoneOffset = 12;
   // Last successful NTP sync (epoch seconds, UTC)

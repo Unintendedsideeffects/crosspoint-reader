@@ -6,6 +6,24 @@ void Activity::onEnter() { LOG_DBG("ACT", "Entering activity: %s", name.c_str())
 
 void Activity::onExit() { LOG_DBG("ACT", "Exiting activity: %s", name.c_str()); }
 
+#ifdef HOST_BUILD
+void Activity::requestUpdate(bool immediate) { (void)immediate; }
+
+void Activity::requestUpdateAndWait() {}
+
+void Activity::onGoHome() {}
+
+void Activity::onSelectBook(const std::string& path) { (void)path; }
+
+void Activity::startActivityForResult(std::unique_ptr<Activity>&& activity, ActivityResultHandler resultHandler) {
+  (void)activity;
+  this->resultHandler = std::move(resultHandler);
+}
+
+void Activity::setResult(ActivityResult&& result) { this->result = std::move(result); }
+
+void Activity::finish() {}
+#else
 void Activity::requestUpdate(bool immediate) { activityManager.requestUpdate(immediate); }
 
 void Activity::requestUpdateAndWait() {
@@ -26,3 +44,4 @@ void Activity::startActivityForResult(std::unique_ptr<Activity>&& activity, Acti
 void Activity::setResult(ActivityResult&& result) { this->result = std::move(result); }
 
 void Activity::finish() { activityManager.popActivity(); }
+#endif

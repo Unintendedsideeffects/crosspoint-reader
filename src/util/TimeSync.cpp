@@ -19,7 +19,7 @@ bool isTimeValid() {
 
 bool shouldSync() {
   const auto mode = static_cast<CrossPointSettings::TIME_MODE>(SETTINGS.timeMode);
-  if (mode == CrossPointSettings::TIME_MANUAL) {
+  if (mode == CrossPointSettings::TIME_MODE_MANUAL) {
     return false;
   }
   if (!isTimeValid()) {
