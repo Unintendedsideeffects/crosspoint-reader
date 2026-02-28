@@ -39,9 +39,7 @@ class HomeActivity final : public Activity {
   std::string coverBmpPath;
   std::vector<RecentBook> recentBooks;
   void onContinueReading();
-  void onSelectBook(const std::string& path);
   void onMyLibraryOpen();
-  void onRecentsOpen();
   void onSettingsOpen();
   void onFileTransferOpen();
   void onOpdsBrowserOpen();
