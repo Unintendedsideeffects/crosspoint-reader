@@ -61,7 +61,7 @@ FEATURES = {
     'integrations': Feature(
         name='Integrations Base',
         flag='ENABLE_INTEGRATIONS',
-        size_kb=0,
+        size_kb=-2,
         description='Shared runtime hooks for remote sync integrations'
     ),
     'koreader_sync': Feature(
