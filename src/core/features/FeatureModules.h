@@ -20,17 +20,21 @@ namespace core {
 
 enum class WebOptionalRoute {
   PokedexPluginPage,
+  WallpaperPluginPage,
+  AnkiPluginPage,
   UserFontsApi,
   WebWifiSetupApi,
   OtaApi,
 };
 
 enum class HomeOptionalAction {
+  AnkiSupport,
   OpdsBrowser,
   TodoPlanner,
 };
 
 enum class Capability {
+  AnkiSupport,
   BackgroundServer,
   BleWifiProvisioning,
   CalibreSync,
@@ -42,10 +46,12 @@ enum class Capability {
   MarkdownSupport,
   OtaUpdates,
   TodoPlanner,
+  TrmnlSwitch,
   UsbMassStorage,
   UserFonts,
   VisualCoverPicker,
   WebPokedexPlugin,
+  WebWallpaperPlugin,
   WebWifiSetup,
   XtcSupport,
 };
@@ -169,6 +175,8 @@ class FeatureModules {
   };
 
   static WebCompressedPayload getPokedexPluginPagePayload();
+  static WebCompressedPayload getWallpaperPluginPagePayload();
+  static WebCompressedPayload getAnkiPluginPagePayload();
   static OtaWebStartResult startOtaWebCheck();
   static OtaWebCheckSnapshot getOtaWebCheckSnapshot();
 

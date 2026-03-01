@@ -47,6 +47,14 @@
 #include "network/html/PokedexPluginPageHtml.generated.h"
 #endif
 
+#if ENABLE_WEB_WALLPAPER_PLUGIN
+#include "network/html/WallpaperPluginPageHtml.generated.h"
+#endif
+
+#if ENABLE_ANKI_SUPPORT
+#include "network/html/AnkiPluginPageHtml.generated.h"
+#endif
+
 #if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
 #include "activities/browser/OpdsBookBrowserActivity.h"
 #include "activities/settings/CalibreSettingsActivity.h"
@@ -212,6 +220,8 @@ bool FeatureModules::isEnabled(const char* featureKey) { return FeatureCatalog::
 
 bool FeatureModules::hasCapability(const Capability capability) {
   switch (capability) {
+    case Capability::AnkiSupport:
+      return isEnabled("anki_support");
     case Capability::BackgroundServer:
       return isEnabled("background_server");
     case Capability::BleWifiProvisioning:
@@ -234,6 +244,8 @@ bool FeatureModules::hasCapability(const Capability capability) {
       return isEnabled("ota_updates");
     case Capability::TodoPlanner:
       return isEnabled("todo_planner");
+    case Capability::TrmnlSwitch:
+      return isEnabled("trmnl_switch");
     case Capability::UsbMassStorage:
       return isEnabled("usb_mass_storage");
     case Capability::UserFonts:
@@ -242,6 +254,8 @@ bool FeatureModules::hasCapability(const Capability capability) {
       return isEnabled("visual_cover_picker");
     case Capability::WebPokedexPlugin:
       return isEnabled("web_pokedex_plugin");
+    case Capability::WebWallpaperPlugin:
+      return isEnabled("web_wallpaper_plugin");
     case Capability::WebWifiSetup:
       return isEnabled("web_wifi_setup");
     case Capability::XtcSupport:
@@ -505,6 +519,8 @@ bool FeatureModules::supportsSettingAction(const SettingAction action) {
       return hasCapability(Capability::CalibreSync);
     case SettingAction::CheckForUpdates:
       return hasCapability(Capability::OtaUpdates);
+    case SettingAction::SwitchToTrmnl:
+      return hasCapability(Capability::TrmnlSwitch);
     case SettingAction::Language:
       return true;
     case SettingAction::None:
@@ -872,6 +888,22 @@ FeatureModules::WebCompressedPayload FeatureModules::getPokedexPluginPagePayload
 #endif
 }
 
+FeatureModules::WebCompressedPayload FeatureModules::getWallpaperPluginPagePayload() {
+#if ENABLE_WEB_WALLPAPER_PLUGIN
+  return {true, WallpaperPluginPageHtml, WallpaperPluginPageHtmlCompressedSize};
+#else
+  return {false, nullptr, 0};
+#endif
+}
+
+FeatureModules::WebCompressedPayload FeatureModules::getAnkiPluginPagePayload() {
+#if ENABLE_ANKI_SUPPORT
+  return {true, AnkiPluginPageHtml, AnkiPluginPageHtmlCompressedSize};
+#else
+  return {false, nullptr, 0};
+#endif
+}
+
 FeatureModules::OtaWebStartResult FeatureModules::startOtaWebCheck() {
 #if ENABLE_OTA_UPDATES
   if (otaWebCheckData.state.load(std::memory_order_acquire) == OtaWebCheckState::Checking) {
@@ -943,6 +975,8 @@ FeatureModules::FontScanResult FeatureModules::onFontScanRequested() {
 
 bool FeatureModules::shouldExposeHomeAction(const HomeOptionalAction action, const bool hasOpdsUrl) {
   switch (action) {
+    case HomeOptionalAction::AnkiSupport:
+      return hasCapability(Capability::AnkiSupport);
     case HomeOptionalAction::OpdsBrowser:
       return hasCapability(Capability::CalibreSync) && hasOpdsUrl;
     case HomeOptionalAction::TodoPlanner:
@@ -955,6 +989,10 @@ bool FeatureModules::shouldRegisterWebRoute(const WebOptionalRoute route) {
   switch (route) {
     case WebOptionalRoute::PokedexPluginPage:
       return hasCapability(Capability::WebPokedexPlugin);
+    case WebOptionalRoute::WallpaperPluginPage:
+      return hasCapability(Capability::WebWallpaperPlugin);
+    case WebOptionalRoute::AnkiPluginPage:
+      return isEnabled("anki_support");
     case WebOptionalRoute::UserFontsApi:
       return hasCapability(Capability::UserFonts);
     case WebOptionalRoute::WebWifiSetupApi:

@@ -25,6 +25,7 @@ enum class SettingAction {
   Language,
   FactoryReset,
   ValidateSleepImages,
+  SwitchToTrmnl,
 };
 
 struct SettingInfo {

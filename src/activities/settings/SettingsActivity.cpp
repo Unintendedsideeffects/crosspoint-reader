@@ -19,6 +19,7 @@
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
 #include "core/features/FeatureModules.h"
+#include "esp_ota_ops.h"
 #include "fontIds.h"
 
 const StrId SettingsActivity::categoryNames[categoryCount] = {StrId::STR_CAT_DISPLAY, StrId::STR_CAT_READER,
@@ -305,6 +306,14 @@ void SettingsActivity::toggleCurrentSetting() {
             std::make_unique<FactoryResetActivity>(renderer, mappedInput, [] { activityManager.popActivity(); }),
             resultHandler);
         break;
+      case SettingAction::SwitchToTrmnl: {
+        const esp_partition_t* next_partition = esp_ota_get_next_update_partition(NULL);
+        if (next_partition != nullptr) {
+          LOG_INF("SYSTEM", "Switching to next partition: %s", next_partition->label);
+          esp_ota_set_boot_partition(next_partition);
+          esp_restart();
+        }
+      } break;
       case SettingAction::ValidateSleepImages:
         startActivityForResult(
             std::make_unique<ValidateSleepImagesActivity>(renderer, mappedInput, [] { activityManager.popActivity(); }),

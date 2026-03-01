@@ -30,6 +30,9 @@ class FeatureManifest {
   static constexpr bool hasBackgroundServer() { return ENABLE_BACKGROUND_SERVER != 0; }
   static constexpr bool hasHomeMediaPicker() { return ENABLE_HOME_MEDIA_PICKER != 0; }
   static constexpr bool hasWebPokedexPlugin() { return ENABLE_WEB_POKEDEX_PLUGIN != 0; }
+  static constexpr bool hasWebWallpaperPlugin() { return ENABLE_WEB_WALLPAPER_PLUGIN != 0; }
+  static constexpr bool hasAnkiSupport() { return ENABLE_ANKI_SUPPORT != 0; }
+  static constexpr bool hasTrmnlSwitch() { return ENABLE_TRMNL_SWITCH != 0; }
   static constexpr bool hasEpubSupport() { return ENABLE_EPUB_SUPPORT != 0; }
   static constexpr bool hasHyphenation() { return ENABLE_HYPHENATION != 0; }
   static constexpr bool hasXtcSupport() { return ENABLE_XTC_SUPPORT != 0; }

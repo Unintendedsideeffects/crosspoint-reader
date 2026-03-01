@@ -202,6 +202,12 @@ void CrossPointWebServer::begin() {
   if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::PokedexPluginPage)) {
     server->on("/plugins/pokedex", HTTP_GET, [this] { handlePokedexPluginPage(); });
   }
+  if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::WallpaperPluginPage)) {
+    server->on("/plugins/wallpaper", HTTP_GET, [this] { handleWallpaperPluginPage(); });
+  }
+  if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::AnkiPluginPage)) {
+    server->on("/plugins/anki", HTTP_GET, [this] { handleAnkiPluginPage(); });
+  }
   server->on("/api/settings", HTTP_GET, [this] { handleGetSettings(); });
   server->on("/api/settings", HTTP_POST, [this] { handlePostSettings(); });
   if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::UserFontsApi)) {
@@ -1705,6 +1711,28 @@ void CrossPointWebServer::handlePokedexPluginPage() const {
 
   sendPrecompressedHtml(server.get(), payload.data, payload.compressedSize);
   LOG_DBG("WEB", "Served pokedex plugin page");
+}
+
+void CrossPointWebServer::handleWallpaperPluginPage() const {
+  const auto payload = core::FeatureModules::getWallpaperPluginPagePayload();
+  if (!payload.available || payload.data == nullptr || payload.compressedSize == 0) {
+    server->send(404, "text/plain", "Wallpaper plugin not enabled in this build");
+    return;
+  }
+
+  sendPrecompressedHtml(server.get(), payload.data, payload.compressedSize);
+  LOG_DBG("WEB", "Served wallpaper plugin page");
+}
+
+void CrossPointWebServer::handleAnkiPluginPage() const {
+  const auto payload = core::FeatureModules::getAnkiPluginPagePayload();
+  if (!payload.available || payload.data == nullptr || payload.compressedSize == 0) {
+    server->send(404, "text/plain", "Anki plugin not enabled in this build");
+    return;
+  }
+
+  sendPrecompressedHtml(server.get(), payload.data, payload.compressedSize);
+  LOG_DBG("WEB", "Served anki plugin page");
 }
 
 void CrossPointWebServer::handleGetSettings() const {

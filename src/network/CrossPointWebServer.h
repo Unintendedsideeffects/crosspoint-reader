@@ -142,6 +142,8 @@ class CrossPointWebServer {
   // Settings handlers
   void handleSettingsPage() const;
   void handlePokedexPluginPage() const;
+  void handleWallpaperPluginPage() const;
+  void handleAnkiPluginPage() const;
   void handleGetSettings() const;
   void handlePostSettings();
   void handleRescanUserFonts();
