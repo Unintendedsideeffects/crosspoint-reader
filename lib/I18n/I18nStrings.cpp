@@ -243,7 +243,7 @@ const char* const CHARACTER_SETS[] = {
     "\x80"
     "\x91"
     "",  // Português (Brasil)
-    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvxyz|\xC2"
+    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefghiklmnoprstuvwxyz|\xC2"
     "\xAB"
     "\xC2"
     "\xBB"
@@ -431,7 +431,7 @@ const char* const CHARACTER_SETS[] = {
     "\xC3"
     "\xBC"
     "",  // Català
-    " !\"%'()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[\\]abcdefghiklmnoprstuvxyz|\xC2"
+    " !\"%'()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[\\]abcdefghiklmnoprstuvwxyz|\xC2"
     "\xAB"
     "\xD0"
     "\x86"
@@ -1109,6 +1109,11 @@ const char* const STRINGS_EN[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_ES[] = {
@@ -1729,6 +1734,11 @@ const char* const STRINGS_ES[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_FR[] = {
@@ -2562,6 +2572,11 @@ const char* const STRINGS_FR[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_DE[] = {
@@ -3087,6 +3102,11 @@ const char* const STRINGS_DE[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_CS[] = {
@@ -4780,6 +4800,11 @@ const char* const STRINGS_CS[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_PO[] = {
@@ -5468,6 +5493,11 @@ const char* const STRINGS_PO[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_RU[] = {
@@ -14259,6 +14289,11 @@ const char* const STRINGS_RU[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_SV[] = {
@@ -15132,6 +15167,11 @@ const char* const STRINGS_SV[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_RO[] = {
@@ -16171,6 +16211,11 @@ const char* const STRINGS_RO[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_CA[] = {
@@ -16844,6 +16889,11 @@ const char* const STRINGS_CA[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_UK[] = {
@@ -26887,6 +26937,11 @@ const char* const STRINGS_UK[] = {
     "",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_BE[] = {
@@ -35766,6 +35821,11 @@ const char* const STRINGS_BE[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_IT[] = {
@@ -36162,6 +36222,11 @@ const char* const STRINGS_IT[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_PL[] = {
@@ -37241,6 +37306,11 @@ const char* const STRINGS_PL[] = {
     "b zrzut ekranu",
     "Auto-kartkowanie: ",
     "Auto-kartkowanie (str./min)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_FI[] = {
@@ -38086,6 +38156,11 @@ const char* const STRINGS_FI[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_DA[] = {
@@ -38687,6 +38762,11 @@ const char* const STRINGS_DA[] = {
     "Take screenshot",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 const char* const STRINGS_NL[] = {
@@ -39048,6 +39128,11 @@ const char* const STRINGS_NL[] = {
     "Screenshot maken",
     "Auto Turn Enabled: ",
     "Auto Turn (Pages Per Minute)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
 };
 
 }  // namespace i18n_strings
