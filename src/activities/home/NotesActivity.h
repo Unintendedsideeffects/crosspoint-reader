@@ -36,5 +36,5 @@ class NotesActivity final : public Activity {
   void saveNotes() const;
   void addNote();
   void deleteSelectedNote();
-  ButtonNavigator buttonNavigator{mappedInput};
+  ButtonNavigator buttonNavigator;
 };
