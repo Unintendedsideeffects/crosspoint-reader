@@ -13,6 +13,17 @@
 #include "activities/Activity.h"
 
 class TxtReaderActivity final : public Activity {
+ public:
+  // A processed display line: plain text (inline markers stripped for headings),
+  // the font style to render it with, and whether it is a horizontal rule.
+  // Public so anonymous-namespace markdown helpers in the .cpp can return it.
+  struct StyledLine {
+    std::string text;
+    EpdFontFamily::Style style = EpdFontFamily::REGULAR;
+    bool isHRule = false;
+  };
+
+ private:
   std::unique_ptr<Txt> txt;
   TaskHandle_t displayTaskHandle = nullptr;
   std::atomic<bool> exitTaskRequested{false};
@@ -20,14 +31,6 @@ class TxtReaderActivity final : public Activity {
   int currentPage = 0;
   int totalPages = 1;
   int pagesUntilFullRefresh = 0;
-
-  // A processed display line: plain text (inline markers stripped for headings),
-  // the font style to render it with, and whether it is a horizontal rule.
-  struct StyledLine {
-    std::string text;
-    EpdFontFamily::Style style = EpdFontFamily::REGULAR;
-    bool isHRule = false;
-  };
 
   bool isMarkdown = false;  // true when the open file has a .md extension
 
@@ -62,7 +65,6 @@ class TxtReaderActivity final : public Activity {
   void saveProgress() const;
   void loadProgress();
 
- public:
   explicit TxtReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::unique_ptr<Txt> txt)
       : Activity("TxtReader", renderer, mappedInput), txt(std::move(txt)) {}
   void onEnter() override;
