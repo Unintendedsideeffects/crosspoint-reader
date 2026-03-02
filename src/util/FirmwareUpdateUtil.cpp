@@ -7,6 +7,7 @@
 #include <Logging.h>
 #include <SpiBusMutex.h>
 
+// cppcheck-suppress missingInclude
 #include "esp_ota_ops.h"
 #include "fontIds.h"
 
@@ -71,11 +72,11 @@ bool FirmwareUpdateUtil::performLocalUpdate(GfxRenderer& renderer) {
     return false;
   }
 
-  size_t bytesRead = 0;
   size_t totalBytesWritten = 0;
   int lastProgress = -1;
 
   while (totalBytesWritten < firmwareSize) {
+    size_t bytesRead;
     {
       SpiBusMutex::Guard guard;
       bytesRead = firmwareFile.read(buffer, bufferSize);
