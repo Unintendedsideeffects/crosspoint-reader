@@ -31,7 +31,7 @@ FEATURES = {
     'notosans_fonts': Feature(
         name='Noto Sans Fonts',
         flag='ENABLE_NOTOSANS_FONTS',
-        size_kb=1086,
+        size_kb=1085,
         description='12/16/18pt Noto Sans family'
     ),
     'opendyslexic_fonts': Feature(
@@ -55,7 +55,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=0,
+        size_kb=200,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -97,19 +97,19 @@ FEATURES = {
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=10,
+        size_kb=142,
         description='EPUB e-book reader with CSS and chapter navigation'
     ),
     'hyphenation': Feature(
         name='Hyphenation',
         flag='ENABLE_HYPHENATION',
-        size_kb=324,
+        size_kb=455,
         description='Language-aware hyphenation for justified EPUB text'
     ),
     'xtc_support': Feature(
         name='XTC Support',
         flag='ENABLE_XTC_SUPPORT',
-        size_kb=5,
+        size_kb=17,
         description='XTC format reader with chapter navigation'
     ),
     'lyra_theme': Feature(
@@ -121,7 +121,7 @@ FEATURES = {
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=0,
+        size_kb=1,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
@@ -145,13 +145,13 @@ FEATURES = {
     'ble_wifi_provisioning': Feature(
         name='BLE WiFi Provisioning',
         flag='ENABLE_BLE_WIFI_PROVISIONING',
-        size_kb=671,
+        size_kb=670,
         description='Initial WiFi setup via Bluetooth LE'
     ),
     'user_fonts': Feature(
         name='User Fonts',
         flag='ENABLE_USER_FONTS',
-        size_kb=6,
+        size_kb=7,
         description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
     ),
     'web_wifi_setup': Feature(
@@ -163,7 +163,7 @@ FEATURES = {
     'usb_mass_storage': Feature(
         name='USB Mass Storage',
         flag='ENABLE_USB_MASS_STORAGE',
-        size_kb=20,
+        size_kb=21,
         description='On-device prompt for USB SD card access as mass storage'
     ),
 }
@@ -512,7 +512,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 2.67  # Lean profile size baseline (measured)
+    base_size_mb = 2.53  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
