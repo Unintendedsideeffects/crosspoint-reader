@@ -21,12 +21,13 @@ class CrossPointSettings {
     DARK = 0,
     LIGHT = 1,
     CUSTOM = 2,
+    TRANSPARENT = 3,
     SLEEP_SCREEN_MODE_COUNT,
-    // Legacy values kept for backward compatibility with old persisted files.
-    COVER = 3,
-    BLANK = 4,
-    COVER_CUSTOM = 5,
-    TRANSPARENT = 6,
+    // Legacy raw values — never assigned via UI; handled in validateAndClamp().
+    COVER = 9,          // was 3
+    BLANK = 10,         // was 4
+    COVER_CUSTOM = 11,  // was 5
+    // Old TRANSPARENT was 6 — migrated to new TRANSPARENT=3 in validateAndClamp().
   };
   enum SLEEP_SCREEN_COVER_MODE { FIT = 0, CROP = 1, SLEEP_SCREEN_COVER_MODE_COUNT };
   enum SLEEP_SCREEN_COVER_FILTER {

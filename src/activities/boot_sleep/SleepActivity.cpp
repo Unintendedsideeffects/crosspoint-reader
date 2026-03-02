@@ -84,6 +84,68 @@ struct SleepImageCache {
 
 SleepImageCache sleepImageCache;
 
+static constexpr char SLEEP_CACHE_FILE[] = "/.crosspoint/sleep_cache.bin";
+static constexpr uint8_t SLEEP_CACHE_VERSION = 1;
+
+static bool loadSleepImageCacheFromFile(SleepImageCache& cache) {
+  SpiBusMutex::Guard guard;
+  HalFile f;
+  if (!Storage.openFileForRead("SLP", SLEEP_CACHE_FILE, f)) return false;
+
+  uint8_t version, sourceMode;
+  uint16_t count;
+  if (f.read(&version, 1) != 1 || version != SLEEP_CACHE_VERSION) {
+    f.close();
+    return false;
+  }
+  if (f.read(&sourceMode, 1) != 1) {
+    f.close();
+    return false;
+  }
+  if (f.read(&count, 2) != 2) {
+    f.close();
+    return false;
+  }
+
+  cache.validFiles.clear();
+  cache.validFiles.reserve(count);
+  for (uint16_t i = 0; i < count; i++) {
+    uint16_t len;
+    if (f.read(&len, 2) != 2 || len > 500) {
+      f.close();
+      return false;
+    }
+    std::string path(len, '\0');
+    if (static_cast<uint16_t>(f.read(path.data(), len)) != len) {
+      f.close();
+      return false;
+    }
+    cache.validFiles.push_back(std::move(path));
+  }
+  f.close();
+  cache.sourceMode = sourceMode;
+  cache.scanned = true;
+  return true;
+}
+
+static void saveSleepImageCacheToFile(const SleepImageCache& cache) {
+  SpiBusMutex::Guard guard;
+  Storage.mkdir("/.crosspoint");
+  HalFile f;
+  if (!Storage.openFileForWrite("SLP", SLEEP_CACHE_FILE, f)) return;
+  const uint8_t version = SLEEP_CACHE_VERSION;
+  f.write(&version, 1);
+  f.write(&cache.sourceMode, 1);
+  const uint16_t count = static_cast<uint16_t>(std::min(cache.validFiles.size(), size_t(0xFFFF)));
+  f.write(&count, 2);
+  for (uint16_t i = 0; i < count; i++) {
+    const uint16_t len = static_cast<uint16_t>(cache.validFiles[i].size());
+    f.write(&len, 2);
+    f.write(cache.validFiles[i].data(), len);
+  }
+  f.close();
+}
+
 bool tryRenderExternalSleepApp(GfxRenderer& renderer, MappedInputManager& mappedInput) {
   const bool rendered = SleepExtensionHooks::renderExternalSleepScreen(renderer, mappedInput);
   if (rendered) {
@@ -206,6 +268,12 @@ void validateSleepImagesOnce() {
     return;
   }
 
+  // Try loading from persistent cache first
+  if (loadSleepImageCacheFromFile(sleepImageCache) && sleepImageCache.sourceMode == sourceMode) {
+    LOG_INF("SLP", "Loaded %d sleep images from cache", (int)sleepImageCache.validFiles.size());
+    return;
+  }
+
   sleepImageCache.scanned = false;
   sleepImageCache.sourceMode = sourceMode;
   sleepImageCache.validFiles.clear();
@@ -217,6 +285,7 @@ void validateSleepImagesOnce() {
   sleepImageCache.scanned = true;
   LOG_INF("SLP", "Source '%s' found %d valid sleep images", getSleepSourceName(sourceMode),
           (int)sleepImageCache.validFiles.size());
+  saveSleepImageCacheToFile(sleepImageCache);
 }
 }  // namespace
 
@@ -225,6 +294,10 @@ void invalidateSleepImageCache() {
   sleepImageCache.scanned = false;
   sleepImageCache.sourceMode = 0xFF;
   sleepImageCache.validFiles.clear();
+  {
+    SpiBusMutex::Guard spiGuard;
+    Storage.remove(SLEEP_CACHE_FILE);
+  }
   LOG_INF("SLP", "Sleep image cache invalidated");
 }
 

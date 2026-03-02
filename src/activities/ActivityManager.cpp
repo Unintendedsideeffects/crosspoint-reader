@@ -200,9 +200,12 @@ void ActivityManager::goToTodo() {
 
   const std::string today = DateUtils::currentDate();
   if (today.empty()) {
-    if (Activity* fallback = core::FeatureModules::createTodoFallbackActivity(renderer, mappedInput, today,
-                                                                              [] { activityManager.goHome(); })) {
-      replaceActivity(std::unique_ptr<Activity>(fallback));
+    // NTP not synced yet — use a fixed "undated" file so the planner is still usable.
+    const bool mdEnabled = core::FeatureModules::hasCapability(core::Capability::MarkdownSupport);
+    const std::string fallbackPath = std::string("/daily/undated") + (mdEnabled ? ".md" : ".txt");
+    if (Activity* todo = core::FeatureModules::createTodoPlannerActivity(renderer, mappedInput, fallbackPath, "Undated",
+                                                                         [] { activityManager.goHome(); })) {
+      replaceActivity(std::unique_ptr<Activity>(todo));
     } else {
       goHome();
     }
@@ -244,7 +247,23 @@ void ActivityManager::goToTodo() {
 }
 
 void ActivityManager::goToReader(std::string path) {
-  replaceActivity(std::make_unique<ReaderActivity>(renderer, mappedInput, std::move(path)));
+  auto result = core::FeatureModules::createReaderActivityForPath(
+      path, renderer, mappedInput,
+      [path](const std::string& bookPath) {
+        const auto slash = bookPath.rfind('/');
+        const std::string folder = (slash != std::string::npos && slash > 0) ? bookPath.substr(0, slash) : "/";
+        activityManager.goToMyLibrary(folder);
+      },
+      [] { activityManager.goHome(); });
+
+  if (result.status == core::FeatureModules::ReaderOpenStatus::Opened && result.activity) {
+    replaceActivity(std::unique_ptr<Activity>(result.activity));
+  } else {
+    if (result.logMessage) {
+      LOG_ERR("ACT", "Cannot open reader: %s", result.logMessage);
+    }
+    goHome();
+  }
 }
 
 void ActivityManager::goToSleep() {
