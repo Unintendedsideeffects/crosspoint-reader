@@ -55,13 +55,13 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=-2,
+        size_kb=0,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
         name='Integrations Base',
         flag='ENABLE_INTEGRATIONS',
-        size_kb=-2,
+        size_kb=0,
         description='Shared runtime hooks for remote sync integrations'
     ),
     'koreader_sync': Feature(
@@ -85,31 +85,31 @@ FEATURES = {
     'home_media_picker': Feature(
         name='Home Media Picker',
         flag='ENABLE_HOME_MEDIA_PICKER',
-        size_kb=-4,
+        size_kb=0,
         description='Streamlined home UI with horizontal book shelf + vertical menu'
     ),
     'web_pokedex_plugin': Feature(
         name='Web Pokedex Plugin',
         flag='ENABLE_WEB_POKEDEX_PLUGIN',
-        size_kb=-4,
+        size_kb=4,
         description='Browser-side Pokemon wallpaper generator at /plugins/pokedex'
     ),
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=-2,
+        size_kb=10,
         description='EPUB e-book reader with CSS and chapter navigation'
     ),
     'hyphenation': Feature(
         name='Hyphenation',
         flag='ENABLE_HYPHENATION',
-        size_kb=-2,
+        size_kb=324,
         description='Language-aware hyphenation for justified EPUB text'
     ),
     'xtc_support': Feature(
         name='XTC Support',
         flag='ENABLE_XTC_SUPPORT',
-        size_kb=-2,
+        size_kb=5,
         description='XTC format reader with chapter navigation'
     ),
     'lyra_theme': Feature(
