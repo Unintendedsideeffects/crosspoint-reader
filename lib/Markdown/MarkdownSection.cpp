@@ -40,13 +40,13 @@ void MarkdownSection::closeSectionFile() {
 
 uint32_t MarkdownSection::onPageComplete(std::unique_ptr<Page> page) {
   if (!file) {
-    Serial.printf("[%lu] [MSC] File not open for writing page %d\n", millis(), pageCount);
+    LOG_ERR("MSC", "File not open for writing page %d", pageCount);
     return 0;
   }
 
   const uint32_t position = file.position();
   if (!page->serialize(file)) {
-    Serial.printf("[%lu] [MSC] Failed to serialize page %d\n", millis(), pageCount);
+    LOG_ERR("MSC", "Failed to serialize page %d", pageCount);
     return 0;
   }
 
@@ -58,7 +58,7 @@ void MarkdownSection::writeSectionFileHeader(int fontId, float lineCompression, 
                                              uint8_t paragraphAlignment, uint16_t viewportWidth,
                                              uint16_t viewportHeight, bool hyphenationEnabled, uint32_t sourceSize) {
   if (!file) {
-    Serial.printf("[%lu] [MSC] File not open for writing header\n", millis());
+    LOG_ERR("MSC", "File not open for writing header");
     return;
   }
 
@@ -152,7 +152,7 @@ bool MarkdownSection::clearCache() const {
     return true;
   }
   if (!Storage.remove(filePath.c_str())) {
-    Serial.printf("[%lu] [MSC] Failed to clear cache\n", millis());
+    LOG_ERR("MSC", "Failed to clear cache");
     return false;
   }
   return true;
@@ -191,7 +191,7 @@ bool MarkdownSection::createSectionFile(const MdNode& root, int fontId, float li
       progressFn);
 
   if (!success) {
-    Serial.printf("[%lu] [MSC] Failed to render markdown pages\n", millis());
+    LOG_ERR("MSC", "Failed to render markdown pages");
     file.close();
     Storage.remove(filePath.c_str());
     return false;
@@ -210,7 +210,7 @@ bool MarkdownSection::createSectionFile(const MdNode& root, int fontId, float li
   }
 
   if (hasFailedLutRecords) {
-    Serial.printf("[%lu] [MSC] Failed to write LUT due to invalid page positions\n", millis());
+    LOG_ERR("MSC", "Failed to write LUT due to invalid page positions");
     file.close();
     Storage.remove(filePath.c_str());
     return false;
@@ -233,7 +233,7 @@ std::unique_ptr<Page> MarkdownSection::loadPageFromSectionFile() {
   }
 
   if (currentPage < 0 || static_cast<uint16_t>(currentPage) >= pageCount) {
-    Serial.printf("[%lu] [MSC] Invalid page index %d (pageCount=%d)\n", millis(), currentPage, pageCount);
+    LOG_ERR("MSC", "Invalid page index %d (pageCount=%d)", currentPage, pageCount);
     closeSectionFile();
     return nullptr;
   }
@@ -248,7 +248,7 @@ std::unique_ptr<Page> MarkdownSection::loadPageFromSectionFile() {
 
   auto page = Page::deserialize(file);
   if (!page) {
-    Serial.printf("[%lu] [MSC] Failed to deserialize page %d\n", millis(), currentPage);
+    LOG_ERR("MSC", "Failed to deserialize page %d", currentPage);
     closeSectionFile();
     return nullptr;
   }

@@ -1,6 +1,7 @@
 #include "MarkdownNavigation.h"
 
 #include <Arduino.h>
+#include <Logging.h>
 
 #include <algorithm>
 #include <cctype>
@@ -37,7 +38,7 @@ MarkdownNavigation::MarkdownNavigation(const MdNode& root) {
 void MarkdownNavigation::extractFromNode(const MdNode& node, size_t& nodeIndex, size_t depth) {
   if (depth > MAX_NAVIGATION_DEPTH) {
     if (!depthLimitExceeded) {
-      Serial.printf("[%lu] [MD ] Navigation depth limit exceeded (%zu)\n", millis(), MAX_NAVIGATION_DEPTH);
+      LOG_WRN("MD", "Navigation depth limit exceeded (%zu)", MAX_NAVIGATION_DEPTH);
       depthLimitExceeded = true;
     }
     return;

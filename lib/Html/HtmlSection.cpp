@@ -40,13 +40,13 @@ void HtmlSection::closeSectionFile() {
 
 uint32_t HtmlSection::onPageComplete(std::unique_ptr<Page> page) {
   if (!file) {
-    Serial.printf("[%lu] [HSC] File not open for writing page %d\n", millis(), pageCount);
+    LOG_ERR("HSC", "File not open for writing page %d", pageCount);
     return 0;
   }
 
   const uint32_t position = file.position();
   if (!page->serialize(file)) {
-    Serial.printf("[%lu] [HSC] Failed to serialize page %d\n", millis(), pageCount);
+    LOG_ERR("HSC", "Failed to serialize page %d", pageCount);
     return 0;
   }
 
@@ -58,10 +58,9 @@ void HtmlSection::writeSectionFileHeader(int fontId, float lineCompression, bool
                                          uint8_t paragraphAlignment, uint16_t viewportWidth, uint16_t viewportHeight,
                                          bool hyphenationEnabled, uint32_t sourceSize) {
   if (!file) {
-    Serial.printf("[%lu] [HSC] File not open for writing header\n", millis());
+    LOG_ERR("HSC", "File not open for writing header");
     return;
   }
-
   static_assert(HEADER_SIZE == sizeof(SECTION_FILE_VERSION) + sizeof(fontId) + sizeof(lineCompression) +
                                    sizeof(extraParagraphSpacing) + sizeof(paragraphAlignment) + sizeof(viewportWidth) +
                                    sizeof(viewportHeight) + sizeof(hyphenationEnabled) + sizeof(sourceSize) +
@@ -151,7 +150,7 @@ bool HtmlSection::clearCache() const {
     return true;
   }
   if (!Storage.remove(filePath.c_str())) {
-    Serial.printf("[%lu] [HSC] Failed to clear cache\n", millis());
+    LOG_ERR("HSC", "Failed to clear cache");
     return false;
   }
   return true;
@@ -201,7 +200,7 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
 
   bool success = visitor.parseAndBuildPages();
   if (!success) {
-    Serial.printf("[%lu] [HSC] Failed to parse HTML and build pages\n", millis());
+    LOG_ERR("HSC", "Failed to parse HTML and build pages");
     file.close();
     Storage.remove(filePath.c_str());
     return false;
@@ -218,7 +217,7 @@ bool HtmlSection::createSectionFile(int fontId, float lineCompression, bool extr
   }
 
   if (hasFailedLutRecords) {
-    Serial.printf("[%lu] [HSC] Failed to write LUT due to invalid page positions\n", millis());
+    LOG_ERR("HSC", "Failed to write LUT due to invalid page positions");
     file.close();
     Storage.remove(filePath.c_str());
     return false;
@@ -241,7 +240,7 @@ std::unique_ptr<Page> HtmlSection::loadPageFromSectionFile() {
   }
 
   if (currentPage < 0 || static_cast<uint16_t>(currentPage) >= pageCount) {
-    Serial.printf("[%lu] [HSC] Invalid page index %d (pageCount=%d)\n", millis(), currentPage, pageCount);
+    LOG_ERR("HSC", "Invalid page index %d (pageCount=%d)", currentPage, pageCount);
     closeSectionFile();
     return nullptr;
   }

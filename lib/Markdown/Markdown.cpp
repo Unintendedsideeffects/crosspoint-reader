@@ -2,6 +2,7 @@
 
 #include <FsHelpers.h>
 #include <HalStorage.h>
+#include <Logging.h>
 #include <Serialization.h>
 
 #include <algorithm>
@@ -485,13 +486,13 @@ bool Markdown::load() {
   }
 
   if (!Storage.exists(filepath.c_str())) {
-    Serial.printf("[%lu] [MD ] File does not exist: %s\n", millis(), filepath.c_str());
+    LOG_ERR("MD", "File does not exist: %s", filepath.c_str());
     return false;
   }
 
   FsFile file;
   if (!Storage.openFileForRead("MD ", filepath, file)) {
-    Serial.printf("[%lu] [MD ] Failed to open file: %s\n", millis(), filepath.c_str());
+    LOG_ERR("MD", "Failed to open file: %s", filepath.c_str());
     return false;
   }
 
@@ -499,7 +500,7 @@ bool Markdown::load() {
   file.close();
 
   loaded = true;
-  Serial.printf("[%lu] [MD ] Loaded markdown file: %s (%zu bytes)\n", millis(), filepath.c_str(), fileSize);
+  LOG_INF("MD", "Loaded markdown file: %s (%zu bytes)", filepath.c_str(), fileSize);
   return true;
 }
 
@@ -1382,15 +1383,15 @@ bool Markdown::parseToAst() {
   ast = parser.parse(processed);
 
   if (!ast) {
-    Serial.printf("[%lu] [MD ] Failed to parse markdown to AST\n", millis());
+    LOG_ERR("MD", "Failed to parse markdown to AST");
     return false;
   }
 
   // Build navigation data from AST
   navigation = md_detail::make_unique<MarkdownNavigation>(*ast);
 
-  Serial.printf("[%lu] [MD ] Parsed to AST: %zu TOC entries, %zu links\n", millis(), navigation->getTotalHeadings(),
-                navigation->getTotalLinks());
+  LOG_INF("MD", "Parsed to AST: %zu TOC entries, %zu links", navigation->getTotalHeadings(),
+          navigation->getTotalLinks());
 
   return true;
 }

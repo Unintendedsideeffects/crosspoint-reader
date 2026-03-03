@@ -108,7 +108,7 @@ std::unique_ptr<Page> Page::deserialize(FsFile& file) {
       if (pi) {
         page->elements.push_back(std::move(pi));
       } else {
-        Serial.printf("[%lu] [PGE] Failed to deserialize PageImage\n", millis());
+        LOG_ERR("PGE", "Failed to deserialize PageImage");
         return nullptr;
       }
     } else {

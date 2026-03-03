@@ -197,7 +197,7 @@ bool BleWifiProvisioner::parsePayload(const std::string& payload, std::string& s
 
 bool BleWifiProvisioner::parseJsonPayload(const std::string& payload, std::string& ssidOut,
                                           std::string& passwordOut) const {
-  StaticJsonDocument<384> doc;
+  JsonDocument doc;
   const DeserializationError err = deserializeJson(doc, payload);
   if (err) {
     return false;
