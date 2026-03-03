@@ -1795,8 +1795,9 @@
             <div class="wallpaper-control-group">
               <div class="wallpaper-group-label">Device Handoff</div>
               <div class="companion-desc">
-                Upload the exported BMP to <code>/sleep/custom</code> for Custom source mode, or rename it to
-                <code>sleep.bmp</code> for the legacy root-level fallback.
+                Put the exported BMP in <code>/sleep</code> for Custom source mode. If you manage the SD card
+                directly, <code>/.sleep</code> also works and takes priority. A root-level <code>sleep.bmp</code> is
+                only the legacy fallback.
               </div>
               <div class="actions" style="margin-top: 12px;">
                 <a class="btn btn-outline" id="open-wallpaper-file-manager" data-file-manager-link="files" href="http://crosspoint.local/files" target="_blank" rel="noopener">
@@ -1818,11 +1819,26 @@
           <div>
             <div class="companion-title">Grayscale Pokedex Wallpaper</div>
             <div class="companion-desc">
-              Generate wallpapers from Pokemon data. Upload to
-              <code>/sleep/pokedex</code> for Sleep Source mode.
+              Generate wallpapers from Pokemon data. The current shipped version lives at
+              <code>/plugins/pokedex</code> on the device. Use the static page only as a fallback when no device host is
+              available.
             </div>
           </div>
-          <a class="btn btn-outline" href="../plugins/x4-pokedex-grayscale/" target="_blank" rel="noopener">Open</a>
+          <div class="actions">
+            <a
+              class="btn btn-outline"
+              id="open-pokedex-plugin"
+              data-device-link-path="/plugins/pokedex"
+              href="http://crosspoint.local/plugins/pokedex"
+              target="_blank"
+              rel="noopener"
+            >
+              Open on Device
+            </a>
+            <a class="btn btn-outline" href="../plugins/x4-pokedex-grayscale/" target="_blank" rel="noopener">
+              Static Fallback
+            </a>
+          </div>
         </div>
       </div>
 
@@ -3190,7 +3206,7 @@
           link.click();
           link.remove();
           URL.revokeObjectURL(url);
-          setStatus("Downloaded sleep.bmp. Upload it to /sleep/custom or rename as needed for your sleep-image setup.");
+          setStatus("Downloaded sleep.bmp. Put it in /sleep for Custom mode, or leave it at the SD root for the legacy fallback. If you manage the SD card directly, /.sleep also works and takes priority.");
         }
 
         function loadImageFile(file) {
@@ -3350,6 +3366,14 @@
         });
       }
 
+      function setDetectedDeviceLinkUrls(origin) {
+        document.querySelectorAll("[data-device-link-path]").forEach((link) => {
+          const path = link.dataset.deviceLinkPath;
+          if (!path) return;
+          link.href = `${origin}${path}`;
+        });
+      }
+
       function buildProbeOrigins(hostValue) {
         const origins = [];
         const addOrigin = (origin) => {
@@ -3394,7 +3418,10 @@
         }
 
         const candidates = buildProbeOrigins(hostInput.value);
-        if (inputOrigin) setDetectedFileManagerUrl(inputOrigin);
+        if (inputOrigin) {
+          setDetectedFileManagerUrl(inputOrigin);
+          setDetectedDeviceLinkUrls(inputOrigin);
+        }
         setFileManagerStatus(`Probing ${candidates.length} candidate endpoint(s)...`);
 
         let skippedMixedContent = false;
@@ -3407,12 +3434,15 @@
           }
           if (await probeOrigin(origin)) {
             setDetectedFileManagerUrl(origin);
+            setDetectedDeviceLinkUrls(origin);
             setFileManagerStatus(`Detected endpoint at ${origin}.`);
             return;
           }
         }
 
-        setDetectedFileManagerUrl(firstSkippedOrigin || inputOrigin || "http://crosspoint.local");
+        const fallbackOrigin = firstSkippedOrigin || inputOrigin || "http://crosspoint.local";
+        setDetectedFileManagerUrl(fallbackOrigin);
+        setDetectedDeviceLinkUrls(fallbackOrigin);
         if (skippedMixedContent) {
           setFileManagerStatus(
             `Active probing is blocked by browser mixed-content policy on HTTPS pages for ${firstSkippedOrigin || "http:// hosts"}. Use Open /files to navigate directly, or run this page from http:// for active probing.`,

@@ -208,7 +208,7 @@
 
 <div class="card">
   <h1>Pokedex Wallpaper Plugin</h1>
-  <p class="subtitle">Browser-side generation for XTEink X4 (480x800), then direct upload to <code>/sleep/pokedex</code>.</p>
+  <p class="subtitle">Browser-side generation for XTEink X4 (480x800), then direct upload to <code>/sleep/pokedex</code>. Use <code>Image Source = Pokedex</code> on the device.</p>
 </div>
 
 <div class="card">
@@ -745,7 +745,7 @@
         throw new Error(await response.text());
       }
 
-      setStatus("Upload complete: " + getOutputFilename());
+      setStatus("Upload complete: " + getOutputFilename() + ". Set Image Source to Pokedex on the device.");
     } catch (error) {
       console.error(error);
       setStatus("Upload failed: " + error.message, true);
@@ -810,7 +810,7 @@
           throw new Error("Upload failed for #" + id + " (" + (i + 1) + "/" + ids.length + "): " + (await response.text()));
         }
       }
-      setStatus("Batch upload complete (" + ids.length + " wallpapers)");
+      setStatus("Batch upload complete (" + ids.length + " wallpapers). Set Image Source to Pokedex on the device.");
     } catch (error) {
       console.error(error);
       setStatus("Batch upload failed: " + error.message, true);

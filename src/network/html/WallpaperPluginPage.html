@@ -20,7 +20,7 @@
     <input type="file" id="fileInput" accept="image/*" />
     <div id="previewContainer" style="display:none;">
       <canvas id="canvas"></canvas>
-      <button id="uploadBtn" class="btn">Upload to /sleep/custom</button>
+      <button id="uploadBtn" class="btn">Upload to /sleep</button>
     </div>
     <div id="status" class="status"></div>
   </div>
@@ -72,6 +72,19 @@
       reader.readAsDataURL(file);
     };
 
+    async function ensureFolder(path, name) {
+      const formData = new FormData();
+      formData.append('path', path);
+      formData.append('name', name);
+      const response = await fetch('/mkdir', { method: 'POST', body: formData });
+      if (response.ok) return;
+
+      const message = (await response.text()).toLowerCase();
+      if (message.includes('already') && message.includes('exist')) return;
+      if (message.includes('exists')) return;
+      throw new Error("Failed to create folder '" + name + "': " + message);
+    }
+
     uploadBtn.onclick = async () => {
       uploadBtn.disabled = true;
       status.innerText = 'Converting to BMP...';
@@ -84,14 +97,17 @@
           const formData = new FormData();
           formData.append('file', blob, 'custom_wallpaper.png');
           
-          status.innerText = 'Uploading to /sleep/custom...';
-          const resp = await fetch('/upload?path=/sleep/custom', {
+          status.innerText = 'Ensuring /sleep exists...';
+          await ensureFolder('/', 'sleep');
+
+          status.innerText = 'Uploading to /sleep...';
+          const resp = await fetch('/upload?path=/sleep', {
             method: 'POST',
             body: formData
           });
           
           if (resp.ok) {
-            status.innerText = 'Success! Set "Sleep Screen Source" to "Custom" in Settings.';
+            status.innerText = 'Success! Use Custom sleep mode with images in /sleep. A direct SD-card /.sleep folder also works and takes priority.';
           } else {
             status.innerText = 'Upload failed: ' + await resp.text();
           }
