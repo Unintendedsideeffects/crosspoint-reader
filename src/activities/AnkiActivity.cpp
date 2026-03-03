@@ -5,6 +5,7 @@
 #include <Logging.h>
 
 #include "ScreenComponents.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 AnkiActivity::AnkiActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)

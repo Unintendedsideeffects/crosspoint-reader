@@ -5,6 +5,7 @@
 #include <Logging.h>
 
 #include "ScreenComponents.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/AnkiStore.h"
 
@@ -25,7 +26,13 @@ void AnkiAddActivity::loop() {
     card.front = frontText;
     card.back = "";  // Needs back-side input logic
     card.context = contextText;
-    card.timestamp = static_cast<uint32_t>(millis() / 1000);  // Placeholder until NTP
+
+    const std::time_t now = std::time(nullptr);
+    if (now > 1577836800) {  // 2020-01-01
+      card.timestamp = static_cast<uint32_t>(now);
+    } else {
+      card.timestamp = static_cast<uint32_t>(millis() / 1000);
+    }
 
     util::AnkiStore::getInstance().addCard(card);
     util::AnkiStore::getInstance().save();
