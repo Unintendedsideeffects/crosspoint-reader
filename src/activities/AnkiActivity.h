@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "../Activity.h"
+#include "Activity.h"
 #include "util/AnkiStore.h"
 #include "util/ButtonNavigator.h"
 
