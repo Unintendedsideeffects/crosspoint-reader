@@ -105,6 +105,19 @@
       background: var(--white);
     }
 
+    select, input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 2px solid var(--black);
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      background: var(--white);
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
     .btn {
       border: 2px solid var(--black);
       background: var(--black);
@@ -209,6 +222,81 @@
         </div>
       </div>
 
+      <div>
+        <label for="artStyle">Art Style</label>
+        <select id="artStyle">
+          <option value="official" selected>Official Artwork</option>
+          <option value="home">Pokemon Home</option>
+          <option value="pixel">Classic Pixel</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="fontMode">Text Font</label>
+        <select id="fontMode">
+          <option value="mono" selected>Monospace</option>
+          <option value="display">Serif Display</option>
+          <option value="sans">Sans Serif</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input id="customFont" type="text" placeholder="Custom CSS font stack (optional)" />
+      </div>
+
+      <div>
+        <label for="bgStyle">Background</label>
+        <select id="bgStyle">
+          <option value="white" selected>All White</option>
+          <option value="black">All Black</option>
+          <option value="diagonal">Classic Diagonal</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="spriteScale">Sprite Size</label>
+        <input id="spriteScale" type="range" min="0.6" max="2.2" step="0.1" value="1.0" />
+      </div>
+
+      <div class="row">
+        <label><input id="spriteOverlay" type="checkbox" /> Sprite over text layer</label>
+      </div>
+
+      <div>
+        <label>Bottom Panel Content</label>
+        <div class="row">
+          <label><input id="showFlavor" type="checkbox" checked /> Flavor text</label>
+          <label><input id="showHp" type="checkbox" /> HP bars</label>
+          <label><input id="showEvolution" type="checkbox" /> Evolution</label>
+        </div>
+      </div>
+
+      <div>
+        <label for="batchGens">Batch Generations</label>
+        <select id="batchGens" multiple size="5">
+          <option value="1,151">Gen 1 (1-151)</option>
+          <option value="152,251">Gen 2 (152-251)</option>
+          <option value="252,386">Gen 3 (252-386)</option>
+          <option value="387,493">Gen 4 (387-493)</option>
+          <option value="494,649">Gen 5 (494-649)</option>
+          <option value="650,721">Gen 6 (650-721)</option>
+          <option value="722,809">Gen 7 (722-809)</option>
+          <option value="810,905">Gen 8 (810-905)</option>
+          <option value="906,1025">Gen 9 (906-1025)</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="batchType">Batch Type Filter</label>
+        <select id="batchType">
+          <option value="" selected>Any Type</option>
+          <option value="normal">Normal</option><option value="fire">Fire</option><option value="water">Water</option>
+          <option value="electric">Electric</option><option value="grass">Grass</option><option value="ice">Ice</option>
+          <option value="fighting">Fighting</option><option value="poison">Poison</option><option value="ground">Ground</option>
+          <option value="flying">Flying</option><option value="psychic">Psychic</option><option value="bug">Bug</option>
+          <option value="rock">Rock</option><option value="ghost">Ghost</option><option value="dragon">Dragon</option>
+          <option value="dark">Dark</option><option value="steel">Steel</option><option value="fairy">Fairy</option>
+        </select>
+      </div>
+
       <div class="row">
         <button class="btn" id="previewBtn" type="button">Preview</button>
         <button class="btn secondary" id="downloadBtn" type="button">Download BMP</button>
@@ -219,10 +307,19 @@
         <button class="btn secondary" id="openFolderBtn" type="button">Open /sleep/pokedex</button>
       </div>
 
+      <div class="row">
+        <button class="btn secondary" id="batchPreviewBtn" type="button">Preview Batch Start</button>
+        <button class="btn" id="batchUploadBtn" type="button">Batch Upload</button>
+      </div>
+
       <div class="status" id="statusBox">Enter a Pokemon and click Preview.</div>
 
       <p class="hint">
         This page does all rendering in your browser. The device is only used for file storage via <code>/upload</code>.
+      </p>
+      <p class="hint">
+        Upstream acknowledgements:
+        <a href="https://m86-tech.github.io/BOOX-Pokedex-Wallpaper-Generator/" target="_blank" rel="noopener noreferrer">BOOX Pokedex Wallpaper Generator</a>.
       </p>
     </div>
 
@@ -247,6 +344,19 @@
   const uploadBtn = document.getElementById("uploadBtn");
   const randomBtn = document.getElementById("randomBtn");
   const openFolderBtn = document.getElementById("openFolderBtn");
+  const artStyleSelect = document.getElementById("artStyle");
+  const fontModeSelect = document.getElementById("fontMode");
+  const customFontInput = document.getElementById("customFont");
+  const bgStyleSelect = document.getElementById("bgStyle");
+  const spriteScaleInput = document.getElementById("spriteScale");
+  const spriteOverlayInput = document.getElementById("spriteOverlay");
+  const showFlavorInput = document.getElementById("showFlavor");
+  const showHpInput = document.getElementById("showHp");
+  const showEvolutionInput = document.getElementById("showEvolution");
+  const batchGensSelect = document.getElementById("batchGens");
+  const batchTypeSelect = document.getElementById("batchType");
+  const batchPreviewBtn = document.getElementById("batchPreviewBtn");
+  const batchUploadBtn = document.getElementById("batchUploadBtn");
 
   let lastRendered = null;
 
@@ -261,6 +371,8 @@
     downloadBtn.disabled = isBusy;
     uploadBtn.disabled = isBusy;
     randomBtn.disabled = isBusy;
+    batchPreviewBtn.disabled = isBusy;
+    batchUploadBtn.disabled = isBusy;
   }
 
   function titleCase(value) {
@@ -335,53 +447,141 @@
     ctx.putImageData(imageData, 0, 0);
   }
 
-  function drawWallpaper(pokemon, sprite, flavorText) {
-    ctx.fillStyle = "#ffffff";
+  function getFontFamily() {
+    if (fontModeSelect.value === "display") return "Georgia, 'Times New Roman', Times, serif";
+    if (fontModeSelect.value === "sans") return "Arial, Helvetica, sans-serif";
+    if (fontModeSelect.value === "custom" && customFontInput.value.trim()) return customFontInput.value.trim();
+    return "'Courier New', Courier, monospace";
+  }
+
+  function getRenderOptions() {
+    return {
+      artStyle: artStyleSelect.value,
+      background: bgStyleSelect.value,
+      spriteScale: Math.max(0.6, Math.min(2.2, parseFloat(spriteScaleInput.value) || 1.0)),
+      spriteOverlay: spriteOverlayInput.checked,
+      showFlavor: showFlavorInput.checked,
+      showHp: showHpInput.checked,
+      showEvolution: showEvolutionInput.checked,
+      fontFamily: getFontFamily(),
+    };
+  }
+
+  function getSpriteUrl(pokemon, style) {
+    if (style === "pixel") return pokemon.sprites && pokemon.sprites.front_default;
+    if (style === "home") return pokemon.sprites && pokemon.sprites.other && pokemon.sprites.other.home && pokemon.sprites.other.home.front_default;
+    return pokemon.sprites && pokemon.sprites.other && pokemon.sprites.other["official-artwork"] && pokemon.sprites.other["official-artwork"].front_default;
+  }
+
+  function getEvolutionNames(evolutionData) {
+    if (!evolutionData || !evolutionData.chain) return [];
+    const names = [];
+    const queue = [evolutionData.chain];
+    while (queue.length && names.length < 5) {
+      const node = queue.shift();
+      if (node && node.species && node.species.name) names.push(titleCase(node.species.name));
+      const next = (node && node.evolves_to) || [];
+      for (let i = 0; i < next.length; i++) queue.push(next[i]);
+    }
+    return names;
+  }
+
+  function drawHpBars(pokemon, startY, fontFamily) {
+    const wanted = { hp: "HP", attack: "ATK", defense: "DEF", speed: "SPD" };
+    const stats = (pokemon.stats || []).filter(function(entry) { return wanted[entry.stat && entry.stat.name]; });
+    let y = startY;
+    for (let i = 0; i < stats.length; i++) {
+      const stat = stats[i];
+      const key = stat.stat.name;
+      const value = Math.max(0, Math.min(255, stat.base_stat || 0));
+      ctx.fillStyle = "#111111";
+      ctx.font = "bold 16px " + fontFamily;
+      ctx.fillText(wanted[key], 36, y);
+      ctx.strokeStyle = "#111111";
+      ctx.strokeRect(96, y - 14, 180, 12);
+      ctx.fillStyle = "#111111";
+      ctx.fillRect(96, y - 14, Math.round((value / 255) * 180), 12);
+      y += 22;
+    }
+    return y;
+  }
+
+  function drawWallpaper(pokemon, sprite, flavorText, evolutionNames, options) {
+    const isBlack = options.background === "black";
+    const ink = isBlack ? "#ffffff" : "#111111";
+    const paper = isBlack ? "#000000" : "#ffffff";
+    const panel = isBlack ? "#ffffff" : "#111111";
+    const panelText = isBlack ? "#000000" : "#ffffff";
+
+    ctx.fillStyle = paper;
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    ctx.strokeStyle = "#eeeeee";
-    ctx.lineWidth = 1;
-    for (let y = 0; y < SCREEN_HEIGHT; y += 24) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(SCREEN_WIDTH, y);
-      ctx.stroke();
+    if (options.background === "diagonal") {
+      ctx.strokeStyle = "#dddddd";
+      ctx.lineWidth = 1;
+      for (let x = -SCREEN_HEIGHT; x < SCREEN_WIDTH; x += 18) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + SCREEN_HEIGHT, SCREEN_HEIGHT);
+        ctx.stroke();
+      }
     }
 
-    ctx.fillStyle = "#111111";
+    ctx.fillStyle = panel;
     ctx.fillRect(24, 24, SCREEN_WIDTH - 48, 82);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 34px Courier New";
+    ctx.fillStyle = panelText;
+    ctx.font = "bold 34px " + options.fontFamily;
     ctx.fillText("#" + String(pokemon.id).padStart(4, "0"), 42, 62);
-    ctx.font = "bold 30px Courier New";
+    ctx.font = "bold 30px " + options.fontFamily;
     ctx.fillText(titleCase(pokemon.name), 42, 92);
 
-    const spriteMax = 320;
+    const spriteMax = Math.round(320 * options.spriteScale);
     const scale = Math.min(spriteMax / sprite.width, spriteMax / sprite.height, 1.0);
     const spriteW = Math.round(sprite.width * scale);
     const spriteH = Math.round(sprite.height * scale);
     const spriteX = Math.round((SCREEN_WIDTH - spriteW) / 2);
     const spriteY = 170;
-
-    ctx.fillStyle = "#f0f0f0";
-    ctx.fillRect(spriteX - 18, spriteY - 18, spriteW + 36, spriteH + 36);
-    ctx.drawImage(sprite, spriteX, spriteY, spriteW, spriteH);
+    const drawSprite = function() {
+      ctx.fillStyle = isBlack ? "#222222" : "#f0f0f0";
+      ctx.fillRect(spriteX - 18, spriteY - 18, spriteW + 36, spriteH + 36);
+      ctx.drawImage(sprite, spriteX, spriteY, spriteW, spriteH);
+    };
+    if (!options.spriteOverlay) drawSprite();
 
     const typeNames = (pokemon.types || []).map(function(entry) { return titleCase(entry.type.name); }).join(" / ");
-    ctx.fillStyle = "#111111";
+    ctx.fillStyle = panel;
     ctx.fillRect(24, 540, SCREEN_WIDTH - 48, 48);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 24px Courier New";
+    ctx.fillStyle = panelText;
+    ctx.font = "bold 24px " + options.fontFamily;
     ctx.fillText(typeNames || "Unknown", 36, 571);
 
-    ctx.fillStyle = "#111111";
-    ctx.font = "18px Courier New";
-    const wrapped = wrapText(flavorText || "No flavor text available for this Pokemon.", SCREEN_WIDTH - 72, 7);
-    for (let i = 0; i < wrapped.length; i++) {
-      ctx.fillText(wrapped[i], 36, 632 + (i * 26));
+    let currentY = 620;
+    ctx.fillStyle = ink;
+    if (options.showFlavor) {
+      ctx.font = "18px " + options.fontFamily;
+      const wrapped = wrapText(flavorText || "No flavor text available for this Pokemon.", SCREEN_WIDTH - 72, 4);
+      for (let i = 0; i < wrapped.length; i++) {
+        ctx.fillText(wrapped[i], 36, currentY + (i * 24));
+      }
+      currentY += (wrapped.length * 24) + 10;
     }
 
-    ctx.font = "16px Courier New";
+    if (options.showHp) {
+      currentY = drawHpBars(pokemon, currentY, options.fontFamily) + 6;
+    }
+
+    if (options.showEvolution) {
+      const text = evolutionNames.length ? ("Evolution: " + evolutionNames.join(" > ")) : "Evolution: Unknown";
+      ctx.font = "16px " + options.fontFamily;
+      const evoLines = wrapText(text, SCREEN_WIDTH - 72, 2);
+      for (let i = 0; i < evoLines.length; i++) {
+        ctx.fillText(evoLines[i], 36, currentY + (i * 20));
+      }
+    }
+
+    if (options.spriteOverlay) drawSprite();
+
+    ctx.font = "16px " + options.fontFamily;
     ctx.fillText("CrossPoint / sleep/pokedex", 36, 776);
 
     applyGrayscale();
@@ -441,6 +641,29 @@
     await ensureFolder("/sleep", "pokedex");
   }
 
+  async function renderPokemonByInput(rawInput, options) {
+    const pokemon = await fetchJson("https://pokeapi.co/api/v2/pokemon/" + encodeURIComponent(rawInput.toLowerCase()));
+    const species = await fetchJson(pokemon.species.url).catch(function() { return null; });
+    const evolution = species && species.evolution_chain && species.evolution_chain.url
+      ? await fetchJson(species.evolution_chain.url).catch(function() { return null; })
+      : null;
+    const spriteUrl =
+      getSpriteUrl(pokemon, options.artStyle) ||
+      getSpriteUrl(pokemon, "official") ||
+      getSpriteUrl(pokemon, "home") ||
+      getSpriteUrl(pokemon, "pixel");
+    if (!spriteUrl) {
+      throw new Error("Pokemon sprite not available");
+    }
+    const sprite = await loadImage(spriteUrl);
+    drawWallpaper(pokemon, sprite, getFlavorText(species), getEvolutionNames(evolution), options);
+    lastRendered = {
+      id: pokemon.id,
+      name: sanitizeFilename(pokemon.name),
+    };
+    return pokemon;
+  }
+
   async function renderCurrentPokemon() {
     const rawInput = input.value.trim();
     if (!rawInput) {
@@ -451,25 +674,7 @@
     try {
       setBusy(true);
       setStatus("Loading Pokemon data...");
-
-      const pokemon = await fetchJson("https://pokeapi.co/api/v2/pokemon/" + encodeURIComponent(rawInput.toLowerCase()));
-      const species = await fetchJson(pokemon.species.url).catch(function() { return null; });
-      const spriteUrl =
-        (pokemon.sprites && pokemon.sprites.other && pokemon.sprites.other["official-artwork"] &&
-         pokemon.sprites.other["official-artwork"].front_default) ||
-        (pokemon.sprites && pokemon.sprites.other && pokemon.sprites.other.home && pokemon.sprites.other.home.front_default) ||
-        (pokemon.sprites && pokemon.sprites.front_default);
-
-      if (!spriteUrl) {
-        throw new Error("Pokemon sprite not available");
-      }
-
-      const sprite = await loadImage(spriteUrl);
-      drawWallpaper(pokemon, sprite, getFlavorText(species));
-      lastRendered = {
-        id: pokemon.id,
-        name: sanitizeFilename(pokemon.name)
-      };
+      const pokemon = await renderPokemonByInput(rawInput, getRenderOptions());
 
       setStatus("Ready: #" + String(pokemon.id).padStart(4, "0") + " " + titleCase(pokemon.name));
     } catch (error) {
@@ -537,6 +742,71 @@
     }
   }
 
+  async function resolveBatchIds() {
+    const selected = Array.from(batchGensSelect.selectedOptions || []);
+    if (!selected.length) {
+      throw new Error("Select at least one generation for batch mode");
+    }
+    const ids = new Set();
+    for (let i = 0; i < selected.length; i++) {
+      const bounds = selected[i].value.split(",");
+      const start = parseInt(bounds[0], 10);
+      const end = parseInt(bounds[1], 10);
+      for (let id = start; id <= end; id++) ids.add(id);
+    }
+    const type = batchTypeSelect.value;
+    if (!type) return Array.from(ids).sort(function(a, b) { return a - b; });
+
+    const typeData = await fetchJson("https://pokeapi.co/api/v2/type/" + encodeURIComponent(type));
+    const typeIds = new Set();
+    for (let i = 0; i < (typeData.pokemon || []).length; i++) {
+      const url = typeData.pokemon[i] && typeData.pokemon[i].pokemon && typeData.pokemon[i].pokemon.url;
+      const match = String(url || "").match(/\/pokemon\/(\d+)\/?$/);
+      if (match) typeIds.add(parseInt(match[1], 10));
+    }
+    return Array.from(ids).filter(function(id) { return typeIds.has(id); }).sort(function(a, b) { return a - b; });
+  }
+
+  async function previewBatchStart() {
+    try {
+      const ids = await resolveBatchIds();
+      if (!ids.length) throw new Error("No Pokemon found for selected generation/type filters");
+      input.value = String(ids[0]);
+      await renderCurrentPokemon();
+      setStatus("Batch preview ready for #" + ids[0] + " (" + ids.length + " matches)");
+    } catch (error) {
+      setStatus("Batch preview failed: " + error.message, true);
+    }
+  }
+
+  async function runBatchUpload() {
+    try {
+      setBusy(true);
+      const ids = await resolveBatchIds();
+      if (!ids.length) throw new Error("No Pokemon found for selected generation/type filters");
+      setStatus("Ensuring /sleep/pokedex exists...");
+      await ensurePokedexFolder();
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        setStatus("Batch " + (i + 1) + "/" + ids.length + ": #" + id);
+        const pokemon = await renderPokemonByInput(String(id), getRenderOptions());
+        const blob = canvasToBmpBlob();
+        const formData = new FormData();
+        formData.append("file", blob, "pokedex_" + String(pokemon.id).padStart(4, "0") + "_" + sanitizeFilename(pokemon.name) + "_x4.bmp");
+        const response = await fetch("/upload?path=" + encodeURIComponent(UPLOAD_PATH), { method: "POST", body: formData });
+        if (!response.ok) {
+          throw new Error("Upload failed for #" + id + ": " + (await response.text()));
+        }
+      }
+      setStatus("Batch upload complete (" + ids.length + " wallpapers)");
+    } catch (error) {
+      console.error(error);
+      setStatus("Batch upload failed: " + error.message, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function setRandomPokemon() {
     const randomId = Math.floor(Math.random() * MAX_POKEMON_ID) + 1;
     input.value = String(randomId);
@@ -547,6 +817,8 @@
   downloadBtn.addEventListener("click", downloadCurrentWallpaper);
   uploadBtn.addEventListener("click", uploadCurrentWallpaper);
   randomBtn.addEventListener("click", setRandomPokemon);
+  batchPreviewBtn.addEventListener("click", previewBatchStart);
+  batchUploadBtn.addEventListener("click", runBatchUpload);
   openFolderBtn.addEventListener("click", function() {
     window.location.href = "/files?path=" + encodeURIComponent(UPLOAD_PATH);
   });
