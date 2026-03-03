@@ -8,6 +8,7 @@
 #include <I18n.h>
 #include <Logging.h>
 
+#include "AnkiAddActivity.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "EpubReaderChapterSelectionActivity.h"
@@ -383,6 +384,37 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
         }
       }
       // If no text or page loading failed, just close menu
+      requestUpdate();
+      break;
+    }
+    case EpubReaderMenuActivity::MenuAction::ADD_TO_ANKI: {
+      if (section && section->currentPage >= 0 && section->currentPage < section->pageCount) {
+        auto p = section->loadPageFromSectionFile();
+        if (p) {
+          std::string firstWords;
+          int wordCount = 0;
+          for (const auto& el : p->elements) {
+            if (el->getTag() == TAG_PageLine) {
+              const auto& line = static_cast<const PageLine&>(*el);
+              if (line.getBlock()) {
+                for (const auto& w : line.getBlock()->getWords()) {
+                  if (!firstWords.empty()) firstWords += " ";
+                  firstWords += w;
+                  if (++wordCount >= 10) break;
+                }
+              }
+            }
+            if (wordCount >= 10) break;
+          }
+          if (!firstWords.empty()) {
+            startActivityForResult(
+                std::make_unique<AnkiAddActivity>(renderer, mappedInput, firstWords, epub->getTitle()),
+                [](const ActivityResult&) {});
+            break;
+          }
+          LOG_WRN("EPUB", "ADD_TO_ANKI: no text found on current page");
+        }
+      }
       requestUpdate();
       break;
     }

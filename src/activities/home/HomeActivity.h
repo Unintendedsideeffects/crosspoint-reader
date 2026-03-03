@@ -19,6 +19,7 @@ class HomeActivity final : public Activity {
   int menuMyLibraryIndex = -1;
   int menuOpdsIndex = -1;
   int menuTodoIndex = -1;
+  int menuAnkiIndex = -1;
   int menuFileTransferIndex = -1;
   int menuSettingsIndex = -1;
 
@@ -45,6 +46,7 @@ class HomeActivity final : public Activity {
   void onFileTransferOpen();
   void onOpdsBrowserOpen();
   void onTodoOpen();
+  void onAnkiOpen();
 
   void freeCoverBuffer();  // Free the stored cover buffer
 

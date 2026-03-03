@@ -20,6 +20,7 @@ class EpubReaderMenuActivity final : public Activity {
     DISPLAY_QR,
     GO_HOME,
     SYNC,
+    ADD_TO_ANKI,
     DELETE_CACHE
   };
 

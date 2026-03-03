@@ -1119,6 +1119,15 @@ const char* const STRINGS_EN[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_ES[] = {
@@ -1756,6 +1765,15 @@ const char* const STRINGS_ES[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_FR[] = {
@@ -2597,6 +2615,15 @@ const char* const STRINGS_FR[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_DE[] = {
@@ -3126,6 +3153,15 @@ const char* const STRINGS_DE[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_CS[] = {
@@ -4825,6 +4861,15 @@ const char* const STRINGS_CS[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_PO[] = {
@@ -5519,6 +5564,15 @@ const char* const STRINGS_PO[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_RU[] = {
@@ -14316,6 +14370,15 @@ const char* const STRINGS_RU[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_SV[] = {
@@ -15193,6 +15256,15 @@ const char* const STRINGS_SV[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_RO[] = {
@@ -16238,6 +16310,15 @@ const char* const STRINGS_RO[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_CA[] = {
@@ -16917,6 +16998,15 @@ const char* const STRINGS_CA[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_UK[] = {
@@ -27066,6 +27156,15 @@ const char* const STRINGS_UK[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_BE[] = {
@@ -35951,6 +36050,15 @@ const char* const STRINGS_BE[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_IT[] = {
@@ -36353,6 +36461,15 @@ const char* const STRINGS_IT[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_PL[] = {
@@ -37436,6 +37553,15 @@ const char* const STRINGS_PL[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_FI[] = {
@@ -38287,6 +38413,15 @@ const char* const STRINGS_FI[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_DA[] = {
@@ -38892,6 +39027,15 @@ const char* const STRINGS_DA[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 const char* const STRINGS_NL[] = {
@@ -39259,6 +39403,15 @@ const char* const STRINGS_NL[] = {
     "No notes yet. Add one below.",
     "+ Add Note",
     "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
 };
 
 }  // namespace i18n_strings

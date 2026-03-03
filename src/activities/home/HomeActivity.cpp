@@ -29,6 +29,7 @@ int HomeActivity::getMenuItemCount() const {
   if (hasContinueReading) count++;
   if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl)) count++;
   if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) count++;
+  if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::AnkiSupport, false)) count++;
   return count;
 }
 
@@ -65,6 +66,8 @@ void HomeActivity::rebuildMenuLayout() {
     menuOpdsIndex = -1;
     menuTodoIndex =
         core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false) ? idx++ : -1;
+    menuAnkiIndex =
+        core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::AnkiSupport, false) ? idx++ : -1;
     menuFileTransferIndex = idx++;
     menuSettingsIndex = idx++;
     menuItemCount = idx;
@@ -77,6 +80,8 @@ void HomeActivity::rebuildMenuLayout() {
       core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl) ? idx++ : -1;
   menuTodoIndex =
       core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false) ? idx++ : -1;
+  menuAnkiIndex =
+      core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::AnkiSupport, false) ? idx++ : -1;
   menuFileTransferIndex = idx++;
   menuSettingsIndex = idx++;
   menuItemCount = idx;
@@ -194,6 +199,9 @@ std::string HomeActivity::getMenuItemLabel(const int index) const {
   }
   if (index == menuTodoIndex) {
     return "TODO";
+  }
+  if (index == menuAnkiIndex) {
+    return "Anki";
   }
   if (index == menuFileTransferIndex) {
     return "File Transfer";
@@ -359,6 +367,10 @@ void HomeActivity::loop() {
             onTodoOpen();
             return;
           }
+          if (selectedMenuIndex == menuAnkiIndex) {
+            onAnkiOpen();
+            return;
+          }
           if (selectedMenuIndex == menuFileTransferIndex) {
             onFileTransferOpen();
             return;
@@ -386,6 +398,10 @@ void HomeActivity::loop() {
         }
         if (selectedMenuIndex == menuTodoIndex) {
           onTodoOpen();
+          return;
+        }
+        if (selectedMenuIndex == menuAnkiIndex) {
+          onAnkiOpen();
           return;
         }
         if (selectedMenuIndex == menuFileTransferIndex) {
@@ -493,6 +509,8 @@ void HomeActivity::loop() {
         core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::OpdsBrowser, hasOpdsUrl) ? idx++ : -1;
     const int todoIdx =
         core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false) ? idx++ : -1;
+    const int ankiIdx =
+        core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::AnkiSupport, false) ? idx++ : -1;
     const int notesIdx = idx++;
     const int fileTransferIdx = idx++;
     const int settingsIdx = idx;
@@ -505,6 +523,8 @@ void HomeActivity::loop() {
       onOpdsBrowserOpen();
     } else if (selectorIndex == todoIdx) {
       onTodoOpen();
+    } else if (selectorIndex == ankiIdx) {
+      onAnkiOpen();
     } else if (selectorIndex == notesIdx) {
       onNotesOpen();
     } else if (selectorIndex == fileTransferIdx) {
@@ -548,6 +568,10 @@ void HomeActivity::render(RenderLock&&) {
         menuLabels.push_back("Agenda");
         menuIcons.push_back(Text);
       }
+      if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::AnkiSupport, false)) {
+        menuLabels.push_back("Anki");
+        menuIcons.push_back(Text);  // Using Text icon as placeholder
+      }
       menuLabels.push_back(tr(STR_FILE_TRANSFER));
       menuIcons.push_back(Transfer);
       menuLabels.push_back(tr(STR_SETTINGS_TITLE));
@@ -563,6 +587,10 @@ void HomeActivity::render(RenderLock&&) {
       }
       if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
         menuLabels.push_back("TODO");
+        menuIcons.push_back(Text);
+      }
+      if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::AnkiSupport, false)) {
+        menuLabels.push_back("Anki");
         menuIcons.push_back(Text);
       }
       menuLabels.push_back("File Transfer");
@@ -780,6 +808,9 @@ void HomeActivity::render(RenderLock&&) {
     if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::TodoPlanner, false)) {
       labels_text.push_back("TODO");
     }
+    if (core::FeatureModules::shouldExposeHomeAction(core::HomeOptionalAction::AnkiSupport, false)) {
+      labels_text.push_back("Anki");
+    }
     labels_text.push_back("File Transfer");
     labels_text.push_back("Settings");
     for (size_t i = 0; i < labels_text.size(); ++i) {
@@ -818,5 +849,7 @@ void HomeActivity::onFileTransferOpen() { activityManager.goToFileTransfer(); }
 void HomeActivity::onOpdsBrowserOpen() { activityManager.goToBrowser(); }
 
 void HomeActivity::onTodoOpen() { activityManager.goToTodo(); }
+
+void HomeActivity::onAnkiOpen() { activityManager.goToAnki(); }
 
 void HomeActivity::onNotesOpen() { activityManager.goToNotes(); }

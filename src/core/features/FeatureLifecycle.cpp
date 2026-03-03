@@ -19,6 +19,10 @@
 #include "KOReaderCredentialStore.h"
 #endif
 
+#if ENABLE_ANKI_SUPPORT
+#include "util/AnkiStore.h"
+#endif
+
 namespace core {
 namespace {
 
@@ -38,6 +42,10 @@ void koreaderOnSettingsLoaded(GfxRenderer& renderer) {
   (void)renderer;
   KOREADER_STORE.loadFromFile();
 }
+#endif
+
+#if ENABLE_ANKI_SUPPORT
+void ankiOnStorageReady() { util::AnkiStore::getInstance().load(); }
 #endif
 
 #if ENABLE_DARK_MODE
@@ -72,6 +80,9 @@ const LifecycleHook kLifecycleHooks[] = {
 #endif
 #if ENABLE_USER_FONTS
     {"user_fonts", userFontsOnStorageReady, userFontsOnSettingsLoaded, userFontsOnFontSetup},
+#endif
+#if ENABLE_ANKI_SUPPORT
+    {"anki_support", ankiOnStorageReady, nullptr, nullptr},
 #endif
     {nullptr, nullptr, nullptr, nullptr},
 };

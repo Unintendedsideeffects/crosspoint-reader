@@ -2,22 +2,70 @@
 <html>
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CrossPoint Reader - Anki Plugin</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; line-height: 1.6; }
-    .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; line-height: 1.6; color: #333; }
+    .card { border: 1px solid #ddd; padding: 24px; border-radius: 12px; background: #f9f9f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    h1 { color: #000; margin-top: 0; }
+    .stats { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #007bff; }
+    .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: #fff; text-decoration: none; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; margin-right: 10px; }
+    .btn:hover { background: #0056b3; }
+    .btn-danger { background: #dc3545; }
+    .btn-danger:hover { background: #a71d2a; }
+    .actions { margin-top: 20px; }
+    code { background: #eee; padding: 2px 4px; border-radius: 4px; }
   </style>
 </head>
 <body>
-  <h1>Anki Support (Beta)</h1>
-  <p>To use Anki cards on your CrossPoint Reader:</p>
+  <h1>Anki Support</h1>
+  
   <div class="card">
-    <ol>
-      <li>Export your Anki cards to a simple <code>anki.json</code> format.</li>
-      <li>Upload <code>anki.json</code> to the root of your SD card.</li>
-      <li>Open the Anki Activity from the Home screen.</li>
-    </ol>
-    <p>Coming Soon: Direct integration with AnkiWeb / AnkiConnect.</p>
+    <div id="status" class="stats">Checking cards...</div>
+    
+    <p>You can add new cards while reading by selecting <strong>Notes</strong> (Anki) in the reader menu. The first 10 words of the current page will be added as the front of the card.</p>
+    
+    <div class="actions">
+      <a href="/api/anki/cards" class="btn" download="anki_cards.json">Export JSON</a>
+      <button onclick="clearCards()" class="btn btn-danger">Clear All Cards</button>
+    </div>
   </div>
+
+  <div style="margin-top: 40px;">
+    <h3>How to sync with Anki (Desktop)</h3>
+    <ol>
+      <li>Download the <code>anki_cards.json</code> file using the button above.</li>
+      <li>Use a simple script or plugin to import this JSON into your Anki deck.</li>
+      <li><em>Coming Soon:</em> Direct sync via AnkiConnect.</li>
+    </ol>
+  </div>
+
+  <script>
+    async function updateStatus() {
+      try {
+        const response = await fetch('/api/anki/cards');
+        const cards = await response.json();
+        document.getElementById('status').textContent = `You have ${cards.length} card(s) saved on your device.`;
+      } catch (e) {
+        document.getElementById('status').textContent = 'Error loading card count.';
+      }
+    }
+
+    async function clearCards() {
+      if (!confirm('Are you sure you want to delete ALL cards from your device?')) return;
+      
+      try {
+        const response = await fetch('/api/anki/clear', { method: 'POST' });
+        if (response.ok) {
+          updateStatus();
+          alert('All cards cleared.');
+        }
+      } catch (e) {
+        alert('Failed to clear cards.');
+      }
+    }
+
+    updateStatus();
+  </script>
 </body>
 </html>

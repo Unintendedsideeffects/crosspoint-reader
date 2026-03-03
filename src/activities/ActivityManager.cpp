@@ -4,6 +4,7 @@
 #include <HalStorage.h>
 #include <Logging.h>
 
+#include "AnkiActivity.h"
 #include "boot_sleep/BootActivity.h"
 #include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
@@ -223,6 +224,12 @@ void ActivityManager::goToRecentBooks() {
 }
 
 void ActivityManager::goToNotes() { replaceActivity(std::make_unique<NotesActivity>(renderer, mappedInput)); }
+
+void ActivityManager::goToAnki() {
+  if (core::FeatureModules::isEnabled("anki_support")) {
+    replaceActivity(std::make_unique<AnkiActivity>(renderer, mappedInput));
+  }
+}
 
 void ActivityManager::goToBrowser() {
   replaceActivity(std::make_unique<OpdsBookBrowserActivity>(renderer, mappedInput));

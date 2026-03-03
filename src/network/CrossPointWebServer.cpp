@@ -23,6 +23,7 @@
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
 #include "html/SettingsPageHtml.generated.h"
+#include "util/AnkiStore.h"
 #include "util/DateUtils.h"
 #include "util/InputValidation.h"
 #include "util/PathUtils.h"
@@ -207,6 +208,8 @@ void CrossPointWebServer::begin() {
   }
   if (core::FeatureModules::shouldRegisterWebRoute(core::WebOptionalRoute::AnkiPluginPage)) {
     server->on("/plugins/anki", HTTP_GET, [this] { handleAnkiPluginPage(); });
+    server->on("/api/anki/cards", HTTP_GET, [this] { handleAnkiGetCards(); });
+    server->on("/api/anki/clear", HTTP_POST, [this] { handleAnkiClearCards(); });
   }
   server->on("/api/settings", HTTP_GET, [this] { handleGetSettings(); });
   server->on("/api/settings", HTTP_POST, [this] { handlePostSettings(); });
@@ -2865,4 +2868,37 @@ void CrossPointWebServer::handleOtaCheckGet() const {
   String json;
   serializeJson(doc, json);
   server->send(200, "application/json", json);
+}
+
+void CrossPointWebServer::handleAnkiGetCards() const {
+  if (!core::FeatureModules::isEnabled("anki_support")) {
+    server->send(404, "text/plain", "Anki support disabled");
+    return;
+  }
+
+  const auto& cards = util::AnkiStore::getInstance().getCards();
+  JsonDocument doc;
+  JsonArray arr = doc.to<JsonArray>();
+
+  for (const auto& card : cards) {
+    JsonObject obj = arr.add<JsonObject>();
+    obj["front"] = card.front;
+    obj["back"] = card.back;
+    obj["context"] = card.context;
+    obj["timestamp"] = card.timestamp;
+  }
+
+  String json;
+  serializeJson(doc, json);
+  server->send(200, "application/json", json);
+}
+
+void CrossPointWebServer::handleAnkiClearCards() {
+  if (!core::FeatureModules::isEnabled("anki_support")) {
+    server->send(404, "text/plain", "Anki support disabled");
+    return;
+  }
+
+  util::AnkiStore::getInstance().clear();
+  server->send(200, "application/json", "{\"status\":\"ok\"}");
 }

@@ -144,6 +144,8 @@ class CrossPointWebServer {
   void handlePokedexPluginPage() const;
   void handleWallpaperPluginPage() const;
   void handleAnkiPluginPage() const;
+  void handleAnkiGetCards() const;
+  void handleAnkiClearCards();
   void handleGetSettings() const;
   void handlePostSettings();
   void handleRescanUserFonts();
