@@ -770,6 +770,11 @@
         transition: none;
       }
 
+      .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
       .btn-outline {
         background: var(--white);
         color: var(--blk);
@@ -864,6 +869,158 @@
         font-size: 9px;
       }
 
+      .wallpaper-layout {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .wallpaper-preview-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .wallpaper-dropzone {
+        border: var(--px) solid var(--dk);
+        background: var(--fog);
+        padding: 10px;
+      }
+
+      .wallpaper-dropzone.is-dragover {
+        background: var(--bone);
+        border-color: var(--blk);
+      }
+
+      .wallpaper-stage {
+        position: relative;
+        border: var(--px) solid var(--blk);
+        padding: 10px;
+        display: flex;
+        justify-content: center;
+        background:
+          repeating-linear-gradient(
+            45deg,
+            var(--fog),
+            var(--fog) 8px,
+            #dfdfdf 8px,
+            #dfdfdf 16px
+          );
+      }
+
+      .wallpaper-stage canvas {
+        width: min(100%, 240px);
+        height: auto;
+        aspect-ratio: 3 / 5;
+        display: block;
+        border: 1px solid var(--dk);
+        background: var(--white);
+        image-rendering: pixelated;
+      }
+
+      .wallpaper-empty {
+        position: absolute;
+        inset: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        text-align: center;
+        font-size: 9px;
+        color: var(--md);
+        line-height: 1.5;
+        background: rgba(250, 250, 250, 0.78);
+        pointer-events: none;
+      }
+
+      .wallpaper-empty.hidden {
+        display: none;
+      }
+
+      .wallpaper-meta {
+        font-size: 8px;
+        color: var(--md);
+        line-height: 1.5;
+      }
+
+      .wallpaper-controls {
+        display: grid;
+        gap: 10px;
+      }
+
+      .wallpaper-control-group {
+        border: 1px solid var(--bone);
+        background: var(--fog);
+        padding: 10px;
+      }
+
+      .wallpaper-group-label {
+        font-family: 'Silkscreen', monospace;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--blk);
+        margin-bottom: 8px;
+      }
+
+      .wallpaper-chip-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .wallpaper-chip.active {
+        background: var(--blk);
+        color: var(--white);
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--dk),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 #000;
+      }
+
+      .wallpaper-align-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 28px);
+        gap: 4px;
+      }
+
+      .wallpaper-align-btn {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        line-height: 1;
+      }
+
+      .wallpaper-field-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .wallpaper-color {
+        width: 42px;
+        height: 28px;
+        border: var(--px) solid var(--dk);
+        background: var(--white);
+        padding: 0;
+        cursor: pointer;
+      }
+
+      .wallpaper-rotation {
+        margin-top: 8px;
+        font-size: 9px;
+        color: var(--dk);
+      }
+
+      .wallpaper-helper {
+        margin-top: 8px;
+        font-size: 8px;
+        color: var(--md);
+        line-height: 1.5;
+      }
+
       /* ── Preview ── */
       .preview-top {
         display: flex;
@@ -919,6 +1076,16 @@
         font-size: 9px;
         color: var(--dk);
         background: var(--fog);
+      }
+
+      @media (max-width: 760px) {
+        .wallpaper-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .wallpaper-stage canvas {
+          width: min(100%, 280px);
+        }
       }
 
       .footer {
@@ -1484,7 +1651,7 @@
                 aria-label="CrossPoint host"
               />
               <button class="btn btn-outline" id="detect-file-manager">Detect</button>
-              <a class="btn btn-outline" id="open-detected-file-manager" href="http://crosspoint.local/files" target="_blank" rel="noopener">
+              <a class="btn btn-outline" id="open-detected-file-manager" data-file-manager-link="files" href="http://crosspoint.local/files" target="_blank" rel="noopener">
                 Open /files
               </a>
             </div>
@@ -1534,6 +1701,113 @@
             </div>
             <div id="font-status" class="info-bar" style="display:none; margin-top: 12px;"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Companion -->
+      <div class="panel">
+        <div class="panel-heading">Wallpaper Studio</div>
+        <div class="wallpaper-layout">
+          <div class="wallpaper-preview-stack">
+            <div class="wallpaper-dropzone" id="wallpaper-dropzone">
+              <div class="companion-title">X4 Sleep Wallpaper</div>
+              <div class="companion-desc">
+                Import any image, preview the final <code>480 x 800</code> X4 output, then export a grayscale
+                <code>.bmp</code> ready for sleep-image folders.
+              </div>
+              <div class="actions" style="margin-top: 12px; align-items: center;">
+                <input type="file" id="wallpaper-upload" accept="image/*" style="display:none" />
+                <button class="btn btn-outline" type="button" id="wallpaper-select-btn">Select Image</button>
+                <button class="btn btn-outline" type="button" id="wallpaper-clear-btn" disabled>Clear</button>
+                <button class="btn btn-solid" type="button" id="wallpaper-download-btn" disabled>Download BMP</button>
+              </div>
+            </div>
+            <div class="wallpaper-stage">
+              <canvas id="wallpaper-preview-canvas" width="480" height="800" aria-label="Wallpaper preview"></canvas>
+              <div class="wallpaper-empty" id="wallpaper-empty">
+                Drop an image here or select one above. Output stays fixed to the X4 sleep-image frame.
+              </div>
+            </div>
+            <div class="wallpaper-meta" id="wallpaper-meta">Output: 480 x 800 BMP, grayscale-ready for the X4.</div>
+          </div>
+          <div class="wallpaper-controls">
+            <div class="wallpaper-control-group">
+              <div class="wallpaper-group-label">Placement</div>
+              <div class="wallpaper-chip-row" id="wallpaper-fit-options">
+                <button class="btn btn-outline wallpaper-chip" type="button" data-wallpaper-fit="fill">Fill</button>
+                <button class="btn btn-outline wallpaper-chip" type="button" data-wallpaper-fit="fit">Fit</button>
+                <button class="btn btn-outline wallpaper-chip" type="button" data-wallpaper-fit="stretch">Stretch</button>
+              </div>
+              <div class="wallpaper-helper">
+                Fill crops edge-to-edge, Fit preserves the whole image, Stretch forces a full-frame remap.
+              </div>
+            </div>
+
+            <div class="wallpaper-control-group">
+              <div class="wallpaper-group-label">Anchor</div>
+              <div class="wallpaper-align-grid" id="wallpaper-align-options">
+                <button class="btn btn-outline wallpaper-chip wallpaper-align-btn" type="button" data-wallpaper-align="top-left" title="Top left">↖</button>
+                <button class="btn btn-outline wallpaper-chip wallpaper-align-btn" type="button" data-wallpaper-align="top-center" title="Top center">↑</button>
+                <button class="btn btn-outline wallpaper-chip wallpaper-align-btn" type="button" data-wallpaper-align="top-right" title="Top right">↗</button>
+                <button class="btn btn-outline wallpaper-chip wallpaper-align-btn" type="button" data-wallpaper-align="center-left" title="Center left">←</button>
+                <button class="btn btn-outline wallpaper-chip wallpaper-align-btn" type="button" data-wallpaper-align="center-center" title="Center">•</button>
+                <button class="btn btn-outline wallpaper-chip wallpaper-align-btn" type="button" data-wallpaper-align="center-right" title="Center right">→</button>
+                <button class="btn btn-outline wallpaper-chip wallpaper-align-btn" type="button" data-wallpaper-align="bottom-left" title="Bottom left">↙</button>
+                <button class="btn btn-outline wallpaper-chip wallpaper-align-btn" type="button" data-wallpaper-align="bottom-center" title="Bottom center">↓</button>
+                <button class="btn btn-outline wallpaper-chip wallpaper-align-btn" type="button" data-wallpaper-align="bottom-right" title="Bottom right">↘</button>
+              </div>
+              <div class="wallpaper-helper">
+                Anchor controls crop bias in Fill mode and padding placement in Fit mode.
+              </div>
+            </div>
+
+            <div class="wallpaper-control-group">
+              <div class="wallpaper-group-label">Output</div>
+              <div class="wallpaper-field-row">
+                <div class="wallpaper-chip-row" id="wallpaper-depth-options">
+                  <button class="btn btn-outline wallpaper-chip" type="button" data-wallpaper-depth="4">4-bit grayscale</button>
+                  <button class="btn btn-outline wallpaper-chip" type="button" data-wallpaper-depth="1">1-bit mono</button>
+                </div>
+                <div class="wallpaper-field-row">
+                  <span class="output-label" style="margin:0">Background</span>
+                  <input class="wallpaper-color" type="color" id="wallpaper-bg" value="#ffffff" aria-label="Wallpaper background color" />
+                </div>
+              </div>
+              <div class="wallpaper-helper">
+                4-bit keeps gradients cleaner. 1-bit produces a smaller, higher-contrast bitmap.
+              </div>
+            </div>
+
+            <div class="wallpaper-control-group">
+              <div class="wallpaper-group-label">Adjust</div>
+              <div class="wallpaper-chip-row">
+                <button class="btn btn-outline wallpaper-chip" type="button" id="wallpaper-rotate-ccw">Rotate -90</button>
+                <button class="btn btn-outline wallpaper-chip" type="button" id="wallpaper-rotate-cw">Rotate +90</button>
+                <button class="btn btn-outline wallpaper-chip" type="button" id="wallpaper-rotate-reset">Reset</button>
+                <button class="btn btn-outline wallpaper-chip" type="button" id="wallpaper-invert-toggle">Invert</button>
+              </div>
+              <div class="wallpaper-rotation" id="wallpaper-rotation-label">Rotation: 0°</div>
+              <div class="wallpaper-helper">
+                Export stays fixed to <code>480 x 800</code> even when the source image is rotated.
+              </div>
+            </div>
+
+            <div class="wallpaper-control-group">
+              <div class="wallpaper-group-label">Device Handoff</div>
+              <div class="companion-desc">
+                Upload the exported BMP to <code>/sleep/custom</code> for Custom source mode, or rename it to
+                <code>sleep.bmp</code> for the legacy root-level fallback.
+              </div>
+              <div class="actions" style="margin-top: 12px;">
+                <a class="btn btn-outline" id="open-wallpaper-file-manager" data-file-manager-link="files" href="http://crosspoint.local/files" target="_blank" rel="noopener">
+                  Open /files
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="wallpaper-status" class="info-bar">
+          No image selected. This tool runs entirely in your browser and exports an X4-ready BMP.
         </div>
       </div>
 
@@ -2617,6 +2891,412 @@
         });
       }
 
+      function setupWallpaperStudio() {
+        const fileInput = document.getElementById("wallpaper-upload");
+        const selectBtn = document.getElementById("wallpaper-select-btn");
+        const clearBtn = document.getElementById("wallpaper-clear-btn");
+        const downloadBtn = document.getElementById("wallpaper-download-btn");
+        const dropzone = document.getElementById("wallpaper-dropzone");
+        const canvas = document.getElementById("wallpaper-preview-canvas");
+        const emptyState = document.getElementById("wallpaper-empty");
+        const meta = document.getElementById("wallpaper-meta");
+        const status = document.getElementById("wallpaper-status");
+        const bgInput = document.getElementById("wallpaper-bg");
+        const rotationLabel = document.getElementById("wallpaper-rotation-label");
+        const invertToggle = document.getElementById("wallpaper-invert-toggle");
+        if (!fileInput || !canvas || !status) return;
+
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return;
+        const TARGET_WIDTH = 480;
+        const TARGET_HEIGHT = 800;
+
+        const state = {
+          file: null,
+          image: null,
+          imageUrl: null,
+          fitMode: "fill",
+          alignment: "center-center",
+          depth: 4,
+          rotation: 0,
+          invert: false,
+          bgColor: "#ffffff",
+        };
+
+        function setStatus(message, isError = false) {
+          status.textContent = message;
+          status.style.borderLeftColor = isError ? "var(--md)" : "var(--blk)";
+        }
+
+        function normalizedRotation() {
+          return ((state.rotation % 360) + 360) % 360;
+        }
+
+        function updateButtonStates() {
+          const hasImage = Boolean(state.image);
+          clearBtn.disabled = !hasImage;
+          downloadBtn.disabled = !hasImage;
+          emptyState.classList.toggle("hidden", hasImage);
+          rotationLabel.textContent = `Rotation: ${normalizedRotation()}°`;
+
+          document.querySelectorAll("[data-wallpaper-fit]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.wallpaperFit === state.fitMode);
+          });
+          document.querySelectorAll("[data-wallpaper-align]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.wallpaperAlign === state.alignment);
+          });
+          document.querySelectorAll("[data-wallpaper-depth]").forEach((button) => {
+            button.classList.toggle("active", Number(button.dataset.wallpaperDepth) === state.depth);
+          });
+          invertToggle.classList.toggle("active", state.invert);
+
+          if (!hasImage) {
+            meta.textContent = "Output: 480 x 800 BMP, grayscale-ready for the X4.";
+            return;
+          }
+
+          meta.textContent = `${state.file.name} · ${state.image.naturalWidth} x ${state.image.naturalHeight} in · ${TARGET_WIDTH} x ${TARGET_HEIGHT} out · ${state.depth}-bit grayscale`;
+        }
+
+        function releaseImageUrl() {
+          if (state.imageUrl) {
+            URL.revokeObjectURL(state.imageUrl);
+            state.imageUrl = null;
+          }
+        }
+
+        function clearWallpaperSelection() {
+          releaseImageUrl();
+          state.file = null;
+          state.image = null;
+          fileInput.value = "";
+          ctx.fillStyle = state.bgColor;
+          ctx.fillRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+          updateButtonStates();
+          setStatus("No image selected. This tool runs entirely in your browser and exports an X4-ready BMP.");
+        }
+
+        function getAlignmentOffset(drawWidth, drawHeight, canvasWidth, canvasHeight) {
+          const [vertical, horizontal] = state.alignment.split("-");
+          let x = 0;
+          let y = 0;
+
+          if (horizontal === "center") x = (canvasWidth - drawWidth) / 2;
+          else if (horizontal === "right") x = canvasWidth - drawWidth;
+
+          if (vertical === "center") y = (canvasHeight - drawHeight) / 2;
+          else if (vertical === "bottom") y = canvasHeight - drawHeight;
+
+          return { x, y };
+        }
+
+        function drawRotatedImage(image, rotation, destX, destY, destWidth, destHeight, sourceX, sourceY, sourceWidth, sourceHeight) {
+          ctx.save();
+          ctx.translate(destX + destWidth / 2, destY + destHeight / 2);
+          ctx.rotate(rotation * Math.PI / 180);
+          if (rotation === 90 || rotation === 270) {
+            ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, -destHeight / 2, -destWidth / 2, destHeight, destWidth);
+          } else {
+            ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, -destWidth / 2, -destHeight / 2, destWidth, destHeight);
+          }
+          ctx.restore();
+        }
+
+        function applyEffects(imageData) {
+          const data = imageData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            let gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+            if (state.invert) gray = 255 - gray;
+            if (state.depth === 1) {
+              gray = gray > 127 ? 255 : 0;
+            } else {
+              gray = Math.round(gray / 255 * 15) * (255 / 15);
+            }
+            data[i] = gray;
+            data[i + 1] = gray;
+            data[i + 2] = gray;
+          }
+          return imageData;
+        }
+
+        function renderWallpaperPreview() {
+          ctx.fillStyle = state.bgColor;
+          ctx.fillRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+
+          if (!state.image) {
+            updateButtonStates();
+            return;
+          }
+
+          const rotation = normalizedRotation();
+          const isQuarterTurn = rotation === 90 || rotation === 270;
+          const sourceImage = state.image;
+          const effectiveWidth = isQuarterTurn ? sourceImage.naturalHeight : sourceImage.naturalWidth;
+          const effectiveHeight = isQuarterTurn ? sourceImage.naturalWidth : sourceImage.naturalHeight;
+          const imageRatio = effectiveWidth / effectiveHeight;
+          const canvasRatio = TARGET_WIDTH / TARGET_HEIGHT;
+
+          let sourceX = 0;
+          let sourceY = 0;
+          let sourceWidth = sourceImage.naturalWidth;
+          let sourceHeight = sourceImage.naturalHeight;
+          let drawWidth = TARGET_WIDTH;
+          let drawHeight = TARGET_HEIGHT;
+          let destX = 0;
+          let destY = 0;
+
+          if (state.fitMode === "stretch") {
+            drawWidth = TARGET_WIDTH;
+            drawHeight = TARGET_HEIGHT;
+          } else if (state.fitMode === "fill") {
+            const scaleFactor = Math.max(TARGET_WIDTH / effectiveWidth, TARGET_HEIGHT / effectiveHeight);
+            const croppedWidth = TARGET_WIDTH / scaleFactor;
+            const croppedHeight = TARGET_HEIGHT / scaleFactor;
+            let cropOffsetX = (effectiveWidth - croppedWidth) / 2;
+            let cropOffsetY = (effectiveHeight - croppedHeight) / 2;
+            const [vertical, horizontal] = state.alignment.split("-");
+
+            if (effectiveWidth > croppedWidth) {
+              if (horizontal === "left") cropOffsetX = 0;
+              else if (horizontal === "right") cropOffsetX = effectiveWidth - croppedWidth;
+            }
+            if (effectiveHeight > croppedHeight) {
+              if (vertical === "top") cropOffsetY = 0;
+              else if (vertical === "bottom") cropOffsetY = effectiveHeight - croppedHeight;
+            }
+
+            if (isQuarterTurn) {
+              sourceX = cropOffsetY;
+              sourceY = cropOffsetX;
+              sourceWidth = croppedHeight;
+              sourceHeight = croppedWidth;
+            } else {
+              sourceX = cropOffsetX;
+              sourceY = cropOffsetY;
+              sourceWidth = croppedWidth;
+              sourceHeight = croppedHeight;
+            }
+          } else {
+            if (imageRatio > canvasRatio) {
+              drawWidth = TARGET_WIDTH;
+              drawHeight = TARGET_WIDTH / imageRatio;
+            } else {
+              drawHeight = TARGET_HEIGHT;
+              drawWidth = TARGET_HEIGHT * imageRatio;
+            }
+            const offset = getAlignmentOffset(drawWidth, drawHeight, TARGET_WIDTH, TARGET_HEIGHT);
+            destX = offset.x;
+            destY = offset.y;
+          }
+
+          if (rotation === 0) {
+            ctx.drawImage(sourceImage, sourceX, sourceY, sourceWidth, sourceHeight, destX, destY, drawWidth, drawHeight);
+          } else {
+            drawRotatedImage(sourceImage, rotation, destX, destY, drawWidth, drawHeight, sourceX, sourceY, sourceWidth, sourceHeight);
+          }
+
+          const processed = applyEffects(ctx.getImageData(0, 0, TARGET_WIDTH, TARGET_HEIGHT));
+          ctx.putImageData(processed, 0, 0);
+          updateButtonStates();
+        }
+
+        function createBmp(imageData, width, height) {
+          const depth = state.depth;
+          const rowSize = depth === 1
+            ? Math.ceil(Math.ceil(width / 8) / 4) * 4
+            : Math.ceil(Math.ceil(width / 2) / 4) * 4;
+          const pixelDataSize = rowSize * height;
+          const paletteSize = Math.pow(2, depth) * 4;
+          const fileSize = 54 + paletteSize + pixelDataSize;
+          const buffer = new ArrayBuffer(fileSize);
+          const view = new DataView(buffer);
+          const data = imageData.data;
+
+          view.setUint8(0, 0x42);
+          view.setUint8(1, 0x4D);
+          view.setUint32(2, fileSize, true);
+          view.setUint32(6, 0, true);
+          view.setUint32(10, 54 + paletteSize, true);
+
+          view.setUint32(14, 40, true);
+          view.setInt32(18, width, true);
+          view.setInt32(22, height, true);
+          view.setUint16(26, 1, true);
+          view.setUint16(28, depth, true);
+          view.setUint32(30, 0, true);
+          view.setUint32(34, pixelDataSize, true);
+          view.setUint32(38, 2835, true);
+          view.setUint32(42, 2835, true);
+          view.setUint32(46, Math.pow(2, depth), true);
+          view.setUint32(50, 0, true);
+
+          let paletteOffset = 54;
+          if (depth === 1) {
+            view.setUint8(paletteOffset, 0);
+            view.setUint8(paletteOffset + 1, 0);
+            view.setUint8(paletteOffset + 2, 0);
+            view.setUint8(paletteOffset + 3, 0);
+            view.setUint8(paletteOffset + 4, 255);
+            view.setUint8(paletteOffset + 5, 255);
+            view.setUint8(paletteOffset + 6, 255);
+            view.setUint8(paletteOffset + 7, 0);
+          } else {
+            for (let i = 0; i < 16; i++) {
+              const gray = Math.round(i * 255 / 15);
+              view.setUint8(paletteOffset + i * 4, gray);
+              view.setUint8(paletteOffset + i * 4 + 1, gray);
+              view.setUint8(paletteOffset + i * 4 + 2, gray);
+              view.setUint8(paletteOffset + i * 4 + 3, 0);
+            }
+          }
+
+          const pixelOffset = 54 + paletteSize;
+          for (let y = height - 1; y >= 0; y--) {
+            const rowOffset = (height - 1 - y) * rowSize;
+            for (let x = 0; x < width; x++) {
+              const index = (y * width + x) * 4;
+              const gray = data[index];
+              if (depth === 1) {
+                const byteIndex = Math.floor(x / 8);
+                const bitIndex = 7 - (x % 8);
+                const existing = view.getUint8(pixelOffset + rowOffset + byteIndex) || 0;
+                const bit = gray > 127 ? 1 : 0;
+                view.setUint8(pixelOffset + rowOffset + byteIndex, existing | (bit << bitIndex));
+              } else {
+                const paletteIndex = Math.round(gray / 255 * 15);
+                const byteIndex = Math.floor(x / 2);
+                if (x % 2 === 0) {
+                  view.setUint8(pixelOffset + rowOffset + byteIndex, paletteIndex << 4);
+                } else {
+                  const existing = view.getUint8(pixelOffset + rowOffset + byteIndex);
+                  view.setUint8(pixelOffset + rowOffset + byteIndex, existing | paletteIndex);
+                }
+              }
+            }
+          }
+
+          return new Blob([buffer], { type: "image/bmp" });
+        }
+
+        function downloadCurrentWallpaper() {
+          if (!state.image) return;
+          renderWallpaperPreview();
+          const bmp = createBmp(ctx.getImageData(0, 0, TARGET_WIDTH, TARGET_HEIGHT), TARGET_WIDTH, TARGET_HEIGHT);
+          const url = URL.createObjectURL(bmp);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "sleep.bmp";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+          setStatus("Downloaded sleep.bmp. Upload it to /sleep/custom or rename as needed for your sleep-image setup.");
+        }
+
+        function loadImageFile(file) {
+          if (!file || !file.type.startsWith("image/")) {
+            setStatus("Select an image file (PNG, JPEG, WebP, or similar).", true);
+            return;
+          }
+
+          releaseImageUrl();
+          state.image = null;
+          state.file = file;
+          const objectUrl = URL.createObjectURL(file);
+          state.imageUrl = objectUrl;
+          const image = new Image();
+          image.onload = () => {
+            state.image = image;
+            renderWallpaperPreview();
+            setStatus(`Loaded ${file.name}. Export with Download BMP when the framing looks right.`);
+          };
+          image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            if (state.imageUrl === objectUrl) state.imageUrl = null;
+            setStatus(`Couldn't decode ${file.name}. Try another image.`, true);
+          };
+          image.src = objectUrl;
+        }
+
+        selectBtn.addEventListener("click", () => fileInput.click());
+        clearBtn.addEventListener("click", clearWallpaperSelection);
+        downloadBtn.addEventListener("click", downloadCurrentWallpaper);
+        dropzone.addEventListener("click", (event) => {
+          if (!event.target.closest("button")) fileInput.click();
+        });
+
+        fileInput.addEventListener("change", (event) => {
+          const file = event.target.files && event.target.files[0];
+          if (file) loadImageFile(file);
+        });
+
+        ["dragenter", "dragover"].forEach((eventName) => {
+          dropzone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            dropzone.classList.add("is-dragover");
+          });
+        });
+
+        ["dragleave", "dragend", "drop"].forEach((eventName) => {
+          dropzone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            dropzone.classList.remove("is-dragover");
+          });
+        });
+
+        dropzone.addEventListener("drop", (event) => {
+          const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+          if (file) loadImageFile(file);
+        });
+
+        document.querySelectorAll("[data-wallpaper-fit]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.fitMode = button.dataset.wallpaperFit;
+            renderWallpaperPreview();
+          });
+        });
+
+        document.querySelectorAll("[data-wallpaper-align]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.alignment = button.dataset.wallpaperAlign;
+            renderWallpaperPreview();
+          });
+        });
+
+        document.querySelectorAll("[data-wallpaper-depth]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.depth = Number(button.dataset.wallpaperDepth);
+            renderWallpaperPreview();
+          });
+        });
+
+        bgInput.addEventListener("input", () => {
+          state.bgColor = bgInput.value;
+          renderWallpaperPreview();
+        });
+
+        document.getElementById("wallpaper-rotate-ccw").addEventListener("click", () => {
+          state.rotation -= 90;
+          renderWallpaperPreview();
+        });
+        document.getElementById("wallpaper-rotate-cw").addEventListener("click", () => {
+          state.rotation += 90;
+          renderWallpaperPreview();
+        });
+        document.getElementById("wallpaper-rotate-reset").addEventListener("click", () => {
+          state.rotation = 0;
+          renderWallpaperPreview();
+        });
+        invertToggle.addEventListener("click", () => {
+          state.invert = !state.invert;
+          renderWallpaperPreview();
+        });
+
+        canvas.width = TARGET_WIDTH;
+        canvas.height = TARGET_HEIGHT;
+        clearWallpaperSelection();
+      }
+
       function normalizeFileManagerOrigin(rawValue, defaultScheme = "http") {
         const raw = (rawValue || "").trim();
         if (!raw) return null;
@@ -2665,8 +3345,9 @@
       }
 
       function setDetectedFileManagerUrl(origin) {
-        const link = document.getElementById("open-detected-file-manager");
-        link.href = `${origin}/files`;
+        document.querySelectorAll('[data-file-manager-link="files"]').forEach((link) => {
+          link.href = `${origin}/files`;
+        });
       }
 
       function buildProbeOrigins(hostValue) {
@@ -2758,6 +3439,7 @@
 
       setupEvents();
       setupFontConverter();
+      setupWallpaperStudio();
       setupDeviceTools();
       setupGitHubBuildTrigger();
       const initialState = parseInitialStateFromUrl();
