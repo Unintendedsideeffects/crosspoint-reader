@@ -254,6 +254,7 @@
       <div>
         <label for="spriteScale">Sprite Size</label>
         <input id="spriteScale" type="range" min="0.6" max="2.2" step="0.1" value="1.0" />
+        <p class="hint" id="spriteScaleLabel">Current scale: 1.0x</p>
       </div>
 
       <div class="row">
@@ -282,6 +283,7 @@
           <option value="810,905">Gen 8 (810-905)</option>
           <option value="906,1025">Gen 9 (906-1025)</option>
         </select>
+        <p class="hint">Tip: use Ctrl/Cmd + click to select multiple generations.</p>
       </div>
 
       <div>
@@ -318,7 +320,7 @@
         This page does all rendering in your browser. The device is only used for file storage via <code>/upload</code>.
       </p>
       <p class="hint">
-        Upstream acknowledgements:
+        Upstream acknowledgments:
         <a href="https://m86-tech.github.io/BOOX-Pokedex-Wallpaper-Generator/" target="_blank" rel="noopener noreferrer">BOOX Pokedex Wallpaper Generator</a>.
       </p>
     </div>
@@ -334,6 +336,11 @@
   const SCREEN_HEIGHT = 800;
   const MAX_POKEMON_ID = 1025;
   const UPLOAD_PATH = "/sleep/pokedex";
+  const MIN_SPRITE_SCALE = 0.6; // Keep sprite readable without shrinking to illegible size.
+  const MAX_SPRITE_SCALE = 2.2; // Prevent oversized sprites from consuming the bottom panel area.
+  const MAX_EVOLUTION_CHAIN_LENGTH = 5; // Limit branch traversal so the footer section does not overflow.
+  const MAX_FLAVOR_TEXT_LINES = 4; // Keeps room for optional HP/evolution sections in the same bottom area.
+  const MAX_EVOLUTION_TEXT_LINES = 2; // Prevent long evolution strings from colliding with footer branding.
 
   const canvas = document.getElementById("previewCanvas");
   const ctx = canvas.getContext("2d");
@@ -349,6 +356,7 @@
   const customFontInput = document.getElementById("customFont");
   const bgStyleSelect = document.getElementById("bgStyle");
   const spriteScaleInput = document.getElementById("spriteScale");
+  const spriteScaleLabel = document.getElementById("spriteScaleLabel");
   const spriteOverlayInput = document.getElementById("spriteOverlay");
   const showFlavorInput = document.getElementById("showFlavor");
   const showHpInput = document.getElementById("showHp");
@@ -383,6 +391,10 @@
 
   function sanitizeFilename(value) {
     return String(value).toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+  }
+
+  function getPokemonFilename(id, name) {
+    return "pokedex_" + String(id).padStart(4, "0") + "_" + sanitizeFilename(name) + "_x4.bmp";
   }
 
   async function fetchJson(url) {
@@ -458,7 +470,7 @@
     return {
       artStyle: artStyleSelect.value,
       background: bgStyleSelect.value,
-      spriteScale: Math.max(0.6, Math.min(2.2, parseFloat(spriteScaleInput.value) || 1.0)),
+      spriteScale: Math.max(MIN_SPRITE_SCALE, Math.min(MAX_SPRITE_SCALE, parseFloat(spriteScaleInput.value) || 1.0)),
       spriteOverlay: spriteOverlayInput.checked,
       showFlavor: showFlavorInput.checked,
       showHp: showHpInput.checked,
@@ -477,7 +489,7 @@
     if (!evolutionData || !evolutionData.chain) return [];
     const names = [];
     const queue = [evolutionData.chain];
-    while (queue.length && names.length < 5) {
+    while (queue.length && names.length < MAX_EVOLUTION_CHAIN_LENGTH) {
       const node = queue.shift();
       if (node && node.species && node.species.name) names.push(titleCase(node.species.name));
       const next = (node && node.evolves_to) || [];
@@ -559,7 +571,7 @@
     ctx.fillStyle = ink;
     if (options.showFlavor) {
       ctx.font = "18px " + options.fontFamily;
-      const wrapped = wrapText(flavorText || "No flavor text available for this Pokemon.", SCREEN_WIDTH - 72, 4);
+      const wrapped = wrapText(flavorText || "No flavor text available for this Pokemon.", SCREEN_WIDTH - 72, MAX_FLAVOR_TEXT_LINES);
       for (let i = 0; i < wrapped.length; i++) {
         ctx.fillText(wrapped[i], 36, currentY + (i * 24));
       }
@@ -573,7 +585,7 @@
     if (options.showEvolution) {
       const text = evolutionNames.length ? ("Evolution: " + evolutionNames.join(" > ")) : "Evolution: Unknown";
       ctx.font = "16px " + options.fontFamily;
-      const evoLines = wrapText(text, SCREEN_WIDTH - 72, 2);
+      const evoLines = wrapText(text, SCREEN_WIDTH - 72, MAX_EVOLUTION_TEXT_LINES);
       for (let i = 0; i < evoLines.length; i++) {
         ctx.fillText(evoLines[i], 36, currentY + (i * 20));
       }
@@ -689,7 +701,7 @@
     if (!lastRendered) {
       return "pokedex_wallpaper_x4.bmp";
     }
-    return "pokedex_" + String(lastRendered.id).padStart(4, "0") + "_" + lastRendered.name + "_x4.bmp";
+    return getPokemonFilename(lastRendered.id, lastRendered.name);
   }
 
   async function downloadCurrentWallpaper() {
@@ -792,10 +804,10 @@
         const pokemon = await renderPokemonByInput(String(id), getRenderOptions());
         const blob = canvasToBmpBlob();
         const formData = new FormData();
-        formData.append("file", blob, "pokedex_" + String(pokemon.id).padStart(4, "0") + "_" + sanitizeFilename(pokemon.name) + "_x4.bmp");
+        formData.append("file", blob, getPokemonFilename(pokemon.id, pokemon.name));
         const response = await fetch("/upload?path=" + encodeURIComponent(UPLOAD_PATH), { method: "POST", body: formData });
         if (!response.ok) {
-          throw new Error("Upload failed for #" + id + ": " + (await response.text()));
+          throw new Error("Upload failed for #" + id + " (" + (i + 1) + "/" + ids.length + "): " + (await response.text()));
         }
       }
       setStatus("Batch upload complete (" + ids.length + " wallpapers)");
@@ -819,6 +831,9 @@
   randomBtn.addEventListener("click", setRandomPokemon);
   batchPreviewBtn.addEventListener("click", previewBatchStart);
   batchUploadBtn.addEventListener("click", runBatchUpload);
+  spriteScaleInput.addEventListener("input", function() {
+    spriteScaleLabel.textContent = "Current scale: " + (parseFloat(spriteScaleInput.value) || 1.0).toFixed(1) + "x";
+  });
   openFolderBtn.addEventListener("click", function() {
     window.location.href = "/files?path=" + encodeURIComponent(UPLOAD_PATH);
   });
