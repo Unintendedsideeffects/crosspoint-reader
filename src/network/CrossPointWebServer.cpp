@@ -2876,21 +2876,10 @@ void CrossPointWebServer::handleAnkiGetCards() const {
     return;
   }
 
-  const auto& cards = util::AnkiStore::getInstance().getCards();
-  JsonDocument doc;
-  JsonArray arr = doc.to<JsonArray>();
-
-  for (const auto& card : cards) {
-    JsonObject obj = arr.add<JsonObject>();
-    obj["front"] = card.front;
-    obj["back"] = card.back;
-    obj["context"] = card.context;
-    obj["timestamp"] = card.timestamp;
-  }
-
-  String json;
-  serializeJson(doc, json);
-  server->send(200, "application/json", json);
+  // buildCardsJson holds the AnkiStore mutex internally; release before send().
+  std::string json;
+  util::AnkiStore::getInstance().buildCardsJson(json);
+  server->send(200, "application/json", json.c_str());
 }
 
 void CrossPointWebServer::handleAnkiClearCards() {
@@ -2900,5 +2889,6 @@ void CrossPointWebServer::handleAnkiClearCards() {
   }
 
   util::AnkiStore::getInstance().clear();
+  util::AnkiStore::getInstance().save();
   server->send(200, "application/json", "{\"status\":\"ok\"}");
 }

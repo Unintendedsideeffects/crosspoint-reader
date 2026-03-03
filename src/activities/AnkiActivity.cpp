@@ -8,10 +8,14 @@
 #include "fontIds.h"
 
 AnkiActivity::AnkiActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
-    : Activity("Anki", renderer, mappedInput), cards(util::AnkiStore::getInstance().getCards()) {}
+    : Activity("Anki", renderer, mappedInput) {}
 
 void AnkiActivity::onEnter() {
   Activity::onEnter();
+  // Snapshot under the store's mutex so render/loop never race with web server mutations.
+  cards = util::AnkiStore::getInstance().copyCards();
+  selectedIndex = 0;
+  showingBack = false;
   requestUpdate();
 }
 

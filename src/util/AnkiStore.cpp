@@ -3,8 +3,11 @@
 #include <ArduinoJson.h>
 #include <HalStorage.h>
 #include <Logging.h>
+#include <SpiBusMutex.h>
 
 namespace util {
+
+AnkiStore::AnkiStore() : mutex_(xSemaphoreCreateMutexStatic(&mutexBuf_)) {}
 
 AnkiStore& AnkiStore::getInstance() {
   static AnkiStore instance;
@@ -12,8 +15,12 @@ AnkiStore& AnkiStore::getInstance() {
 }
 
 bool AnkiStore::load() {
+  SpiBusMutex::Guard spiGuard;
+
   if (!Storage.exists(kFilePath)) {
+    xSemaphoreTake(mutex_, portMAX_DELAY);
     cards.clear();
+    xSemaphoreGive(mutex_);
     return true;
   }
 
@@ -22,6 +29,7 @@ bool AnkiStore::load() {
     return false;
   }
 
+  // Parse outside the mutex — JSON parse is CPU-bound, not a shared-state concern.
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, json);
   if (error) {
@@ -29,6 +37,7 @@ bool AnkiStore::load() {
     return false;
   }
 
+  xSemaphoreTake(mutex_, portMAX_DELAY);
   cards.clear();
   JsonArray arr = doc.as<JsonArray>();
   cards.reserve(arr.size());
@@ -40,29 +49,37 @@ bool AnkiStore::load() {
     card.timestamp = obj["t"] | 0;
     cards.push_back(std::move(card));
   }
+  const size_t loaded = cards.size();
+  xSemaphoreGive(mutex_);
 
-  LOG_INF("ANKI", "Loaded %zu cards", cards.size());
+  LOG_INF("ANKI", "Loaded %zu cards", loaded);
   return true;
 }
 
 bool AnkiStore::save() const {
-  JsonDocument doc;
-  JsonArray arr = doc.to<JsonArray>();
-
-  for (const auto& card : cards) {
-    JsonObject obj = arr.add<JsonObject>();
-    obj["f"] = card.front;
-    obj["b"] = card.back;
-    obj["c"] = card.context;
-    obj["t"] = card.timestamp;
+  // Serialize under mutex so we get a consistent snapshot, then do SD I/O.
+  String json;
+  size_t count;
+  {
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    JsonDocument doc;
+    JsonArray arr = doc.to<JsonArray>();
+    for (const auto& card : cards) {
+      JsonObject obj = arr.add<JsonObject>();
+      obj["f"] = card.front;
+      obj["b"] = card.back;
+      obj["c"] = card.context;
+      obj["t"] = card.timestamp;
+    }
+    count = cards.size();
+    serializeJson(doc, json);
+    xSemaphoreGive(mutex_);
   }
 
-  String json;
-  serializeJson(doc, json);
-
+  SpiBusMutex::Guard spiGuard;
   Storage.mkdir("/.crosspoint");
   if (Storage.writeFile(kFilePath, json)) {
-    LOG_INF("ANKI", "Saved %zu cards", cards.size());
+    LOG_INF("ANKI", "Saved %zu cards", count);
     return true;
   }
 
@@ -70,21 +87,55 @@ bool AnkiStore::save() const {
   return false;
 }
 
+std::vector<AnkiCard> AnkiStore::copyCards() const {
+  xSemaphoreTake(mutex_, portMAX_DELAY);
+  std::vector<AnkiCard> snapshot = cards;
+  xSemaphoreGive(mutex_);
+  return snapshot;
+}
+
+void AnkiStore::buildCardsJson(std::string& out) const {
+  xSemaphoreTake(mutex_, portMAX_DELAY);
+  JsonDocument doc;
+  JsonArray arr = doc.to<JsonArray>();
+  for (const auto& card : cards) {
+    JsonObject obj = arr.add<JsonObject>();
+    obj["front"] = card.front;
+    obj["back"] = card.back;
+    obj["context"] = card.context;
+    obj["timestamp"] = card.timestamp;
+  }
+  String json;
+  serializeJson(doc, json);
+  xSemaphoreGive(mutex_);
+  out = json.c_str();
+}
+
 void AnkiStore::addCard(const AnkiCard& card) {
+  xSemaphoreTake(mutex_, portMAX_DELAY);
   cards.push_back(card);
-  save();
+  xSemaphoreGive(mutex_);
 }
 
 void AnkiStore::removeCard(size_t index) {
+  xSemaphoreTake(mutex_, portMAX_DELAY);
   if (index < cards.size()) {
     cards.erase(cards.begin() + index);
-    save();
   }
+  xSemaphoreGive(mutex_);
 }
 
 void AnkiStore::clear() {
+  xSemaphoreTake(mutex_, portMAX_DELAY);
   cards.clear();
-  save();
+  xSemaphoreGive(mutex_);
+}
+
+size_t AnkiStore::count() const {
+  xSemaphoreTake(mutex_, portMAX_DELAY);
+  const size_t n = cards.size();
+  xSemaphoreGive(mutex_);
+  return n;
 }
 
 }  // namespace util

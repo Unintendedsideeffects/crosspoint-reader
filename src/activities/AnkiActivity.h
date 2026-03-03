@@ -19,5 +19,5 @@ class AnkiActivity final : public Activity {
   int selectedIndex = 0;
   bool showingBack = false;
   ButtonNavigator buttonNavigator;
-  const std::vector<util::AnkiCard>& cards;
+  std::vector<util::AnkiCard> cards;  // snapshot taken in onEnter()
 };

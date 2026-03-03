@@ -28,6 +28,7 @@ void AnkiAddActivity::loop() {
     card.timestamp = static_cast<uint32_t>(millis() / 1000);  // Placeholder until NTP
 
     util::AnkiStore::getInstance().addCard(card);
+    util::AnkiStore::getInstance().save();
     saved = true;
     requestUpdate();
     vTaskDelay(pdMS_TO_TICKS(500));  // Show "Saved" briefly
