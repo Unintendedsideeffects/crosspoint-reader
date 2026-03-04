@@ -272,6 +272,7 @@
 
       <div class="row">
         <label><input id="spriteOverlay" type="checkbox" /> Sprite over text layer</label>
+        <label><input id="showTypes" type="checkbox" checked /> Show type pill</label>
       </div>
 
       <div>
@@ -280,7 +281,7 @@
           <label><input id="showFlavor" type="checkbox" checked /> Flavor text</label>
           <label><input id="showHp" type="checkbox" /> HP/Stats</label>
           <label><input id="showEvolution" type="checkbox" checked /> Evolution</label>
-          <label><input id="showAbilities" type="checkbox" /> Abilities</label>
+          <label><input id="showAbilities" type="checkbox" checked /> Abilities</label>
         </div>
         <p class="hint">HP/Stats works best if Flavor or Evolution/Abilities is disabled.</p>
       </div>
@@ -412,6 +413,7 @@
   const spriteScaleInput = document.getElementById("spriteScale");
   const spriteScaleLabel = document.getElementById("spriteScaleLabel");
   const spriteOverlayInput = document.getElementById("spriteOverlay");
+  const showTypesInput = document.getElementById("showTypes");
   const showFlavorInput = document.getElementById("showFlavor");
   const showHpInput = document.getElementById("showHp");
   const showEvolutionInput = document.getElementById("showEvolution");
@@ -524,6 +526,7 @@
       background: bgStyleSelect.value,
       spriteScale: Math.max(MIN_SPRITE_SCALE, Math.min(MAX_SPRITE_SCALE, parseFloat(spriteScaleInput.value) || 1.0)),
       spriteOverlay: spriteOverlayInput.checked,
+      showTypes: showTypesInput.checked,
       showFlavor: showFlavorInput.checked,
       showHp: showHpInput.checked,
       showEvolution: showEvolutionInput.checked,
@@ -852,8 +855,6 @@
     const evolutionData = bundle.evolution;
     const encounters = bundle.encounters || [];
     const scaleUnit = Math.min(SCREEN_WIDTH / 480, SCREEN_HEIGHT / 800) * 1.1;
-    const primaryType = pokemon.types && pokemon.types[0] && pokemon.types[0].type ? pokemon.types[0].type.name : "normal";
-    const accent = TYPE_ACCENTS[primaryType] || "#555555";
     let background = "#ffffff";
     let ink = "#111111";
     let headerInk = "#111111";
@@ -868,17 +869,12 @@
       pillBg = "#ffffff";
       pillText = "#000000";
       diagonalFill = "#1f1f1f";
-    } else if (options.background === "type") {
-      diagonalFill = accent;
-      pillBg = accent;
-      pillText = "#ffffff";
-      headerInk = "#ffffff";
     }
 
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    if (options.background === "diagonal" || options.background === "type") {
+    if (options.background === "diagonal") {
       ctx.fillStyle = diagonalFill;
       ctx.beginPath();
       ctx.moveTo(0, 0);
@@ -908,12 +904,21 @@
     const spriteCenterY = currentY + (5 * scaleUnit) + ((180 * scaleUnit) / 2);
     const spriteX = Math.round((SCREEN_WIDTH / 2) - (spriteWidth / 2));
     const spriteY = Math.round(spriteCenterY - (spriteHeight / 2));
-    drawGrayscaleSprite(ctx, sprite, spriteBounds, spriteX, spriteY, spriteWidth, spriteHeight, options.artStyle === "pixel");
+    const drawMainSprite = function() {
+      drawGrayscaleSprite(ctx, sprite, spriteBounds, spriteX, spriteY, spriteWidth, spriteHeight, options.artStyle === "pixel");
+    };
+    if (!options.spriteOverlay) {
+      drawMainSprite();
+    }
     currentY = spriteCenterY + ((180 * scaleUnit) / 2);
 
-    const pillY = currentY + (15 * scaleUnit);
-    drawClassicTypePills(pokemon, pillY, scaleUnit, pillBg, pillText, options.fontFamily, true);
-    currentY = pillY + (18 * scaleUnit);
+    if (options.showTypes) {
+      const pillY = currentY + (15 * scaleUnit);
+      drawClassicTypePills(pokemon, pillY, scaleUnit, pillBg, pillText, options.fontFamily, true);
+      currentY = pillY + (18 * scaleUnit);
+    } else {
+      currentY += 10 * scaleUnit;
+    }
 
     const dividerOneY = currentY + (15 * scaleUnit);
     ctx.lineWidth = 3 * scaleUnit;
@@ -956,6 +961,10 @@
     ctx.stroke();
 
     drawClassicFooter(pokemon, flavorText, dividerTwoY + (25 * scaleUnit), scaleUnit, ink, options);
+
+    if (options.spriteOverlay) {
+      drawMainSprite();
+    }
   }
 
   function drawBoxedWallpaper(pokemon, sprite, flavorText, evolutionNames, options) {
@@ -1003,14 +1012,18 @@
     };
     if (!options.spriteOverlay) drawSprite();
 
-    const typeNames = (pokemon.types || []).map(function(entry) { return titleCase(entry.type.name); }).join(" / ");
-    ctx.fillStyle = panel;
-    ctx.fillRect(24, 540, SCREEN_WIDTH - 48, 48);
-    ctx.fillStyle = panelText;
-    ctx.font = (isPixel ? "16px" : "bold 24px") + " " + options.fontFamily;
-    ctx.fillText(typeNames || "Unknown", 36, 571);
-
     let currentY = 620;
+    if (options.showTypes) {
+      const typeNames = (pokemon.types || []).map(function(entry) { return titleCase(entry.type.name); }).join(" / ");
+      ctx.fillStyle = panel;
+      ctx.fillRect(24, 540, SCREEN_WIDTH - 48, 48);
+      ctx.fillStyle = panelText;
+      ctx.font = (isPixel ? "16px" : "bold 24px") + " " + options.fontFamily;
+      ctx.fillText(typeNames || "Unknown", 36, 571);
+    } else {
+      currentY = 580;
+    }
+
     ctx.fillStyle = ink;
     if (options.showFlavor) {
       ctx.font = (isPixel ? "12px" : "18px") + " " + options.fontFamily;
@@ -1291,7 +1304,7 @@
   
   // Re-render preview when settings change
   [layoutStyleSelect, artStyleSelect, fontModeSelect, bgStyleSelect, spriteScaleInput, spriteOverlayInput,
-   showFlavorInput, showHpInput, showEvolutionInput, showAbilitiesInput].forEach(el => {
+   showTypesInput, showFlavorInput, showHpInput, showEvolutionInput, showAbilitiesInput].forEach(el => {
     el.addEventListener("change", renderCurrentPokemon);
   });
 

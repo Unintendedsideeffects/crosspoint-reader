@@ -387,7 +387,6 @@
         <section class="card control-block">
           <label for="bgStyle">Background</label>
           <select id="bgStyle">
-            <option value="type">Dynamic Type Accent</option>
             <option value="diagonal" selected>Classic Diagonal</option>
             <option value="white">All White</option>
             <option value="black">All Black</option>
@@ -401,6 +400,7 @@
           <div class="option-grid">
             <label><input id="boldText" type="checkbox" checked /> Bold text</label>
             <label><input id="spriteOverlay" type="checkbox" /> Sprite over text layer</label>
+            <label><input id="showTypes" type="checkbox" checked /> Show type pill</label>
           </div>
         </section>
 
@@ -410,7 +410,7 @@
             <label><input id="showFlavor" type="checkbox" checked /> Flavor text</label>
             <label><input id="showHp" type="checkbox" /> HP / stats</label>
             <label><input id="showEvolution" type="checkbox" checked /> Evolution</label>
-            <label><input id="showAbilities" type="checkbox" /> Abilities</label>
+            <label><input id="showAbilities" type="checkbox" checked /> Abilities</label>
           </div>
           <p class="hint">HP / stats works best if Flavor, Evolution, or Abilities is disabled.</p>
         </section>
@@ -575,6 +575,7 @@
     const spriteScaleLabel = document.getElementById("spriteScaleLabel");
     const boldTextInput = document.getElementById("boldText");
     const spriteOverlayInput = document.getElementById("spriteOverlay");
+    const showTypesInput = document.getElementById("showTypes");
     const showFlavorInput = document.getElementById("showFlavor");
     const showHpInput = document.getElementById("showHp");
     const showEvolutionInput = document.getElementById("showEvolution");
@@ -730,6 +731,7 @@
         background: bgStyleSelect.value,
         spriteScale: Math.max(MIN_SPRITE_SCALE, Math.min(MAX_SPRITE_SCALE, parseFloat(spriteScaleInput.value) || 1.0)),
         spriteOverlay: spriteOverlayInput.checked,
+        showTypes: showTypesInput.checked,
         showFlavor: showFlavorInput.checked,
         showHp: showHpInput.checked,
         showEvolution: showEvolutionInput.checked,
@@ -1143,12 +1145,7 @@
       let pillText = "#ffffff";
       let diagonalFill = "#e5e5e5";
 
-      if (options.background === "type") {
-        diagonalFill = accent;
-        pillBg = accent;
-        pillText = "#ffffff";
-        headerInk = "#ffffff";
-      } else if (options.background === "black") {
+      if (options.background === "black") {
         background = "#000000";
         ink = "#ffffff";
         headerInk = "#ffffff";
@@ -1160,7 +1157,7 @@
       ctx.fillStyle = background;
       ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-      if (options.background === "diagonal" || options.background === "type") {
+      if (options.background === "diagonal") {
         ctx.fillStyle = diagonalFill;
         ctx.beginPath();
         ctx.moveTo(0, 0);
@@ -1190,12 +1187,21 @@
       const spriteCenterY = currentY + (5 * scaleUnit) + ((180 * scaleUnit) / 2);
       const spriteX = Math.round((SCREEN_WIDTH / 2) - (spriteWidth / 2));
       const spriteY = Math.round(spriteCenterY - (spriteHeight / 2));
-      drawGrayscaleSprite(ctx, sprite, spriteBounds, spriteX, spriteY, spriteWidth, spriteHeight, options.artStyle === "pixel");
+      const drawMainSprite = function() {
+        drawGrayscaleSprite(ctx, sprite, spriteBounds, spriteX, spriteY, spriteWidth, spriteHeight, options.artStyle === "pixel");
+      };
+      if (!options.spriteOverlay) {
+        drawMainSprite();
+      }
       currentY = spriteCenterY + ((180 * scaleUnit) / 2);
 
-      const pillY = currentY + (15 * scaleUnit);
-      drawClassicTypePills(pokemon, pillY, scaleUnit, pillBg, pillText, options.fontFamily, options.boldText);
-      currentY = pillY + (18 * scaleUnit);
+      if (options.showTypes) {
+        const pillY = currentY + (15 * scaleUnit);
+        drawClassicTypePills(pokemon, pillY, scaleUnit, pillBg, pillText, options.fontFamily, options.boldText);
+        currentY = pillY + (18 * scaleUnit);
+      } else {
+        currentY += 10 * scaleUnit;
+      }
 
       const dividerOneY = currentY + (15 * scaleUnit);
       ctx.lineWidth = 3 * scaleUnit;
@@ -1238,13 +1244,14 @@
       ctx.stroke();
 
       drawClassicFooter(pokemon, species, flavorText, dividerTwoY + (25 * scaleUnit), scaleUnit, ink, options);
+
+      if (options.spriteOverlay) {
+        drawMainSprite();
+      }
     }
 
     function drawBoxedWallpaper(pokemon, sprite, flavorText, evolutionNames, options) {
       const isBlack = options.background === "black";
-      const isType = options.background === "type";
-      const baseType = pokemon.types && pokemon.types[0] && pokemon.types[0].type ? pokemon.types[0].type.name : "normal";
-      const accent = TYPE_ACCENTS[baseType] || "#bcbcbc";
       const ink = isBlack ? "#ffffff" : "#111111";
       const paper = isBlack ? "#000000" : "#ffffff";
       const panel = isBlack ? "#ffffff" : "#111111";
@@ -1253,8 +1260,6 @@
 
       if (options.background === "diagonal") {
         drawDiagonalBackground(isBlack);
-      } else if (isType) {
-        drawTypeAccentBackground(accent);
       } else {
         ctx.fillStyle = paper;
         ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -1286,16 +1291,20 @@
         drawSprite();
       }
 
-      const typeNames = (pokemon.types || []).map(function(entry) {
-        return titleCase(entry.type.name);
-      }).join(" / ");
-      ctx.fillStyle = panel;
-      ctx.fillRect(24, 540, SCREEN_WIDTH - 48, 48);
-      ctx.fillStyle = panelText;
-      ctx.font = getFontSpec(isPixel ? 13 : 24, options.fontFamily, options.boldText);
-      ctx.fillText(typeNames || "Unknown", 36, 571);
-
       let currentY = 620;
+      if (options.showTypes) {
+        const typeNames = (pokemon.types || []).map(function(entry) {
+          return titleCase(entry.type.name);
+        }).join(" / ");
+        ctx.fillStyle = panel;
+        ctx.fillRect(24, 540, SCREEN_WIDTH - 48, 48);
+        ctx.fillStyle = panelText;
+        ctx.font = getFontSpec(isPixel ? 13 : 24, options.fontFamily, options.boldText);
+        ctx.fillText(typeNames || "Unknown", 36, 571);
+      } else {
+        currentY = 580;
+      }
+
       ctx.fillStyle = ink;
 
       if (options.showFlavor) {
@@ -1561,6 +1570,7 @@
       spriteScaleInput,
       boldTextInput,
       spriteOverlayInput,
+      showTypesInput,
       showFlavorInput,
       showHpInput,
       showEvolutionInput,
