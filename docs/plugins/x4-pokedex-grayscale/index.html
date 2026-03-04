@@ -1101,7 +1101,7 @@
         }
 
         ctx.fillStyle = ink;
-        ctx.fillText(String(form.name).toUpperCase(), centerX, centerY + (45 * scaleUnit));
+        ctx.fillText(String(form.name).toUpperCase(), centerX, centerY + (60 * scaleUnit));
 
         if (i < forms.length - 1) {
           const arrowX = segmentWidth * (i + 1);
@@ -1127,7 +1127,7 @@
         }
       }
 
-      return centerY + (65 * scaleUnit);
+      return centerY + (72 * scaleUnit);
     }
 
     async function drawClassicWallpaper(bundle, sprite, flavorText, options) {
@@ -1196,7 +1196,7 @@
       currentY = spriteCenterY + ((180 * scaleUnit) / 2);
 
       if (options.showTypes) {
-        const pillY = currentY + (15 * scaleUnit);
+        const pillY = currentY + (24 * scaleUnit);
         drawClassicTypePills(pokemon, pillY, scaleUnit, pillBg, pillText, options.fontFamily, options.boldText);
         currentY = pillY + (18 * scaleUnit);
       } else {
@@ -1265,6 +1265,8 @@
         ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
       }
 
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
       ctx.fillStyle = panel;
       ctx.fillRect(24, 24, SCREEN_WIDTH - 48, 86);
       ctx.fillStyle = panelText;
@@ -1305,6 +1307,8 @@
         currentY = 580;
       }
 
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
       ctx.fillStyle = ink;
 
       if (options.showFlavor) {
