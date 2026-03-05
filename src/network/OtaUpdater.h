@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include <atomic>
 #include <cstddef>
 #include <functional>
 #include <string>
@@ -30,6 +31,7 @@ class OtaUpdater {
   size_t totalSize = 0;
   bool render = false;
   bool factoryResetOnInstall = false;
+  const std::atomic<bool>* cancelRequested = nullptr;
   std::vector<FeatureStoreEntry> featureStoreEntries;
   String selectedBundleId;
   String selectedFeatureFlags;
@@ -71,4 +73,5 @@ class OtaUpdater {
   const std::vector<FeatureStoreEntry>& getFeatureStoreEntries() const;
   bool selectFeatureStoreBundleByIndex(size_t index);
   const String& getLastError() const;
+  void setCancelFlag(const std::atomic<bool>* cancelFlag) { cancelRequested = cancelFlag; }
 };

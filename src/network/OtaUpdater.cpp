@@ -5,7 +5,9 @@
 #include <HalStorage.h>
 #include <Logging.h>
 #include <WiFi.h>
+#include <mbedtls/sha256.h>
 
+#include <algorithm>
 #include <cstring>
 
 #include "CrossPointSettings.h"
@@ -36,6 +38,113 @@ constexpr char factoryResetMarkerFile[] = "/.factory-reset-pending";
 constexpr uint32_t otaNoProgressTimeoutMs = 45000;
 constexpr uint8_t otaMaxAttempts = 3;
 constexpr uint32_t otaRetryBackoffBaseMs = 1000;
+
+constexpr size_t sha256DigestBytes = 32;
+
+bool otaCanceled(const std::atomic<bool>* cancelFlag) {
+  return cancelFlag != nullptr && cancelFlag->load(std::memory_order_acquire);
+}
+
+int hexNibble(const char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -1;
+}
+
+bool parseSha256Hex(const String& checksum, uint8_t outDigest[sha256DigestBytes]) {
+  String normalized = checksum;
+  normalized.trim();
+  if (normalized.startsWith("sha256:")) {
+    normalized = normalized.substring(7);
+  } else if (normalized.startsWith("SHA256:")) {
+    normalized = normalized.substring(7);
+  }
+  normalized.trim();
+
+  if (normalized.length() != static_cast<int>(sha256DigestBytes * 2)) {
+    return false;
+  }
+
+  for (size_t i = 0; i < sha256DigestBytes; ++i) {
+    const int hi = hexNibble(normalized[2 * i]);
+    const int lo = hexNibble(normalized[2 * i + 1]);
+    if (hi < 0 || lo < 0) {
+      return false;
+    }
+    outDigest[i] = static_cast<uint8_t>((hi << 4) | lo);
+  }
+  return true;
+}
+
+String digestToHex(const uint8_t digest[sha256DigestBytes]) {
+  static constexpr char kHex[] = "0123456789abcdef";
+  char out[sha256DigestBytes * 2 + 1] = {0};
+  for (size_t i = 0; i < sha256DigestBytes; ++i) {
+    out[2 * i] = kHex[digest[i] >> 4];
+    out[2 * i + 1] = kHex[digest[i] & 0x0F];
+  }
+  return String(out);
+}
+
+bool calculatePartitionSha256(const esp_partition_t* partition, size_t imageSize,
+                              uint8_t outDigest[sha256DigestBytes]) {
+  if (partition == nullptr || imageSize == 0) {
+    return false;
+  }
+
+  mbedtls_sha256_context ctx;
+  mbedtls_sha256_init(&ctx);
+  if (mbedtls_sha256_starts_ret(&ctx, 0) != 0) {
+    mbedtls_sha256_free(&ctx);
+    return false;
+  }
+
+  constexpr size_t readChunkSize = 1024;
+  uint8_t chunkBuf[readChunkSize];
+  size_t offset = 0;
+  while (offset < imageSize) {
+    const size_t toRead = std::min(readChunkSize, imageSize - offset);
+    const esp_err_t readErr = esp_partition_read(partition, offset, chunkBuf, toRead);
+    if (readErr != ESP_OK) {
+      mbedtls_sha256_free(&ctx);
+      return false;
+    }
+    if (mbedtls_sha256_update_ret(&ctx, chunkBuf, toRead) != 0) {
+      mbedtls_sha256_free(&ctx);
+      return false;
+    }
+    offset += toRead;
+  }
+
+  const bool ok = mbedtls_sha256_finish_ret(&ctx, outDigest) == 0;
+  mbedtls_sha256_free(&ctx);
+  return ok;
+}
+
+bool verifyPartitionChecksum(const esp_partition_t* partition, const String& expectedChecksum, size_t imageSize,
+                             String& outError) {
+  uint8_t expectedDigest[sha256DigestBytes] = {0};
+  if (!parseSha256Hex(expectedChecksum, expectedDigest)) {
+    outError = "Invalid bundle checksum metadata";
+    return false;
+  }
+
+  uint8_t actualDigest[sha256DigestBytes] = {0};
+  if (!calculatePartitionSha256(partition, imageSize, actualDigest)) {
+    outError = "Failed to verify installed image checksum";
+    return false;
+  }
+
+  if (memcmp(expectedDigest, actualDigest, sha256DigestBytes) != 0) {
+    outError = "Installed image checksum mismatch";
+    LOG_ERR("OTA", "Checksum mismatch. expected=%s actual=%s", expectedChecksum.c_str(),
+            digestToHex(actualDigest).c_str());
+    return false;
+  }
+
+  return true;
+}
 
 bool markFactoryResetPending() {
   FsFile markerFile;
@@ -198,6 +307,11 @@ size_t getMaxOtaPartitionSize() {
 } /* namespace */
 
 OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
+  if (otaCanceled(cancelRequested)) {
+    lastError = "Update canceled";
+    return INTERNAL_UPDATE_ERROR;
+  }
+
   updateAvailable = false;
   factoryResetOnInstall = false;
   latestVersion.clear();
@@ -428,7 +542,13 @@ const std::string& OtaUpdater::getLatestVersion() const { return latestVersion; 
 OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
   lastError.clear();
   processedSize = 0;
+  totalSize = otaSize;
   render = false;
+
+  if (otaCanceled(cancelRequested)) {
+    lastError = "Update canceled";
+    return INTERNAL_UPDATE_ERROR;
+  }
 
   if (!isUpdateNewer()) {
     lastError = "No newer update available";
@@ -465,7 +585,13 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
   String finalMessage = "Update failed";
 
   for (uint8_t attempt = 1; attempt <= otaMaxAttempts; ++attempt) {
+    if (otaCanceled(cancelRequested)) {
+      lastError = "Update canceled";
+      return INTERNAL_UPDATE_ERROR;
+    }
+
     esp_https_ota_handle_t ota_handle = NULL;
+    const esp_partition_t* updatePartition = esp_ota_get_next_update_partition(nullptr);
     bool attemptFailed = false;
     bool attemptRetryable = false;
     OtaUpdaterError attemptError = INTERNAL_UPDATE_ERROR;
@@ -481,7 +607,9 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
       }
     };
 
-    auto canRetry = [&]() { return attempt < otaMaxAttempts && WiFi.status() == WL_CONNECTED; };
+    auto canRetry = [&]() {
+      return attempt < otaMaxAttempts && WiFi.status() == WL_CONNECTED && !otaCanceled(cancelRequested);
+    };
 
     processedSize = 0;
     esp_err = esp_https_ota_begin(&ota_config, &ota_handle);
@@ -495,10 +623,26 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     }
 
     if (!attemptFailed) {
+      const int discoveredImageSize = esp_https_ota_get_image_size(ota_handle);
+      if (discoveredImageSize > 0) {
+        totalSize = static_cast<size_t>(discoveredImageSize);
+      }
+    }
+
+    if (!attemptFailed) {
       size_t lastProgressBytes = 0;
       unsigned long lastProgressAt = millis();
 
       do {
+        if (otaCanceled(cancelRequested)) {
+          attemptFailed = true;
+          attemptError = INTERNAL_UPDATE_ERROR;
+          attemptMessage = "Update canceled";
+          attemptRetryable = false;
+          abortOta();
+          break;
+        }
+
         if (WiFi.status() != WL_CONNECTED) {
           LOG_ERR("OTA", "WiFi disconnected during OTA");
           attemptFailed = true;
@@ -510,7 +654,14 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
         }
 
         esp_err = esp_https_ota_perform(ota_handle);
-        processedSize = esp_https_ota_get_image_len_read(ota_handle);
+        const int imageLenRead = esp_https_ota_get_image_len_read(ota_handle);
+        if (imageLenRead >= 0) {
+          processedSize = static_cast<size_t>(imageLenRead);
+        }
+        const int discoveredImageSize = esp_https_ota_get_image_size(ota_handle);
+        if (discoveredImageSize > 0) {
+          totalSize = static_cast<size_t>(discoveredImageSize);
+        }
         if (processedSize > lastProgressBytes) {
           lastProgressBytes = processedSize;
           lastProgressAt = millis();
@@ -563,6 +714,33 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
       }
     }
 
+    if (!attemptFailed && !selectedChecksum.isEmpty()) {
+      size_t imageSize = processedSize;
+      if (imageSize == 0) {
+        imageSize = totalSize;
+      }
+      if (imageSize == 0) {
+        imageSize = otaSize;
+      }
+      String checksumError;
+      if (updatePartition == nullptr || imageSize == 0 ||
+          !verifyPartitionChecksum(updatePartition, selectedChecksum, imageSize, checksumError)) {
+        attemptFailed = true;
+        attemptError = INTERNAL_UPDATE_ERROR;
+        attemptMessage = checksumError.length() > 0 ? checksumError : "Checksum verification failed";
+        attemptRetryable = false;
+        // esp_https_ota_finish may have set the boot partition; revert to running image.
+        const esp_partition_t* runningPartition = esp_ota_get_running_partition();
+        if (runningPartition != nullptr) {
+          const esp_err_t revertErr = esp_ota_set_boot_partition(runningPartition);
+          if (revertErr != ESP_OK) {
+            LOG_ERR("OTA", "Failed to restore running boot partition after checksum failure: %s",
+                    esp_err_to_name(revertErr));
+          }
+        }
+      }
+    }
+
     if (!attemptFailed) {
       LOG_INF("OTA", "Update completed");
 
@@ -603,7 +781,10 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
   }
 
   if (lastError.isEmpty()) {
-    lastError = finalMessage;
+    lastError = otaCanceled(cancelRequested) ? "Update canceled" : finalMessage;
+  }
+  if (otaCanceled(cancelRequested)) {
+    return INTERNAL_UPDATE_ERROR;
   }
   return finalError;
 }

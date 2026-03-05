@@ -107,6 +107,8 @@ curl http://crosspoint.local/api/status
 
 Returns JSON booleans describing which compile-time features are included in this firmware build.
 
+**Note:** `/api/features` is available as a backward-compatible alias for this endpoint.
+
 **Request:**
 ```bash
 curl http://crosspoint.local/api/plugins

@@ -150,8 +150,10 @@ Fields Android reads: `name`, `isDirectory`, `size`, `modified` (defaults to 0 i
       "spineIndex": 2
     },
     "pokemon": {
-      "id":   4,
-      "name": "charmander"
+      "id": 4,
+      "name": "charmander",
+      "speciesName": "Charmander",
+      "evolutionChain": [...]
     }
   }
 ]
@@ -166,10 +168,66 @@ Android only depends on `path`, `title`, `author`, `last_position`, and
 `last_opened`. Extra fields such as `hasCover`, `progress`, and `pokemon` are
 ignored by Gson and are safe to add. `pokemon` is only present when the
 `pokemon_party` firmware module is compiled in and that book has an assignment.
+The `pokemon` field contains the full metadata object saved for the book.
 
 ---
 
-## 6. GET /api/plugins
+## 6. GET /api/book-progress?path=<encoded-path>
+
+Returns normalized cached progress for a single book.
+
+**Response:**
+```json
+{
+  "path": "/Books/book.epub",
+  "progress": {
+    "format": "epub",
+    "percent": 27.32,
+    "page": 4,
+    "pageCount": 12,
+    "position": "Ch 3 4/12 27%",
+    "spineIndex": 2
+  }
+}
+```
+
+---
+
+## 7. GET /api/book-pokemon?path=<encoded-path>
+
+Returns saved Pokemon metadata for a single book. Only available if `pokemon_party` is enabled.
+
+**Response:**
+```json
+{
+  "path": "/Books/book.epub",
+  "pokemon": { ... }
+}
+```
+
+---
+
+## 8. PUT /api/book-pokemon
+
+Stores Pokemon metadata for a book.
+
+**Request body:**
+```json
+{
+  "path": "/Books/book.epub",
+  "pokemon": { ... }
+}
+```
+
+---
+
+## 9. DELETE /api/book-pokemon?path=<encoded-path>
+
+Clears Pokemon metadata for a book.
+
+---
+
+## 10. GET /api/plugins
 
 **Android DTO** (`PluginFlags` in `WifiTransport.kt`):
 ```json

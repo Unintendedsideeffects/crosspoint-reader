@@ -79,8 +79,10 @@ class WifiSelectionActivity final : public Activity {
   int forgetPromptSelection = 0;
 
   // Connection timeout
-  static constexpr unsigned long CONNECTION_TIMEOUT_MS = 15000;
+  static constexpr unsigned long CONNECTION_TIMEOUT_MS = 20000;
+  static constexpr unsigned long CONNECT_FAILURE_GRACE_MS = 2500;
   unsigned long connectionStartTime = 0;
+  unsigned long connectFailureGraceUntilMs = 0;
   BleWifiProvisioner bleProvisioner;
 
   void renderNetworkList() const;

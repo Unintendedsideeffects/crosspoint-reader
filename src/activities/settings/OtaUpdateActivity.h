@@ -32,6 +32,7 @@ class OtaUpdateActivity : public Activity {
   OtaUpdater updater;
   size_t selectedBundleIndex = 0;
   bool usingFeatureStore = false;
+  unsigned long restartAtMs = 0;
 
   // Worker task for background OTA operations
   TaskHandle_t otaWorkerTaskHandle = nullptr;

@@ -260,10 +260,15 @@ void WifiSelectionActivity::checkBleProvisioning() {
 void WifiSelectionActivity::attemptConnection() {
   state = autoConnecting ? WifiSelectionState::AUTO_CONNECTING : WifiSelectionState::CONNECTING;
   connectionStartTime = millis();
+  connectFailureGraceUntilMs = connectionStartTime + CONNECT_FAILURE_GRACE_MS;
   connectedIP.clear();
   connectionError.clear();
   requestUpdate();
 
+  // Reset any previous STA session before initiating a fresh connect attempt.
+  WiFi.scanDelete();
+  WiFi.disconnect(false);
+  delay(120);
   WiFi.mode(WIFI_STA);
 
   // Set DHCP hostname so the device is identifiable in the router's lease table.
@@ -313,6 +318,9 @@ void WifiSelectionActivity::checkConnectionStatus() {
   }
 
   if (status == WL_CONNECT_FAILED || status == WL_NO_SSID_AVAIL) {
+    if (millis() < connectFailureGraceUntilMs) {
+      return;
+    }
     connectionError = tr(STR_ERROR_GENERAL_FAILURE);
     if (status == WL_NO_SSID_AVAIL) {
       connectionError = tr(STR_ERROR_NETWORK_NOT_FOUND);

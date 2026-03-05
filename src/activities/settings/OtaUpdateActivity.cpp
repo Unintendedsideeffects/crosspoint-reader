@@ -1,6 +1,7 @@
 #include "OtaUpdateActivity.h"
 
 #include <GfxRenderer.h>
+#include <I18n.h>
 #include <Logging.h>
 #include <WiFi.h>
 
@@ -9,6 +10,18 @@
 #include "activities/network/WifiSelectionActivity.h"
 #include "fontIds.h"
 #include "network/OtaUpdater.h"
+
+namespace {
+String formatOtaByteCount(const size_t bytes) {
+  if (bytes >= 1024 * 1024) {
+    return String(static_cast<unsigned long>(bytes / (1024 * 1024))) + " MB";
+  }
+  if (bytes >= 1024) {
+    return String(static_cast<unsigned long>(bytes / 1024)) + " KB";
+  }
+  return String(static_cast<unsigned long>(bytes)) + " B";
+}
+}  // namespace
 
 void OtaUpdateActivity::otaWorkerTrampoline(void* param) {
   auto* self = static_cast<OtaUpdateActivity*>(param);
@@ -126,6 +139,7 @@ void OtaUpdateActivity::onEnter() {
   workerExitRequested.store(false);
   workerHasExited.store(false);
   workerCmd.store(OtaWorkerCmd::NONE);
+  updater.setCancelFlag(&workerExitRequested);
 
   xTaskCreate(&OtaUpdateActivity::otaWorkerTrampoline, "OtaWorkerTask",
               4096,                 // Stack size — HTTP + JSON parsing needs headroom
@@ -147,6 +161,10 @@ void OtaUpdateActivity::onEnter() {
 void OtaUpdateActivity::onExit() {
   Activity::onExit();
 
+  // Ask worker to stop before network shutdown so long-running OTA loops can
+  // observe cancelRequested and exit cooperatively.
+  workerExitRequested.store(true);
+
   // Turn off wifi — this causes any in-progress HTTP in the worker to fail quickly
   WiFi.disconnect(false);  // false = don't erase credentials, send disconnect frame
   delay(100);
@@ -155,16 +173,18 @@ void OtaUpdateActivity::onExit() {
 
   // Give the worker longer to exit — WiFi going down causes in-flight HTTP to
   // fail, but esp_https_ota abort + cleanup can take a few seconds.
-  workerExitRequested.store(true);
   if (otaWorkerTaskHandle) {
     xTaskNotify(otaWorkerTaskHandle, 1, eIncrement);
-    constexpr int workerExitTimeoutMs = 20000;
-    constexpr int pollMs = 10;
+    constexpr int workerExitTimeoutMs = 45000;
+    constexpr int pollMs = 20;
     for (int waited = 0; !workerHasExited.load() && waited < workerExitTimeoutMs; waited += pollMs) {
       vTaskDelay(pdMS_TO_TICKS(pollMs));
     }
     if (!workerHasExited.load()) {
-      vTaskDelete(otaWorkerTaskHandle);
+      LOG_WRN("OTA", "Worker still shutting down after %d ms; waiting for cooperative exit", workerExitTimeoutMs);
+      while (!workerHasExited.load()) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+      }
     }
     otaWorkerTaskHandle = nullptr;
   }
@@ -306,12 +326,18 @@ void OtaUpdateActivity::render(RenderLock&&) {
   if (state == UPDATE_IN_PROGRESS) {
     renderer.drawCenteredText(UI_10_FONT_ID, 310, "Updating...", true, EpdFontFamily::BOLD);
     renderer.drawRect(20, 350, pageWidth - 40, 50);
-    renderer.fillRect(24, 354, static_cast<int>(updaterProgress * static_cast<float>(pageWidth - 44)), 42);
-    renderer.drawCenteredText(UI_10_FONT_ID, 420,
-                              (std::to_string(static_cast<int>(updaterProgress * 100)) + "%").c_str());
-    renderer.drawCenteredText(
-        UI_10_FONT_ID, 440,
-        (std::to_string(updater.getProcessedSize()) + " / " + std::to_string(updater.getTotalSize())).c_str());
+    if (updater.getTotalSize() > 0) {
+      renderer.fillRect(24, 354, static_cast<int>(updaterProgress * static_cast<float>(pageWidth - 44)), 42);
+      renderer.drawCenteredText(UI_10_FONT_ID, 420,
+                                (std::to_string(static_cast<int>(updaterProgress * 100)) + "%").c_str());
+      renderer.drawCenteredText(
+          UI_10_FONT_ID, 440,
+          (formatOtaByteCount(updater.getProcessedSize()) + " / " + formatOtaByteCount(updater.getTotalSize()))
+              .c_str());
+    } else {
+      renderer.drawCenteredText(UI_10_FONT_ID, 420, "Downloading...", true, EpdFontFamily::BOLD);
+      renderer.drawCenteredText(UI_10_FONT_ID, 440, formatOtaByteCount(updater.getProcessedSize()).c_str());
+    }
     renderer.displayBuffer();
     return;
   }
@@ -333,10 +359,11 @@ void OtaUpdateActivity::render(RenderLock&&) {
   }
 
   if (state == FINISHED) {
-    renderer.drawCenteredText(UI_10_FONT_ID, 300, "Update complete", true, EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, 350, "Press and hold power button to turn back on");
+    renderer.drawCenteredText(UI_10_FONT_ID, 300, tr(STR_UPDATE_COMPLETE), true, EpdFontFamily::BOLD);
+    renderer.drawCenteredText(UI_10_FONT_ID, 350, tr(STR_BOOTING), true);
     renderer.displayBuffer();
     state = SHUTTING_DOWN;
+    restartAtMs = millis() + 1500;
     return;
   }
 }
@@ -397,6 +424,8 @@ void OtaUpdateActivity::loop() {
         RenderLock lock(*this);
         state = UPDATE_IN_PROGRESS;
       }
+      restartAtMs = 0;
+      lastUpdaterPercentage = UNINITIALIZED_PERCENTAGE;
       requestUpdate(true);
       dispatchWorker(OtaWorkerCmd::INSTALL_UPDATE);
     }
@@ -423,6 +452,8 @@ void OtaUpdateActivity::loop() {
   }
 
   if (state == SHUTTING_DOWN) {
-    ESP.restart();
+    if (restartAtMs != 0 && millis() >= restartAtMs) {
+      ESP.restart();
+    }
   }
 }

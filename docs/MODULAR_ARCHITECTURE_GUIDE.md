@@ -147,6 +147,12 @@ Behavior:
 | Web Pokedex Plugin | `ENABLE_WEB_POKEDEX_PLUGIN` | ~34KB | ✅ Stable | None |
 | Pokemon Party | `ENABLE_POKEMON_PARTY` | ~4KB | ✅ Stable | `ENABLE_WEB_POKEDEX_PLUGIN` |
 
+**Pokemon Party Behavior:**
+The Pokemon Party feature transforms the "Recent Books" view into a persistent
+6-slot party management screen. It calculates levels (based on floor(percent))
+and evolution states directly from reading progress, persisting assignments in
+`pokemon.json` sidecars within the book cache.
+
 ## Testing Strategy
 
 ### Automated Testing (CI)

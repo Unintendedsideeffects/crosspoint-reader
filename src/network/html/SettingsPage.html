@@ -673,7 +673,24 @@
     statusEl.style.color = 'var(--gray-4)';
 
     try {
-      await fetch('/api/ota/check', { method: 'POST' });
+      const startResp = await fetch('/api/ota/check', { method: 'POST' });
+      if (!startResp.ok) {
+        let message = 'Failed to start update check';
+        const bodyText = await startResp.text();
+        if (bodyText) {
+          try {
+            const startJson = JSON.parse(bodyText);
+            if (startJson && startJson.message) {
+              message = startJson.message;
+            } else {
+              message = bodyText;
+            }
+          } catch (_) {
+            message = bodyText;
+          }
+        }
+        throw new Error(message);
+      }
 
       let attempts = 0;
       const maxAttempts = 30;
