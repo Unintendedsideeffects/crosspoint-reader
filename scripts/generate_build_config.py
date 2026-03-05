@@ -103,7 +103,7 @@ FEATURES = {
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=145,
+        size_kb=146,
         description='EPUB e-book reader with CSS and chapter navigation'
     ),
     'hyphenation': Feature(
