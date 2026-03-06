@@ -14,6 +14,10 @@
 #include <Epub.h>
 #endif
 
+// Standard thumbnail height for cover images (matches HomeActivity: screenHeight/2 on 480px display).
+// This height is used wherever a cover BMP is referenced outside of a specific render context.
+static constexpr int kDefaultThumbHeight = 240;
+
 #include "CrossPointSettings.h"
 #include "SpiBusMutex.h"
 #include "activities/home/RecentBooksActivity.h"
@@ -397,7 +401,7 @@ FeatureModules::HomeCardDataResult FeatureModules::resolveHomeCardData(const std
       result.author = epub.getAuthor();
     }
     if (epub.generateThumbBmp(thumbHeight)) {
-      result.coverPath = epub.getThumbBmpPath();
+      result.coverPath = epub.getThumbBmpPath(thumbHeight);
     }
 #endif
     return result;
@@ -424,7 +428,7 @@ FeatureModules::HomeCardDataResult FeatureModules::resolveHomeCardData(const std
       result.author = xtcAuthor;
     }
     if (xtc.generateThumbBmp(thumbHeight)) {
-      result.coverPath = xtc.getThumbBmpPath();
+      result.coverPath = xtc.getThumbBmpPath(thumbHeight);
     }
 #endif
     return result;
@@ -452,7 +456,7 @@ FeatureModules::RecentBookDataResult FeatureModules::resolveRecentBookData(const
     }
     result.title = epub.getTitle();
     result.author = epub.getAuthor();
-    result.coverPath = epub.getThumbBmpPath();
+    result.coverPath = epub.getThumbBmpPath(kDefaultThumbHeight);
 #endif
     return result;
   }
@@ -470,7 +474,7 @@ FeatureModules::RecentBookDataResult FeatureModules::resolveRecentBookData(const
 
     result.title = xtc.getTitle();
     result.author = xtc.getAuthor();
-    result.coverPath = xtc.getThumbBmpPath();
+    result.coverPath = xtc.getThumbBmpPath(kDefaultThumbHeight);
 #endif
     return result;
   }
@@ -878,7 +882,7 @@ bool FeatureModules::tryGetDocumentCoverPath(const String& documentPath, std::st
     return false;
   }
 
-  outCoverPath = epub.getThumbBmpPath();
+  outCoverPath = epub.getThumbBmpPath(kDefaultThumbHeight);
   return !outCoverPath.empty();
 #else
   (void)documentPath;
