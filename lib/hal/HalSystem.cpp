@@ -133,7 +133,7 @@ std::string getPanicInfo(bool full) {
 
 bool isRebootFromPanic() {
   const auto resetReason = esp_reset_reason();
-  return resetReason == ESP_RST_PANIC || resetReason == ESP_RST_CPU_LOCKUP;
+  return resetReason == ESP_RST_PANIC;
 }
 
 }  // namespace HalSystem
