@@ -5,9 +5,8 @@
 #include "Arduino.h"
 #include "HalStorage.h"
 #include "Logging.h"
+#include "esp_attr.h"
 #include "esp_debug_helpers.h"
-#include "esp_private/esp_system_attr.h"
-#include "esp_private/panic_internal.h"
 #include "riscv/rvruntime-frames.h"
 
 #define MAX_PANIC_STACK_DEPTH 32
