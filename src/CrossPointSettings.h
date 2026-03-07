@@ -160,6 +160,9 @@ class CrossPointSettings {
     BACKGROUND_SERVER_MODE_COUNT
   };
 
+  // Image rendering in EPUB reader
+  enum IMAGE_RENDERING { IMAGES_DISPLAY = 0, IMAGES_PLACEHOLDER = 1, IMAGES_SUPPRESS = 2, IMAGE_RENDERING_COUNT };
+
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
   // Sleep screen cover mode settings
@@ -245,6 +248,10 @@ class CrossPointSettings {
   char deviceName[32] = "";
   // Persisted background server flag for always-on mode while the device is awake.
   uint8_t wifiAutoConnect = 0;
+  // Show hidden files/directories (starting with '.') in the file browser (0 = hidden, 1 = show)
+  uint8_t showHiddenFiles = 0;
+  // Image rendering mode in EPUB reader
+  uint8_t imageRendering = IMAGES_DISPLAY;
 
   ~CrossPointSettings() = default;
 

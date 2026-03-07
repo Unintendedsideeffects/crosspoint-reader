@@ -47,6 +47,27 @@ constexpr size_t WS_UPLOAD_MAX_BYTES = 512UL * 1024UL * 1024UL;
 // Static pointer for WebSocket callback (WebSocketsServer requires C-style callback)
 CrossPointWebServer* wsInstance = nullptr;
 
+// WebSocket upload state
+FsFile wsUploadFile;
+String wsUploadFileName;
+String wsUploadPath;
+size_t wsUploadSize = 0;
+size_t wsUploadReceived = 0;
+unsigned long wsUploadStartTime = 0;
+bool wsUploadInProgress = false;
+String wsLastCompleteName;
+size_t wsLastCompleteSize = 0;
+unsigned long wsLastCompleteAt = 0;
+
+// Helper function to clear epub cache after upload
+void clearEpubCacheIfNeeded(const String& filePath) {
+  // Only clear cache for .epub files
+  if (FsHelpers::hasEpubExtension(filePath)) {
+    Epub(filePath.c_str(), "/.crosspoint").clearCache();
+    LOG_DBG("WEB", "Cleared epub cache for: %s", filePath.c_str());
+  }
+}
+
 // Helper to invalidate sleep image cache when /sleep/ or sleep images are modified
 void invalidateSleepCacheIfNeeded(const String& filePath) {
   String lowerPath = filePath;
@@ -767,11 +788,7 @@ void CrossPointWebServer::scanFiles(const char* path, const std::function<void(F
   }
 }
 
-bool CrossPointWebServer::isEpubFile(const String& filename) const {
-  String lower = filename;
-  lower.toLowerCase();
-  return lower.endsWith(".epub");
-}
+bool CrossPointWebServer::isEpubFile(const String& filename) const { return FsHelpers::hasEpubExtension(filename); }
 
 bool CrossPointWebServer::isProtectedComponent(const String& component) const {
   if (component.isEmpty()) {
