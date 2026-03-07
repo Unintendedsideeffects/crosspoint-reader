@@ -1,6 +1,7 @@
 #include "MyLibraryActivity.h"
 
 #include <Epub.h>
+#include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <I18n.h>
@@ -31,10 +32,10 @@ std::string fallbackTitleFromPath(const std::string& path) {
     title = title.substr(lastSlash + 1);
   }
 
-  if (StringUtils::checkFileExtension(title, ".xtch")) {
+  if (FsHelpers::checkFileExtension(title, ".xtch")) {
     title.resize(title.length() - 5);
-  } else if (StringUtils::checkFileExtension(title, ".epub") || StringUtils::checkFileExtension(title, ".xtc") ||
-             StringUtils::checkFileExtension(title, ".txt") || StringUtils::checkFileExtension(title, ".md")) {
+  } else if (FsHelpers::checkFileExtension(title, ".epub") || FsHelpers::checkFileExtension(title, ".xtc") ||
+             FsHelpers::checkFileExtension(title, ".txt") || FsHelpers::checkFileExtension(title, ".md")) {
     title.resize(title.length() - 4);
   }
 
@@ -203,7 +204,7 @@ void MyLibraryActivity::onExit() {
 
 void MyLibraryActivity::clearFileMetadata(const std::string& fullPath) {
   // Only clear cache for .epub files
-  if (StringUtils::checkFileExtension(fullPath, ".epub")) {
+  if (FsHelpers::checkFileExtension(fullPath, ".epub")) {
     Epub(fullPath, "/.crosspoint").clearCache();
     LOG_DBG("MyLibrary", "Cleared metadata cache for: %s", fullPath.c_str());
   }

@@ -2,6 +2,7 @@
 
 #include <ArduinoJson.h>
 #include <FeatureFlags.h>
+#include <FsHelpers.h>
 #include <Logging.h>
 
 #include <algorithm>
@@ -94,15 +95,15 @@ static_assert(PokedexPluginPageHtmlCompressedSize == sizeof(PokedexPluginPageHtm
 #endif
 
 namespace {
-bool isEpubDocumentPath(const std::string& path) { return StringUtils::checkFileExtension(path, ".epub"); }
+bool isEpubDocumentPath(const std::string& path) { return FsHelpers::checkFileExtension(path, ".epub"); }
 
 bool isXtcDocumentPath(const std::string& path) {
-  return StringUtils::checkFileExtension(path, ".xtc") || StringUtils::checkFileExtension(path, ".xtch");
+  return FsHelpers::checkFileExtension(path, ".xtc") || FsHelpers::checkFileExtension(path, ".xtch");
 }
 
-bool isTxtDocumentPath(const std::string& path) { return StringUtils::checkFileExtension(path, ".txt"); }
+bool isTxtDocumentPath(const std::string& path) { return FsHelpers::checkFileExtension(path, ".txt"); }
 
-bool isMarkdownDocumentPath(const std::string& path) { return StringUtils::checkFileExtension(path, ".md"); }
+bool isMarkdownDocumentPath(const std::string& path) { return FsHelpers::checkFileExtension(path, ".md"); }
 
 std::string fileNameFromPath(const std::string& path) {
   const size_t lastSlash = path.find_last_of('/');
@@ -523,7 +524,7 @@ bool FeatureModules::isSupportedLibraryFile(const std::string& path) {
     return true;
   }
 
-  return StringUtils::checkFileExtension(path, ".bmp");
+  return FsHelpers::checkFileExtension(path, ".bmp");
 }
 
 bool FeatureModules::supportsSettingAction(const SettingAction action) {
@@ -873,7 +874,7 @@ void FeatureModules::onUploadCompleted(const String& uploadPath, const String& u
 
 void FeatureModules::onWebFileChanged(const String& filePath) {
 #if ENABLE_EPUB_SUPPORT
-  if (StringUtils::checkFileExtension(filePath, ".epub")) {
+  if (FsHelpers::checkFileExtension(filePath, ".epub")) {
     Epub(filePath.c_str(), "/.crosspoint").clearCache();
     LOG_DBG("FEATURES", "Cleared epub cache for: %s", filePath.c_str());
   }
