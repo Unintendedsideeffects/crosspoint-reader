@@ -304,6 +304,26 @@ size_t getMaxOtaPartitionSize() {
   return 0;
 }
 
+String describeCheckForUpdateError(const OtaUpdater::OtaUpdaterError error) {
+  switch (error) {
+    case OtaUpdater::HTTP_ERROR:
+      return "Unable to reach update server";
+    case OtaUpdater::JSON_PARSE_ERROR:
+      return "Invalid update metadata";
+    case OtaUpdater::UPDATE_OLDER_ERROR:
+      return "No newer update available";
+    case OtaUpdater::INTERNAL_UPDATE_ERROR:
+      return "Update check failed";
+    case OtaUpdater::OOM_ERROR:
+      return "Out of memory during update check";
+    case OtaUpdater::NO_UPDATE:
+      return "No update package found";
+    case OtaUpdater::OK:
+    default:
+      return "";
+  }
+}
+
 } /* namespace */
 
 OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
@@ -316,6 +336,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   factoryResetOnInstall = false;
   latestVersion.clear();
   otaUrl.clear();
+  lastError.clear();
   otaSize = 0;
   totalSize = 0;
 
@@ -361,16 +382,19 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     res = fetchReleaseJson(latestChannelUrl, doc, filter);
   }
   if (res != OK) {
+    lastError = describeCheckForUpdateError(res);
     return res;
   }
 
   if (!doc["tag_name"].is<std::string>()) {
     LOG_ERR("OTA", "No tag_name found");
+    lastError = "Update metadata missing tag";
     return JSON_PARSE_ERROR;
   }
 
   if (!doc["assets"].is<JsonArray>()) {
     LOG_ERR("OTA", "No assets found");
+    lastError = "Update metadata missing assets";
     return JSON_PARSE_ERROR;
   }
 
@@ -392,6 +416,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
 
   if (!updateAvailable) {
     LOG_ERR("OTA", "No firmware.bin asset found");
+    lastError = "Release missing firmware package";
     return NO_UPDATE;
   }
 
