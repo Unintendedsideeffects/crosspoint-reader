@@ -2,7 +2,16 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
 #include <string>
+
+#if __has_include("esp_attr.h")
+#include "esp_attr.h"
+#endif
+
+#ifndef RTC_NOINIT_ATTR
+#define RTC_NOINIT_ATTR
+#endif
 
 #define MAX_ENTRY_LEN 256
 #define MAX_LOG_LINES 16
