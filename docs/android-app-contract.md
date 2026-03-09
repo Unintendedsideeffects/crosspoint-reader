@@ -15,6 +15,10 @@ the two codebases. Keep it up to date when either side changes.
 | USB mass storage | `UsbMassStorageTransport` | Implemented both sides (libaums) |
 | BLE provisioning | `BleTransport` | Implemented both sides |
 
+For the machine-readable HTTP contract, see [docs/http-api.openapi.yaml](./http-api.openapi.yaml).
+This document remains the umbrella transport contract for HTTP, UDP discovery,
+USB serial JSON-RPC, BLE provisioning, and other non-OpenAPI surfaces.
+
 ---
 
 ## 1. UDP device discovery
@@ -83,6 +87,7 @@ returned by UDP discovery (§1) rather than assuming a fixed `crosspoint.local`.
   "rssi":                 -50,
   "freeHeap":             204800,
   "uptime":               3600,
+  "openBook":             "/Books/book.epub",
   "otaSelectedBundle":    "string",
   "otaInstalledBundle":   "string",
   "otaInstalledFeatures": "string"
@@ -91,6 +96,8 @@ returned by UDP discovery (§1) rather than assuming a fixed `crosspoint.local`.
 
 **Current status:** ✅ Fixed on Android side — `StatusDto` now uses camelCase field names
 matching the firmware directly (no `@SerializedName` needed for `wifiStatus`/`freeHeap`).
+Android only reads the stable subset above and safely ignores extra fields such
+as `openBook`.
 
 ---
 
@@ -194,6 +201,9 @@ Returns normalized cached progress for a single book.
 }
 ```
 
+**Current status:** ✅ Implemented. Returns `{"path": "...", "progress": null}`
+when the book exists but has no cached progress yet.
+
 ---
 
 ## 7. GET /api/book-pokemon?path=<encoded-path>
@@ -207,6 +217,9 @@ Returns saved Pokemon metadata for a single book. Only available if `pokemon_par
   "pokemon": { ... }
 }
 ```
+
+**Current status:** ✅ Implemented. Returns `{"pokemon": null}` when no pokemon
+assignment exists for the book yet.
 
 ---
 
@@ -222,11 +235,32 @@ Stores Pokemon metadata for a book.
 }
 ```
 
+**Response:**
+```json
+{
+  "ok": true,
+  "path": "/Books/book.epub",
+  "pokemon": { ... }
+}
+```
+
+**Current status:** ✅ Implemented.
+
 ---
 
 ## 9. DELETE /api/book-pokemon?path=<encoded-path>
 
 Clears Pokemon metadata for a book.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "path": "/Books/book.epub"
+}
+```
+
+**Current status:** ✅ Implemented.
 
 ---
 
@@ -250,6 +284,9 @@ The four keys above are included when the corresponding feature is enabled.
 
 **Current status:** ✅ Matches as long as firmware uses the exact key names above.
 Verify: `web_wifi_setup`, `ota_updates`, `remote_open_book`, `remote_page_turn`, `user_fonts`, `todo_planner`.
+
+`GET /api/features` is a supported alias for `GET /api/plugins` and returns the
+same JSON object.
 
 ---
 
@@ -377,6 +414,41 @@ paths=<json-encoded-array>  (form field, value is a JSON string)
 **Current status:** ✅ All three implemented (gated on `WebWifiSetupApi` feature flag).
 `secured` aliases `encrypted`, and `connected` marks the active network match.
 
+### GET /api/wifi/status
+
+Returns the current Wi-Fi mode and connection state.
+
+**Connected STA response:**
+```json
+{
+  "connected": true,
+  "mode": "STA",
+  "ssid": "MyNetwork",
+  "ip": "192.168.1.20",
+  "rssi": -60
+}
+```
+
+**Disconnected STA response:**
+```json
+{
+  "connected": false,
+  "mode": "STA",
+  "status": "connecting | failed | no_ssid | disconnected"
+}
+```
+
+**AP mode response:**
+```json
+{
+  "connected": false,
+  "mode": "AP",
+  "ssid": "crosspoint-ABCD"
+}
+```
+
+**Current status:** ✅ Implemented (same `web_wifi_setup` gate as scan/connect/forget).
+
 ---
 
 ## 14. POST /api/ota/check + GET /api/ota/check
@@ -386,6 +458,7 @@ paths=<json-encoded-array>  (form field, value is a JSON string)
 **GET response:**
 ```json
 {
+  "currentVersion":  "1.0.0",
   "status":         "idle | checking | done | error",
   "available":      false,
   "latestVersion":  "1.2.0",
@@ -488,6 +561,47 @@ USB serial `todo_add` command also implemented (see §19).
 
 ---
 
+## Additional HTTP control endpoints
+
+### POST /api/open-book
+
+Android sends:
+```json
+{"path": "/Books/book.epub"}
+```
+
+Success response:
+```json
+{"status":"opening"}
+```
+
+**Current status:** ✅ Implemented. Returns HTTP `202` on success, `400` for
+invalid JSON or path, and `404` when the file does not exist.
+
+### POST /api/remote/button
+
+Android sends:
+```json
+{"button": "page_forward"}
+```
+
+Accepted button values:
+- `page_forward`
+- `next`
+- `page_back`
+- `prev`
+- `previous`
+
+Success response:
+```json
+{"status":"ok"}
+```
+
+**Current status:** ✅ Implemented. Returns HTTP `202` on success and `400` for
+unknown button values.
+
+---
+
 ## 18. BLE WiFi provisioning
 
 **Service UUID:** `41cb0001-b8f4-4e4a-9f49-ecb9d6fd4b90`
@@ -522,7 +636,7 @@ terminated by `\n`.
 
 | cmd | arg | Expected response |
 |-----|-----|-------------------|
-| `status` | — | `{"ok":true,"version":"...","protocolVersion":1,"freeHeap":...,"uptime":...}` |
+| `status` | — | `{"ok":true,"version":"...","protocolVersion":1,"freeHeap":...,"uptime":...,"openBook":"...","otaSelectedBundle":"...","otaInstalledBundle":"..."}` |
 | `plugins` | — | `{"ok":true,"plugins":{"remote_open_book":true,"remote_page_turn":true,...}}` |
 | `list` | `"/path"` | `{"ok":true,"files":[{"name":"...","path":"...","dir":false,"size":...,"modified":0}]}` |
 | `download` | `"/path/file.epub"` | `{"ok":true,"data":"<base64>"}` |
@@ -538,6 +652,7 @@ terminated by `\n`.
 | `recent` | — | `{"ok":true,"books":[{"path":"...","title":"...","author":"...","last_position":"1/12 8%","last_opened":0,"cover":"<base64-optional>"}]}` |
 | `cover` | `"/path/file.epub"` | `{"ok":true,"data":"<base64>"}` or `{"ok":false}` |
 | `wifi_connect` | `{"ssid":"...","password":"..."}` | `{"ok":true}` |
+| `wifi_status` | — | `{"ok":true,"connected":bool,"ssid":"...","ip":"...","rssi":-60}` (when connected) or `{"ok":true,"connected":false,"status":"disconnected\|failed\|no_ssid\|connecting"}` |
 | `open_book` | `"/path/file.epub"` | `{"ok":true}` |
 | `remote_button` | `"page_forward"\|"page_back"` | `{"ok":true}` |
 | `todo_add` | `{"text":"...","type":"todo"\|"agenda"}` | `{"ok":true}` |
@@ -563,6 +678,8 @@ No known backend gaps remain for the Android HTTP contract documented here.
 Items resolved on the firmware side (fork-drift):
 - USB serial JSON-RPC — **implemented** in `src/UsbSerialProtocol.cpp`
 - mDNS hostname — **implemented**; hostname is `crosspoint-{name}` or `crosspoint-{last4mac}`
+- USB serial `status` now returns `otaSelectedBundle` and `otaInstalledBundle` — **fixed in `src/UsbSerialProtocol.cpp`**
+- HTTP `handleOpenBook` and `handleRemoteButton` now gate on `remote_open_book` / `remote_page_turn` feature flags — **fixed in `src/network/CrossPointWebServer.cpp`**
 
 Items previously listed as gaps that are now resolved on the Android side:
 - `/api/files` format (bare array, `isDirectory` field, path construction) — **fixed in Android**

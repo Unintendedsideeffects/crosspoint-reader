@@ -2142,7 +2142,7 @@ void CrossPointWebServer::handleSleepCoverPin() {
 }
 
 void CrossPointWebServer::handleOpenBook() {
-  if (!true) {
+  if (!core::FeatureCatalog::isEnabled("remote_open_book")) {
     server->send(404, "text/plain", "Remote open-book disabled");
     return;
   }
@@ -2179,7 +2179,7 @@ void CrossPointWebServer::handleOpenBook() {
 }
 
 void CrossPointWebServer::handleRemoteButton() {
-  if (!true) {
+  if (!core::FeatureCatalog::isEnabled("remote_page_turn")) {
     server->send(404, "text/plain", "Remote page turn disabled");
     return;
   }

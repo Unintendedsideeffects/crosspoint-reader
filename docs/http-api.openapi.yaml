@@ -1,0 +1,1527 @@
+openapi: 3.0.3
+info:
+  title: CrossPoint Reader HTTP API
+  version: 1.0.0-draft
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit
+  description: |
+    Machine-readable contract for the CrossPoint Reader HTTP surface.
+
+    Scope:
+    - Included: HTTP endpoints exposed by the firmware web server.
+    - Excluded: UDP discovery, WebSocket upload protocol, BLE provisioning, and
+      USB serial JSON-RPC.
+
+    Consumers should discover optional capabilities from `/api/plugins` or
+    `/api/features` before calling feature-gated endpoints. Operations with
+    `x-crosspoint-feature-gates` may return `404` when the route is disabled or
+    not registered in the active firmware build.
+externalDocs:
+  description: Umbrella consumer transport contract
+  url: ./android-app-contract.md
+servers:
+  - url: http://crosspoint.local
+    description: mDNS hostname when the device is reachable on LAN
+  - url: http://{deviceHost}
+    description: Direct device hostname or IP
+    variables:
+      deviceHost:
+        default: crosspoint.local
+security: []
+tags:
+  - name: status
+    description: Device and transport status endpoints
+  - name: features
+    description: Capability discovery endpoints
+  - name: files
+    description: Storage browsing and file management endpoints
+  - name: books
+    description: Book metadata, progress, and cover endpoints
+  - name: settings
+    description: Runtime settings metadata and mutation endpoints
+  - name: todo
+    description: Daily planner endpoints
+  - name: sleep
+    description: Sleep screen asset and pinning endpoints
+  - name: wifi
+    description: Wi-Fi setup and status endpoints
+  - name: ota
+    description: Over-the-air update check endpoints
+  - name: control
+    description: Remote control endpoints for opening books and page turns
+  - name: fonts
+    description: User font management endpoints
+paths:
+  /api/status:
+    get:
+      tags: [status]
+      operationId: getStatus
+      summary: Get device status
+      responses:
+        '200':
+          description: Device status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+              examples:
+                default:
+                  value:
+                    version: 1.0.0
+                    protocolVersion: 1
+                    wifiStatus: Connected
+                    ip: 192.168.1.20
+                    mode: STA
+                    rssi: -50
+                    freeHeap: 204800
+                    uptime: 3600
+                    openBook: /Books/book.epub
+                    otaSelectedBundle: stable
+                    otaInstalledBundle: stable
+                    otaInstalledFeatures: markdown,remote_open_book
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/plugins:
+    get:
+      tags: [features]
+      operationId: getFeatureMap
+      summary: Get enabled feature flags
+      description: Consumers should use this endpoint for capability discovery.
+      responses:
+        '200':
+          description: Feature flag map
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureMap'
+              examples:
+                default:
+                  value:
+                    web_wifi_setup: true
+                    ota_updates: true
+                    remote_open_book: true
+                    remote_page_turn: true
+                    user_fonts: false
+                    todo_planner: true
+                    pokemon_party: false
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/features:
+    get:
+      tags: [features]
+      operationId: getFeatureMapAlias
+      summary: Get enabled feature flags
+      description: "Backward-compatible alias for `/api/plugins`."
+      responses:
+        '200':
+          description: Feature flag map
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureMap'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/files:
+    get:
+      tags: [files]
+      operationId: listFiles
+      summary: List files in a directory
+      parameters:
+        - name: path
+          in: query
+          description: "Absolute directory path. Defaults to `/`."
+          required: false
+          schema:
+            $ref: '#/components/schemas/DevicePath'
+      responses:
+        '200':
+          description: Directory listing
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileEntry'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+  /download:
+    get:
+      tags: [files]
+      operationId: downloadFile
+      summary: Download a file from storage
+      parameters:
+        - name: path
+          in: query
+          required: true
+          description: Absolute file path on device storage
+          schema:
+            $ref: '#/components/schemas/DevicePath'
+      responses:
+        '200':
+          description: Binary file response
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            application/epub+zip:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /upload:
+    post:
+      tags: [files]
+      operationId: uploadFile
+      summary: Upload a file with multipart form data
+      parameters:
+        - name: path
+          in: query
+          required: false
+          description: "Optional destination directory. Defaults to `/`."
+          schema:
+            $ref: '#/components/schemas/DevicePath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Upload completed
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "File uploaded successfully: mybook.epub"
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+  /mkdir:
+    post:
+      tags: [files]
+      operationId: createDirectory
+      summary: Create a folder
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Folder name, not a full path
+                path:
+                  allOf:
+                    - $ref: '#/components/schemas/DevicePath'
+                  description: "Parent directory. Defaults to `/`."
+      responses:
+        '200':
+          description: Folder created
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Folder created: Books"
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /rename:
+    post:
+      tags: [files]
+      operationId: renameFile
+      summary: Rename a file
+      description: |
+        Supports both the legacy form contract and the JSON consumer contract.
+
+        Legacy form contract:
+        - `path`: absolute source path
+        - `name`: new file name only
+
+        JSON contract:
+        - `from`: absolute source path
+        - `to`: either a new file name or a full absolute target path
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [path, name]
+              properties:
+                path:
+                  $ref: '#/components/schemas/DevicePath'
+                name:
+                  type: string
+                  minLength: 1
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameRequest'
+      responses:
+        '200':
+          description: Rename applied or no-op
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                success:
+                  value: Renamed successfully
+                unchanged:
+                  value: Name unchanged
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '409':
+          $ref: '#/components/responses/ConflictText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /move:
+    post:
+      tags: [files]
+      operationId: moveFile
+      summary: Move a file into another directory
+      description: |
+        Supports both the legacy form contract and the JSON consumer contract.
+
+        Legacy form contract:
+        - `path`: absolute source path
+        - `dest`: absolute destination directory
+
+        JSON contract:
+        - `from`: absolute source path
+        - `to`: absolute destination directory
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [path, dest]
+              properties:
+                path:
+                  $ref: '#/components/schemas/DevicePath'
+                dest:
+                  $ref: '#/components/schemas/DevicePath'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveRequest'
+      responses:
+        '200':
+          description: Move applied or no-op
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                success:
+                  value: Moved successfully
+                unchanged:
+                  value: Already in destination
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '409':
+          $ref: '#/components/responses/ConflictText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /delete:
+    post:
+      tags: [files]
+      operationId: deleteFiles
+      summary: Delete one or more files or directories
+      description: |
+        Accepts either:
+        - `path`: a single absolute path
+        - `paths`: a JSON-encoded string containing an array of absolute paths
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                path:
+                  $ref: '#/components/schemas/DevicePath'
+                paths:
+                  type: string
+                  description: 'JSON-encoded array string, for example `["/Books/a.epub","/Books/b.epub"]`'
+      responses:
+        '200':
+          description: Delete succeeded
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                single:
+                  value: Deleted successfully
+                multi:
+                  value: All items deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /api/settings:
+    get:
+      tags: [settings]
+      operationId: getSettings
+      summary: List editable settings metadata
+      responses:
+        '200':
+          description: Settings descriptors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SettingEntry'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+    post:
+      tags: [settings]
+      operationId: updateSettings
+      summary: Apply one or more settings mutations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingMutationRequest'
+            examples:
+              sample:
+                value:
+                  fontSize: 5
+                  darkMode: 1
+                  deviceName: living-room-reader
+      responses:
+        '200':
+          description: Settings applied
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Applied 3 setting(s)
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+  /api/settings/raw:
+    get:
+      tags: [settings]
+      operationId: getRawSettings
+      summary: Get raw settings values
+      responses:
+        '200':
+          description: Raw settings map
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RawSettingsResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/recent:
+    get:
+      tags: [books]
+      operationId: getRecentBooks
+      summary: Get recent books with cached progress
+      responses:
+        '200':
+          description: Recent books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecentBook'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/book-progress:
+    get:
+      tags: [books]
+      operationId: getBookProgress
+      summary: Get normalized cached progress for one book
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/DevicePath'
+      responses:
+        '200':
+          description: "Book progress, or `null` when no cache exists yet"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookProgressResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/book-pokemon:
+    get:
+      tags: [books]
+      operationId: getBookPokemon
+      summary: Get saved Pokemon metadata for a book
+      x-crosspoint-feature-gates: [pokemon_party]
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/DevicePath'
+      responses:
+        '200':
+          description: "Pokemon metadata, or `null` when no assignment exists"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookPokemonResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+    put:
+      tags: [books]
+      operationId: putBookPokemon
+      summary: Save Pokemon metadata for a book
+      x-crosspoint-feature-gates: [pokemon_party]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookPokemonUpsertRequest'
+      responses:
+        '200':
+          description: Pokemon metadata saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookPokemonUpsertResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+    delete:
+      tags: [books]
+      operationId: deleteBookPokemon
+      summary: Delete Pokemon metadata for a book
+      x-crosspoint-feature-gates: [pokemon_party]
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/DevicePath'
+      responses:
+        '200':
+          description: Pokemon metadata deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookPokemonDeleteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /api/todo/entry:
+    post:
+      tags: [todo]
+      operationId: addTodoEntry
+      summary: Append a TODO or agenda entry to today's planner file
+      x-crosspoint-feature-gates: [todo_planner]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 300
+                type:
+                  type: string
+                  enum: [todo, agenda]
+                  default: todo
+      responses:
+        '200':
+          description: Entry appended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /api/todo/today:
+    get:
+      tags: [todo]
+      operationId: getTodayTodo
+      summary: Get today's planner items
+      x-crosspoint-feature-gates: [todo_planner]
+      responses:
+        '200':
+          description: Planner items for today
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoTodayResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableText'
+    post:
+      tags: [todo]
+      operationId: saveTodayTodo
+      summary: Rewrite today's planner items
+      x-crosspoint-feature-gates: [todo_planner]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoTodaySaveRequest'
+      responses:
+        '200':
+          description: Planner file updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoTodaySaveResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /api/cover:
+    get:
+      tags: [books]
+      operationId: getBookCover
+      summary: Get a BMP cover image for a book
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/DevicePath'
+      responses:
+        '200':
+          description: BMP cover image
+          content:
+            image/bmp:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '403':
+          $ref: '#/components/responses/ForbiddenText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /api/sleep-images:
+    get:
+      tags: [sleep]
+      operationId: getSleepImages
+      summary: List sleep-screen candidate images
+      responses:
+        '200':
+          description: Sleep images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SleepImage'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/sleep-cover:
+    get:
+      tags: [sleep]
+      operationId: getPinnedSleepCover
+      summary: Get the currently pinned sleep cover
+      responses:
+        '200':
+          description: Currently pinned sleep cover
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SleepImage'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/sleep-cover/pin:
+    post:
+      tags: [sleep]
+      operationId: pinSleepCover
+      summary: Pin or clear the sleep cover
+      description: |
+        Mode A:
+        - `{ "path": "/sleep/foo.bmp" }` pins a sleep image.
+        - `{ "path": "" }` clears the pin and returns plain text `Cleared`.
+
+        Mode B:
+        - `{ "bookPath": "/Books/book.epub" }` resolves and copies the book's
+          cover to `/sleep/.pinned-cover.bmp`, then pins that generated file.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SleepCoverPathRequest'
+                - $ref: '#/components/schemas/SleepCoverBookRequest'
+      responses:
+        '200':
+          description: Pin updated or cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PinnedSleepCoverResponse'
+            text/plain:
+              schema:
+                type: string
+              example: Cleared
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /api/wifi/scan:
+    get:
+      tags: [wifi]
+      operationId: scanWifiNetworks
+      summary: Scan for Wi-Fi networks
+      x-crosspoint-feature-gates: [web_wifi_setup]
+      responses:
+        '200':
+          description: Visible Wi-Fi networks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WifiNetwork'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+        '504':
+          $ref: '#/components/responses/GatewayTimeoutText'
+  /api/wifi/status:
+    get:
+      tags: [wifi]
+      operationId: getWifiStatus
+      summary: Get current Wi-Fi mode and connection state
+      x-crosspoint-feature-gates: [web_wifi_setup]
+      responses:
+        '200':
+          description: Wi-Fi state
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/WifiStatusConnected'
+                  - $ref: '#/components/schemas/WifiStatusDisconnected'
+                  - $ref: '#/components/schemas/WifiStatusAccessPoint'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/wifi/connect:
+    post:
+      tags: [wifi]
+      operationId: saveWifiCredentials
+      summary: Save Wi-Fi credentials
+      x-crosspoint-feature-gates: [web_wifi_setup]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WifiConnectRequest'
+      responses:
+        '200':
+          description: Credentials saved
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: WiFi credentials saved
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /api/wifi/forget:
+    post:
+      tags: [wifi]
+      operationId: forgetWifiCredentials
+      summary: Remove saved Wi-Fi credentials
+      x-crosspoint-feature-gates: [web_wifi_setup]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WifiForgetRequest'
+      responses:
+        '200':
+          description: Credentials removed
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: WiFi credentials removed
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+        '500':
+          $ref: '#/components/responses/InternalServerErrorText'
+  /api/open-book:
+    post:
+      tags: [control]
+      operationId: openBook
+      summary: Queue a book to open on the device
+      x-crosspoint-feature-gates: [remote_open_book]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenBookRequest'
+      responses:
+        '202':
+          description: Book open request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpeningStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/remote/button:
+    post:
+      tags: [control]
+      operationId: pressRemoteButton
+      summary: Queue a remote page-turn button event
+      x-crosspoint-feature-gates: [remote_page_turn]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoteButtonRequest'
+      responses:
+        '202':
+          description: Button request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/ota/check:
+    get:
+      tags: [ota]
+      operationId: getOtaStatus
+      summary: Get OTA check status
+      x-crosspoint-feature-gates: [ota_updates]
+      responses:
+        '200':
+          description: OTA status snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtaCheckResponse'
+        '404':
+          description: OTA API disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtaErrorResponse'
+    post:
+      tags: [ota]
+      operationId: startOtaCheck
+      summary: Start an OTA availability check
+      x-crosspoint-feature-gates: [ota_updates]
+      responses:
+        '200':
+          description: A check is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckingStatusResponse'
+        '202':
+          description: Check started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckingStatusResponse'
+        '404':
+          description: OTA API disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtaErrorResponse'
+        '500':
+          description: Failed to start OTA task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtaErrorResponse'
+        '503':
+          description: OTA check requires Wi-Fi connectivity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtaErrorResponse'
+  /api/user-fonts/rescan:
+    post:
+      tags: [fonts]
+      operationId: rescanUserFonts
+      summary: Rescan SD-card user fonts
+      x-crosspoint-feature-gates: [user_fonts]
+      responses:
+        '200':
+          description: Font families rescanned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserFontScanResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+  /api/user-fonts/upload:
+    post:
+      tags: [fonts]
+      operationId: uploadUserFont
+      summary: Upload a `.cpf` user font
+      x-crosspoint-feature-gates: [user_fonts]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "`.cpf` font file to store under `/fonts`"
+      responses:
+        '200':
+          description: Font uploaded and fonts rescanned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserFontUploadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestText'
+        '404':
+          $ref: '#/components/responses/NotFoundText'
+components:
+  responses:
+    BadRequestText:
+      description: Request validation failed
+      content:
+        text/plain:
+          schema:
+            type: string
+    ForbiddenText:
+      description: Access to the requested path or item is forbidden
+      content:
+        text/plain:
+          schema:
+            type: string
+    NotFoundText:
+      description: Requested resource was not found or the feature is disabled
+      content:
+        text/plain:
+          schema:
+            type: string
+    ConflictText:
+      description: Request conflicts with current storage state
+      content:
+        text/plain:
+          schema:
+            type: string
+    InternalServerErrorText:
+      description: Server-side failure while processing the request
+      content:
+        text/plain:
+          schema:
+            type: string
+    ServiceUnavailableText:
+      description: Temporary runtime precondition failure
+      content:
+        text/plain:
+          schema:
+            type: string
+    GatewayTimeoutText:
+      description: Upstream or device operation timed out
+      content:
+        text/plain:
+          schema:
+            type: string
+  schemas:
+    DevicePath:
+      type: string
+      pattern: ^/
+      example: /Books/MyBook.epub
+    StatusResponse:
+      type: object
+      required:
+        - version
+        - protocolVersion
+        - wifiStatus
+        - ip
+        - mode
+        - rssi
+        - freeHeap
+        - uptime
+        - openBook
+        - otaSelectedBundle
+        - otaInstalledBundle
+        - otaInstalledFeatures
+      properties:
+        version:
+          type: string
+        protocolVersion:
+          type: integer
+          minimum: 1
+        wifiStatus:
+          type: string
+          enum: [Connected, Disconnected, AP Mode]
+        ip:
+          type: string
+        mode:
+          type: string
+          enum: [STA, AP]
+        rssi:
+          type: integer
+        freeHeap:
+          type: integer
+        uptime:
+          type: integer
+        openBook:
+          type: string
+        otaSelectedBundle:
+          type: string
+        otaInstalledBundle:
+          type: string
+        otaInstalledFeatures:
+          type: string
+    FeatureMap:
+      type: object
+      description: Known keys are stable; additional feature ids may be added over time.
+      properties:
+        markdown:
+          type: boolean
+        web_wifi_setup:
+          type: boolean
+        ota_updates:
+          type: boolean
+        remote_open_book:
+          type: boolean
+        remote_page_turn:
+          type: boolean
+        user_fonts:
+          type: boolean
+        todo_planner:
+          type: boolean
+        pokemon_party:
+          type: boolean
+      additionalProperties:
+        type: boolean
+    FileEntry:
+      type: object
+      required: [name, size, isDirectory, isEpub]
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+          minimum: 0
+        isDirectory:
+          type: boolean
+        isEpub:
+          type: boolean
+    RenameRequest:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          $ref: '#/components/schemas/DevicePath'
+        to:
+          type: string
+          description: New file name or full absolute target path
+    MoveRequest:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          $ref: '#/components/schemas/DevicePath'
+        to:
+          allOf:
+            - $ref: '#/components/schemas/DevicePath'
+          description: Absolute destination directory
+    SettingEntry:
+      type: object
+      required: [key, name, category, type]
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        type:
+          type: string
+          enum: [toggle, enum, value, string]
+        value:
+          $ref: '#/components/schemas/SettingValue'
+        options:
+          type: array
+          items:
+            type: string
+        min:
+          type: integer
+        max:
+          type: integer
+        step:
+          type: integer
+        hasValue:
+          type: boolean
+    SettingValue:
+      anyOf:
+        - type: boolean
+        - type: integer
+        - type: string
+    SettingMutationRequest:
+      type: object
+      description: Partial settings mutation keyed by setting id.
+      additionalProperties:
+        $ref: '#/components/schemas/SettingValue'
+    RawSettingsResponse:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/SettingValue'
+    BookProgress:
+      type: object
+      required: [format, percent, page, pageCount, position]
+      properties:
+        format:
+          type: string
+          enum: [epub, txt, markdown, xtc, unknown]
+        percent:
+          type: number
+        page:
+          type: integer
+          minimum: 1
+        pageCount:
+          type: integer
+          minimum: 0
+        position:
+          type: string
+        spineIndex:
+          type: integer
+          minimum: 0
+    BookProgressResponse:
+      type: object
+      required: [path, progress]
+      properties:
+        path:
+          $ref: '#/components/schemas/DevicePath'
+        progress:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/BookProgress'
+          nullable: true
+    PokemonMetadata:
+      type: object
+      description: Arbitrary JSON metadata persisted for a book's Pokemon assignment.
+      additionalProperties: true
+      example:
+        id: 25
+        name: pikachu
+        speciesName: Pikachu
+        types:
+          - electric
+        evolutionChain:
+          - id: 172
+            name: pichu
+            minLevel: null
+            trigger: friendship
+          - id: 25
+            name: pikachu
+            minLevel: null
+            trigger: null
+          - id: 26
+            name: raichu
+            minLevel: null
+            trigger: use-item
+    RecentBook:
+      type: object
+      required: [path, title, author, last_position, last_opened, hasCover, progress]
+      properties:
+        path:
+          $ref: '#/components/schemas/DevicePath'
+        title:
+          type: string
+        author:
+          type: string
+        last_position:
+          type: string
+        last_opened:
+          type: integer
+        hasCover:
+          type: boolean
+        progress:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/BookProgress'
+          nullable: true
+        pokemon:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/PokemonMetadata'
+          nullable: true
+    BookPokemonResponse:
+      type: object
+      required: [path, pokemon]
+      properties:
+        path:
+          $ref: '#/components/schemas/DevicePath'
+        pokemon:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/PokemonMetadata'
+          nullable: true
+    BookPokemonUpsertRequest:
+      type: object
+      required: [path, pokemon]
+      properties:
+        path:
+          $ref: '#/components/schemas/DevicePath'
+        pokemon:
+          $ref: '#/components/schemas/PokemonMetadata'
+    BookPokemonUpsertResponse:
+      type: object
+      required: [ok, path, pokemon]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        path:
+          $ref: '#/components/schemas/DevicePath'
+        pokemon:
+          $ref: '#/components/schemas/PokemonMetadata'
+    BookPokemonDeleteResponse:
+      type: object
+      required: [ok, path]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        path:
+          $ref: '#/components/schemas/DevicePath'
+    OkResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+    TodoItem:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+        type:
+          type: string
+          enum: [todo, agenda, text]
+        checked:
+          type: boolean
+        isHeader:
+          type: boolean
+        is_header:
+          type: boolean
+          description: Accepted alias in save requests
+    TodoTodayResponse:
+      type: object
+      required: [ok, date, path, items]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        date:
+          type: string
+          format: date
+        path:
+          $ref: '#/components/schemas/DevicePath'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TodoItem'
+    TodoTodaySaveRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TodoItem'
+    TodoTodaySaveResponse:
+      type: object
+      required: [ok, date, path]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        date:
+          type: string
+          format: date
+        path:
+          $ref: '#/components/schemas/DevicePath'
+    SleepImage:
+      type: object
+      required: [path, name]
+      properties:
+        path:
+          type: string
+          example: /sleep/foo.bmp
+        name:
+          type: string
+          example: foo.bmp
+    SleepCoverPathRequest:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          description: Sleep image path, or empty string to clear the pin
+    SleepCoverBookRequest:
+      type: object
+      required: [bookPath]
+      properties:
+        bookPath:
+          $ref: '#/components/schemas/DevicePath'
+    PinnedSleepCoverResponse:
+      type: object
+      required: [pinnedPath]
+      properties:
+        pinnedPath:
+          type: string
+    WifiNetwork:
+      type: object
+      required: [ssid, rssi, encrypted, secured, saved, connected]
+      properties:
+        ssid:
+          type: string
+        rssi:
+          type: integer
+        encrypted:
+          type: boolean
+        secured:
+          type: boolean
+        saved:
+          type: boolean
+        connected:
+          type: boolean
+    WifiStatusConnected:
+      type: object
+      required: [connected, mode, ip, rssi]
+      properties:
+        connected:
+          type: boolean
+          enum: [true]
+        mode:
+          type: string
+          enum: [STA]
+        ssid:
+          type: string
+        ip:
+          type: string
+        rssi:
+          type: integer
+    WifiStatusDisconnected:
+      type: object
+      required: [connected, mode, status]
+      properties:
+        connected:
+          type: boolean
+          enum: [false]
+        mode:
+          type: string
+          enum: [STA]
+        status:
+          type: string
+          enum: [connecting, failed, no_ssid, disconnected]
+    WifiStatusAccessPoint:
+      type: object
+      required: [connected, mode]
+      properties:
+        connected:
+          type: boolean
+          enum: [false]
+        mode:
+          type: string
+          enum: [AP]
+        ssid:
+          type: string
+    WifiConnectRequest:
+      type: object
+      required: [ssid]
+      properties:
+        ssid:
+          type: string
+        password:
+          type: string
+    WifiForgetRequest:
+      type: object
+      required: [ssid]
+      properties:
+        ssid:
+          type: string
+    OpenBookRequest:
+      type: object
+      required: [path]
+      properties:
+        path:
+          $ref: '#/components/schemas/DevicePath'
+    RemoteButtonRequest:
+      type: object
+      required: [button]
+      properties:
+        button:
+          type: string
+          enum: [page_forward, next, page_back, prev, previous]
+    OpeningStatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [opening]
+    OkStatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    CheckingStatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [checking]
+    OtaCheckResponse:
+      type: object
+      required: [currentVersion, status]
+      properties:
+        currentVersion:
+          type: string
+        status:
+          type: string
+          enum: [idle, checking, done]
+        available:
+          type: boolean
+        latestVersion:
+          type: string
+        latest_version:
+          type: string
+        errorCode:
+          type: integer
+        error_code:
+          type: integer
+        message:
+          type: string
+    OtaErrorResponse:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        message:
+          type: string
+    UserFontScanResponse:
+      type: object
+      required: [families, activeLoaded]
+      properties:
+        families:
+          type: integer
+          minimum: 0
+        activeLoaded:
+          type: boolean
+    UserFontUploadResponse:
+      type: object
+      required: [ok, families, activeLoaded]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        families:
+          type: integer
+          minimum: 0
+        activeLoaded:
+          type: boolean

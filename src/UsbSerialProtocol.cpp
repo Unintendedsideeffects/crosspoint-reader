@@ -150,6 +150,8 @@ static void handleStatus() {
   resp["freeHeap"] = (uint32_t)ESP.getFreeHeap();
   resp["uptime"] = millis() / 1000;
   resp["openBook"] = APP_STATE.openEpubPath.c_str();
+  resp["otaSelectedBundle"] = SETTINGS.selectedOtaBundle;
+  resp["otaInstalledBundle"] = SETTINGS.installedOtaBundle;
   serializeJson(resp, logSerial);
   logSerial.write('\n');
 }

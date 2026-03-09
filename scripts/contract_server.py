@@ -11,6 +11,7 @@ Usage:
 Firmware endpoints implemented:
     GET  /api/status
     GET  /api/plugins
+    GET  /api/features
     GET  /api/files?path=X
     GET  /download?path=X
     POST /mkdir          (form: name, path)
@@ -20,12 +21,17 @@ Firmware endpoints implemented:
     GET  /api/settings
     GET  /api/settings/raw
     POST /api/settings   (JSON body)
+    GET  /api/book-progress?path=X
+    GET  /api/book-pokemon?path=X
+    PUT  /api/book-pokemon
+    DELETE /api/book-pokemon?path=X
     GET  /api/recent
     GET  /api/cover?path=X
     GET  /api/sleep-images
     GET  /api/sleep-cover
     POST /api/sleep-cover/pin  (JSON: {path} or {bookPath})
     GET  /api/wifi/scan
+    GET  /api/wifi/status
     POST /api/wifi/connect     (JSON: {ssid, password})
     POST /api/wifi/forget      (JSON: {ssid})
     POST /api/open-book        (JSON: {path})
@@ -33,6 +39,8 @@ Firmware endpoints implemented:
     POST /api/ota/check
     GET  /api/ota/check
     POST /api/todo/entry       (form: type, text)
+    GET  /api/todo/today
+    POST /api/todo/today
     POST /api/user-fonts/upload
     POST /api/user-fonts/rescan
 
@@ -60,7 +68,7 @@ def _default_status():
     return {
         "version": "1.0.0",
         "protocolVersion": 1,
-        "wifiStatus": "connected",
+        "wifiStatus": "Connected",
         "ip": "192.168.4.1",
         "mode": "STA",
         "rssi": -50,
@@ -69,6 +77,7 @@ def _default_status():
         "openBook": "",
         "otaSelectedBundle": "",
         "otaInstalledBundle": "",
+        "otaInstalledFeatures": "",
     }
 
 
@@ -95,6 +104,15 @@ def _default_ota():
     }
 
 
+def _default_todo_today():
+    return {
+        "ok": True,
+        "date": "2024-01-15",
+        "path": "/daily/2024-01-15.md",
+        "items": [],
+    }
+
+
 def _default_state():
     return {
         # path → list[{name, isDirectory, size, modified, isEpub}]
@@ -103,6 +121,10 @@ def _default_state():
         "settings": [],
         # list[{path, title, author, last_position, last_opened}]
         "recentBooks": [],
+        # path → {format, percent, page, pageCount, position, spineIndex} | null
+        "bookProgress": {},
+        # path → pokemon object | null
+        "bookPokemon": {},
         "status": _default_status(),
         "plugins": _default_plugins(),
         # list[{path, name}]
@@ -110,6 +132,7 @@ def _default_state():
         "pinnedSleepCover": {"path": "", "name": ""},
         # list[{ssid, rssi, secured, connected}]
         "wifiNetworks": [],
+        "todoToday": _default_todo_today(),
         "otaStatus": _default_ota(),
         # path → base64-encoded bytes (for cover/download endpoints)
         "binaryFiles": {},
@@ -123,6 +146,7 @@ def _default_mutations():
         "settingsMutations": [],   # list[dict]
         "pinRequests": [],         # list[str]  ("" means clear)
         "todoEntries": [],         # list[[type, text]]
+        "todoTodaySaves": [],      # list[dict]
         "wifiConnects": [],        # list[[ssid, password]]
         "wifiForgets": [],         # list[str]
         "openBookRequests": [],    # list[str]
@@ -131,6 +155,8 @@ def _default_mutations():
         "renames": [],             # list[[from_path, new_name]]
         "moves": [],               # list[[from_path, dest_path]]
         "createdDirs": [],         # list[[name, parent_path]]
+        "bookPokemonUpserts": [],  # list[dict]
+        "bookPokemonDeletes": [],  # list[str]
     }
 
 
@@ -174,6 +200,37 @@ class ContractHandler(BaseHTTPRequestHandler):
         values = params.get(key, [])
         return urllib.parse.unquote(values[0]) if values else ""
 
+    def _connected_ssid(self) -> str:
+        status_ssid = _state["status"].get("ssid", "")
+        if status_ssid:
+            return status_ssid
+        for network in _state["wifiNetworks"]:
+            if network.get("connected"):
+                return network.get("ssid", "")
+        return ""
+
+    def _lookup_recent_book(self, path: str):
+        for book in _state["recentBooks"]:
+            if book.get("path") == path:
+                return book
+        return None
+
+    def _lookup_book_progress(self, path: str):
+        if path in _state["bookProgress"]:
+            return _state["bookProgress"][path]
+        book = self._lookup_recent_book(path)
+        if book is not None and "progress" in book:
+            return book.get("progress")
+        return None
+
+    def _lookup_book_pokemon(self, path: str):
+        if path in _state["bookPokemon"]:
+            return _state["bookPokemon"][path]
+        book = self._lookup_recent_book(path)
+        if book is not None and "pokemon" in book:
+            return book.get("pokemon")
+        return None
+
     # ── Response helpers ─────────────────────────────────────────────────────
 
     def _send_raw(self, code: int, content_type: str, body: bytes):
@@ -206,7 +263,7 @@ class ContractHandler(BaseHTTPRequestHandler):
             if base == "/api/status":
                 self._json_response(_state["status"])
 
-            elif base == "/api/plugins":
+            elif base in ("/api/plugins", "/api/features"):
                 self._json_response(_state["plugins"])
 
             elif base == "/api/files":
@@ -231,6 +288,20 @@ class ContractHandler(BaseHTTPRequestHandler):
             elif base == "/api/recent":
                 self._json_response(_state["recentBooks"])
 
+            elif base == "/api/book-progress":
+                path = self._query_param(query, "path")
+                if not path:
+                    self._text("Missing path", 400)
+                    return
+                self._json_response({"path": path, "progress": self._lookup_book_progress(path)})
+
+            elif base == "/api/book-pokemon":
+                path = self._query_param(query, "path")
+                if not path:
+                    self._text("Missing path", 400)
+                    return
+                self._json_response({"path": path, "pokemon": self._lookup_book_pokemon(path)})
+
             elif base == "/api/cover":
                 path = self._query_param(query, "path")
                 b64 = _state["binaryFiles"].get(path, "")
@@ -245,6 +316,9 @@ class ContractHandler(BaseHTTPRequestHandler):
             elif base == "/api/sleep-cover":
                 self._json_response(_state["pinnedSleepCover"])
 
+            elif base == "/api/todo/today":
+                self._json_response(_state["todoToday"])
+
             elif base == "/api/wifi/scan":
                 # Mirror firmware: return both secured and encrypted fields
                 networks = []
@@ -255,8 +329,39 @@ class ContractHandler(BaseHTTPRequestHandler):
                     networks.append(entry)
                 self._json_response(networks)
 
+            elif base == "/api/wifi/status":
+                status = _state["status"]
+                mode = status.get("mode", "STA")
+                if mode == "AP":
+                    response = {"connected": False, "mode": "AP"}
+                    ssid = status.get("apSsid", "") or status.get("ssid", "")
+                    if ssid:
+                        response["ssid"] = ssid
+                    self._json_response(response)
+                elif status.get("wifiStatus") == "Connected":
+                    response = {
+                        "connected": True,
+                        "mode": "STA",
+                        "ip": status.get("ip", ""),
+                        "rssi": status.get("rssi", -50),
+                    }
+                    ssid = self._connected_ssid()
+                    if ssid:
+                        response["ssid"] = ssid
+                    self._json_response(response)
+                else:
+                    self._json_response(
+                        {
+                            "connected": False,
+                            "mode": "STA",
+                            "status": status.get("wifiConnectStatus", "disconnected"),
+                        }
+                    )
+
             elif base == "/api/ota/check":
-                self._json_response(_state["otaStatus"])
+                response = dict(_state["otaStatus"])
+                response.setdefault("currentVersion", _state["status"].get("version", "1.0.0"))
+                self._json_response(response)
 
             elif base == "/_test/ping":
                 self._text("pong")
@@ -294,18 +399,28 @@ class ContractHandler(BaseHTTPRequestHandler):
                 self._text(f"Folder created: {name}")
 
             elif base == "/rename":
-                form = self._parse_form(raw)
-                path = urllib.parse.unquote(form.get("path", ""))
-                name = form.get("name", "")
-                _mutations["renames"].append([path, name])
-                self._text("Renamed")
+                body = self._parse_json(raw)
+                if "from" in body or "to" in body:
+                    path = urllib.parse.unquote(body.get("from", ""))
+                    target = urllib.parse.unquote(body.get("to", ""))
+                else:
+                    form = self._parse_form(raw)
+                    path = urllib.parse.unquote(form.get("path", ""))
+                    target = form.get("name", "")
+                _mutations["renames"].append([path, target])
+                self._text("Renamed successfully")
 
             elif base == "/move":
-                form = self._parse_form(raw)
-                path = urllib.parse.unquote(form.get("path", ""))
-                dest = urllib.parse.unquote(form.get("dest", ""))
+                body = self._parse_json(raw)
+                if "from" in body or "to" in body:
+                    path = urllib.parse.unquote(body.get("from", ""))
+                    dest = urllib.parse.unquote(body.get("to", ""))
+                else:
+                    form = self._parse_form(raw)
+                    path = urllib.parse.unquote(form.get("path", ""))
+                    dest = urllib.parse.unquote(form.get("dest", ""))
                 _mutations["moves"].append([path, dest])
-                self._text("Moved")
+                self._text("Moved successfully")
 
             elif base == "/delete":
                 form = self._parse_form(raw)
@@ -322,6 +437,24 @@ class ContractHandler(BaseHTTPRequestHandler):
                     [form.get("type", ""), form.get("text", "")]
                 )
                 self._text("Added")
+
+            elif base == "/api/todo/today":
+                body = self._parse_json(raw)
+                items = body.get("items", [])
+                if not isinstance(items, list):
+                    items = []
+                _mutations["todoTodaySaves"].append(body)
+                current = dict(_state["todoToday"])
+                current["ok"] = True
+                current["items"] = items
+                _state["todoToday"] = current
+                self._json_response(
+                    {
+                        "ok": True,
+                        "date": current.get("date", _default_todo_today()["date"]),
+                        "path": current.get("path", _default_todo_today()["path"]),
+                    }
+                )
 
             elif base == "/api/sleep-cover/pin":
                 self._handle_sleep_pin(raw)
@@ -352,8 +485,16 @@ class ContractHandler(BaseHTTPRequestHandler):
                 self._text("WiFi credentials removed")
 
             elif base == "/api/ota/check":
-                # POST triggers a check; respond 202 immediately
-                self._json_response({"status": "checking"}, 202)
+                status = _state["otaStatus"].get("status", "idle")
+                if status == "disabled":
+                    self._json_response({"status": "error", "message": "OTA API disabled"}, 404)
+                elif _state["status"].get("wifiStatus") != "Connected":
+                    self._json_response({"status": "error", "message": "Not connected to WiFi"}, 503)
+                elif status == "checking":
+                    self._json_response({"status": "checking"}, 200)
+                else:
+                    _state["otaStatus"]["status"] = "checking"
+                    self._json_response({"status": "checking"}, 202)
 
             elif base in ("/api/user-fonts/upload", "/api/user-fonts/rescan"):
                 self._text()
@@ -379,6 +520,50 @@ class ContractHandler(BaseHTTPRequestHandler):
                     _state["errorPaths"].append(path)
                 self._text("Error path added")
 
+            else:
+                self._not_found()
+
+    def do_PUT(self):
+        base, _ = self._path_and_query()
+        raw = self._read_body()
+
+        with _lock:
+            if base in _state["errorPaths"]:
+                self._text("Simulated server error", 500)
+                return
+
+            if base == "/api/book-pokemon":
+                body = self._parse_json(raw)
+                path = body.get("path", "")
+                pokemon = body.get("pokemon")
+                if not path:
+                    self._text("Missing path", 400)
+                    return
+                if not isinstance(pokemon, dict):
+                    self._text("Missing pokemon object", 400)
+                    return
+                _state["bookPokemon"][path] = pokemon
+                _mutations["bookPokemonUpserts"].append({"path": path, "pokemon": pokemon})
+                self._json_response({"ok": True, "path": path, "pokemon": pokemon})
+            else:
+                self._not_found()
+
+    def do_DELETE(self):
+        base, query = self._path_and_query()
+
+        with _lock:
+            if base in _state["errorPaths"]:
+                self._text("Simulated server error", 500)
+                return
+
+            if base == "/api/book-pokemon":
+                path = self._query_param(query, "path")
+                if not path:
+                    self._text("Missing path", 400)
+                    return
+                _state["bookPokemon"].pop(path, None)
+                _mutations["bookPokemonDeletes"].append(path)
+                self._json_response({"ok": True, "path": path})
             else:
                 self._not_found()
 
