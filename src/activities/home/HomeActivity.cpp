@@ -26,6 +26,12 @@
 #include "util/ForkDriftNavigation.h"
 #include "util/StringUtils.h"
 
+// Static cover cache state
+bool HomeActivity::coverRendered = false;
+bool HomeActivity::coverBufferStored = false;
+uint8_t* HomeActivity::coverBuffer = nullptr;
+std::vector<std::string> HomeActivity::coverCacheBookPaths;
+
 int HomeActivity::getMenuItemCount() const {
   int count = 3;  // My Library, File transfer, Settings
   if (hasContinueReading) count++;
@@ -268,10 +274,17 @@ void HomeActivity::onEnter() {
     selectorIndex = 0;
 
     hasCoverImage = false;
-    coverRendered = false;
     coverBmpPath.clear();
     lastBookTitle.clear();
     lastBookAuthor.clear();
+
+    // Invalidate cached cover buffer only when the recent book list has changed.
+    // If the same books are shown, restoreCoverBuffer() will reuse the static
+    // buffer and skip the slow SD card BMP reload entirely.
+    if (!isCoverCacheValid()) {
+      freeCoverBuffer();
+      coverRendered = false;
+    }
   } else {
     // Check if we have a book to continue reading
     hasContinueReading = !APP_STATE.openEpubPath.empty() && Storage.exists(APP_STATE.openEpubPath.c_str());
@@ -317,8 +330,8 @@ void HomeActivity::onEnter() {
 void HomeActivity::onExit() {
   Activity::onExit();
 
-  // Free the stored cover buffer if any
-  freeCoverBuffer();
+  // Do NOT free coverBuffer here — it is static and persists so the next home
+  // visit can restore covers instantly without reloading from SD card.
   recentBooks.clear();
 }
 
@@ -339,6 +352,13 @@ bool HomeActivity::storeCoverBuffer() {
 
   memcpy(coverBuffer, frameBuffer, bufferSize);
   coverBufferStored = true;
+
+  // Record which books' covers are now in the buffer so we can validate on re-entry.
+  coverCacheBookPaths.clear();
+  for (const auto& book : recentBooks) {
+    coverCacheBookPaths.push_back(book.path);
+  }
+
   return true;
 }
 
@@ -363,6 +383,22 @@ void HomeActivity::freeCoverBuffer() {
     coverBuffer = nullptr;
   }
   coverBufferStored = false;
+  coverCacheBookPaths.clear();
+}
+
+bool HomeActivity::isCoverCacheValid() const {
+  if (!coverBufferStored || !coverBuffer) {
+    return false;
+  }
+  if (coverCacheBookPaths.size() != recentBooks.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < coverCacheBookPaths.size(); i++) {
+    if (coverCacheBookPaths[i] != recentBooks[i].path) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void HomeActivity::loop() {

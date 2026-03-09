@@ -30,11 +30,16 @@ class HomeActivity final : public Activity {
   bool hasOpdsUrl = false;
   bool hasCoverImage = false;
   bool hasContinueReading = false;
-  bool coverRendered = false;      // Track if cover has been rendered once
-  bool coverBufferStored = false;  // Track if cover buffer is stored
   bool updateRequired = false;
 
-  uint8_t* coverBuffer = nullptr;  // HomeActivity's own buffer for cover image
+  // Static cover cache — persists across HomeActivity instances to avoid reloading
+  // covers from SD on every home visit. Invalidated when the recent book list changes.
+  // Cost: 48KB heap held while reading; benefit: instant home re-entry.
+  static bool coverRendered;
+  static bool coverBufferStored;
+  static uint8_t* coverBuffer;
+  static std::vector<std::string> coverCacheBookPaths;
+
   std::string lastBookTitle;
   std::string lastBookAuthor;
   std::string coverBmpPath;
@@ -48,7 +53,8 @@ class HomeActivity final : public Activity {
   void onTodoOpen();
   void onAnkiOpen();
 
-  void freeCoverBuffer();  // Free the stored cover buffer
+  void freeCoverBuffer();         // Free the stored cover buffer
+  bool isCoverCacheValid() const;  // True if static cover buffer matches current recent books
 
  protected:
   int getMenuItemCount() const;
