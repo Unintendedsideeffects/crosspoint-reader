@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Logging.h>
+
 #include <cstdint>
 
 class GfxRenderer;
@@ -21,6 +23,7 @@ class LifecycleRegistry {
 
   static void add(const LifecycleEntry& entry) {
     if (count >= kMaxEntries) {
+      LOG_ERR("REG", "LifecycleRegistry full (%d), entry dropped", kMaxEntries);
       return;
     }
 

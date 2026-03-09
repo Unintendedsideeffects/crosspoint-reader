@@ -34,11 +34,19 @@ network::BufferedHttpUploadSession& uploadSession() { return network::sharedBuff
 
 FontScanSnapshot rescanUserFonts() {
   auto& fontManager = UserFontManager::getInstance();
-  fontManager.scanFonts();
+  {
+    SpiBusMutex::Guard guard;
+    fontManager.scanFonts();
+  }
 
   bool activeLoaded = true;
   if (SETTINGS.fontFamily == CrossPointSettings::USER_SD) {
-    activeLoaded = fontManager.loadFontFamily(SETTINGS.userFontPath);
+    bool loaded = false;
+    {
+      SpiBusMutex::Guard guard;
+      loaded = fontManager.loadFontFamily(SETTINGS.userFontPath);
+    }
+    activeLoaded = loaded;
     if (!activeLoaded) {
       SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
       if (!SETTINGS.saveToFile()) {

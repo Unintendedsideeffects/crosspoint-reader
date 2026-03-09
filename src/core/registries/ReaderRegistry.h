@@ -1,6 +1,10 @@
 #pragma once
 
+#include <Logging.h>
+
+#include <cctype>
 #include <cstddef>
+#include <cstring>
 #include <string>
 
 class Activity;
@@ -34,6 +38,7 @@ class ReaderRegistry {
 
   static void add(const ReaderEntry& entry) {
     if (count >= kMaxEntries) {
+      LOG_ERR("REG", "ReaderRegistry full (%d), entry dropped", kMaxEntries);
       return;
     }
 
@@ -82,27 +87,19 @@ class ReaderRegistry {
   }
 
  private:
-  static std::size_t cStringLength(const char* value) {
-    if (value == nullptr) {
-      return 0;
-    }
-
-    std::size_t length = 0;
-    while (value[length] != '\0') {
-      ++length;
-    }
-    return length;
-  }
-
   static bool hasExtension(const std::string& path, const char* extension) {
-    const std::size_t extensionLength = cStringLength(extension);
+    if (extension == nullptr) {
+      return false;
+    }
+    const std::size_t extensionLength = std::strlen(extension);
     if (extensionLength == 0 || path.size() < extensionLength) {
       return false;
     }
 
     const std::size_t offset = path.size() - extensionLength;
     for (std::size_t i = 0; i < extensionLength; ++i) {
-      if (path[offset + i] != extension[i]) {
+      if (std::tolower(static_cast<unsigned char>(path[offset + i])) !=
+          std::tolower(static_cast<unsigned char>(extension[i]))) {
         return false;
       }
     }

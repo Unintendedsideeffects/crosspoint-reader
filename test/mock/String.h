@@ -48,6 +48,17 @@ class String {
   bool operator==(const char* rhs) const { return s_ == (rhs ? rhs : ""); }
   bool operator!=(const String& rhs) const { return !(*this == rhs); }
   bool operator!=(const char* rhs) const { return !(*this == rhs); }
+  bool equalsIgnoreCase(const char* rhs) const {
+    if (!rhs) return false;
+    if (s_.size() != std::strlen(rhs)) return false;
+    for (size_t i = 0; i < s_.size(); ++i) {
+      if (std::tolower(static_cast<unsigned char>(s_[i])) != std::tolower(static_cast<unsigned char>(rhs[i]))) {
+        return false;
+      }
+    }
+    return true;
+  }
+  bool equalsIgnoreCase(const String& rhs) const { return equalsIgnoreCase(rhs.c_str()); }
 
   // Element access
   char operator[](size_t i) const { return s_[i]; }
@@ -66,6 +77,11 @@ class String {
   int indexOf(const String& sub) const { return indexOf(sub.c_str()); }
   int indexOf(char c) const {
     auto pos = s_.find(c);
+    return pos == std::string::npos ? -1 : static_cast<int>(pos);
+  }
+  int indexOf(char c, int fromIndex) const {
+    if (fromIndex < 0 || static_cast<size_t>(fromIndex) >= s_.size()) return -1;
+    auto pos = s_.find(c, static_cast<size_t>(fromIndex));
     return pos == std::string::npos ? -1 : static_cast<int>(pos);
   }
 

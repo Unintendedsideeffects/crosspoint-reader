@@ -1,6 +1,9 @@
 #pragma once
 
+#include <Logging.h>
+
 #include <cstddef>
+#include <cstring>
 
 class Activity;
 class GfxRenderer;
@@ -28,6 +31,7 @@ class HomeActionRegistry {
 
   static void add(const HomeActionEntry& entry) {
     if (count >= kMaxEntries) {
+      LOG_ERR("REG", "HomeActionRegistry full (%d), entry dropped", kMaxEntries);
       return;
     }
 
@@ -88,17 +92,7 @@ class HomeActionRegistry {
     if (left == nullptr || right == nullptr) {
       return left == right;
     }
-
-    while (*left != '\0' && *right != '\0') {
-      if (*left != *right) {
-        return false;
-      }
-
-      ++left;
-      ++right;
-    }
-
-    return *left == *right;
+    return std::strcmp(left, right) == 0;
   }
 
   inline static HomeActionEntry entries[kMaxEntries] = {};

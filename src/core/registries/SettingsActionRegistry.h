@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Logging.h>
+
 #include <cstddef>
 
 #include "activities/settings/SettingsActivity.h"
@@ -23,6 +25,7 @@ class SettingsActionRegistry {
 
   static void add(const SettingsActionEntry& entry) {
     if (count >= kMaxEntries) {
+      LOG_ERR("REG", "SettingsActionRegistry full (%d), entry dropped", kMaxEntries);
       return;
     }
 

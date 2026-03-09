@@ -5,6 +5,9 @@
 #include <Logging.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include <esp_task_wdt.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #include "WifiCredentialStore.h"
 #include "core/features/FeatureCatalog.h"
@@ -18,7 +21,29 @@ bool shouldRegisterWebWifiSetupApiRoute() { return core::FeatureCatalog::isEnabl
 
 void mountWifiRoutes(WebServer* server) {
   server->on("/api/wifi/scan", HTTP_GET, [server] {
-    int n = WiFi.scanNetworks();
+    // WiFi.scanNetworks() is blocking (can take several seconds). Use the async
+    // variant and poll with watchdog resets to avoid triggering the WDT.
+    constexpr unsigned long kScanTimeoutMs = 8000;
+    constexpr unsigned long kPollIntervalMs = 100;
+    WiFi.scanNetworks(/*async=*/true);
+    esp_task_wdt_reset();
+    const unsigned long start = millis();
+    int n = WIFI_SCAN_RUNNING;
+    while (n == WIFI_SCAN_RUNNING) {
+      vTaskDelay(pdMS_TO_TICKS(kPollIntervalMs));
+      esp_task_wdt_reset();
+      n = WiFi.scanComplete();
+      if (millis() - start > kScanTimeoutMs) {
+        WiFi.scanDelete();
+        server->send(504, "text/plain", "WiFi scan timed out");
+        return;
+      }
+    }
+    if (n == WIFI_SCAN_FAILED) {
+      WiFi.scanDelete();
+      server->send(500, "text/plain", "WiFi scan failed");
+      return;
+    }
     const bool staConnected = (WiFi.getMode() & WIFI_MODE_STA) && (WiFi.status() == WL_CONNECTED);
     const String activeSsid = staConnected ? WiFi.SSID() : String();
     JsonDocument doc;

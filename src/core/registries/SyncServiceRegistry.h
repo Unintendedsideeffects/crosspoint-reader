@@ -13,12 +13,12 @@
 //     heap-allocating types so it is safe to include in any translation unit.
 //   - Nullable: all fn ptrs default to nullptr; getKoreaderApi() returns nullptr when
 //     the feature is disabled, letting callers guard with a single null-check.
-//
+
+namespace core {
+
 // Buffer sizes for credential strings.  Callers must allocate at least these sizes.
 static constexpr size_t kSyncCredBufSize = 128;  // username / password
 static constexpr size_t kSyncUrlBufSize = 256;   // server URL
-
-namespace core {
 
 // Narrow API surface for KOReader sync credential and state access.
 // All string accessors write into caller-provided buffers (null-terminated).
