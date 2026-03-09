@@ -50,7 +50,12 @@ FontScanSnapshot rescanUserFonts() {
     activeLoaded = loaded;
     if (!activeLoaded) {
       SETTINGS.fontFamily = CrossPointSettings::BOOKERLY;
-      if (!SETTINGS.saveToFile()) {
+      bool saved = false;
+      {
+        SpiBusMutex::Guard guard;
+        saved = SETTINGS.saveToFile();
+      }
+      if (!saved) {
         LOG_WRN("FEATURES", "Failed to persist font fallback after rescan");
       }
     }
@@ -68,14 +73,14 @@ bool resolveUserFontUploadTarget(WebServer* server, const char* uploadFileName,
     return false;
   }
 
-  // Case-insensitive .cpf check: copy to stack buffer, lowercase, compare suffix.
-  char lower[network::BufferedHttpUploadSession::kMaxFileNameLen];
-  snprintf(lower, sizeof(lower), "%s", uploadFileName);
-  for (char* p = lower; *p; ++p) {
-    *p = static_cast<char>(std::tolower(static_cast<unsigned char>(*p)));
+  // Case-insensitive .cpf suffix check on the last 4 bytes only — no full-name copy needed.
+  const size_t len = std::strlen(uploadFileName);
+  char ext[5] = {};
+  if (len >= 4) {
+    memcpy(ext, uploadFileName + len - 4, 4);
+    for (char* p = ext; *p; ++p) *p = static_cast<char>(std::tolower(static_cast<unsigned char>(*p)));
   }
-  const size_t len = std::strlen(lower);
-  if (len < 4 || std::strcmp(lower + len - 4, ".cpf") != 0) {
+  if (len < 4 || std::strcmp(ext, ".cpf") != 0) {
     snprintf(error, errorSize, "Only .cpf font files are accepted");
     return false;
   }
@@ -202,7 +207,10 @@ void onUploadCompleted(const char* uploadPath, const char* uploadFileName) {
 
   auto& manager = UserFontManager::getInstance();
   manager.invalidateCache();
-  manager.scanFonts();
+  {
+    SpiBusMutex::Guard guard;
+    manager.scanFonts();
+  }
 }
 
 }  // namespace

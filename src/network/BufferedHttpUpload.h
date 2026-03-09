@@ -8,7 +8,7 @@
 namespace network {
 
 struct BufferedHttpUploadTarget {
-  static constexpr size_t kMaxPathLen = 512;
+  static constexpr size_t kMaxPathLen = 256;
 
   char uploadPath[kMaxPathLen] = "/";
   char filePath[kMaxPathLen] = {};
@@ -50,6 +50,7 @@ class BufferedHttpUploadSession {
   char uploadFileName[kMaxFileNameLen] = {};
   char uploadPathValue[kMaxPathLen] = "/";
   char targetFilePath[kMaxPathLen] = {};
+  BufferedHttpUploadTarget uploadTarget = {};
   size_t uploadSize = 0;
   bool uploadSuccess = false;
   char uploadError[kMaxErrorLen] = {};

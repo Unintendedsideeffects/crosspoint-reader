@@ -103,6 +103,8 @@ bool resolveWebUploadTarget(WebServer* server, const char* uploadFileName, netwo
     return false;
   }
 
+  // PathUtils requires String parameters and returns String by value, so one String allocation
+  // per urlDecode/normalizePath call is unavoidable here without a PathUtils API change.
   String uploadPath = "/";
   if (server->hasArg("path")) {
     uploadPath = PathUtils::urlDecode(server->arg("path"));
@@ -122,8 +124,13 @@ bool resolveWebUploadTarget(WebServer* server, const char* uploadFileName, netwo
 
   const bool endsWithSlash = uploadPath.length() > 0 && uploadPath[uploadPath.length() - 1] == '/';
   snprintf(target.uploadPath, sizeof(target.uploadPath), "%s", uploadPath.c_str());
-  snprintf(target.filePath, sizeof(target.filePath), "%s%s%s", uploadPath.c_str(), endsWithSlash ? "" : "/",
-           uploadFileName);
+  const int written = snprintf(target.filePath, sizeof(target.filePath), "%s%s%s", uploadPath.c_str(),
+                               endsWithSlash ? "" : "/", uploadFileName);
+  if (written < 0 || static_cast<size_t>(written) >= sizeof(target.filePath)) {
+    snprintf(error, errorSize, "Path too long");
+    LOG_WRN("WEB", "[UPLOAD] Combined upload path exceeds limit (%d chars)", written);
+    return false;
+  }
   return true;
 }
 
