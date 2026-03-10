@@ -102,6 +102,8 @@ bool FeatureModules::hasCapability(const Capability capability) {
       return isEnabled("dark_mode");
     case Capability::EpubSupport:
       return isEnabled("epub_support");
+    case Capability::GlobalStatusBar:
+      return isEnabled("global_status_bar");
     case Capability::HomeMediaPicker:
       return isEnabled("home_media_picker");
     case Capability::KoreaderSync:

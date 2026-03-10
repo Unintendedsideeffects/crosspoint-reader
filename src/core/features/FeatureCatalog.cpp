@@ -64,6 +64,7 @@ constexpr FeatureDescriptor kFeatureCatalog[] = {
     {"user_fonts", "User Fonts", ENABLE_USER_FONTS != 0, nullptr, 0, nullptr, 0},
     {"web_wifi_setup", "Web WiFi Setup", ENABLE_WEB_WIFI_SETUP != 0, nullptr, 0, nullptr, 0},
     {"usb_mass_storage", "USB Mass Storage", ENABLE_USB_MASS_STORAGE != 0, nullptr, 0, nullptr, 0},
+    {"global_status_bar", "Global Status Bar", ENABLE_GLOBAL_STATUS_BAR != 0, nullptr, 0, nullptr, 0},
 };
 
 constexpr size_t kFeatureCount = sizeof(kFeatureCatalog) / sizeof(kFeatureCatalog[0]);

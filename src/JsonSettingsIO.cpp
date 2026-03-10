@@ -103,6 +103,10 @@ bool JsonSettingsIO::saveSettings(const CrossPointSettings& s, const char* path)
   doc["installedOtaFeatureFlags"] = s.installedOtaFeatureFlags;
   doc["deviceName"] = s.deviceName;
   doc["wifiAutoConnect"] = s.wifiAutoConnect;
+  doc["showHiddenFiles"] = s.showHiddenFiles;
+  doc["imageRendering"] = s.imageRendering;
+  doc["globalStatusBar"] = s.globalStatusBar;
+  doc["globalStatusBarPosition"] = s.globalStatusBarPosition;
 
   String json;
   serializeJson(doc, json);
@@ -196,6 +200,11 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   s.embeddedStyle = doc["embeddedStyle"] | (uint8_t)1;
   s.usbMscPromptOnConnect = doc["usbMscPromptOnConnect"] | (uint8_t)0;
   s.wifiAutoConnect = doc["wifiAutoConnect"] | (uint8_t)0;
+  s.showHiddenFiles = doc["showHiddenFiles"] | (uint8_t)0;
+  s.imageRendering = clamp(doc["imageRendering"] | (uint8_t)S::IMAGES_DISPLAY, S::IMAGE_RENDERING_COUNT, S::IMAGES_DISPLAY);
+  s.globalStatusBar = doc["globalStatusBar"] | (uint8_t)0;
+  s.globalStatusBarPosition =
+      clamp(doc["globalStatusBarPosition"] | (uint8_t)S::STATUS_BAR_TOP, S::GLOBAL_STATUS_BAR_POSITION_COUNT, S::STATUS_BAR_TOP);
 
   const char* url = doc["opdsServerUrl"] | "";
   strncpy(s.opdsServerUrl, url, sizeof(s.opdsServerUrl) - 1);

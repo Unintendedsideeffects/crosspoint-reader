@@ -165,6 +165,14 @@ inline std::vector<SettingInfo> getSettingsList() {
         SettingInfo::Toggle(StrId::STR_DARK_MODE, &CrossPointSettings::darkMode, "darkMode", StrId::STR_CAT_DISPLAY));
   }
 
+  if (core::FeatureModules::hasCapability(core::Capability::GlobalStatusBar)) {
+    list.push_back(SettingInfo::Toggle(StrId::STR_GLOBAL_STATUS_BAR, &CrossPointSettings::globalStatusBar,
+                                       "globalStatusBar", StrId::STR_CAT_DISPLAY));
+    list.push_back(SettingInfo::Enum(StrId::STR_STATUS_BAR_POSITION, &CrossPointSettings::globalStatusBarPosition,
+                                     {StrId::STR_STATUS_BAR_TOP, StrId::STR_STATUS_BAR_BOTTOM},
+                                     "globalStatusBarPosition", StrId::STR_CAT_DISPLAY));
+  }
+
   if (core::FeatureModules::hasCapability(core::Capability::UsbMassStorage)) {
     list.push_back(SettingInfo::Toggle(StrId::STR_FILE_TRANSFER, &CrossPointSettings::usbMscPromptOnConnect,
                                        "usbMscPromptOnConnect", StrId::STR_CAT_SYSTEM));

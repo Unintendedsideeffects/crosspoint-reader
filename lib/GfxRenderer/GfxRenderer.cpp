@@ -799,6 +799,10 @@ void GfxRenderer::invertScreen() const {
 void GfxRenderer::displayBuffer(const HalDisplay::RefreshMode refreshMode) const {
   auto elapsed = millis() - start_ms;
   LOG_DBG("GFX", "Time = %lu ms from clearScreen to displayBuffer", elapsed);
+  // Run overlay hook before dark-mode inversion so it draws in normal polarity.
+  if (postRenderHook) {
+    postRenderHook(*this);
+  }
   if (darkMode) {
     invertScreen();
   }

@@ -164,6 +164,13 @@ class CrossPointSettings {
   // Image rendering in EPUB reader
   enum IMAGE_RENDERING { IMAGES_DISPLAY = 0, IMAGES_PLACEHOLDER = 1, IMAGES_SUPPRESS = 2, IMAGE_RENDERING_COUNT };
 
+  // Global status bar overlay position
+  enum GLOBAL_STATUS_BAR_POSITION {
+    STATUS_BAR_TOP = 0,
+    STATUS_BAR_BOTTOM = 1,
+    GLOBAL_STATUS_BAR_POSITION_COUNT
+  };
+
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
   // Sleep screen cover mode settings
@@ -253,6 +260,9 @@ class CrossPointSettings {
   uint8_t showHiddenFiles = 0;
   // Image rendering mode in EPUB reader
   uint8_t imageRendering = IMAGES_DISPLAY;
+  // Global status bar overlay (battery + WiFi, always visible across all screens)
+  uint8_t globalStatusBar = 0;          // 0 = disabled, 1 = enabled
+  uint8_t globalStatusBarPosition = STATUS_BAR_TOP;  // 0 = top, 1 = bottom
 
   ~CrossPointSettings() = default;
 

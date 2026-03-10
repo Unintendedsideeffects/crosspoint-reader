@@ -43,6 +43,7 @@ enum class Capability {
   CalibreSync,
   DarkMode,
   EpubSupport,
+  GlobalStatusBar,
   HomeMediaPicker,
   KoreaderSync,
   LyraTheme,

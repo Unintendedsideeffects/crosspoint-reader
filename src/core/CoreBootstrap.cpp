@@ -18,6 +18,7 @@
 #include "features/txt/Registration.h"
 #include "features/usb_mass_storage/Registration.h"
 #include "features/user_fonts/Registration.h"
+#include "features/status_overlay/Registration.h"
 #include "features/visual_cover_picker/Registration.h"
 #include "features/web_pokedex/Registration.h"
 #include "features/web_wallpaper/Registration.h"
@@ -56,6 +57,7 @@ void registerFeatureModules() {
   features::ble_wifi_provisioning::registerFeature();
   features::usb_mass_storage::registerFeature();
   features::visual_cover_picker::registerFeature();
+  features::status_overlay::registerFeature();
 
   gFeatureRegistrationsInitialized = true;
 }

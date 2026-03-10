@@ -36,6 +36,7 @@ class GfxRenderer {
   Orientation orientation;
   bool fadingFix;
   bool darkMode;
+  void (*postRenderHook)(const GfxRenderer&) = nullptr;
   uint8_t* frameBuffer = nullptr;
   uint8_t* bwBufferChunks[BW_BUFFER_NUM_CHUNKS] = {nullptr};
   std::map<int, IEpdFont*> fontMap;
@@ -82,6 +83,11 @@ class GfxRenderer {
   // Dark mode control
   void setDarkMode(const bool enabled) { darkMode = enabled; }
   bool isDarkMode() const { return darkMode; }
+
+  // Post-render hook: called inside displayBuffer() after activity rendering
+  // but before dark-mode inversion, so the hook draws in normal polarity.
+  // Use a plain function pointer (no std::function) to avoid heap allocation.
+  void setPostRenderHook(void (*hook)(const GfxRenderer&)) { postRenderHook = hook; }
 
   // Screen ops
   int getScreenWidth() const;

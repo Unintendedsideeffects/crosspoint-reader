@@ -130,6 +130,10 @@
 #define ENABLE_USB_MASS_STORAGE 1
 #endif
 
+#ifndef ENABLE_GLOBAL_STATUS_BAR
+#define ENABLE_GLOBAL_STATUS_BAR 1
+#endif
+
 // Enforce downstream dependencies at compile time.
 #if !ENABLE_INTEGRATIONS
 #undef ENABLE_KOREADER_SYNC
