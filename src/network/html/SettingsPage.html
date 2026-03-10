@@ -609,9 +609,23 @@
     container.innerHTML = '<div class="loader-container"><span class="loader" style="width:24px;height:24px;"></span></div>';
 
     try {
-      const response = await fetch('/api/wifi/scan');
-      const networks = await response.json();
-      
+      // Poll until the device returns 200 (results ready) or an error.
+      // The first request starts the async scan; subsequent requests check progress.
+      let networks = null;
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const response = await fetch('/api/wifi/scan');
+        if (response.status === 200) {
+          networks = await response.json();
+          break;
+        }
+        if (response.status !== 202) {
+          throw new Error(await response.text());
+        }
+        await new Promise(function(r) { setTimeout(r, 500); });
+      }
+
+      if (!networks) throw new Error('Scan timed out');
+
       if (networks.length === 0) {
         container.innerHTML = '<p style="font-size: 0.8em; color: var(--gray-5); text-align: center; padding: 10px;">No networks found</p>';
       } else {
@@ -622,13 +636,13 @@
           html += '<div class="setting-row">' +
             '<span class="setting-name">' + escapeHtml(net.ssid) + lock + saved + '</span>' +
             '<span class="setting-control">';
-          
+
           if (net.saved) {
             html += '<button class="save-btn" style="padding:4px 10px; font-size:0.7em; background:var(--gray-3); border-color:var(--gray-3);" onclick="forgetWifi(\'' + escapeHtml(net.ssid) + '\')">Forget</button>';
           } else {
             html += '<button class="save-btn" style="padding:4px 10px; font-size:0.7em;" onclick="connectWifi(\'' + escapeHtml(net.ssid) + '\', ' + net.encrypted + ')">Connect</button>';
           }
-          
+
           html += '</span></div>';
         });
         container.innerHTML = html;

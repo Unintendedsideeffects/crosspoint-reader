@@ -5,9 +5,6 @@
 #include <Logging.h>
 #include <WebServer.h>
 #include <WiFi.h>
-#include <esp_task_wdt.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 
 #include "SpiBusMutex.h"
 #include "WifiCredentialStore.h"
@@ -22,48 +19,51 @@ bool shouldRegisterWebWifiSetupApiRoute() { return core::FeatureCatalog::isEnabl
 
 void mountWifiRoutes(WebServer* server) {
   server->on("/api/wifi/scan", HTTP_GET, [server] {
-    // WiFi.scanNetworks() is blocking (can take several seconds). Use the async
-    // variant and poll with watchdog resets to avoid triggering the WDT.
-    constexpr unsigned long kScanTimeoutMs = 8000;
-    constexpr unsigned long kPollIntervalMs = 100;
-    WiFi.scanNetworks(/*async=*/true);
-    esp_task_wdt_reset();
-    const unsigned long start = millis();
-    int n = WIFI_SCAN_RUNNING;
-    while (n == WIFI_SCAN_RUNNING) {
-      vTaskDelay(pdMS_TO_TICKS(kPollIntervalMs));
-      esp_task_wdt_reset();
-      n = WiFi.scanComplete();
-      if (millis() - start > kScanTimeoutMs) {
-        WiFi.scanDelete();
-        server->send(504, "text/plain", "WiFi scan timed out");
-        return;
+    // Non-blocking scan: start async scan on first call and return HTTP 202
+    // immediately. The browser re-polls until it receives HTTP 200 with results.
+    // This prevents blocking the main task (and thus the display) for the
+    // several seconds a WiFi scan takes.
+    static bool scanActive = false;
+    const int16_t n = WiFi.scanComplete();
+    if (n >= 0) {
+      // Scan complete — build and return results.
+      scanActive = false;
+      const bool staConnected = (WiFi.getMode() & WIFI_MODE_STA) && (WiFi.status() == WL_CONNECTED);
+      const String activeSsid = staConnected ? WiFi.SSID() : String();
+      JsonDocument doc;
+      JsonArray array = doc.to<JsonArray>();
+      for (int i = 0; i < n; ++i) {
+        const String networkSsid = WiFi.SSID(i);
+        const bool encrypted = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+        JsonObject obj = array.add<JsonObject>();
+        obj["ssid"] = networkSsid;
+        obj["rssi"] = WiFi.RSSI(i);
+        obj["encrypted"] = encrypted;
+        obj["secured"] = encrypted;
+        obj["saved"] = WIFI_STORE.hasSavedCredential(networkSsid.c_str());
+        obj["connected"] = staConnected && (networkSsid == activeSsid);
       }
-    }
-    if (n == WIFI_SCAN_FAILED) {
       WiFi.scanDelete();
+      String json;
+      serializeJson(doc, json);
+      server->send(200, "application/json", json);
+      return;
+    }
+    if (n == WIFI_SCAN_RUNNING) {
+      server->send(202, "application/json", "{\"scanning\":true}");
+      return;
+    }
+    // n == WIFI_SCAN_FAILED: either not yet started or a previous scan failed.
+    if (scanActive) {
+      // We started a scan but it failed.
+      scanActive = false;
       server->send(500, "text/plain", "WiFi scan failed");
       return;
     }
-    const bool staConnected = (WiFi.getMode() & WIFI_MODE_STA) && (WiFi.status() == WL_CONNECTED);
-    const String activeSsid = staConnected ? WiFi.SSID() : String();
-    JsonDocument doc;
-    JsonArray array = doc.to<JsonArray>();
-    for (int i = 0; i < n; ++i) {
-      const String networkSsid = WiFi.SSID(i);
-      const bool encrypted = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
-      JsonObject obj = array.add<JsonObject>();
-      obj["ssid"] = networkSsid;
-      obj["rssi"] = WiFi.RSSI(i);
-      obj["encrypted"] = encrypted;
-      obj["secured"] = encrypted;
-      obj["saved"] = WIFI_STORE.hasSavedCredential(networkSsid.c_str());
-      obj["connected"] = staConnected && (networkSsid == activeSsid);
-    }
-    WiFi.scanDelete();
-    String json;
-    serializeJson(doc, json);
-    server->send(200, "application/json", json);
+    // Start a fresh async scan.
+    WiFi.scanNetworks(/*async=*/true);
+    scanActive = true;
+    server->send(202, "application/json", "{\"scanning\":true}");
   });
 
   server->on("/api/wifi/connect", HTTP_POST, [server] {
