@@ -133,22 +133,34 @@ bool Epub::parseContentOpf(BookMetadataCache::BookMetadata& bookMetadata) {
         coverPageBase = opfParser.guideCoverPageHref.substr(0, lastSlash + 1);
       }
 
-      // Search for image references: xlink:href="..." (SVG) and src="..." (img)
-      std::string imageRef;
-      for (const char* pattern : {"xlink:href=\"", "src=\""}) {
-        auto pos = coverPageHtml.find(pattern);
+      // Search for image references: xlink:href and src attributes (both quote styles).
+      // Returns the attribute value if it has a recognised image extension, else empty.
+      const auto findImageAttr = [&](const char* attrName, char quote) -> std::string {
+        // Longest needle is "xlink:href='" (12 chars + null = 13); 20 is safe.
+        char needle[20];
+        snprintf(needle, sizeof(needle), "%s=%c", attrName, quote);
+        const size_t needleLen = strlen(needle);
+        auto pos = coverPageHtml.find(needle);
         while (pos != std::string::npos) {
-          pos += strlen(pattern);
-          const auto endPos = coverPageHtml.find('"', pos);
+          pos += needleLen;
+          const auto endPos = coverPageHtml.find(quote, pos);
           if (endPos != std::string::npos) {
-            const auto ref = std::string_view{coverPageHtml}.substr(pos, endPos - pos);
-            // Check if it's an image file
-            if (FsHelpers::hasPngExtension(ref) || FsHelpers::hasJpgExtension(ref) || FsHelpers::hasGifExtension(ref)) {
-              imageRef = ref;
-              break;
+            const std::string_view ref{coverPageHtml.c_str() + pos, endPos - pos};
+            if (FsHelpers::hasPngExtension(ref) || FsHelpers::hasJpgExtension(ref) ||
+                FsHelpers::hasGifExtension(ref)) {
+              return std::string(ref);
             }
           }
-          pos = coverPageHtml.find(pattern, pos);
+          pos = coverPageHtml.find(needle, pos);
+        }
+        return {};
+      };
+
+      std::string imageRef;
+      for (const char* attrName : {"xlink:href", "src"}) {
+        for (const char quote : {'"', '\''}) {
+          imageRef = findImageAttr(attrName, quote);
+          if (!imageRef.empty()) break;
         }
         if (!imageRef.empty()) break;
       }
