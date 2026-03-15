@@ -1097,6 +1097,91 @@
         font-family: 'IBM Plex Mono', monospace;
       }
 
+      /* ── Pre-built download cards ── */
+      .preset-dl-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      @media (max-width: 600px) {
+        .preset-dl-grid { grid-template-columns: 1fr; }
+      }
+
+      .preset-dl-card {
+        border: var(--px) solid var(--blk);
+        background: var(--fog);
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-hi),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo);
+        position: relative;
+      }
+
+      .preset-dl-card.active-preset {
+        background: var(--white);
+        border-color: var(--blk);
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-hi),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo),
+          0 0 0 2px var(--blk);
+      }
+
+      .preset-dl-name {
+        font-family: 'Silkscreen', monospace;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--blk);
+      }
+
+      .preset-dl-size {
+        font-size: 8px;
+        color: var(--md);
+        letter-spacing: 0.06em;
+      }
+
+      .preset-dl-features {
+        font-size: 8px;
+        color: var(--dk);
+        line-height: 1.6;
+        flex: 1;
+      }
+
+      .preset-dl-features span {
+        display: block;
+      }
+
+      .preset-dl-features span.feat-off {
+        color: var(--pale);
+        text-decoration: line-through;
+      }
+
+      .preset-dl-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+      }
+
+      .preset-dl-badge {
+        position: absolute;
+        top: -1px;
+        right: 8px;
+        font-family: 'Silkscreen', monospace;
+        font-size: 7px;
+        font-weight: 700;
+        text-transform: uppercase;
+        background: var(--blk);
+        color: var(--white);
+        padding: 1px 5px;
+        letter-spacing: 0.08em;
+      }
+
       /* ── Cloud build trigger ── */
       .gh-token-row {
         display: flex;
@@ -1587,6 +1672,72 @@
           </div>
         </section>
 
+      </div>
+
+      <!-- Pre-built Downloads -->
+      <div class="panel">
+        <div class="panel-heading">Pre-built Downloads</div>
+        <div class="companion-desc" style="line-height: 1.6; margin-bottom: 4px;">
+          Ready-to-flash binaries built from the <code>fork-drift</code> branch on every push.
+          Grab a preset, or use the <strong>Build &amp; Download</strong> panel below for a custom configuration.
+        </div>
+        <div class="preset-dl-grid">
+          <!-- Lean -->
+          <div class="preset-dl-card" id="dl-card-lean">
+            <div class="preset-dl-name">Lean</div>
+            <div class="preset-dl-size">~2.6 MB &middot; 41% flash</div>
+            <div class="preset-dl-features">
+              <span class="feat-off">&#x25A0; Extended Fonts</span>
+              <span class="feat-off">&#x25A0; PNG/JPEG Sleep</span>
+              <span class="feat-off">&#x25A0; Markdown</span>
+              <span class="feat-off">&#x25A0; Background Server</span>
+              <span class="feat-off">&#x25A0; Media Picker</span>
+            </div>
+            <div class="preset-dl-actions">
+              <a class="btn btn-solid" id="dl-btn-lean" href="#" download>&#x2193; firmware.bin</a>
+              <a class="btn btn-outline" id="dl-releases-lean" href="#" target="_blank" rel="noopener">Releases</a>
+            </div>
+          </div>
+          <!-- Standard -->
+          <div class="preset-dl-card" id="dl-card-standard">
+            <div class="preset-dl-badge">Recommended</div>
+            <div class="preset-dl-name">Standard</div>
+            <div class="preset-dl-size">~6.2 MB &middot; 97% flash</div>
+            <div class="preset-dl-features">
+              <span>&#x25A0; Extended Fonts</span>
+              <span>&#x25A0; PNG/JPEG Sleep</span>
+              <span class="feat-off">&#x25A0; Markdown</span>
+              <span>&#x25A0; Background Server</span>
+              <span>&#x25A0; Media Picker</span>
+            </div>
+            <div class="preset-dl-actions">
+              <a class="btn btn-solid" id="dl-btn-standard" href="#" download>&#x2193; firmware.bin</a>
+              <a class="btn btn-outline" id="dl-releases-standard" href="#" target="_blank" rel="noopener">Releases</a>
+            </div>
+          </div>
+          <!-- Full -->
+          <div class="preset-dl-card" id="dl-card-full">
+            <div class="preset-dl-name">Full</div>
+            <div class="preset-dl-size">~6.4 MB &middot; 99% flash</div>
+            <div class="preset-dl-features">
+              <span>&#x25A0; Extended Fonts</span>
+              <span>&#x25A0; PNG/JPEG Sleep</span>
+              <span>&#x25A0; Markdown</span>
+              <span>&#x25A0; Background Server</span>
+              <span>&#x25A0; Media Picker</span>
+              <span>&#x25A0; KOReader + Calibre</span>
+            </div>
+            <div class="preset-dl-actions">
+              <a class="btn btn-solid" id="dl-btn-full" href="#" download>&#x2193; firmware.bin</a>
+              <a class="btn btn-outline" id="dl-releases-full" href="#" target="_blank" rel="noopener">Releases</a>
+            </div>
+          </div>
+        </div>
+        <div class="info-bar">
+          These binaries are updated automatically on every push to <code>fork-drift</code>.
+          Flash with <a href="https://unintendedsideeffects.github.io/xteink-flasher/" target="_blank" rel="noopener" style="color:inherit">Xteink Flasher</a>
+          or via <code>esptool.py</code>.
+        </div>
       </div>
 
       <!-- Build Outputs -->
@@ -2189,6 +2340,11 @@
         document.querySelectorAll(".preset-btn").forEach((btn) => {
           btn.classList.toggle("active", btn.dataset.preset === profileName);
         });
+        // Mirror highlight on the download cards
+        ["lean", "standard", "full"].forEach((p) => {
+          const card = document.getElementById("dl-card-" + p);
+          if (card) card.classList.toggle("active-preset", p === profileName);
+        });
       }
 
       function detectMatchingProfile(selections) {
@@ -2630,6 +2786,25 @@
         } finally {
           triggerBtn.disabled = false;
         }
+      }
+
+      function initPresetDownloadLinks() {
+        const repo = getRepoInfo();
+        const base = `https://github.com/${repo.owner}/${repo.repo}/releases/download/latest`;
+        const releasesUrl = `https://github.com/${repo.owner}/${repo.repo}/releases/tag/latest`;
+
+        const map = {
+          lean:     "crosspoint-lean.bin",
+          standard: "crosspoint-standard.bin",
+          full:     "crosspoint-full.bin",
+        };
+
+        Object.entries(map).forEach(([profile, filename]) => {
+          const dlBtn = document.getElementById("dl-btn-" + profile);
+          const relBtn = document.getElementById("dl-releases-" + profile);
+          if (dlBtn) dlBtn.href = `${base}/${filename}`;
+          if (relBtn) relBtn.href = releasesUrl;
+        });
       }
 
       function setupGitHubBuildTrigger() {
@@ -3522,6 +3697,7 @@
       setupWallpaperStudio();
       setupDeviceTools();
       setupGitHubBuildTrigger();
+      initPresetDownloadLinks();
       const initialState = parseInitialStateFromUrl();
       baseProfile = initialState.initialProfile;
       setSelections(initialState.selections);
