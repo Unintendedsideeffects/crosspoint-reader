@@ -1482,7 +1482,7 @@
                     <div class="card-body">
                       <div class="card-name">Pokemon Party</div>
                       <div class="card-size"></div>
-                      <div class="card-desc">Per-book Pokemon metadata API for recent-book party views</div>
+                      <div class="card-desc">Enables the Pokemon Party UI theme and per-book Pokemon metadata API; select the theme in Settings → Display</div>
                     </div>
                     <div class="card-toggle"><span class="toggle-box"></span></div>
                   </label>
@@ -1597,6 +1597,17 @@
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
 
+              <label class="skill-card" data-feature="remote_keyboard_input" data-node-id="remote_keyboard_input">
+                <input type="checkbox" id="remote_keyboard_input" data-feature="remote_keyboard_input" />
+                <div class="card-icon"><span>&#x2328;</span></div>
+                <div class="card-body">
+                  <div class="card-name">Remote Keyboard</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Use the Android keyboard first, then fall back to QR/browser input with automatic hotspot startup</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
+
               <div class="dep-group" data-dep-parent="integrations">
                 <label class="skill-card dep-parent" data-feature="integrations" data-node-id="integrations">
                   <input type="checkbox" id="integrations" data-feature="integrations" />
@@ -1635,7 +1646,7 @@
             </div>
 
             <div class="info-bar" style="margin-top: 12px;">
-              Android/app clients discover remote open-book and remote page-turn support from the plugin flags <code>remote_open_book</code> and <code>remote_page_turn</code>.
+              Android/app clients discover remote open-book, remote page-turn, and remote keyboard support from the plugin flags <code>remote_open_book</code>, <code>remote_page_turn</code>, and <code>remote_keyboard_input</code>. Remote keyboard sessions prefer the Android app, then expose a QR/browser input page, and can start a hotspot automatically when needed.
             </div>
           </div>
         </section>
@@ -2140,6 +2151,11 @@
           flag: "ENABLE_OTA_UPDATES",
           default: true,
         },
+        remote_keyboard_input: {
+          sizeKb: 18,
+          flag: "ENABLE_REMOTE_KEYBOARD_INPUT",
+          default: true,
+        },
         todo_planner: {
           sizeKb: 10,
           flag: "ENABLE_TODO_PLANNER",
@@ -2203,7 +2219,7 @@
       const HUB_FEATURES = {
         reader_hub: ["markdown", "xtc_support", "epub_support", "book_images", "hyphenation", "todo_planner"],
         interface_hub: ["opendyslexic_fonts", "notosans_fonts", "bookerly_fonts", "home_media_picker", "lyra_theme", "visual_cover_picker", "image_sleep", "web_pokedex_plugin", "pokemon_party", "dark_mode", "user_fonts"],
-        network_hub: ["background_server", "background_server_on_charge", "background_server_always", "web_wifi_setup", "ble_wifi_provisioning", "ota_updates", "integrations", "koreader_sync", "calibre_sync"],
+        network_hub: ["background_server", "background_server_on_charge", "background_server_always", "web_wifi_setup", "ble_wifi_provisioning", "ota_updates", "remote_keyboard_input", "integrations", "koreader_sync", "calibre_sync"],
         storage_hub: ["usb_mass_storage"],
       };
 
@@ -2221,6 +2237,7 @@
           xtc_support: true,
           lyra_theme: true,
           ota_updates: true,
+          remote_keyboard_input: true,
           background_server: true,
           background_server_on_charge: true,
           web_wifi_setup: true,
@@ -2245,6 +2262,7 @@
           xtc_support: true,
           lyra_theme: true,
           ota_updates: true,
+          remote_keyboard_input: true,
           todo_planner: true,
           background_server: true,
           background_server_on_charge: true,
