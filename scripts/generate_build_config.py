@@ -181,7 +181,7 @@ FEATURES = {
     'remote_keyboard_input': Feature(
         name='Remote Keyboard Input',
         flag='ENABLE_REMOTE_KEYBOARD_INPUT',
-        size_kb=12,
+        size_kb=18,
         description='Android-first remote text entry with browser QR and hotspot fallback'
     ),
     'usb_mass_storage': Feature(
