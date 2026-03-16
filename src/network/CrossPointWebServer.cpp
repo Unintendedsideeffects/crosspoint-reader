@@ -476,6 +476,18 @@ void CrossPointWebServer::handleRoot() const {
 }
 
 void CrossPointWebServer::handleNotFound() const {
+  if (apMode) {
+    // In AP mode, redirect any unrecognised URL to the home page.
+    // OS captive-portal probes (Apple /hotspot-detect.html, Android /generate_204,
+    // Windows /ncsi.txt, etc.) all land here because none match a registered route.
+    // A 302 to the raw AP IP triggers the "Sign in to network" notification on every
+    // major OS; we use the IP rather than the .local hostname because mDNS is blocked
+    // on clients until after they dismiss the captive portal.
+    const String homeUrl = "http://" + WiFi.softAPIP().toString() + "/";
+    server->sendHeader("Location", homeUrl);
+    server->send(302, "text/plain", "");
+    return;
+  }
   String message = "404 Not Found\n\n";
   message += "URI: " + server->uri() + "\n";
   server->send(404, "text/plain", message);
