@@ -39,6 +39,22 @@ If you would like to contribute to this fork:
 2.  **Synchronize with Upstream:** If your change is a general improvement intended for all CrossPoint users, we will work with you to prepare it for upstreaming after it has been validated in `fork-drift`.
 3.  **Issue Tracking:** Please refer to [issues.md](../issues.md) for current priorities and known regressions being addressed in this fork.
 
+## Behavioral Drifts
+
+These are changes to existing upstream behaviour rather than wholly new features. They require no feature flag and are always active.
+
+### Captive portal redirect in AP/hotspot mode
+
+**Upstream behaviour:** `CrossPointWebServer::handleNotFound()` returns a plain-text 404 for any unrecognised URL.
+
+**Fork drift:** When the web server is running in AP mode (hotspot), `handleNotFound()` returns `302 → http://<ap-ip>/` instead of 404.
+
+**Why:** The DNS server already resolves every domain to the device IP via a wildcard entry. OS captive-portal probes — Apple iOS/macOS (`/hotspot-detect.html`, `/library/test/success.html`), Android (`/generate_204`), Windows (`/ncsi.txt`, `/connecttest.txt`) — all hit the web server and previously received a 404, so the OS never surfaced the "Sign in to network" notification. The 302 redirect completes the second layer of the captive portal handshake, causing every major OS to automatically open the CrossPoint web UI when a user connects to the hotspot.
+
+The redirect uses the raw AP IP address rather than the `.local` mDNS hostname because mDNS is typically blocked on clients until after the captive portal is dismissed.
+
+**Files changed:** `src/network/CrossPointWebServer.cpp` (`handleNotFound`)
+
 ---
 
 For more details on building custom firmware, see [BUILD_CONFIGURATION.md](BUILD_CONFIGURATION.md).

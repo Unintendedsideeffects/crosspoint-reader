@@ -23,7 +23,11 @@ Welcome to the **CrossPoint** firmware. This guide outlines the hardware control
       - [3.6.5 KOReader Sync Quick Setup](#365-koreader-sync-quick-setup)
     - [3.7 Sleep Screen](#37-sleep-screen)
       - [3.7.1 Pinning a Sleep Cover Image](#371-pinning-a-sleep-cover-image)
+<<<<<<< Updated upstream
     - [3.8 Remote Keyboard Input](#38-remote-keyboard-input)
+=======
+  - [8. Remote Keyboard Input](#8-remote-keyboard-input)
+>>>>>>> Stashed changes
   - [4. Reading Mode](#4-reading-mode)
     - [Page Turning](#page-turning)
     - [Chapter Navigation](#chapter-navigation)
@@ -189,6 +193,7 @@ The Settings screen allows you to configure the device's behavior. There are a f
   - "Ignore" (default) - Require a long press to turn off the device
   - "Sleep" - A short press puts the device into sleep mode
   - "Page Turn" - A short press in reading mode turns to the next page; a long press turns the device off
+  - "Select" - A short press acts as a Confirm/Select button (e.g. opens the reader menu while reading)
 
 #### 3.6.4 System
 
@@ -391,7 +396,7 @@ Once you have opened a book, the button layout changes to facilitate reading.
 
 The role of the volume (side) buttons can be swapped in the **[Controls Settings](#363-controls)**.
 
-If the **Short Power Button Click** setting is set to "Page Turn", you can also turn to the next page by briefly pressing the Power button.
+If the **Short Power Button Click** setting is set to "Page Turn", you can also turn to the next page by briefly pressing the Power button. If set to "Select", a short press opens the reader menu (same as pressing the Confirm button).
 
 ### Chapter Navigation
 * **Next Chapter:** Press and **hold** the **Right** (or **Volume Down**) button briefly, then release.

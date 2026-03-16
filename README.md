@@ -36,6 +36,7 @@ Compared with `upstream/master`, this branch adds fork-specific user-facing capa
 - Home UI variants exposed via configurator (Home Media Picker / Lyra / Visual Covers)
 - Fork plugin surfaces (including web Pokedex plugin page)
 - Fork release-channel/configuration docs and OTA catalog metadata (`docs/ota`, configurator docs)
+- **Captive portal in AP/hotspot mode** — when the device creates a hotspot, any unrecognised HTTP request is redirected to the home page (302) rather than returning 404, triggering the OS "Sign in to network" notification on iOS, Android, and Windows automatically (see [`docs/fork-strategy.md`](./docs/fork-strategy.md#behavioral-drifts))
 
 For full branch intent and maintenance model, see [`docs/fork-strategy.md`](./docs/fork-strategy.md).
 
