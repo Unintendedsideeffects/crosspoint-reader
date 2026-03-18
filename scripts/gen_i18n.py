@@ -462,16 +462,10 @@ def generate_keys_header(
             order_line += part
     lines.append("// clang-format off")
     lines.append(order_line)
-    lines.append("constexpr uint8_t SORTED_LANGUAGE_INDICES[] = {")
-    rendered_indices = [f"static_cast<uint8_t>(Language::{languages[i]})" for i in sorted_indices]
-    paired_indices = [rendered_indices[i : i + 2] for i in range(0, len(rendered_indices), 2)]
-    max_left_len = max(len(pair[0]) for pair in paired_indices if len(pair) == 2)
-    for pair in paired_indices:
-        if len(pair) == 2:
-            lines.append(f"    {pair[0]},{' ' * (max_left_len - len(pair[0]) + 1)}{pair[1]},")
-        else:
-            lines.append(f"    {pair[0]},")
-    lines.append("};")
+    rendered_indices = ", ".join(
+        f"static_cast<uint8_t>(Language::{languages[i]})" for i in sorted_indices
+    )
+    lines.append(f"constexpr uint8_t SORTED_LANGUAGE_INDICES[] = {{{rendered_indices}}};")
     lines.append("// clang-format on")
     lines.append("")
     lines.append(

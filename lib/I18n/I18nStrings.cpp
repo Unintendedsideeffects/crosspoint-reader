@@ -2465,8 +2465,8 @@ const char* const STRINGS_FR[] = {
     "essayer",
     "Oui",
     "Non",
-    "Show",
-    "Hide",
+    "Afficher",
+    "Masquer",
     "ON",
     "OFF",
     "Non d\xC3"
@@ -4502,8 +4502,10 @@ const char* const STRINGS_CS[] = {
     "Zkusit znovu",
     "Ano",
     "Ne",
-    "Show",
-    "Hide",
+    "Zobrazit",
+    "Skr\xC3"
+    "\xBD"
+    "t",
     "ZAP",
     "VYP",
     "Nenastaveno",
@@ -5474,8 +5476,8 @@ const char* const STRINGS_PO[] = {
     "N\xC3"
     "\xA3"
     "o",
-    "Show",
-    "Hide",
+    "Mostrar",
+    "Ocultar",
     "LIG.",
     "DESL.",
     "N\xC3"
@@ -33716,8 +33718,38 @@ const char* const STRINGS_BE[] = {
     "\xD0"
     "\xB5"
     "",
-    "Show",
-    "Hide",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD1"
+    "\x85"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    "",
     "\xD0"
     "\xA3"
     "\xD0"
@@ -36588,8 +36620,8 @@ const char* const STRINGS_IT[] = {
     "\xAC"
     "",
     "No",
-    "Show",
-    "Hide",
+    "Mostra",
+    "Nascondi",
     "ON",
     "OFF",
     "Non impostato",
@@ -38452,8 +38484,12 @@ const char* const STRINGS_FI[] = {
     "\xA4"
     "",
     "Ei",
-    "Show",
-    "Hide",
+    "N\xC3"
+    "\xA4"
+    "yt\xC3"
+    "\xA4"
+    "",
+    "Piilota",
     "P\xC3"
     "\x84"
     "\xC3"
@@ -39173,8 +39209,8 @@ const char* const STRINGS_DA[] = {
     "v igen",
     "Ja",
     "Nej",
-    "Show",
-    "Hide",
+    "Vis",
+    "Skjul",
     "T\xC3"
     "\x86"
     "NDT",

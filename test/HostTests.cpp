@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -130,6 +131,37 @@ void testInputValidation() {
   assert(!InputValidation::parseStrictPositiveSize(huge.c_str(), huge.size(), static_cast<size_t>(-1), parsed));
 
   std::cout << "Input validation hardening tests passed!" << std::endl;
+}
+
+void testStatusBarToggleTranslations() {
+  std::cout << "Testing status bar toggle translations..." << std::endl;
+
+  struct TranslationExpectation {
+    const char* path;
+    const char* show;
+    const char* hide;
+  };
+
+  const TranslationExpectation expectations[] = {
+      {"lib/I18n/translations/belarusian.yaml", "Паказаць", "Схаваць"},
+      {"lib/I18n/translations/czech.yaml", "Zobrazit", "Skrýt"},
+      {"lib/I18n/translations/danish.yaml", "Vis", "Skjul"},
+      {"lib/I18n/translations/finnish.yaml", "Näytä", "Piilota"},
+      {"lib/I18n/translations/french.yaml", "Afficher", "Masquer"},
+      {"lib/I18n/translations/italian.yaml", "Mostra", "Nascondi"},
+      {"lib/I18n/translations/portuguese.yaml", "Mostrar", "Ocultar"},
+  };
+
+  for (const TranslationExpectation& expectation : expectations) {
+    std::ifstream file(expectation.path);
+    assert(file.is_open());
+
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    assert(content.find(std::string("STR_SHOW: \"") + expectation.show + "\"") != std::string::npos);
+    assert(content.find(std::string("STR_HIDE: \"") + expectation.hide + "\"") != std::string::npos);
+  }
+
+  std::cout << "Status bar toggle translations passed!" << std::endl;
 }
 
 void testFeatureCatalogApi() {
@@ -1101,6 +1133,7 @@ int main() {
   testMarkdownLimits();
   testTodoPlannerStorageSelection();
   testInputValidation();
+  testStatusBarToggleTranslations();
   testFeatureCatalogApi();
   testPokemonBookDataStore();
   testPokemonPartyApiRoutes();

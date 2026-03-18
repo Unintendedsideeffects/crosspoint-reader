@@ -485,17 +485,7 @@ constexpr uint8_t getLanguageCount() { return static_cast<uint8_t>(Language::_CO
 // Order: English, Беларуская, Català, Čeština, Dansk, Deutsch, Español, Suomi, Français, Italiano, Nederlands, Polski
 // clang-format off
 // Português (Brasil), Română, Русский, Svenska, Türkçe, Українська
-constexpr uint8_t SORTED_LANGUAGE_INDICES[] = {
-    static_cast<uint8_t>(Language::EN),         static_cast<uint8_t>(Language::BE),
-    static_cast<uint8_t>(Language::CA),         static_cast<uint8_t>(Language::CZECH),
-    static_cast<uint8_t>(Language::DA),         static_cast<uint8_t>(Language::DE),
-    static_cast<uint8_t>(Language::ES),         static_cast<uint8_t>(Language::FI),
-    static_cast<uint8_t>(Language::FRENCH),     static_cast<uint8_t>(Language::IT),
-    static_cast<uint8_t>(Language::NL),         static_cast<uint8_t>(Language::PL),
-    static_cast<uint8_t>(Language::PORTUGUESE), static_cast<uint8_t>(Language::RO),
-    static_cast<uint8_t>(Language::RUSSIAN),    static_cast<uint8_t>(Language::SV),
-    static_cast<uint8_t>(Language::TR),         static_cast<uint8_t>(Language::UK),
-};
+constexpr uint8_t SORTED_LANGUAGE_INDICES[] = {static_cast<uint8_t>(Language::EN), static_cast<uint8_t>(Language::BE), static_cast<uint8_t>(Language::CA), static_cast<uint8_t>(Language::CZECH), static_cast<uint8_t>(Language::DA), static_cast<uint8_t>(Language::DE), static_cast<uint8_t>(Language::ES), static_cast<uint8_t>(Language::FI), static_cast<uint8_t>(Language::FRENCH), static_cast<uint8_t>(Language::IT), static_cast<uint8_t>(Language::NL), static_cast<uint8_t>(Language::PL), static_cast<uint8_t>(Language::PORTUGUESE), static_cast<uint8_t>(Language::RO), static_cast<uint8_t>(Language::RUSSIAN), static_cast<uint8_t>(Language::SV), static_cast<uint8_t>(Language::TR), static_cast<uint8_t>(Language::UK)};
 // clang-format on
 
 static_assert(sizeof(SORTED_LANGUAGE_INDICES) / sizeof(SORTED_LANGUAGE_INDICES[0]) == getLanguageCount(),
