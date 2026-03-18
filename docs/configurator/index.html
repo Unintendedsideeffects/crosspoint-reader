@@ -1556,6 +1556,53 @@
         border-left: 3px solid var(--blk);
       }
 
+      /* ── Mobile sidebar overrides ── */
+      @media (max-width: 1299px) {
+        /* Stack prebuilt + folder vertically; drawer becomes horizontal tab row below */
+        .sidebar-main {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar-folder {
+          grid-column: 1;
+        }
+
+        /* Preset cards: single column, natural height (no portrait aspect ratio) */
+        .preset-dl-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .preset-dl-card {
+          aspect-ratio: unset;
+        }
+
+        /* Drawer becomes a horizontal scrolling tab row */
+        .sidebar-drawer {
+          grid-column: 1;
+          flex-direction: row;
+          overflow-x: auto;
+          min-width: unset;
+        }
+
+        .drawer-item {
+          border-bottom: none;
+          border-right: 1px solid var(--bone);
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+
+        .drawer-item:last-child {
+          border-right: none;
+        }
+
+        .drawer-item.active {
+          border-left: none;
+          border-bottom: 3px solid var(--blk);
+          padding-left: 14px;
+          padding-bottom: 7px;
+        }
+      }
+
       /* ── Widescreen two-column layout ── */
       @media (min-width: 1300px) {
         .page {
