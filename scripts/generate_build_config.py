@@ -518,7 +518,7 @@ PROFILES = {
         },
     },
     'full': {
-        'description': 'Feature-rich build (~6.0MB, fits in flash)',
+        'description': 'Feature-rich build (~5.9MB, fits in flash)',
         'features': {
             'bookerly_fonts': True,
             'notosans_fonts': True,
@@ -537,13 +537,14 @@ PROFILES = {
             'todo_planner': True,
             'background_server': True,
             'background_server_on_charge': True,
+            'background_server_always': True,
             'home_media_picker': True,
             'web_pokedex_plugin': True,
             'pokemon_party': True,
             'remote_keyboard_input': True,
             'dark_mode': True,
             'visual_cover_picker': True,
-            'ble_wifi_provisioning': True,
+            'ble_wifi_provisioning': False,  # 673 KB — available via standard profile or configurator
             'user_fonts': True,
             'web_wifi_setup': True,
             'usb_mass_storage': True,

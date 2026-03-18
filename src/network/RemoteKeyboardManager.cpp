@@ -315,6 +315,13 @@ void RemoteKeyboardManager::runHotspotTask() {
   WiFi.mode(WIFI_AP);
   delay(100);
 
+  // Explicitly configure the AP subnet so the LwIP DHCP server initialises its
+  // address pool correctly, even when switching from STA mode.
+  const IPAddress apLocalIp(192, 168, 4, 1);
+  const IPAddress apGateway(192, 168, 4, 1);
+  const IPAddress apSubnet(255, 255, 255, 0);
+  WiFi.softAPConfig(apLocalIp, apGateway, apSubnet);
+
   if (!WiFi.softAP(apSsid, nullptr, AP_CHANNEL, false, AP_MAX_CONNECTIONS)) {
     LOG_ERR("RKB", "Failed to start remote keyboard hotspot");
     hotspotFailed = true;
@@ -323,12 +330,30 @@ void RemoteKeyboardManager::runHotspotTask() {
     return;
   }
 
-  delay(100);
+  // Poll until the AP IP is assigned — softAP() returns true before the DHCP
+  // server is ready, so a fixed delay is not reliable.
+  IPAddress apIp;
+  const unsigned long apDeadlineMs = millis() + 3000;
+  do {
+    apIp = WiFi.softAPIP();
+    if (apIp != IPAddress(0, 0, 0, 0)) break;
+    delay(10);
+  } while (millis() < apDeadlineMs);
 
-  const IPAddress apIp = WiFi.softAPIP();
+  if (apIp == IPAddress(0, 0, 0, 0)) {
+    LOG_ERR("RKB", "Hotspot IP not assigned after 3s — aborting");
+    hotspotFailed = true;
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_OFF);
+    hotspotTask = nullptr;
+    vTaskDelete(nullptr);
+    return;
+  }
+
   hotspotSsid = apSsid;
   hotspotIp = apIp.toString().c_str();
   hotspotReady = true;
+  LOG_DBG("RKB", "Hotspot ready: SSID=%s IP=%s", apSsid, hotspotIp.c_str());
 
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
   dnsServer.start(DNS_PORT, "*", apIp);
