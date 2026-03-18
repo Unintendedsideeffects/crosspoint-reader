@@ -1576,30 +1576,10 @@
           aspect-ratio: unset;
         }
 
-        /* Drawer becomes a horizontal scrolling tab row */
+        /* Drawer: full-width vertical list on mobile */
         .sidebar-drawer {
           grid-column: 1;
-          flex-direction: row;
-          overflow-x: auto;
           min-width: unset;
-        }
-
-        .drawer-item {
-          border-bottom: none;
-          border-right: 1px solid var(--bone);
-          white-space: nowrap;
-          flex-shrink: 0;
-        }
-
-        .drawer-item:last-child {
-          border-right: none;
-        }
-
-        .drawer-item.active {
-          border-left: none;
-          border-bottom: 3px solid var(--blk);
-          padding-left: 14px;
-          padding-bottom: 7px;
         }
       }
 
