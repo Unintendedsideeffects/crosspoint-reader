@@ -1194,6 +1194,150 @@
         font-family: 'IBM Plex Mono', monospace;
       }
 
+      /* ── WiFi / Settings tabs shared form controls ── */
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        flex: 1;
+      }
+      .form-label {
+        font-family: 'Silkscreen', monospace;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--dk);
+      }
+      .form-input, .form-select {
+        background: var(--fog);
+        border: var(--px) solid var(--dk);
+        padding: 5px 8px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 10px;
+        color: var(--blk);
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .form-input:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--blk);
+      }
+      .form-select {
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        padding-right: 22px;
+        cursor: pointer;
+      }
+
+      /* ── WiFi network list ── */
+      .wifi-network-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 12px 0;
+      }
+      .wifi-network-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+      }
+      .wifi-network-row .form-group { min-width: 0; }
+      .wifi-remove-btn {
+        flex-shrink: 0;
+        background: var(--fog);
+        border: var(--px) solid var(--dk);
+        padding: 5px 10px;
+        font-family: 'Silkscreen', monospace;
+        font-size: 9px;
+        cursor: pointer;
+        color: var(--md);
+        align-self: flex-end;
+        white-space: nowrap;
+      }
+      .wifi-remove-btn:hover { background: var(--bone); color: var(--blk); }
+      .wifi-empty-hint {
+        font-size: 9px;
+        color: var(--lt);
+        padding: 12px 0;
+        text-align: center;
+        font-family: 'IBM Plex Mono', monospace;
+      }
+
+      /* ── Settings panel ── */
+      .settings-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .settings-section {
+        border-bottom: 1px solid var(--bone);
+        padding: 10px 0;
+      }
+      .settings-section:last-child { border-bottom: none; }
+      .settings-section-title {
+        font-family: 'Silkscreen', monospace;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--md);
+        margin-bottom: 8px;
+      }
+      .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 8px;
+      }
+      .settings-row-hidden { display: none !important; }
+
+      /* ── E-ink live preview ── */
+      .eink-preview-wrap {
+        display: flex;
+        justify-content: center;
+        margin: 14px 0 6px;
+      }
+      .eink-device {
+        position: relative;
+        width: 180px;
+        background: var(--bone);
+        border: 2px solid var(--blk);
+        padding: 8px 8px 14px;
+        box-shadow:
+          inset var(--px) var(--px) 0 var(--bevel-hi),
+          inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 var(--bevel-lo);
+      }
+      .eink-screen {
+        display: block;
+        width: 100%;
+        aspect-ratio: 3 / 5;
+        border: 1px solid var(--dk);
+        background: #f4f0e8;
+        image-rendering: pixelated;
+      }
+      .eink-buttons {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 6px;
+      }
+      .eink-btn-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--dk);
+        border: 1px solid var(--blk);
+      }
+      .eink-preview-caption {
+        text-align: center;
+        font-size: 8px;
+        color: var(--lt);
+        margin-top: 4px;
+        font-family: 'IBM Plex Mono', monospace;
+      }
+
       /* ── Pre-built download cards ── */
       .preset-dl-grid {
         display: grid;
@@ -2269,6 +2413,8 @@
         <button class="drawer-item active" data-tab="output">Output</button>
         <button class="drawer-item" data-tab="build">Build</button>
         <button class="drawer-item" data-tab="device">Device</button>
+        <button class="drawer-item" data-tab="wifi">WiFi</button>
+        <button class="drawer-item" data-tab="settings">Settings</button>
         <button class="drawer-item" data-tab="fonts">Fonts</button>
         <button class="drawer-item" data-tab="studio">Studio</button>
         <button class="drawer-item" data-tab="preview">Preview</button>
@@ -2564,6 +2710,280 @@
             <div class="preview-meta" id="preview-meta"></div>
           </div>
           </div><!-- /.folder-pane#tab-preview -->
+
+          <!-- tab: wifi -->
+          <div class="folder-pane" id="tab-wifi">
+          <div class="panel">
+            <div class="panel-heading">WiFi Credentials</div>
+            <div class="companion-desc" style="line-height: 1.6; margin-bottom: 4px;">
+              Add up to 8 networks. Download <code>wifi.json</code> and place it at
+              <code>/.crosspoint/wifi.json</code> on the SD card. The device imports on first boot,
+              connects to a matching network, then re-saves with device-specific obfuscation.
+            </div>
+            <div class="wifi-network-list" id="wifi-network-list">
+              <div class="wifi-empty-hint" id="wifi-empty-hint">No networks added yet. Click + Add Network.</div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-outline" id="wifi-add-btn">+ Add Network</button>
+              <button class="btn btn-solid" id="wifi-download-btn" disabled>&#x2193; wifi.json</button>
+            </div>
+            <div class="info-bar" style="margin-top: 10px;">
+              Passwords are stored as plaintext in this file. The device XOR-obfuscates them with its
+              MAC address on import — the file on SD is not long-term sensitive, but treat it like a
+              password file.
+            </div>
+          </div>
+          </div><!-- /.folder-pane#tab-wifi -->
+
+          <!-- tab: settings -->
+          <div class="folder-pane" id="tab-settings">
+          <div class="panel">
+            <div class="panel-heading">Baked Settings</div>
+            <div class="companion-desc" style="line-height: 1.6; margin-bottom: 4px;">
+              Pre-configure device settings. Download <code>settings.json</code> and place it at
+              <code>/.crosspoint/settings.json</code> on the SD card. The device loads these on first
+              boot. Feature-gated options (greyed) depend on your current feature selection above.
+            </div>
+
+            <!-- Live e-ink preview -->
+            <div class="eink-preview-wrap">
+              <div>
+                <div class="eink-device">
+                  <canvas class="eink-screen" id="eink-canvas" width="180" height="300"></canvas>
+                  <div class="eink-buttons">
+                    <div class="eink-btn-dot"></div>
+                    <div class="eink-btn-dot"></div>
+                    <div class="eink-btn-dot"></div>
+                    <div class="eink-btn-dot"></div>
+                  </div>
+                </div>
+                <div class="eink-preview-caption">live preview</div>
+              </div>
+            </div>
+
+            <div class="settings-sections">
+
+              <!-- Typography -->
+              <div class="settings-section">
+                <div class="settings-section-title">Typography</div>
+                <div class="settings-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="s-fontFamily">Font Family</label>
+                    <select class="form-select" id="s-fontFamily">
+                      <option value="0">Bookerly</option>
+                      <option value="1">NotoSans</option>
+                      <option value="2">OpenDyslexic</option>
+                      <option value="3" id="opt-user-font">User SD Font</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-fontSize">Font Size</label>
+                    <select class="form-select" id="s-fontSize">
+                      <option value="0">Small</option>
+                      <option value="1" selected>Medium</option>
+                      <option value="2">Large</option>
+                      <option value="3">Extra Large</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-lineSpacing">Line Spacing</label>
+                    <select class="form-select" id="s-lineSpacing">
+                      <option value="0">Tight</option>
+                      <option value="1" selected>Normal</option>
+                      <option value="2">Wide</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-paragraphAlignment">Alignment</label>
+                    <select class="form-select" id="s-paragraphAlignment">
+                      <option value="0" selected>Justified</option>
+                      <option value="1">Left</option>
+                      <option value="2">Center</option>
+                      <option value="3">Right</option>
+                      <option value="4">Book Style</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-screenMargin">Margin (px)</label>
+                    <select class="form-select" id="s-screenMargin">
+                      <option value="0">None (0)</option>
+                      <option value="3">Thin (3)</option>
+                      <option value="5" selected>Normal (5)</option>
+                      <option value="8">Wide (8)</option>
+                      <option value="12">Extra Wide (12)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-extraParagraphSpacing">Para Spacing</label>
+                    <select class="form-select" id="s-extraParagraphSpacing">
+                      <option value="0">Off</option>
+                      <option value="1" selected>On</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-textAntiAliasing">Anti-aliasing</label>
+                    <select class="form-select" id="s-textAntiAliasing">
+                      <option value="0">Off</option>
+                      <option value="1" selected>On</option>
+                    </select>
+                  </div>
+                  <div class="form-group" id="row-hyphenation">
+                    <label class="form-label" for="s-hyphenationEnabled">Hyphenation</label>
+                    <select class="form-select" id="s-hyphenationEnabled">
+                      <option value="0" selected>Off</option>
+                      <option value="1">On</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-embeddedStyle">Book CSS</label>
+                    <select class="form-select" id="s-embeddedStyle">
+                      <option value="0">Ignore</option>
+                      <option value="1" selected>Use Book's</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Display -->
+              <div class="settings-section">
+                <div class="settings-section-title">Display</div>
+                <div class="settings-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="s-orientation">Orientation</label>
+                    <select class="form-select" id="s-orientation">
+                      <option value="0" selected>Portrait</option>
+                      <option value="1">Landscape CW</option>
+                      <option value="2">Inverted</option>
+                      <option value="3">Landscape CCW</option>
+                    </select>
+                  </div>
+                  <div class="form-group" id="row-darkMode">
+                    <label class="form-label" for="s-darkMode">Dark Mode</label>
+                    <select class="form-select" id="s-darkMode">
+                      <option value="0" selected>Off</option>
+                      <option value="1">On</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-uiTheme">UI Theme</label>
+                    <select class="form-select" id="s-uiTheme">
+                      <option value="0">Classic</option>
+                      <option value="1" selected>Lyra</option>
+                      <option value="2">Lyra Extended</option>
+                      <option value="3">ForkDrift</option>
+                      <option value="4">Pokémon Party</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-refreshFrequency">Full Refresh</label>
+                    <select class="form-select" id="s-refreshFrequency">
+                      <option value="0">Every page</option>
+                      <option value="1">Every 5 pages</option>
+                      <option value="2">Every 10 pages</option>
+                      <option value="3" selected>Every 15 pages</option>
+                      <option value="4">Every 30 pages</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Status Bar -->
+              <div class="settings-section">
+                <div class="settings-section-title">Status Bar</div>
+                <div class="settings-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="s-statusBar">Mode</label>
+                    <select class="form-select" id="s-statusBar">
+                      <option value="0">None</option>
+                      <option value="1">No Progress</option>
+                      <option value="2" selected>Full</option>
+                      <option value="3">Book Progress Bar</option>
+                      <option value="4">Only Bar</option>
+                      <option value="5">Chapter Bar</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-statusBarTitle">Title</label>
+                    <select class="form-select" id="s-statusBarTitle">
+                      <option value="0">Book Title</option>
+                      <option value="1" selected>Chapter Title</option>
+                      <option value="2">Hide</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-statusBarBattery">Battery</label>
+                    <select class="form-select" id="s-statusBarBattery">
+                      <option value="0">Hide</option>
+                      <option value="1" selected>Show</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Behaviour -->
+              <div class="settings-section">
+                <div class="settings-section-title">Behaviour</div>
+                <div class="settings-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="s-sleepTimeout">Sleep After</label>
+                    <select class="form-select" id="s-sleepTimeout">
+                      <option value="0">1 minute</option>
+                      <option value="1">5 minutes</option>
+                      <option value="2" selected>10 minutes</option>
+                      <option value="3">15 minutes</option>
+                      <option value="4">30 minutes</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-sideButtonLayout">Side Buttons</label>
+                    <select class="form-select" id="s-sideButtonLayout">
+                      <option value="0" selected>Prev / Next</option>
+                      <option value="1">Next / Prev</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-shortPwrBtn">Power Button</label>
+                    <select class="form-select" id="s-shortPwrBtn">
+                      <option value="0" selected>Ignore</option>
+                      <option value="1">Sleep</option>
+                      <option value="2">Page Turn</option>
+                      <option value="3">Select</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="s-longPressChapterSkip">Long-press Skip</label>
+                    <select class="form-select" id="s-longPressChapterSkip">
+                      <option value="0">Off</option>
+                      <option value="1" selected>On</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Network (feature-gated) -->
+              <div class="settings-section" id="row-deviceName">
+                <div class="settings-section-title">Network Identity</div>
+                <div class="settings-grid">
+                  <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label" for="s-deviceName">Device Name (mDNS hostname)</label>
+                    <input class="form-input" id="s-deviceName" type="text"
+                      maxlength="24" placeholder="e.g. my-reader (a-z, 0-9, hyphens)"
+                      pattern="[a-z0-9\-]*" autocomplete="off" spellcheck="false" />
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- /.settings-sections -->
+
+            <div class="actions" style="margin-top: 14px;">
+              <button class="btn btn-solid" id="settings-download-btn">&#x2193; settings.json</button>
+            </div>
+            <div class="info-bar" style="margin-top: 10px;">
+              Only changed/non-default values are included. The device merges this file with its
+              existing settings on load — fields not present keep their current values.
+            </div>
+          </div>
+          </div><!-- /.folder-pane#tab-settings -->
 
         </div><!-- /.folder-content-area -->
 
@@ -3192,6 +3612,7 @@
         updateSizeDisplay(size);
         updateOutputs(selections, selectedProfile, matchingProfile);
         updateBuildLink(selections, selectedProfile);
+        if (window._updateSettingsVisibility) window._updateSettingsVisibility(selections);
       }
 
       function flashCopyButton(btn) {
@@ -4423,6 +4844,295 @@
         lucide.createIcons();
       }
 
+      /* ════════════════════════════════════════════════
+         WiFi credentials tab
+         ════════════════════════════════════════════════ */
+      function setupWifiTab() {
+        const list = document.getElementById('wifi-network-list');
+        const emptyHint = document.getElementById('wifi-empty-hint');
+        const addBtn = document.getElementById('wifi-add-btn');
+        const dlBtn = document.getElementById('wifi-download-btn');
+        let networks = [];
+
+        function refresh() {
+          // Remove all rows except empty hint
+          list.querySelectorAll('.wifi-network-row').forEach(r => r.remove());
+
+          emptyHint.style.display = networks.length === 0 ? '' : 'none';
+          dlBtn.disabled = networks.length === 0;
+
+          networks.forEach((net, idx) => {
+            const row = document.createElement('div');
+            row.className = 'wifi-network-row';
+            row.innerHTML = `
+              <div class="form-group">
+                <label class="form-label">SSID</label>
+                <input class="form-input wifi-ssid" type="text" maxlength="32"
+                  value="${escapeHtml(net.ssid)}" placeholder="Network name"
+                  autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input class="form-input wifi-pass" type="password" maxlength="63"
+                  value="${escapeHtml(net.password)}" placeholder="Leave blank for open networks"
+                  autocomplete="new-password" />
+              </div>
+              <button class="wifi-remove-btn" data-idx="${idx}" title="Remove">&#xD7;</button>
+            `;
+            row.querySelector('.wifi-ssid').addEventListener('input', e => {
+              networks[idx].ssid = e.target.value;
+            });
+            row.querySelector('.wifi-pass').addEventListener('input', e => {
+              networks[idx].password = e.target.value;
+            });
+            row.querySelector('.wifi-remove-btn').addEventListener('click', () => {
+              networks.splice(idx, 1);
+              refresh();
+            });
+            list.appendChild(row);
+          });
+        }
+
+        function escapeHtml(s) {
+          return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+        }
+
+        addBtn.addEventListener('click', () => {
+          if (networks.length >= 8) return;
+          networks.push({ ssid: '', password: '' });
+          refresh();
+          // Focus last SSID input
+          const rows = list.querySelectorAll('.wifi-ssid');
+          if (rows.length) rows[rows.length - 1].focus();
+        });
+
+        dlBtn.addEventListener('click', () => {
+          const payload = {
+            lastConnectedSsid: '',
+            credentials: networks
+              .filter(n => n.ssid.trim())
+              .map(n => ({ ssid: n.ssid, password: n.password }))
+          };
+          const json = JSON.stringify(payload, null, 2);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'wifi.json';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        });
+
+        refresh();
+      }
+
+      /* ════════════════════════════════════════════════
+         Baked settings tab
+         ════════════════════════════════════════════════ */
+      function setupSettingsTab() {
+        // Default values matching CrossPointSettings defaults
+        const DEFAULTS = {
+          fontFamily: 0, fontSize: 1, lineSpacing: 1, paragraphAlignment: 0,
+          screenMargin: 5, extraParagraphSpacing: 1, textAntiAliasing: 1,
+          embeddedStyle: 1, hyphenationEnabled: 0,
+          orientation: 0, darkMode: 0, uiTheme: 1, refreshFrequency: 3,
+          statusBar: 2, statusBarTitle: 1, statusBarBattery: 1,
+          sleepTimeout: 2, sideButtonLayout: 0, shortPwrBtn: 0, longPressChapterSkip: 1,
+          deviceName: '',
+        };
+
+        // Map settings ids to their values (read from DOM)
+        function readSettings() {
+          const s = {};
+          Object.keys(DEFAULTS).forEach(key => {
+            const el = document.getElementById('s-' + key);
+            if (!el) return;
+            if (el.tagName === 'SELECT') s[key] = parseInt(el.value, 10);
+            else if (typeof DEFAULTS[key] === 'number') s[key] = parseInt(el.value, 10) || 0;
+            else s[key] = el.value;
+          });
+          return s;
+        }
+
+        // Attach change listeners to redraw preview
+        Object.keys(DEFAULTS).forEach(key => {
+          const el = document.getElementById('s-' + key);
+          if (el) el.addEventListener('change', drawPreview);
+          if (el && el.tagName === 'INPUT') el.addEventListener('input', drawPreview);
+        });
+
+        // Feature-gate visibility: react to global selections
+        function updateSettingsVisibility(selections) {
+          // Dark mode setting only if feature compiled in
+          const rowDark = document.getElementById('row-darkMode');
+          if (rowDark) rowDark.classList.toggle('settings-row-hidden', !selections.dark_mode);
+
+          // Device name only if any network feature is on
+          const rowDev = document.getElementById('row-deviceName');
+          if (rowDev) {
+            const hasNet = selections.background_server || selections.web_wifi_setup ||
+                           selections.ble_wifi_provisioning || selections.ota_updates;
+            rowDev.classList.toggle('settings-row-hidden', !hasNet);
+          }
+
+          // User SD font option only if user_fonts feature is on
+          const optUser = document.getElementById('opt-user-font');
+          if (optUser) {
+            optUser.disabled = !selections.user_fonts;
+            optUser.textContent = selections.user_fonts ? 'User SD Font' : 'User SD Font (needs feature)';
+          }
+
+          // Hyphenation setting only if hyphenation feature is on
+          const rowHyph = document.getElementById('row-hyphenation');
+          if (rowHyph) rowHyph.classList.toggle('settings-row-hidden', !selections.hyphenation);
+
+          drawPreview();
+        }
+
+        // ── Canvas preview ──────────────────────────────────────────
+        const canvas = document.getElementById('eink-canvas');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+        const W = 180, H = 300;
+
+        const FONT_NAMES = ['Bookerly', 'Noto Sans', 'OpenDyslexic', 'User Font'];
+        const STATUS_MODES = [0,1,2,3,4,5]; // mirrors firmware enum
+
+        function drawPreview() {
+          if (!ctx) return;
+          const s = readSettings();
+          const dark = s.darkMode === 1;
+          const paper = dark ? '#1a1a1a' : '#f4f0e8';
+          const ink = dark ? '#e8e4d8' : '#1a1a1a';
+          const barBg = dark ? '#2a2a2a' : '#e0dcd0';
+
+          ctx.clearRect(0, 0, W, H);
+
+          // Background
+          ctx.fillStyle = paper;
+          ctx.fillRect(0, 0, W, H);
+
+          // Subtle scanline texture
+          for (let y = 0; y < H; y += 3) {
+            ctx.fillStyle = dark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.012)';
+            ctx.fillRect(0, y, W, 1);
+          }
+
+          const margin = Math.max(0, Math.min(20, s.screenMargin));
+          const hasStatusBar = s.statusBar > 0;
+          const statusH = hasStatusBar ? 14 : 0;
+          const textTop = margin + statusH + 4;
+
+          // Status bar
+          if (hasStatusBar) {
+            ctx.fillStyle = barBg;
+            ctx.fillRect(0, 0, W, statusH);
+
+            ctx.fillStyle = ink;
+            ctx.font = '7px IBM Plex Mono, monospace';
+            ctx.textBaseline = 'middle';
+
+            // Title (left)
+            const title = s.statusBarTitle === 2 ? '' :
+                          (s.statusBarTitle === 0 ? 'My Book Title' : 'Chapter One');
+            if (title) ctx.fillText(title, margin, statusH / 2);
+
+            // Battery (right)
+            if (s.statusBarBattery) {
+              ctx.textAlign = 'right';
+              ctx.fillText('87%', W - margin, statusH / 2);
+              ctx.textAlign = 'left';
+            }
+
+            // Separator line
+            ctx.fillStyle = dark ? '#444' : '#ccc';
+            ctx.fillRect(0, statusH, W, 1);
+          }
+
+          // Sample paragraphs simulating text
+          const fontSizes = [8, 10, 12, 14];
+          const fsize = fontSizes[s.fontSize] || 10;
+          const lineH = fsize * (s.lineSpacing === 0 ? 1.2 : s.lineSpacing === 2 ? 1.8 : 1.5);
+          const fontName = FONT_NAMES[s.fontFamily] || 'Bookerly';
+
+          ctx.fillStyle = ink;
+          ctx.font = `${fsize}px 'IBM Plex Mono', monospace`;
+          ctx.textBaseline = 'top';
+
+          const textW = W - margin * 2;
+          // Simulate lines of varying width
+          const lineWidths = [0.92, 0.78, 0.95, 0.61, 0.87, 0.72, 0.94, 0.55, 0.83, 0.90,
+                              0.70, 0.96, 0.68, 0.88, 0.50, 0.91, 0.76, 0.84, 0.63, 0.97];
+          const paraBreaks = new Set([4, 10, 15]);
+          let y = textTop;
+          const paraGap = s.extraParagraphSpacing ? lineH * 0.6 : lineH * 0.1;
+
+          for (let i = 0; i < lineWidths.length; i++) {
+            if (y + fsize > H - margin - 12) break;
+            if (paraBreaks.has(i)) y += paraGap;
+
+            const lw = textW * lineWidths[i];
+            const x = s.paragraphAlignment === 2 ? margin + (textW - lw) / 2  // center
+                    : s.paragraphAlignment === 3 ? margin + (textW - lw)       // right
+                    : margin;                                                    // left/justified
+
+            ctx.fillStyle = ink;
+            ctx.fillRect(x, y, i === lineWidths.length - 1 ? lw * 0.55 : lw, fsize * 0.72);
+            y += lineH;
+          }
+
+          // Bottom progress bar (if mode shows bar)
+          if (s.statusBar === 3 || s.statusBar === 4 || s.statusBar === 5) {
+            const barH = 3;
+            ctx.fillStyle = barBg;
+            ctx.fillRect(0, H - barH, W, barH);
+            ctx.fillStyle = ink;
+            ctx.fillRect(0, H - barH, W * 0.37, barH); // 37% progress example
+          }
+
+          // Font name watermark
+          ctx.fillStyle = dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+          ctx.font = '7px IBM Plex Mono, monospace';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(fontName, W - margin, H - margin - (s.statusBar >= 3 ? 5 : 0));
+          ctx.textAlign = 'left';
+        }
+
+        // ── Download ────────────────────────────────────────────────
+        document.getElementById('settings-download-btn').addEventListener('click', () => {
+          const s = readSettings();
+          const out = {};
+
+          // Only emit non-default values
+          Object.keys(DEFAULTS).forEach(key => {
+            const val = s[key];
+            const def = DEFAULTS[key];
+            if (val === undefined) return;
+            if (typeof def === 'number' && val === def) return;
+            if (typeof def === 'string' && val === def) return;
+            out[key] = val;
+          });
+
+          const json = JSON.stringify(out, null, 2);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'settings.json';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        });
+
+        // Expose updater for feature flag changes
+        window._updateSettingsVisibility = updateSettingsVisibility;
+
+        drawPreview();
+      }
+
       setupPrebuiltToggle();
       setupSidebarTabs();
       setupHoverDocs();
@@ -4432,6 +5142,8 @@
       setupWallpaperStudio();
       setupDeviceTools();
       setupGitHubBuildTrigger();
+      setupWifiTab();
+      setupSettingsTab();
       initPresetDownloadLinks();
       const initialState = parseInitialStateFromUrl();
       baseProfile = initialState.initialProfile;
