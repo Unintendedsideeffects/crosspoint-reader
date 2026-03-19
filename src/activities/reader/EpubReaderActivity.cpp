@@ -72,7 +72,7 @@ void EpubReaderActivity::resetPageLoadRetryState() {
 
 void EpubReaderActivity::renderReaderError(StrId messageId) {
   renderer.clearScreen();
-  renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(messageId), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 300, I18N.get(messageId), true, EpdFontFamily::BOLD);
   renderer.displayBuffer();
   automaticPageTurnActive = false;
 }
@@ -646,7 +646,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
         LOG_ERR("ERS", "Failed to persist page data to SD");
         section.reset();
         resetPageLoadRetryState();
-        renderReaderError(STR_LOAD_EPUB_FAILED);
+        renderReaderError(StrId::STR_LOAD_EPUB_FAILED);
         return;
       }
     } else {
@@ -738,7 +738,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
       section->clearCache();
       section.reset();
       resetPageLoadRetryState();
-      renderReaderError(STR_PAGE_LOAD_ERROR);
+      renderReaderError(StrId::STR_PAGE_LOAD_ERROR);
       automaticPageTurnActive = false;
       return;
     }
