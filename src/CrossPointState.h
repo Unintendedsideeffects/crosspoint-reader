@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <iosfwd>
 #include <string>
 
@@ -17,7 +18,7 @@ class CrossPointState {
   volatile int8_t pendingPageTurn = 0;
   // Remote screenshot trigger. Written by WiFi handler task, read and cleared by main loop.
   volatile bool pendingScreenshot = false;
-  uint8_t lastSleepImage = 0;
+  uint8_t lastSleepImage = UINT8_MAX;  // UINT8_MAX = unset sentinel
   uint8_t readerActivityLoadCount = 0;
   bool lastSleepFromReader = false;
   // Exponential backoff for WiFi auto-connect.

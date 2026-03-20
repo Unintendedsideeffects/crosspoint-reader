@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <EpdFontFamily.h>
+#include <FontCacheManager.h>
+#include <FontDecompressor.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
@@ -43,6 +45,8 @@ MappedInputManager mappedInputManager(gpio);
 GfxRenderer renderer(display);
 ActivityManager activityManager(renderer, mappedInputManager);
 BackgroundWebServer& backgroundServer = BackgroundWebServer::getInstance();
+FontDecompressor fontDecompressor;
+FontCacheManager fontCacheManager(renderer.getFontMap());
 
 unsigned long t1 = 0;
 unsigned long t2 = 0;
@@ -307,6 +311,8 @@ bool setupDisplayAndFonts() {
     enterSafeMode("UI startup failed");
     return false;
   }
+  fontCacheManager.setFontDecompressor(&fontDecompressor);
+  renderer.setFontCacheManager(&fontCacheManager);
   activityManagerReady = true;
 
   if (!core::BuiltinFontRegistry::registerAllFonts(renderer)) {
@@ -610,6 +616,11 @@ void loop() {
     APP_STATE.pendingPageTurn = 0;
     mappedInputManager.injectVirtualActivation(pageTurn > 0 ? MappedInputManager::Button::PageForward
                                                             : MappedInputManager::Button::PageBack);
+
+  // Refresh the battery icon when USB is plugged or unplugged.
+  // Placed after sleep guards so we never queue a render that won't be processed.
+  if (gpio.wasUsbStateChanged()) {
+    activityManager.requestUpdate();
   }
 
   const unsigned long activityStartTime = millis();

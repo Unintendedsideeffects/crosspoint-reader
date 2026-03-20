@@ -180,7 +180,7 @@ void onSettingsLoaded(GfxRenderer& renderer) {
 }
 
 void onFontSetup(GfxRenderer& renderer) {
-  renderer.insertFontFamily(USER_SD_FONT_ID, UserFontManager::getInstance().getFontFamily());
+  renderer.insertFont(USER_SD_FONT_ID, *UserFontManager::getInstance().getFontFamily());
 }
 
 void onFontFamilyChanged(uint8_t newValue) {

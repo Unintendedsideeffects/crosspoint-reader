@@ -768,7 +768,8 @@ void CrossPointWebServer::scanFiles(const char* path, const std::function<void(F
       file.getName(name, sizeof(name));
       auto fileName = String(name);
 
-      shouldHide = PathUtils::isProtectedWebComponent(fileName);
+      shouldHide = (!SETTINGS.showHiddenFiles && fileName.startsWith(".")) ||
+                   PathUtils::isProtectedWebComponent(fileName);
 
       if (!shouldHide) {
         info.name = fileName;

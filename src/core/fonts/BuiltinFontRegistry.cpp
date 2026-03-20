@@ -2,7 +2,6 @@
 
 #include <EpdFont.h>
 #include <FeatureFlags.h>
-#include <FontDecompressor.h>
 #include <GfxRenderer.h>
 #include <Logging.h>
 #include <builtinFonts/all.h>
@@ -11,10 +10,6 @@
 
 namespace core {
 namespace {
-
-FontDecompressor fontDecompressor;
-bool fontDecompressorInitAttempted = false;
-bool fontDecompressorReady = false;
 
 EpdFont bookerly14RegularFont(&bookerly_14_regular);
 EpdFont bookerly14BoldFont(&bookerly_14_bold);
@@ -118,20 +113,9 @@ EpdFont ui12BoldFont(&ubuntu_12_bold);
 EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
 
 void registerUiFontFamilies(GfxRenderer& renderer) {
-  renderer.insertFontFamily(UI_10_FONT_ID, &ui10FontFamily);
-  renderer.insertFontFamily(UI_12_FONT_ID, &ui12FontFamily);
-  renderer.insertFontFamily(SMALL_FONT_ID, &smallFontFamily);
-}
-
-bool ensureFontDecompressorReady() {
-  if (!fontDecompressorInitAttempted) {
-    fontDecompressorInitAttempted = true;
-    fontDecompressorReady = fontDecompressor.init();
-    if (!fontDecompressorReady) {
-      LOG_ERR("FONTS", "Font decompressor init failed");
-    }
-  }
-  return fontDecompressorReady;
+  renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
+  renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
+  renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
 }
 
 }  // namespace
@@ -141,31 +125,26 @@ void BuiltinFontRegistry::registerUiFonts(GfxRenderer& renderer) { registerUiFon
 bool BuiltinFontRegistry::registerAllFonts(GfxRenderer& renderer) {
   registerUiFontFamilies(renderer);
 
-  if (!ensureFontDecompressorReady()) {
-    return false;
-  }
-
-  renderer.setFontDecompressor(&fontDecompressor);
-  renderer.insertFontFamily(BOOKERLY_14_FONT_ID, &bookerly14FontFamily);
+  renderer.insertFont(BOOKERLY_14_FONT_ID, bookerly14FontFamily);
 
 #if ENABLE_BOOKERLY_FONTS
-  renderer.insertFontFamily(BOOKERLY_12_FONT_ID, &bookerly12FontFamily);
-  renderer.insertFontFamily(BOOKERLY_16_FONT_ID, &bookerly16FontFamily);
-  renderer.insertFontFamily(BOOKERLY_18_FONT_ID, &bookerly18FontFamily);
+  renderer.insertFont(BOOKERLY_12_FONT_ID, bookerly12FontFamily);
+  renderer.insertFont(BOOKERLY_16_FONT_ID, bookerly16FontFamily);
+  renderer.insertFont(BOOKERLY_18_FONT_ID, bookerly18FontFamily);
 #endif
 
 #if ENABLE_NOTOSANS_FONTS
-  renderer.insertFontFamily(NOTOSANS_12_FONT_ID, &notosans12FontFamily);
-  renderer.insertFontFamily(NOTOSANS_14_FONT_ID, &notosans14FontFamily);
-  renderer.insertFontFamily(NOTOSANS_16_FONT_ID, &notosans16FontFamily);
-  renderer.insertFontFamily(NOTOSANS_18_FONT_ID, &notosans18FontFamily);
+  renderer.insertFont(NOTOSANS_12_FONT_ID, notosans12FontFamily);
+  renderer.insertFont(NOTOSANS_14_FONT_ID, notosans14FontFamily);
+  renderer.insertFont(NOTOSANS_16_FONT_ID, notosans16FontFamily);
+  renderer.insertFont(NOTOSANS_18_FONT_ID, notosans18FontFamily);
 #endif
 
 #if ENABLE_OPENDYSLEXIC_FONTS
-  renderer.insertFontFamily(OPENDYSLEXIC_8_FONT_ID, &opendyslexic8FontFamily);
-  renderer.insertFontFamily(OPENDYSLEXIC_10_FONT_ID, &opendyslexic10FontFamily);
-  renderer.insertFontFamily(OPENDYSLEXIC_12_FONT_ID, &opendyslexic12FontFamily);
-  renderer.insertFontFamily(OPENDYSLEXIC_14_FONT_ID, &opendyslexic14FontFamily);
+  renderer.insertFont(OPENDYSLEXIC_8_FONT_ID, opendyslexic8FontFamily);
+  renderer.insertFont(OPENDYSLEXIC_10_FONT_ID, opendyslexic10FontFamily);
+  renderer.insertFont(OPENDYSLEXIC_12_FONT_ID, opendyslexic12FontFamily);
+  renderer.insertFont(OPENDYSLEXIC_14_FONT_ID, opendyslexic14FontFamily);
 #endif
 
   return true;

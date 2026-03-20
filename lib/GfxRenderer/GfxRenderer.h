@@ -1,9 +1,11 @@
 #pragma once
 
 #include <EpdFontFamily.h>
-#include <FontDecompressor.h>
 #include <HalDisplay.h>
 
+class FontCacheManager;
+
+#include <cstring>
 #include <map>
 #include <vector>
 
@@ -39,11 +41,15 @@ class GfxRenderer {
   void (*postRenderHook)(const GfxRenderer&) = nullptr;
   uint8_t* frameBuffer = nullptr;
   uint8_t* bwBufferChunks[BW_BUFFER_NUM_CHUNKS] = {nullptr};
-  std::map<int, IEpdFont*> fontMap;
-  std::map<int, EpdFontFamily*> fontFamilyMap;
-  FontDecompressor* fontDecompressor = nullptr;
+  std::map<int, EpdFontFamily> fontMap;
 
-  void renderChar(const IEpdFont& font, uint32_t cp, int* x, const int* y, bool pixelState) const;
+  // Mutable because drawText() is const but needs to delegate scan-mode
+  // recording to the (non-const) FontCacheManager. Same pragmatic compromise
+  // as before, concentrated in a single pointer instead of four fields.
+  mutable FontCacheManager* fontCacheManager_ = nullptr;
+
+  void renderChar(const EpdFontFamily& fontFamily, uint32_t cp, int* x, int* y, bool pixelState,
+                  EpdFontFamily::Style style) const;
   const uint8_t* getGlyphBitmap(const EpdFontData* fontData, const EpdGlyph* glyph) const;
   void freeBwBufferChunks();
   template <Color color>
@@ -63,15 +69,10 @@ class GfxRenderer {
 
   // Setup
   bool begin();  // must be called right after display.begin()
-  void insertFont(int fontId, IEpdFont* font);
-  void insertFontFamily(int fontId, EpdFontFamily* fontFamily);
-  void setFontDecompressor(FontDecompressor* d) { fontDecompressor = d; }
-  // Compatibility shim for reader activities that explicitly clear font caches.
-  void clearFontCache() {
-    if (fontDecompressor) {
-      fontDecompressor->clearCache();
-    }
-  }
+  void insertFont(int fontId, EpdFontFamily font);
+  void setFontCacheManager(FontCacheManager* m) { fontCacheManager_ = m; }
+  FontCacheManager* getFontCacheManager() const { return fontCacheManager_; }
+  const std::map<int, EpdFontFamily>& getFontMap() const { return fontMap; }
 
   // Orientation control (affects logical width/height and coordinate transforms)
   void setOrientation(const Orientation o) { orientation = o; }
@@ -127,15 +128,13 @@ class GfxRenderer {
                         EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
   void drawText(int fontId, int x, int y, const char* text, bool black = true,
                 EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
-  // Legacy UI helpers kept for compatibility with older activity renderers.
   void drawButtonHints(int fontId, const char* btn1, const char* btn2, const char* btn3, const char* btn4) const;
   void drawSideButtonHints(int fontId, const char* topBtn, const char* bottomBtn) const;
-  int getSpaceWidth(int fontId) const;
-  int getSpaceWidth(int fontId, EpdFontFamily::Style style) const;
-  int getSpaceKernAdjust(int fontId, uint32_t leftCp, uint32_t rightCp,
-                         EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
-  int getKerning(int fontId, uint32_t leftCp, uint32_t rightCp,
-                 EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
+  int getSpaceWidth(int fontId, EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
+  /// Returns the total inter-word advance: fp4::toPixel(spaceAdvance + kern(leftCp,' ') + kern(' ',rightCp)).
+  int getSpaceAdvance(int fontId, uint32_t leftCp, uint32_t rightCp, EpdFontFamily::Style style) const;
+  /// Returns the kerning adjustment between two adjacent codepoints.
+  int getKerning(int fontId, uint32_t leftCp, uint32_t rightCp, EpdFontFamily::Style style) const;
   int getTextAdvanceX(int fontId, const char* text) const;
   int getTextAdvanceX(int fontId, const char* text, EpdFontFamily::Style style) const;
   int getFontAscenderSize(int fontId) const;

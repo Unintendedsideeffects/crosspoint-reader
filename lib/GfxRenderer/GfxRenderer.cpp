@@ -1,38 +1,36 @@
 #include "GfxRenderer.h"
 
+#include <FontDecompressor.h>
 #include <Logging.h>
 #include <Utf8.h>
 
-#include <cmath>
+#include "FontCacheManager.h"
 
 const uint8_t* GfxRenderer::getGlyphBitmap(const EpdFontData* fontData, const EpdGlyph* glyph) const {
-  if (!fontData || !glyph) {
-    return nullptr;
-  }
-  if (fontData->groups != nullptr && fontData->groupCount > 0) {
-    if (!fontDecompressor) {
+  if (fontData->groups != nullptr) {
+    auto* fd = fontCacheManager_ ? fontCacheManager_->getDecompressor() : nullptr;
+    if (!fd) {
       LOG_ERR("GFX", "Compressed font but no FontDecompressor set");
       return nullptr;
     }
-    const uint16_t glyphIndex = static_cast<uint16_t>(glyph - fontData->glyph);
-    return fontDecompressor->getBitmap(fontData, glyph, glyphIndex);
+    uint32_t glyphIndex = static_cast<uint32_t>(glyph - fontData->glyph);
+    // For page-buffer hits the pointer is stable for the page lifetime.
+    // For hot-group hits it is valid only until the next getBitmap() call — callers
+    // must consume it (draw the glyph) before requesting another bitmap.
+    return fd->getBitmap(fontData, glyph, glyphIndex);
   }
   return &fontData->bitmap[glyph->dataOffset];
 }
 
-bool GfxRenderer::begin() {
+void GfxRenderer::begin() {
   frameBuffer = display.getFrameBuffer();
   if (!frameBuffer) {
     LOG_ERR("GFX", "!! No framebuffer");
-    return false;
+    assert(false);
   }
-  return true;
 }
 
-void GfxRenderer::insertFont(const int fontId, IEpdFont* font) { fontMap.insert({fontId, font}); }
-void GfxRenderer::insertFontFamily(const int fontId, EpdFontFamily* fontFamily) {
-  fontFamilyMap.insert({fontId, fontFamily});
-}
+void GfxRenderer::insertFont(const int fontId, EpdFontFamily font) { fontMap.insert({fontId, font}); }
 
 // Translate logical (x,y) coordinates to physical panel coordinates based on current orientation
 // This should always be inlined for better performance
@@ -68,6 +66,101 @@ static inline void rotateCoordinates(const GfxRenderer::Orientation orientation,
   }
 }
 
+enum class TextRotation { None, Rotated90CW };
+
+// Shared glyph rendering logic for normal and rotated text.
+// Coordinate mapping and cursor advance direction are selected at compile time via the template parameter.
+template <TextRotation rotation>
+static void renderCharImpl(const GfxRenderer& renderer, GfxRenderer::RenderMode renderMode,
+                           const EpdFontFamily& fontFamily, const uint32_t cp, int cursorX, int cursorY,
+                           const bool pixelState, const EpdFontFamily::Style style) {
+  const EpdGlyph* glyph = fontFamily.getGlyph(cp, style);
+  if (!glyph) {
+    LOG_ERR("GFX", "No glyph for codepoint %d", cp);
+    return;
+  }
+
+  const EpdFontData* fontData = fontFamily.getData(style);
+  const bool is2Bit = fontData->is2Bit;
+  const uint8_t width = glyph->width;
+  const uint8_t height = glyph->height;
+  const int left = glyph->left;
+  const int top = glyph->top;
+
+  const uint8_t* bitmap = renderer.getGlyphBitmap(fontData, glyph);
+
+  if (bitmap != nullptr) {
+    // For Normal:  outer loop advances screenY, inner loop advances screenX
+    // For Rotated: outer loop advances screenX, inner loop advances screenY (in reverse)
+    int outerBase, innerBase;
+    if constexpr (rotation == TextRotation::Rotated90CW) {
+      outerBase = cursorX + fontData->ascender - top;  // screenX = outerBase + glyphY
+      innerBase = cursorY - left;                      // screenY = innerBase - glyphX
+    } else {
+      outerBase = cursorY - top;   // screenY = outerBase + glyphY
+      innerBase = cursorX + left;  // screenX = innerBase + glyphX
+    }
+
+    if (is2Bit) {
+      int pixelPosition = 0;
+      for (int glyphY = 0; glyphY < height; glyphY++) {
+        const int outerCoord = outerBase + glyphY;
+        for (int glyphX = 0; glyphX < width; glyphX++, pixelPosition++) {
+          int screenX, screenY;
+          if constexpr (rotation == TextRotation::Rotated90CW) {
+            screenX = outerCoord;
+            screenY = innerBase - glyphX;
+          } else {
+            screenX = innerBase + glyphX;
+            screenY = outerCoord;
+          }
+
+          const uint8_t byte = bitmap[pixelPosition >> 2];
+          const uint8_t bit_index = (3 - (pixelPosition & 3)) * 2;
+          // the direct bit from the font is 0 -> white, 1 -> light gray, 2 -> dark gray, 3 -> black
+          // we swap this to better match the way images and screen think about colors:
+          // 0 -> black, 1 -> dark grey, 2 -> light grey, 3 -> white
+          const uint8_t bmpVal = 3 - ((byte >> bit_index) & 0x3);
+
+          if (renderMode == GfxRenderer::BW && bmpVal < 3) {
+            // Black (also paints over the grays in BW mode)
+            renderer.drawPixel(screenX, screenY, pixelState);
+          } else if (renderMode == GfxRenderer::GRAYSCALE_MSB && (bmpVal == 1 || bmpVal == 2)) {
+            // Light gray (also mark the MSB if it's going to be a dark gray too)
+            // We have to flag pixels in reverse for the gray buffers, as 0 leave alone, 1 update
+            renderer.drawPixel(screenX, screenY, false);
+          } else if (renderMode == GfxRenderer::GRAYSCALE_LSB && bmpVal == 1) {
+            // Dark gray
+            renderer.drawPixel(screenX, screenY, false);
+          }
+        }
+      }
+    } else {
+      int pixelPosition = 0;
+      for (int glyphY = 0; glyphY < height; glyphY++) {
+        const int outerCoord = outerBase + glyphY;
+        for (int glyphX = 0; glyphX < width; glyphX++, pixelPosition++) {
+          int screenX, screenY;
+          if constexpr (rotation == TextRotation::Rotated90CW) {
+            screenX = outerCoord;
+            screenY = innerBase - glyphX;
+          } else {
+            screenX = innerBase + glyphX;
+            screenY = outerCoord;
+          }
+
+          const uint8_t byte = bitmap[pixelPosition >> 3];
+          const uint8_t bit_index = 7 - (pixelPosition & 7);
+
+          if ((byte >> bit_index) & 1) {
+            renderer.drawPixel(screenX, screenY, pixelState);
+          }
+        }
+      }
+    }
+  }
+}
+
 // IMPORTANT: This function is in critical rendering path and is called for every pixel. Please keep it as simple and
 // efficient as possible.
 void GfxRenderer::drawPixel(const int x, const int y, const bool state) const {
@@ -95,18 +188,15 @@ void GfxRenderer::drawPixel(const int x, const int y, const bool state) const {
 }
 
 int GfxRenderer::getTextWidth(const int fontId, const char* text, const EpdFontFamily::Style style) const {
-  if (fontFamilyMap.count(fontId) > 0) {
-    int w = 0, h = 0;
-    fontFamilyMap.at(fontId)->getTextDimensions(text, &w, &h, style);
-    return w;
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) {
+    LOG_ERR("GFX", "Font %d not found", fontId);
+    return 0;
   }
-  if (fontMap.count(fontId) > 0) {
-    int w = 0, h = 0;
-    fontMap.at(fontId)->getTextDimensions(text, &w, &h);
-    return w;
-  }
-  LOG_ERR("GFX", "Font %d not found", fontId);
-  return 0;
+
+  int w = 0, h = 0;
+  fontIt->second.getTextDimensions(text, &w, &h, style);
+  return w;
 }
 
 void GfxRenderer::drawCenteredText(const int fontId, const int y, const char* text, const bool black,
@@ -117,46 +207,35 @@ void GfxRenderer::drawCenteredText(const int fontId, const int y, const char* te
 
 void GfxRenderer::drawText(const int fontId, const int x, const int y, const char* text, const bool black,
                            const EpdFontFamily::Style style) const {
+  const int yPos = y + getFontAscenderSize(fontId);
+  int32_t xPosFP = fp4::fromPixel(x);  // 12.4 fixed-point accumulator
+  int lastBaseX = x;
+  int lastBaseAdvanceFP = 0;  // 12.4 fixed-point
+  int lastBaseTop = 0;
+
   // cannot draw a NULL / empty string
   if (text == nullptr || *text == '\0') {
     return;
   }
 
-  const IEpdFont* font = nullptr;
-  if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(style);
-  } else if (fontMap.count(fontId) > 0) {
-    font = fontMap.at(fontId);
+  if (fontCacheManager_ && fontCacheManager_->isScanning()) {
+    fontCacheManager_->recordText(text, fontId, style);
+    return;
   }
 
-  if (!font) {
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return;
   }
-
-  if (!font->hasPrintableChars(text)) {
-    return;
-  }
-
-  const int yPos = y + font->getFontData()->ascender;
-  int32_t xPosFP = fp4::fromPixel(x);
-  int lastBaseX = x;
-  int lastBaseY = yPos;
-  int lastBaseAdvanceFP = 0;
-  int lastBaseTop = 0;
-  bool hasBaseGlyph = false;
+  const auto& font = fontIt->second;
   constexpr int MIN_COMBINING_GAP_PX = 1;
 
   uint32_t cp;
-  uint32_t prevBaseCp = 0;
+  uint32_t prevCp = 0;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
-    const bool isCombining = utf8IsCombiningMark(cp);
-    if (isCombining && hasBaseGlyph) {
-      const EpdGlyph* combiningGlyph = font->getGlyph(cp);
-      if (!combiningGlyph) {
-        combiningGlyph = font->getGlyph(REPLACEMENT_GLYPH);
-      }
-
+    if (utf8IsCombiningMark(cp)) {
+      const EpdGlyph* combiningGlyph = font.getGlyph(cp, style);
       int raiseBy = 0;
       if (combiningGlyph) {
         const int currentGap = combiningGlyph->top - combiningGlyph->height - lastBaseTop;
@@ -165,79 +244,32 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
         }
       }
 
-      int combiningX = lastBaseX + fp4::toPixel(lastBaseAdvanceFP / 2);
-      int combiningY = lastBaseY - raiseBy;
-      renderChar(*font, cp, &combiningX, &combiningY, black);
+      const int combiningX = lastBaseX + fp4::toPixel(lastBaseAdvanceFP / 2);
+      const int combiningY = yPos - raiseBy;
+      renderCharImpl<TextRotation::None>(*this, renderMode, font, cp, combiningX, combiningY, black, style);
       continue;
     }
 
-    if (!isCombining) {
-      cp = font->applyLigatures(cp, text);
-      if (prevBaseCp != 0) {
-        xPosFP += font->getKerning(prevBaseCp, cp);
-      }
-    }
+    cp = font.applyLigatures(cp, text, style);
+    const int kernFP = (prevCp != 0) ? font.getKerning(prevCp, cp, style) : 0;  // 4.4 fixed-point kern
+    xPosFP += kernFP;
 
-    const EpdGlyph* glyph = font->getGlyph(cp);
-    if (!glyph) {
-      glyph = font->getGlyph(REPLACEMENT_GLYPH);
-    }
-    if (!isCombining) {
-      lastBaseX = fp4::toPixel(xPosFP);
-      lastBaseY = yPos;
-      lastBaseAdvanceFP = glyph ? glyph->advanceX : 0;
-      lastBaseTop = glyph ? glyph->top : 0;
-      hasBaseGlyph = true;
-      prevBaseCp = cp;
-    }
+    lastBaseX = fp4::toPixel(xPosFP);  // snap 12.4 fixed-point to nearest pixel
+    const EpdGlyph* glyph = font.getGlyph(cp, style);
 
-    int drawX = fp4::toPixel(xPosFP);
-    int drawY = yPos;
-    renderChar(*font, cp, &drawX, &drawY, black);
-    if (!isCombining) {
-      if (glyph) {
-        xPosFP += glyph->advanceX;
-      } else {
-        xPosFP += fp4::fromPixel(drawX - lastBaseX);
-        prevBaseCp = 0;
-      }
+    lastBaseAdvanceFP = glyph ? glyph->advanceX : 0;
+    lastBaseTop = glyph ? glyph->top : 0;
+
+    renderCharImpl<TextRotation::None>(*this, renderMode, font, cp, lastBaseX, yPos, black, style);
+    if (glyph) {
+      xPosFP += glyph->advanceX;  // 12.4 fixed-point advance
     }
-  }
-}
-
-void GfxRenderer::drawButtonHints(const int fontId, const char* btn1, const char* btn2, const char* btn3,
-                                  const char* btn4) const {
-  const char* labels[4] = {
-      btn1 ? btn1 : "",
-      btn2 ? btn2 : "",
-      btn3 ? btn3 : "",
-      btn4 ? btn4 : "",
-  };
-  const int screenWidth = getScreenWidth();
-  const int slotWidth = screenWidth / 4;
-  const int y = getScreenHeight() - getLineHeight(fontId) - 6;
-
-  for (int i = 0; i < 4; ++i) {
-    if (labels[i][0] == '\0') {
-      continue;
-    }
-    const int textWidth = getTextWidth(fontId, labels[i]);
-    const int x = i * slotWidth + (slotWidth - textWidth) / 2;
-    drawText(fontId, x, y, labels[i]);
-  }
-}
-
-void GfxRenderer::drawSideButtonHints(const int fontId, const char* topBtn, const char* bottomBtn) const {
-  const int x = getScreenWidth() - getLineHeight(fontId) - 2;
-  if (topBtn && topBtn[0] != '\0') {
-    drawTextRotated90CW(fontId, x, getScreenHeight() / 3, topBtn);
-  }
-  if (bottomBtn && bottomBtn[0] != '\0') {
-    drawTextRotated90CW(fontId, x, (getScreenHeight() * 2) / 3, bottomBtn);
+    prevCp = cp;
   }
 }
 
 void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const bool state) const {
+  if (fontCacheManager_ && fontCacheManager_->isScanning()) return;
   if (x1 == x2) {
     if (y2 < y1) {
       std::swap(y1, y2);
@@ -253,24 +285,24 @@ void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const bool state) con
       drawPixel(x, y1, state);
     }
   } else {
-    // Bresenham's line algorithm for non-axis-aligned lines
-    int dx = abs(x2 - x1);
-    int dy = abs(y2 - y1);
-    int sx = x1 < x2 ? 1 : -1;
-    int sy = y1 < y2 ? 1 : -1;
-    int err = dx - dy;
+    // Bresenham's line algorithm — integer arithmetic only
+    int dx = x2 - x1;
+    int dy = y2 - y1;
+    int sx = (dx > 0) ? 1 : -1;
+    int sy = (dy > 0) ? 1 : -1;
+    dx = sx * dx;  // abs
+    dy = sy * dy;  // abs
 
+    int err = dx - dy;
     while (true) {
       drawPixel(x1, y1, state);
-      if (x1 == x2 && y1 == y2) {
-        break;
-      }
+      if (x1 == x2 && y1 == y2) break;
       int e2 = 2 * err;
-      if (e2 > -dy) {  // err + dx > 0
+      if (e2 > -dy) {
         err -= dy;
         x1 += sx;
       }
-      if (e2 < dx) {  // err - dy < 0
+      if (e2 < dx) {
         err += dx;
         y1 += sy;
       }
@@ -409,8 +441,7 @@ void GfxRenderer::drawPixelDither<Color::LightGray>(const int x, const int y) co
 
 template <>
 void GfxRenderer::drawPixelDither<Color::DarkGray>(const int x, const int y) const {
-  // Intentional dark-gray dithering checkerboard (50% gray for 1-bit displays)
-  drawPixel(x, y, (x + y) % 2 == 0);
+  drawPixel(x, y, (x + y) % 2 == 0);  // TODO: maybe find a better pattern?
 }
 
 void GfxRenderer::fillRectDither(const int x, const int y, const int width, const int height, Color color) const {
@@ -461,7 +492,9 @@ void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, con
     return;
   }
 
-  const int maxRadius = std::min({cornerRadius, width / 2, height / 2});
+  // Assume if we're not rounding all corners then we are only rounding one side
+  const int roundedSides = (!roundTopLeft || !roundTopRight || !roundBottomLeft || !roundBottomRight) ? 1 : 2;
+  const int maxRadius = std::min({cornerRadius, width / roundedSides, height / roundedSides});
   if (maxRadius <= 0) {
     fillRectDither(x, y, width, height, color);
     return;
@@ -472,10 +505,16 @@ void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, con
     fillRectDither(x + maxRadius + 1, y, horizontalWidth - 2, height, color);
   }
 
-  const int verticalHeight = height - 2 * maxRadius - 2;
-  if (verticalHeight > 0) {
-    fillRectDither(x, y + maxRadius + 1, maxRadius + 1, verticalHeight, color);
-    fillRectDither(x + width - maxRadius - 1, y + maxRadius + 1, maxRadius + 1, verticalHeight, color);
+  const int leftFillTop = y + (roundTopLeft ? (maxRadius + 1) : 0);
+  const int leftFillBottom = y + height - 1 - (roundBottomLeft ? (maxRadius + 1) : 0);
+  if (leftFillBottom >= leftFillTop) {
+    fillRectDither(x, leftFillTop, maxRadius + 1, leftFillBottom - leftFillTop + 1, color);
+  }
+
+  const int rightFillTop = y + (roundTopRight ? (maxRadius + 1) : 0);
+  const int rightFillBottom = y + height - 1 - (roundBottomRight ? (maxRadius + 1) : 0);
+  if (rightFillBottom >= rightFillTop) {
+    fillRectDither(x + width - maxRadius - 1, rightFillTop, maxRadius + 1, rightFillBottom - rightFillTop + 1, color);
   }
 
   auto fillArcTemplated = [this](int maxRadius, int cx, int cy, int xDir, int yDir, Color color) {
@@ -499,26 +538,18 @@ void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, con
 
   if (roundTopLeft) {
     fillArcTemplated(maxRadius, x + maxRadius, y + maxRadius, -1, -1, color);
-  } else {
-    fillRectDither(x, y, maxRadius + 1, maxRadius + 1, color);
   }
 
   if (roundTopRight) {
     fillArcTemplated(maxRadius, x + width - maxRadius - 1, y + maxRadius, 1, -1, color);
-  } else {
-    fillRectDither(x + width - maxRadius - 1, y, maxRadius + 1, maxRadius + 1, color);
   }
 
   if (roundBottomRight) {
     fillArcTemplated(maxRadius, x + width - maxRadius - 1, y + height - maxRadius - 1, 1, 1, color);
-  } else {
-    fillRectDither(x + width - maxRadius - 1, y + height - maxRadius - 1, maxRadius + 1, maxRadius + 1, color);
   }
 
   if (roundBottomLeft) {
     fillArcTemplated(maxRadius, x + maxRadius, y + height - maxRadius - 1, -1, 1, color);
-  } else {
-    fillRectDither(x, y + height - maxRadius - 1, maxRadius + 1, maxRadius + 1, color);
   }
 }
 
@@ -541,16 +572,17 @@ void GfxRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, co
     case LandscapeCounterClockwise:
       break;
   }
-  // Image rotation is handled by rotateCoordinates and the display driver
+  // TODO: Rotate bits
   display.drawImage(bitmap, rotatedX, rotatedY, width, height);
 }
 
 void GfxRenderer::drawIcon(const uint8_t bitmap[], const int x, const int y, const int width, const int height) const {
-  display.drawImage(bitmap, y, getScreenWidth() - width - x, height, width);
+  display.drawImageTransparent(bitmap, y, getScreenWidth() - width - x, height, width);
 }
 
 void GfxRenderer::drawBitmap(const Bitmap& bitmap, const int x, const int y, const int maxWidth, const int maxHeight,
                              const float cropX, const float cropY) const {
+  if (fontCacheManager_ && fontCacheManager_->isScanning()) return;
   // For 1-bit bitmaps, use optimized 1-bit rendering path (no crop support for 1-bit)
   if (bitmap.is1Bit() && cropX == 0.0f && cropY == 0.0f) {
     drawBitmap1Bit(bitmap, x, y, maxWidth, maxHeight);
@@ -790,26 +822,15 @@ void GfxRenderer::clearScreen(const uint8_t color) const {
 }
 
 void GfxRenderer::invertScreen() const {
-  uint32_t* p = reinterpret_cast<uint32_t*>(frameBuffer);
-  for (size_t i = 0; i < HalDisplay::BUFFER_SIZE / 4; i++) {
-    p[i] = ~p[i];
+  for (int i = 0; i < HalDisplay::BUFFER_SIZE; i++) {
+    frameBuffer[i] = ~frameBuffer[i];
   }
 }
 
 void GfxRenderer::displayBuffer(const HalDisplay::RefreshMode refreshMode) const {
   auto elapsed = millis() - start_ms;
   LOG_DBG("GFX", "Time = %lu ms from clearScreen to displayBuffer", elapsed);
-  // Run overlay hook before dark-mode inversion so it draws in normal polarity.
-  if (postRenderHook) {
-    postRenderHook(*this);
-  }
-  if (darkMode) {
-    invertScreen();
-  }
   display.displayBuffer(refreshMode, fadingFix);
-  if (darkMode) {
-    invertScreen();
-  }
 }
 
 std::string GfxRenderer::truncatedText(const int fontId, const char* text, const int maxWidth,
@@ -817,7 +838,8 @@ std::string GfxRenderer::truncatedText(const int fontId, const char* text, const
   if (!text || maxWidth <= 0) return "";
 
   std::string item = text;
-  const char* ellipsis = "...";
+  // U+2026 HORIZONTAL ELLIPSIS (UTF-8: 0xE2 0x80 0xA6)
+  const char* ellipsis = "\xe2\x80\xa6";
   int textWidth = getTextWidth(fontId, item.c_str(), style);
   if (textWidth <= maxWidth) {
     // Text fits, return as is
@@ -834,22 +856,25 @@ std::string GfxRenderer::truncatedText(const int fontId, const char* text, const
 std::vector<std::string> GfxRenderer::wrappedText(const int fontId, const char* text, const int maxWidth,
                                                   const int maxLines, const EpdFontFamily::Style style) const {
   std::vector<std::string> lines;
-  if (!text || maxWidth <= 0 || maxLines <= 0) {
-    return lines;
-  }
+
+  if (!text || maxWidth <= 0 || maxLines <= 0) return lines;
 
   std::string remaining = text;
   std::string currentLine;
 
   while (!remaining.empty()) {
     if (static_cast<int>(lines.size()) == maxLines - 1) {
-      const std::string lastContent = currentLine.empty() ? remaining : currentLine + " " + remaining;
+      // Last available line: combine any word already started on this line with
+      // the rest of the text, then let truncatedText fit it with an ellipsis.
+      std::string lastContent = currentLine.empty() ? remaining : currentLine + " " + remaining;
       lines.push_back(truncatedText(fontId, lastContent.c_str(), maxWidth, style));
       return lines;
     }
 
-    const size_t spacePos = remaining.find(' ');
+    // Find next word
+    size_t spacePos = remaining.find(' ');
     std::string word;
+
     if (spacePos == std::string::npos) {
       word = remaining;
       remaining.clear();
@@ -858,27 +883,29 @@ std::vector<std::string> GfxRenderer::wrappedText(const int fontId, const char* 
       remaining.erase(0, spacePos + 1);
     }
 
-    const std::string testLine = currentLine.empty() ? word : currentLine + " " + word;
+    std::string testLine = currentLine.empty() ? word : currentLine + " " + word;
+
     if (getTextWidth(fontId, testLine.c_str(), style) <= maxWidth) {
       currentLine = testLine;
-      continue;
-    }
-
-    if (!currentLine.empty()) {
-      lines.push_back(currentLine);
-      if (getTextWidth(fontId, word.c_str(), style) > maxWidth) {
-        lines.push_back(truncatedText(fontId, word.c_str(), maxWidth, style));
-        currentLine.clear();
-        if (static_cast<int>(lines.size()) >= maxLines) {
-          return lines;
+    } else {
+      if (!currentLine.empty()) {
+        lines.push_back(currentLine);
+        // If the carried-over word itself exceeds maxWidth, truncate it and
+        // push it as a complete line immediately — storing it in currentLine
+        // would allow a subsequent short word to be appended after the ellipsis.
+        if (getTextWidth(fontId, word.c_str(), style) > maxWidth) {
+          lines.push_back(truncatedText(fontId, word.c_str(), maxWidth, style));
+          currentLine.clear();
+          if (static_cast<int>(lines.size()) >= maxLines) return lines;
+        } else {
+          currentLine = word;
         }
       } else {
-        currentLine = word;
-      }
-    } else {
-      lines.push_back(truncatedText(fontId, word.c_str(), maxWidth, style));
-      if (static_cast<int>(lines.size()) >= maxLines) {
-        break;
+        // Single word wider than maxWidth: truncate and stop to avoid complicated
+        // splitting rules (different between languages). Results in an aesthetically
+        // pleasing end.
+        lines.push_back(truncatedText(fontId, word.c_str(), maxWidth, style));
+        return lines;
       }
     }
   }
@@ -919,153 +946,92 @@ int GfxRenderer::getScreenHeight() const {
   return HalDisplay::DISPLAY_WIDTH;
 }
 
-int GfxRenderer::getSpaceWidth(const int fontId) const { return getSpaceWidth(fontId, EpdFontFamily::REGULAR); }
-
 int GfxRenderer::getSpaceWidth(const int fontId, const EpdFontFamily::Style style) const {
-  const IEpdFont* font = nullptr;
-  if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(style);
-  } else if (fontMap.count(fontId) > 0) {
-    font = fontMap.at(fontId);
-  }
-
-  if (!font) {
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
   }
 
-  const EpdGlyph* glyph = font->getGlyph(' ');
-  return glyph ? fp4::toPixel(glyph->advanceX) : 0;
+  const EpdGlyph* spaceGlyph = fontIt->second.getGlyph(' ', style);
+  return spaceGlyph ? fp4::toPixel(spaceGlyph->advanceX) : 0;  // snap 12.4 fixed-point to nearest pixel
 }
 
-int GfxRenderer::getSpaceKernAdjust(const int fontId, const uint32_t leftCp, const uint32_t rightCp,
-                                    const EpdFontFamily::Style style) const {
-  if (leftCp == 0 || rightCp == 0) {
-    return 0;
-  }
-
-  const auto fontFamilyIt = fontFamilyMap.find(fontId);
-  if (fontFamilyIt == fontFamilyMap.end() || fontFamilyIt->second == nullptr) {
-    return 0;
-  }
-
-  const EpdFontFamily& family = *fontFamilyIt->second;
-  return fp4::toPixel(family.getKerning(leftCp, ' ', style) + family.getKerning(' ', rightCp, style));
+int GfxRenderer::getSpaceAdvance(const int fontId, const uint32_t leftCp, const uint32_t rightCp,
+                                 const EpdFontFamily::Style style) const {
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) return 0;
+  const auto& font = fontIt->second;
+  const EpdGlyph* spaceGlyph = font.getGlyph(' ', style);
+  const int32_t spaceAdvanceFP = spaceGlyph ? static_cast<int32_t>(spaceGlyph->advanceX) : 0;
+  // Combine space advance + flanking kern into one fixed-point sum before snapping.
+  // Snapping the combined value avoids the +/-1 px error from snapping each component separately.
+  const int32_t kernFP = static_cast<int32_t>(font.getKerning(leftCp, ' ', style)) +
+                         static_cast<int32_t>(font.getKerning(' ', rightCp, style));
+  return fp4::toPixel(spaceAdvanceFP + kernFP);
 }
 
 int GfxRenderer::getKerning(const int fontId, const uint32_t leftCp, const uint32_t rightCp,
                             const EpdFontFamily::Style style) const {
-  if (leftCp == 0 || rightCp == 0) {
-    return 0;
-  }
-
-  const auto fontFamilyIt = fontFamilyMap.find(fontId);
-  if (fontFamilyIt == fontFamilyMap.end() || fontFamilyIt->second == nullptr) {
-    return 0;
-  }
-
-  return fp4::toPixel(fontFamilyIt->second->getKerning(leftCp, rightCp, style));
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) return 0;
+  const int kernFP = fontIt->second.getKerning(leftCp, rightCp, style);  // 4.4 fixed-point
+  return fp4::toPixel(kernFP);                                           // snap 4.4 fixed-point to nearest pixel
 }
 
-int GfxRenderer::getTextAdvanceX(const int fontId, const char* text) const {
-  return getTextAdvanceX(fontId, text, EpdFontFamily::REGULAR);
-}
-
-int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, const EpdFontFamily::Style style) const {
-  const IEpdFont* font = nullptr;
-  if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(style);
-  } else if (fontMap.count(fontId) > 0) {
-    font = fontMap.at(fontId);
-  }
-
-  if (!font) {
+int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, EpdFontFamily::Style style) const {
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
   }
 
   uint32_t cp;
   uint32_t prevCp = 0;
-  int32_t widthFP = 0;
+  int32_t widthFP = 0;  // 12.4 fixed-point accumulator
+  const auto& font = fontIt->second;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
-    const bool isCombining = utf8IsCombiningMark(cp);
-    if (isCombining) {
+    if (utf8IsCombiningMark(cp)) {
       continue;
     }
-
-    cp = font->applyLigatures(cp, text);
+    cp = font.applyLigatures(cp, text, style);
     if (prevCp != 0) {
-      widthFP += font->getKerning(prevCp, cp);
+      widthFP += font.getKerning(prevCp, cp, style);  // 4.4 fixed-point kern
     }
-
-    const EpdGlyph* glyph = font->getGlyph(cp);
-    if (!glyph) {
-      glyph = font->getGlyph(REPLACEMENT_GLYPH);
-    }
-    if (glyph) {
-      widthFP += glyph->advanceX;
-      prevCp = cp;
-    }
+    const EpdGlyph* glyph = font.getGlyph(cp, style);
+    if (glyph) widthFP += glyph->advanceX;  // 12.4 fixed-point advance
+    prevCp = cp;
   }
-  return fp4::toPixel(widthFP);
+  return fp4::toPixel(widthFP);  // snap 12.4 fixed-point to nearest pixel
 }
 
 int GfxRenderer::getFontAscenderSize(const int fontId) const {
-  const IEpdFont* font = nullptr;
-  if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(EpdFontFamily::REGULAR);
-  } else if (fontMap.count(fontId) > 0) {
-    font = fontMap.at(fontId);
-  }
-
-  if (!font) {
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
   }
 
-  return font->getFontData()->ascender;
+  return fontIt->second.getData(EpdFontFamily::REGULAR)->ascender;
 }
 
 int GfxRenderer::getLineHeight(const int fontId) const {
-  const IEpdFont* font = nullptr;
-  if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(EpdFontFamily::REGULAR);
-  } else if (fontMap.count(fontId) > 0) {
-    font = fontMap.at(fontId);
-  }
-
-  if (!font) {
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
   }
 
-  return font->getFontData()->advanceY;
+  return fontIt->second.getData(EpdFontFamily::REGULAR)->advanceY;
 }
 
 int GfxRenderer::getTextHeight(const int fontId) const {
-  const IEpdFont* font = nullptr;
-  if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(EpdFontFamily::REGULAR);
-  } else if (fontMap.count(fontId) > 0) {
-    font = fontMap.at(fontId);
-  }
-
-  if (!font) {
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
   }
-  return font->getFontData()->ascender;
-}
-
-bool GfxRenderer::fontSupportsGrayscale(const int fontId) const {
-  const IEpdFont* font = nullptr;
-  if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(EpdFontFamily::REGULAR);
-  } else if (fontMap.count(fontId) > 0) {
-    font = fontMap.at(fontId);
-  }
-
-  return font && font->getFontData() && font->getFontData()->is2Bit;
+  return fontIt->second.getData(EpdFontFamily::REGULAR)->ascender;
 }
 
 void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y, const char* text, const bool black,
@@ -1075,124 +1041,55 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
     return;
   }
 
-  const IEpdFont* font = nullptr;
-  if (fontFamilyMap.count(fontId) > 0) {
-    font = fontFamilyMap.at(fontId)->getFont(style);
-  } else if (fontMap.count(fontId) > 0) {
-    font = fontMap.at(fontId);
-  }
-
-  if (!font) {
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return;
   }
 
-  // No printable characters
-  if (!font->hasPrintableChars(text)) {
-    return;
-  }
+  const auto& font = fontIt->second;
 
-  // For 90° clockwise rotation:
-  // Original (glyphX, glyphY) -> Rotated (glyphY, -glyphX)
-  // Text reads from bottom to top.
-  int32_t yPosFP = fp4::fromPixel(y);
+  int32_t yPosFP = fp4::fromPixel(y);  // 12.4 fixed-point accumulator
   int lastBaseY = y;
-  int lastBaseAdvanceFP = 0;
+  int lastBaseAdvanceFP = 0;  // 12.4 fixed-point
   int lastBaseTop = 0;
-  bool hasBaseGlyph = false;
   constexpr int MIN_COMBINING_GAP_PX = 1;
-  uint32_t prevBaseCp = 0;
-
-  const auto drawGlyphRotated = [&](const EpdGlyph* glyph, const int baseX, const int baseY) {
-    if (!glyph) {
-      return;
-    }
-
-    const EpdFontData* fontData = font->getFontData();
-    const int is2Bit = fontData->is2Bit;
-    const uint8_t width = glyph->width;
-    const uint8_t height = glyph->height;
-    const int left = glyph->left;
-    const int top = glyph->top;
-
-    const uint8_t* bitmap = getGlyphBitmap(fontData, glyph);
-    if (!bitmap) {
-      return;
-    }
-
-    for (int glyphY = 0; glyphY < height; glyphY++) {
-      for (int glyphX = 0; glyphX < width; glyphX++) {
-        const int pixelPosition = glyphY * width + glyphX;
-
-        // 90° clockwise rotation transformation:
-        // screenX = x + (ascender - top + glyphY)
-        // screenY = yPos - (left + glyphX)
-        const int screenX = baseX + (fontData->ascender - top + glyphY);
-        const int screenY = baseY - left - glyphX;
-
-        if (is2Bit) {
-          const uint8_t byte = bitmap[pixelPosition / 4];
-          const uint8_t bit_index = (3 - pixelPosition % 4) * 2;
-          const uint8_t bmpVal = 3 - (byte >> bit_index) & 0x3;
-
-          if (renderMode == BW && bmpVal < 3) {
-            drawPixel(screenX, screenY, black);
-          } else if (renderMode == GRAYSCALE_MSB && (bmpVal == 1 || bmpVal == 2)) {
-            drawPixel(screenX, screenY, false);
-          } else if (renderMode == GRAYSCALE_LSB && bmpVal == 1) {
-            drawPixel(screenX, screenY, false);
-          }
-        } else {
-          const uint8_t byte = bitmap[pixelPosition / 8];
-          const uint8_t bit_index = 7 - (pixelPosition % 8);
-
-          if ((byte >> bit_index) & 1) {
-            drawPixel(screenX, screenY, black);
-          }
-        }
-      }
-    }
-  };
 
   uint32_t cp;
+  uint32_t prevCp = 0;
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
-    const bool isCombining = utf8IsCombiningMark(cp);
-    if (!isCombining) {
-      cp = font->applyLigatures(cp, text);
-      if (prevBaseCp != 0) {
-        yPosFP -= font->getKerning(prevBaseCp, cp);
+    if (utf8IsCombiningMark(cp)) {
+      const EpdGlyph* combiningGlyph = font.getGlyph(cp, style);
+      int raiseBy = 0;
+      if (combiningGlyph) {
+        const int currentGap = combiningGlyph->top - combiningGlyph->height - lastBaseTop;
+        if (currentGap < MIN_COMBINING_GAP_PX) {
+          raiseBy = MIN_COMBINING_GAP_PX - currentGap;
+        }
       }
-    }
 
-    const EpdGlyph* glyph = font->getGlyph(cp);
-    if (!glyph) {
-      glyph = font->getGlyph(REPLACEMENT_GLYPH);
-    }
-    if (!glyph) {
+      const int combiningX = x - raiseBy;
+      const int combiningY = lastBaseY - fp4::toPixel(lastBaseAdvanceFP / 2);
+      renderCharImpl<TextRotation::Rotated90CW>(*this, renderMode, font, cp, combiningX, combiningY, black, style);
       continue;
     }
 
-    int drawX = x;
-    int drawY = fp4::toPixel(yPosFP);
-    if (isCombining && hasBaseGlyph) {
-      int raiseBy = 0;
-      const int currentGap = glyph->top - glyph->height - lastBaseTop;
-      if (currentGap < MIN_COMBINING_GAP_PX) {
-        raiseBy = MIN_COMBINING_GAP_PX - currentGap;
-      }
-      drawX -= raiseBy;
-      drawY = lastBaseY - fp4::toPixel(lastBaseAdvanceFP / 2);
+    cp = font.applyLigatures(cp, text, style);
+    if (prevCp != 0) {
+      yPosFP -= font.getKerning(prevCp, cp, style);  // 4.4 fixed-point kern (subtract for rotated)
     }
-    drawGlyphRotated(glyph, drawX, drawY);
 
-    if (!isCombining) {
-      lastBaseY = drawY;
-      lastBaseAdvanceFP = glyph->advanceX;
-      lastBaseTop = glyph->top;
-      hasBaseGlyph = true;
-      prevBaseCp = cp;
-      yPosFP -= glyph->advanceX;
+    lastBaseY = fp4::toPixel(yPosFP);  // snap 12.4 fixed-point to nearest pixel
+    const EpdGlyph* glyph = font.getGlyph(cp, style);
+
+    lastBaseAdvanceFP = glyph ? glyph->advanceX : 0;  // 12.4 fixed-point
+    lastBaseTop = glyph ? glyph->top : 0;
+
+    renderCharImpl<TextRotation::Rotated90CW>(*this, renderMode, font, cp, x, lastBaseY, black, style);
+    if (glyph) {
+      yPosFP -= glyph->advanceX;  // 12.4 fixed-point advance (subtract for rotated)
     }
+    prevCp = cp;
   }
 }
 
@@ -1203,17 +1100,9 @@ size_t GfxRenderer::getBufferSize() { return HalDisplay::BUFFER_SIZE; }
 // unused
 // void GfxRenderer::grayscaleRevert() const { display.grayscaleRevert(); }
 
-void GfxRenderer::copyGrayscaleLsbBuffers() const {
-  if (darkMode) invertScreen();
-  display.copyGrayscaleLsbBuffers(frameBuffer);
-  if (darkMode) invertScreen();
-}
+void GfxRenderer::copyGrayscaleLsbBuffers() const { display.copyGrayscaleLsbBuffers(frameBuffer); }
 
-void GfxRenderer::copyGrayscaleMsbBuffers() const {
-  if (darkMode) invertScreen();
-  display.copyGrayscaleMsbBuffers(frameBuffer);
-  if (darkMode) invertScreen();
-}
+void GfxRenderer::copyGrayscaleMsbBuffers() const { display.copyGrayscaleMsbBuffers(frameBuffer); }
 
 void GfxRenderer::displayGrayBuffer() const { display.displayGrayBuffer(fadingFix); }
 
@@ -1265,7 +1154,7 @@ bool GfxRenderer::storeBwBuffer() {
  * Uses chunked restoration to match chunked storage.
  */
 void GfxRenderer::restoreBwBuffer() {
-  // Check if any all chunks are allocated
+  // Check if all chunks are allocated
   bool missingChunks = false;
   for (const auto& bwBufferChunk : bwBufferChunks) {
     if (!bwBufferChunk) {
@@ -1280,13 +1169,6 @@ void GfxRenderer::restoreBwBuffer() {
   }
 
   for (size_t i = 0; i < BW_BUFFER_NUM_CHUNKS; i++) {
-    // Check if chunk is missing
-    if (!bwBufferChunks[i]) {
-      LOG_ERR("GFX", "!! BW buffer chunks not stored - this is likely a bug");
-      freeBwBufferChunks();
-      return;
-    }
-
     const size_t offset = i * BW_BUFFER_CHUNK_SIZE;
     memcpy(frameBuffer + offset, bwBufferChunks[i], BW_BUFFER_CHUNK_SIZE);
   }
@@ -1304,74 +1186,6 @@ void GfxRenderer::restoreBwBuffer() {
 void GfxRenderer::cleanupGrayscaleWithFrameBuffer() const {
   if (frameBuffer) {
     display.cleanupGrayscaleBuffers(frameBuffer);
-  }
-}
-
-void GfxRenderer::renderChar(const IEpdFont& font, const uint32_t cp, int* x, const int* y,
-                             const bool pixelState) const {
-  const EpdGlyph* glyph = font.getGlyph(cp);
-  if (!glyph) {
-    glyph = font.getGlyph(REPLACEMENT_GLYPH);
-  }
-
-  // no glyph?
-  if (!glyph) {
-    LOG_WRN("GFX", "Missing glyph U+%04lX; advancing cursor", static_cast<unsigned long>(cp));
-    // Advance by space width as a reasonable fallback so subsequent glyphs aren't stacked.
-    if (!utf8IsCombiningMark(cp)) {
-      const EpdGlyph* spaceGlyph = font.getGlyph(' ');
-      *x += spaceGlyph ? fp4::toPixel(spaceGlyph->advanceX) : 8;
-    }
-    return;
-  }
-
-  const EpdFontData* fontData = font.getFontData();
-  const int is2Bit = fontData->is2Bit;
-  const uint8_t width = glyph->width;
-  const uint8_t height = glyph->height;
-  const int left = glyph->left;
-
-  const uint8_t* bitmap = getGlyphBitmap(fontData, glyph);
-  if (bitmap != nullptr) {
-    for (int glyphY = 0; glyphY < height; glyphY++) {
-      const int screenY = *y - glyph->top + glyphY;
-      for (int glyphX = 0; glyphX < width; glyphX++) {
-        const int pixelPosition = glyphY * width + glyphX;
-        const int screenX = *x + left + glyphX;
-
-        if (is2Bit) {
-          const uint8_t byte = bitmap[pixelPosition / 4];
-          const uint8_t bit_index = (3 - pixelPosition % 4) * 2;
-          // the direct bit from the font is 0 -> white, 1 -> light gray, 2 -> dark gray, 3 -> black
-          // we swap this to better match the way images and screen think about colors:
-          // 0 -> black, 1 -> dark grey, 2 -> light grey, 3 -> white
-          const uint8_t bmpVal = 3 - (byte >> bit_index) & 0x3;
-
-          if (renderMode == BW && bmpVal < 3) {
-            // Black (also paints over the grays in BW mode)
-            drawPixel(screenX, screenY, pixelState);
-          } else if (renderMode == GRAYSCALE_MSB && (bmpVal == 1 || bmpVal == 2)) {
-            // Light gray (also mark the MSB if it's going to be a dark gray too)
-            // We have to flag pixels in reverse for the gray buffers, as 0 leave alone, 1 update
-            drawPixel(screenX, screenY, false);
-          } else if (renderMode == GRAYSCALE_LSB && bmpVal == 1) {
-            // Dark gray
-            drawPixel(screenX, screenY, false);
-          }
-        } else {
-          const uint8_t byte = bitmap[pixelPosition / 8];
-          const uint8_t bit_index = 7 - (pixelPosition % 8);
-
-          if ((byte >> bit_index) & 1) {
-            drawPixel(screenX, screenY, pixelState);
-          }
-        }
-      }
-    }
-  }
-
-  if (!utf8IsCombiningMark(cp)) {
-    *x += fp4::toPixel(glyph->advanceX);
   }
 }
 
@@ -1402,4 +1216,43 @@ void GfxRenderer::getOrientedViewableTRBL(int* outTop, int* outRight, int* outBo
       *outLeft = VIEWABLE_MARGIN_TOP;
       break;
   }
+}
+
+void GfxRenderer::drawButtonHints(const int fontId, const char* btn1, const char* btn2, const char* btn3,
+                                  const char* btn4) const {
+  const char* labels[4] = {
+      btn1 ? btn1 : "",
+      btn2 ? btn2 : "",
+      btn3 ? btn3 : "",
+      btn4 ? btn4 : "",
+  };
+  const int screenWidth = getScreenWidth();
+  const int slotWidth = screenWidth / 4;
+  const int y = getScreenHeight() - getLineHeight(fontId) - 6;
+
+  for (int i = 0; i < 4; ++i) {
+    if (labels[i][0] == '\0') {
+      continue;
+    }
+    const int textWidth = getTextWidth(fontId, labels[i]);
+    const int x = i * slotWidth + (slotWidth - textWidth) / 2;
+    drawText(fontId, x, y, labels[i]);
+  }
+}
+
+void GfxRenderer::drawSideButtonHints(const int fontId, const char* topBtn, const char* bottomBtn) const {
+  const int x = getScreenWidth() - getLineHeight(fontId) - 2;
+  if (topBtn && topBtn[0] != '\0') {
+    drawTextRotated90CW(fontId, x, getScreenHeight() / 3, topBtn);
+  }
+  if (bottomBtn && bottomBtn[0] != '\0') {
+    drawTextRotated90CW(fontId, x, (getScreenHeight() * 2) / 3, bottomBtn);
+  }
+}
+
+bool GfxRenderer::fontSupportsGrayscale(const int fontId) const {
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) return false;
+  const IEpdFont* font = fontIt->second.getFont(EpdFontFamily::REGULAR);
+  return font && font->getFontData() && font->getFontData()->is2Bit;
 }

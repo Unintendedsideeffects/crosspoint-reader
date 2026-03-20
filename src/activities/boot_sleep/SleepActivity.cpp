@@ -351,8 +351,7 @@ void SleepActivity::renderCustomSleepScreen() const {
   if (SETTINGS.sleepPinnedPath[0] != '\0') {
     const std::string pinnedPath(SETTINGS.sleepPinnedPath);
     LOG_INF("SLP", "Using pinned sleep cover: %s", pinnedPath.c_str());
-    if (isBmpFile(pinnedPath)) {
-      FsFile file;
+    if (isBmpFile(pinnedPath)) {      FsFile file;
       if (Storage.openFileForRead("SLP", pinnedPath, file)) {
         Bitmap bitmap(file, true);
         if (bitmap.parseHeaders() == BmpReaderError::Ok) {

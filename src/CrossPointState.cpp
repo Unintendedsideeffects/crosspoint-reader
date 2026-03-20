@@ -75,7 +75,7 @@ bool CrossPointState::loadFromBinaryFile() {
       return false;
     }
   } else {
-    lastSleepImage = 0;
+    lastSleepImage = UINT8_MAX;
   }
 
   if (version >= 3) {
