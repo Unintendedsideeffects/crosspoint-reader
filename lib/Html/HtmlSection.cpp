@@ -244,13 +244,37 @@ std::unique_ptr<Page> HtmlSection::loadPageFromSectionFile() {
     return nullptr;
   }
 
-  file.seek(HEADER_SIZE - sizeof(uint32_t));
+  if (!file.seek(HEADER_SIZE - sizeof(uint32_t))) {
+    LOG_ERR("HSC", "Failed to seek to LUT offset header for page %d", currentPage);
+    clearCache();
+    return nullptr;
+  }
+
   uint32_t lutOffset;
-  serialization::readPod(file, lutOffset);
-  file.seek(lutOffset + sizeof(uint32_t) * currentPage);
+  if (!serialization::readPod(file, lutOffset)) {
+    LOG_ERR("HSC", "Failed to read LUT offset for page %d", currentPage);
+    clearCache();
+    return nullptr;
+  }
+
+  if (!file.seek(lutOffset + sizeof(uint32_t) * currentPage)) {
+    LOG_ERR("HSC", "Failed to seek to LUT entry for page %d (lutOffset=%u)", currentPage, lutOffset);
+    clearCache();
+    return nullptr;
+  }
+
   uint32_t pagePos;
-  serialization::readPod(file, pagePos);
-  file.seek(pagePos);
+  if (!serialization::readPod(file, pagePos)) {
+    LOG_ERR("HSC", "Failed to read page position for page %d", currentPage);
+    clearCache();
+    return nullptr;
+  }
+
+  if (!file.seek(pagePos)) {
+    LOG_ERR("HSC", "Failed to seek to page position %u for page %d", pagePos, currentPage);
+    clearCache();
+    return nullptr;
+  }
 
   auto page = Page::deserialize(file);
   return page;

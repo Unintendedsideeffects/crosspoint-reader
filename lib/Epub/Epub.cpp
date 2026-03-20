@@ -15,6 +15,9 @@
 #include "SpiBusMutex.h"
 
 namespace {
+constexpr size_t MAX_CSS_FILE_SIZE = 128 * 1024;
+constexpr size_t MIN_HEAP_FOR_CSS_PARSING = 64 * 1024;
+
 bool extractItemToTempFile(const Epub* epub, const std::string& itemHref, const std::string& tempPath) {
   FsFile tempFile;
   if (!Storage.openFileForWrite("EBP", tempPath, tempFile)) {
@@ -330,6 +333,20 @@ void Epub::parseCssFiles() const {
     // Cache miss - parse CSS files
     for (const auto& cssPath : cssFiles) {
       LOG_DBG("EBP", "Parsing CSS file: %s", cssPath.c_str());
+
+      const uint32_t freeHeap = ESP.getFreeHeap();
+      if (freeHeap < MIN_HEAP_FOR_CSS_PARSING) {
+        LOG_ERR("EBP", "Insufficient heap for CSS parsing (%u bytes free, need %zu), skipping: %s", freeHeap,
+                MIN_HEAP_FOR_CSS_PARSING, cssPath.c_str());
+        continue;
+      }
+
+      size_t cssFileSize = 0;
+      if (getItemSize(cssPath, &cssFileSize) && cssFileSize > MAX_CSS_FILE_SIZE) {
+        LOG_ERR("EBP", "CSS file too large (%zu bytes > %zu max), skipping: %s", cssFileSize, MAX_CSS_FILE_SIZE,
+                cssPath.c_str());
+        continue;
+      }
 
       // Extract CSS file to temp location
       const auto tmpCssPath = getCachePath() + "/.tmp.css";

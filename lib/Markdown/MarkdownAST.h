@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 // C++11 make_unique polyfill (md_detail::make_unique is C++14+)

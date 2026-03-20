@@ -6,6 +6,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <new>
 
 #include "BitmapHelpers.h"
 
@@ -349,40 +350,9 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
   // Using fixed-point: srcY_fp = outY * scaleY_fp (gives source Y in 16.16 format)
   int currentOutY = 0;             // Current output row being accumulated
   uint32_t nextOutY_srcStart = 0;  // Source Y where next output row starts (16.16 fixed point)
-  auto cleanupAllocations = [&]() {
-    if (rowAccum) {
-      delete[] rowAccum;
-      rowAccum = nullptr;
-    }
-    if (rowCount) {
-      delete[] rowCount;
-      rowCount = nullptr;
-    }
-    if (atkinsonDitherer) {
-      delete atkinsonDitherer;
-      atkinsonDitherer = nullptr;
-    }
-    if (fsDitherer) {
-      delete fsDitherer;
-      fsDitherer = nullptr;
-    }
-    if (atkinson1BitDitherer) {
-      delete atkinson1BitDitherer;
-      atkinson1BitDitherer = nullptr;
-    }
-    if (mcuRowBuffer) {
-      free(mcuRowBuffer);
-      mcuRowBuffer = nullptr;
-    }
-    if (rowBuffer) {
-      free(rowBuffer);
-      rowBuffer = nullptr;
-    }
-  };
-
   if (needsScaling) {
-    rowAccum = new uint32_t[outWidth]();
-    rowCount = new uint32_t[outWidth]();
+    rowAccum = new (std::nothrow) uint32_t[outWidth]();
+    rowCount = new (std::nothrow) uint32_t[outWidth]();
     if (!rowAccum || !rowCount) {
       LOG_ERR("JPG", "Failed to allocate scaling buffers");
       return false;
