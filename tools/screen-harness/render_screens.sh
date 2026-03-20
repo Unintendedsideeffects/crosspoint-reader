@@ -41,6 +41,7 @@ pushd "$ROOT_DIR" >/dev/null
   src/activities/Activity.cpp \
   src/activities/boot_sleep/BootActivity.cpp \
   lib/GfxRenderer/GfxRenderer.cpp \
+  lib/GfxRenderer/FontCacheManager.cpp \
   lib/EpdFont/EpdFont.cpp \
   lib/EpdFont/EpdFontFamily.cpp \
   lib/EpdFont/FontDecompressor.cpp \

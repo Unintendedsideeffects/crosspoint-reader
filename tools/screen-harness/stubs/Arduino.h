@@ -44,6 +44,12 @@ inline unsigned long millis() {
   return static_cast<unsigned long>(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 }
 
+inline unsigned long micros() {
+  static const auto kStart = std::chrono::steady_clock::now();
+  const auto elapsed = std::chrono::steady_clock::now() - kStart;
+  return static_cast<unsigned long>(std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count());
+}
+
 inline void delay(unsigned long ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 
 inline void pinMode(int /*pin*/, int /*mode*/) {}

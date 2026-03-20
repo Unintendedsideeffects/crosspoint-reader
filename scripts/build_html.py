@@ -102,7 +102,20 @@ def minify_html(html: str) -> str:
 
     return html.strip()
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+def resolve_script_dir() -> str:
+    script_file = globals().get("__file__")
+    if script_file:
+        return os.path.dirname(os.path.abspath(script_file))
+
+    scons_import = globals().get("Import")
+    if callable(scons_import):
+        scons_import("env")
+        return str(Path(env.GetProjectDir()) / "scripts")
+
+    return os.path.join(os.getcwd(), "scripts")
+
+
+SCRIPT_DIR = resolve_script_dir()
 REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 theme_tokens = load_theme_tokens(SCRIPT_DIR)
 
