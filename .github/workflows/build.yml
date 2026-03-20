@@ -41,7 +41,7 @@ jobs:
         run: uv run python scripts/check_feature_key_sync.py
 
       - name: Cache PlatformIO
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
@@ -90,7 +90,7 @@ jobs:
           uv run python -m pip --version
 
       - name: Cache PlatformIO
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
@@ -146,7 +146,7 @@ jobs:
           cp .pio/build/custom/partitions.bin artifact/
 
       - name: Upload firmware artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firmware-${{ matrix.profile }}
           path: artifact/
@@ -185,7 +185,7 @@ jobs:
           uv run python -m pip --version
 
       - name: Cache PlatformIO
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
@@ -225,7 +225,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload latest firmware artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firmware-latest
           path: |
@@ -244,19 +244,19 @@ jobs:
       contents: write
     steps:
       - name: Download latest standard firmware
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: firmware-latest
           path: artifacts/latest-standard
 
       - name: Download lean firmware
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: firmware-lean
           path: artifacts/lean
 
       - name: Download full firmware
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: firmware-full
           path: artifacts/full
@@ -309,7 +309,7 @@ jobs:
       contents: write
     steps:
       - name: Download all firmware artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 

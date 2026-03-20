@@ -110,7 +110,9 @@ def resolve_script_dir() -> str:
     scons_import = globals().get("Import")
     if callable(scons_import):
         scons_import("env")
-        return str(Path(env.GetProjectDir()) / "scripts")
+        project_dir = env.get("PROJECT_DIR") or env.subst("$PROJECT_DIR")
+        if project_dir:
+            return str(Path(project_dir) / "scripts")
 
     return os.path.join(os.getcwd(), "scripts")
 
