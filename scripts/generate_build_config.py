@@ -25,19 +25,19 @@ FEATURES = {
     'bookerly_fonts': Feature(
         name='Bookerly Fonts',
         flag='ENABLE_BOOKERLY_FONTS',
-        size_kb=964,
+        size_kb=893,
         description='12/16/18pt Bookerly family'
     ),
     'notosans_fonts': Feature(
         name='Noto Sans Fonts',
         flag='ENABLE_NOTOSANS_FONTS',
-        size_kb=1098,
+        size_kb=1009,
         description='12/16/18pt Noto Sans family'
     ),
     'opendyslexic_fonts': Feature(
         name='OpenDyslexic Font Pack',
         flag='ENABLE_OPENDYSLEXIC_FONTS',
-        size_kb=2938,
+        size_kb=2706,
         description='Optional OpenDyslexic 8/10/12/14pt family (requires Bookerly + Noto Sans)'
     ),
     'image_sleep': Feature(
@@ -55,7 +55,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=296,
+        size_kb=240,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -67,13 +67,13 @@ FEATURES = {
     'koreader_sync': Feature(
         name='KOReader Sync',
         flag='ENABLE_KOREADER_SYNC',
-        size_kb=19,
+        size_kb=2,
         description='Sync reading progress with KOReader'
     ),
     'calibre_sync': Feature(
         name='Calibre Sync',
         flag='ENABLE_CALIBRE_SYNC',
-        size_kb=95,
+        size_kb=87,
         description='Calibre OPDS browser and metadata sync settings'
     ),
     'background_server': Feature(
@@ -91,7 +91,7 @@ FEATURES = {
     'background_server_always': Feature(
         name='Background Server Always',
         flag='ENABLE_BACKGROUND_SERVER_ALWAYS',
-        size_kb=0,
+        size_kb=1,
         description='Auto-connect to WiFi on wake even when not charging'
     ),
     'home_media_picker': Feature(
@@ -115,19 +115,19 @@ FEATURES = {
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=232,
+        size_kb=199,
         description='EPUB e-book reader with CSS and chapter navigation'
     ),
     'hyphenation': Feature(
         name='Hyphenation',
         flag='ENABLE_HYPHENATION',
-        size_kb=545,
+        size_kb=511,
         description='Language-aware hyphenation for justified EPUB text'
     ),
     'xtc_support': Feature(
         name='XTC Support',
         flag='ENABLE_XTC_SUPPORT',
-        size_kb=18,
+        size_kb=11,
         description='XTC format reader with chapter navigation'
     ),
     'lyra_theme': Feature(
@@ -139,13 +139,13 @@ FEATURES = {
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=4,
+        size_kb=2,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
         name='Todo Planner',
         flag='ENABLE_TODO_PLANNER',
-        size_kb=10,
+        size_kb=6,
         description='Standalone daily TODO/agenda planner with .md/.txt fallback and web quick-entry'
     ),
     'dark_mode': Feature(
@@ -163,31 +163,31 @@ FEATURES = {
     'ble_wifi_provisioning': Feature(
         name='BLE WiFi Provisioning',
         flag='ENABLE_BLE_WIFI_PROVISIONING',
-        size_kb=673,
+        size_kb=630,
         description='Initial WiFi setup via Bluetooth LE'
     ),
     'user_fonts': Feature(
         name='User Fonts',
         flag='ENABLE_USER_FONTS',
-        size_kb=11,
+        size_kb=7,
         description='Load custom .ttf/.otf fonts from SD card (pre-converted)'
     ),
     'web_wifi_setup': Feature(
         name='Web WiFi Setup',
         flag='ENABLE_WEB_WIFI_SETUP',
-        size_kb=5,
+        size_kb=3,
         description='Manage WiFi networks directly from the web interface'
     ),
     'remote_keyboard_input': Feature(
         name='Remote Keyboard Input',
         flag='ENABLE_REMOTE_KEYBOARD_INPUT',
-        size_kb=6,
+        size_kb=5,
         description='Android-first remote text entry with browser QR and hotspot fallback'
     ),
     'usb_mass_storage': Feature(
         name='USB Mass Storage',
         flag='ENABLE_USB_MASS_STORAGE',
-        size_kb=21,
+        size_kb=15,
         description='On-device prompt for USB SD card access as mass storage'
     ),
 }
@@ -570,7 +570,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 2.57  # Lean profile size baseline (measured)
+    base_size_mb = 2.32  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:

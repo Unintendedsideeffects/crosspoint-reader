@@ -212,7 +212,15 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "chore: update feature sizes from CI measurements [skip ci]"
           for attempt in 1 2 3; do
-            git push && break
+            if git push; then
+              exit 0
+            fi
             echo "Push attempt $attempt failed, rebasing on remote..."
+            git reset --hard HEAD
+            git submodule foreach --recursive git reset --hard
+            git clean -fd
+            git submodule foreach --recursive git clean -fd
             git pull --rebase origin ${{ github.ref_name }}
           done
+          echo "Failed to push updated feature sizes after 3 attempts" >&2
+          exit 1
