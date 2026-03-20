@@ -65,6 +65,48 @@ static std::string encodeUtf8Codepoint(uint32_t cp) {
   return encoded;
 }
 
+static bool parseNumericEntity(const std::string& content, uint32_t& codepoint) {
+  if (content.size() <= 3 || content[0] != '&' || content[1] != '#' || content.back() != ';') {
+    return false;
+  }
+
+  size_t index = 2;
+  uint32_t base = 10;
+  if (content[index] == 'x' || content[index] == 'X') {
+    base = 16;
+    index++;
+  }
+  if (index >= content.size() - 1) {
+    return false;
+  }
+
+  uint32_t value = 0;
+  for (; index < content.size() - 1; index++) {
+    const unsigned char ch = static_cast<unsigned char>(content[index]);
+    uint32_t digit = 0;
+    if (ch >= '0' && ch <= '9') {
+      digit = ch - '0';
+    } else if (base == 16 && ch >= 'a' && ch <= 'f') {
+      digit = 10 + (ch - 'a');
+    } else if (base == 16 && ch >= 'A' && ch <= 'F') {
+      digit = 10 + (ch - 'A');
+    } else {
+      return false;
+    }
+
+    if (value > (0x10FFFFu - digit) / base) {
+      return false;
+    }
+    value = value * base + digit;
+  }
+
+  if (value > 0x10FFFFu) {
+    return false;
+  }
+  codepoint = value;
+  return true;
+}
+
 std::unique_ptr<MdNode> MarkdownParser::parse(const std::string& markdown) {
   if (markdown.size() > MAX_INPUT_SIZE) {
     LOG_ERR("MD", "Parse failed: input size %zu exceeds limit %zu", markdown.size(), MAX_INPUT_SIZE);
@@ -526,20 +568,10 @@ int MarkdownParser::onText(MD_TEXTTYPE type, const char* text, MD_SIZE size) {
       } else if (content == "&nbsp;") {
         decodedContent = " ";
       } else if (content.size() > 3 && content[1] == '#') {
-        try {
-          int base = 10;
-          int start = 2;
-          if (content[2] == 'x' || content[2] == 'X') {
-            base = 16;
-            start = 3;
-          }
-          std::string numStr = content.substr(start, content.size() - start - 1);
-          unsigned long num = std::stoul(numStr, nullptr, base);
-          if (num <= 0x10FFFF) {
-            decodedContent = encodeUtf8Codepoint(static_cast<uint32_t>(num));
-          }
-        } catch (const std::exception& e) {
-          // Ignore malformed numeric entities
+        uint32_t codepoint = 0;
+        if (parseNumericEntity(content, codepoint)) {
+          decodedContent = encodeUtf8Codepoint(codepoint);
+        } else {
           LOG_WRN("MD", "Malformed numeric entity: %s", content.c_str());
         }
       }

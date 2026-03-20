@@ -616,6 +616,7 @@ void loop() {
     APP_STATE.pendingPageTurn = 0;
     mappedInputManager.injectVirtualActivation(pageTurn > 0 ? MappedInputManager::Button::PageForward
                                                             : MappedInputManager::Button::PageBack);
+  }
 
   // Refresh the battery icon when USB is plugged or unplugged.
   // Placed after sleep guards so we never queue a render that won't be processed.
