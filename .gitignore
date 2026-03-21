@@ -1,33 +1,38 @@
-.pio
+# Local tooling and editor state
 .vscode
-.DS_Store
 .idea
-lib/EpdFont/fontsrc
 .vs
-build
-**/__pycache__/
-/compile_commands.json
-/.cache
 .history/
+/.cache
 /.venv
+.worktrees/
+/.plans/
+.DS_Store
 
-lib/I18n/I18nStrings.cpp
-*.generated.h
-
-# Build artifacts
+# Build outputs
+.pio
+.pio-*/
+.pio-codex*/
+.pio-ci-sim/
+.pio-size-*/
+build
 firmware.bin
 partitions.bin
-.pio-codex*/
-.worktrees/
 platformio-custom.ini
 platformio.local.ini
-.pio-ci-sim/
+build_size_measurements.json
+/compile_commands.json
 
-.pio-size-*/
-/.plans/
-src/network/html/PokedexPluginPage.cache.json
+# Generated source and caches
+**/__pycache__/
+*.generated.h
+lib/I18n/I18nStrings.cpp
+src/network/html/*.cache.json
+
+# Project-local dependencies and assets
+docs/configurator/node_modules/
+lib/EpdFont/fontsrc
 
 # Crash dumps
 core.*
 *.core
-docs/configurator/node_modules/
