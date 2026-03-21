@@ -446,7 +446,8 @@ void GfxRenderer::drawPixelDither<Color::LightGray>(const int x, const int y) co
 
 template <>
 void GfxRenderer::drawPixelDither<Color::DarkGray>(const int x, const int y) const {
-  drawPixel(x, y, (x + y) % 2 == 0);  // TODO: maybe find a better pattern?
+  // 75% density (3 of 4 pixels black) — Bayer 2x2 complement of LightGray's 25%
+  drawPixel(x, y, !(x % 2 == 0 && y % 2 == 0));
 }
 
 void GfxRenderer::fillRectDither(const int x, const int y, const int width, const int height, Color color) const {
@@ -558,27 +559,97 @@ void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, con
   }
 }
 
+// Read a single bit from a 1-bit packed bitmap (MSB first).
+static inline bool getBitmapBit(const uint8_t* bmp, int widthBytes, int px, int py) {
+  return (bmp[py * widthBytes + (px / 8)] >> (7 - (px % 8))) & 1;
+}
+
+// Set a single bit in a 1-bit packed bitmap (MSB first).
+static inline void setBitmapBit(uint8_t* bmp, int widthBytes, int px, int py, bool val) {
+  const int byteIdx = py * widthBytes + (px / 8);
+  const uint8_t mask = 1 << (7 - (px % 8));
+  if (val)
+    bmp[byteIdx] |= mask;
+  else
+    bmp[byteIdx] &= ~mask;
+}
+
 void GfxRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, const int width, const int height) const {
-  int rotatedX = 0;
-  int rotatedY = 0;
+  if (orientation == LandscapeCounterClockwise) {
+    // Native panel orientation — no rotation needed
+    display.drawImage(bitmap, x, y, width, height);
+    return;
+  }
+
+  // Determine output dimensions and pixel mapping based on rotation
+  int outW, outH;
+  if (orientation == LandscapeClockwise) {
+    outW = width;   // 180° — same dimensions
+    outH = height;
+  } else {
+    outW = height;  // 90° — dimensions swap
+    outH = width;
+  }
+
+  const int srcWidthBytes = width / 8;
+  const int dstWidthBytes = outW / 8;
+  const int bufSize = dstWidthBytes * outH;
+
+  auto* rotated = static_cast<uint8_t*>(malloc(bufSize));
+  if (!rotated) {
+    LOG_ERR("GFX", "drawImage: malloc failed for %d bytes", bufSize);
+    return;
+  }
+  memset(rotated, 0xFF, bufSize);  // white background
+
+  for (int sy = 0; sy < height; sy++) {
+    for (int sx = 0; sx < width; sx++) {
+      int dx, dy;
+      switch (orientation) {
+        case Portrait:
+          // 90° CW: (sx, sy) → (height-1-sy, sx)
+          dx = height - 1 - sy;
+          dy = sx;
+          break;
+        case PortraitInverted:
+          // 90° CCW: (sx, sy) → (sy, width-1-sx)
+          dx = sy;
+          dy = width - 1 - sx;
+          break;
+        case LandscapeClockwise:
+          // 180°: (sx, sy) → (width-1-sx, height-1-sy)
+          dx = width - 1 - sx;
+          dy = height - 1 - sy;
+          break;
+        default:
+          dx = sx;
+          dy = sy;
+          break;
+      }
+      setBitmapBit(rotated, dstWidthBytes, dx, dy, getBitmapBit(bitmap, srcWidthBytes, sx, sy));
+    }
+  }
+
+  // Compute physical position for the rotated image
+  int rotatedX = 0, rotatedY = 0;
   rotateCoordinates(orientation, x, y, &rotatedX, &rotatedY);
-  // Rotate origin corner
   switch (orientation) {
     case Portrait:
-      rotatedY = rotatedY - height;
+      rotatedY = rotatedY - outH;
       break;
     case PortraitInverted:
-      rotatedX = rotatedX - width;
+      rotatedX = rotatedX - outW;
       break;
     case LandscapeClockwise:
-      rotatedY = rotatedY - height;
-      rotatedX = rotatedX - width;
+      rotatedY = rotatedY - outH;
+      rotatedX = rotatedX - outW;
       break;
-    case LandscapeCounterClockwise:
+    default:
       break;
   }
-  // TODO: Rotate bits
-  display.drawImage(bitmap, rotatedX, rotatedY, width, height);
+
+  display.drawImage(rotated, rotatedX, rotatedY, outW, outH);
+  free(rotated);
 }
 
 void GfxRenderer::drawIcon(const uint8_t bitmap[], const int x, const int y, const int width, const int height) const {

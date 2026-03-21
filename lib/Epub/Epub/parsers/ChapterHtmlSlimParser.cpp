@@ -481,9 +481,51 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     // Special case: javascript:void(0) links with data attributes
     // Example: <a href="javascript:void(0)"
     // data-xyz="{&quot;name&quot;:&quot;OPS/ch2.xhtml&quot;,&quot;frag&quot;:&quot;id46&quot;}">
+    // Extract "name" and "frag" to reconstruct the actual internal href.
+    char dataHrefBuf[64];
     if (href && strncmp(href, "javascript:", 11) == 0) {
-      isInternalLink = false;
-      // TODO: Parse data-* attributes to extract actual href
+      for (int i = 0; atts[i]; i += 2) {
+        if (strncmp(atts[i], "data-", 5) != 0) continue;
+        const char* val = atts[i + 1];
+        if (!val) continue;
+
+        const char* nameKey = strstr(val, "\"name\"");
+        if (!nameKey) continue;
+
+        const char* nameValStart = strchr(nameKey + 6, '"');
+        if (!nameValStart) continue;
+        nameValStart++;
+        const char* nameValEnd = strchr(nameValStart, '"');
+        if (!nameValEnd || nameValEnd == nameValStart) continue;
+
+        int nameLen = static_cast<int>(nameValEnd - nameValStart);
+        if (nameLen >= static_cast<int>(sizeof(dataHrefBuf) - 1)) continue;
+
+        memcpy(dataHrefBuf, nameValStart, nameLen);
+        int pos = nameLen;
+
+        const char* fragKey = strstr(val, "\"frag\"");
+        if (fragKey) {
+          const char* fragValStart = strchr(fragKey + 6, '"');
+          if (fragValStart) {
+            fragValStart++;
+            const char* fragValEnd = strchr(fragValStart, '"');
+            if (fragValEnd && fragValEnd != fragValStart) {
+              int fragLen = static_cast<int>(fragValEnd - fragValStart);
+              if (pos + 1 + fragLen < static_cast<int>(sizeof(dataHrefBuf) - 1)) {
+                dataHrefBuf[pos++] = '#';
+                memcpy(dataHrefBuf + pos, fragValStart, fragLen);
+                pos += fragLen;
+              }
+            }
+          }
+        }
+
+        dataHrefBuf[pos] = '\0';
+        href = dataHrefBuf;
+        isInternalLink = isInternalEpubLink(href);
+        break;
+      }
     }
 
     if (isInternalLink) {
