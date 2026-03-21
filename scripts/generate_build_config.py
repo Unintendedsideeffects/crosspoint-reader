@@ -139,7 +139,7 @@ FEATURES = {
     'ota_updates': Feature(
         name='OTA Updates',
         flag='ENABLE_OTA_UPDATES',
-        size_kb=2,
+        size_kb=3,
         description='Over-the-air firmware updates via WiFi'
     ),
     'todo_planner': Feature(
