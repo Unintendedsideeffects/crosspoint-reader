@@ -197,19 +197,38 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Check for reusable build artifact
+        id: reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: firmware.bin
+        run: python3 scripts/ci/check_reusable_artifact.py
+
+      - name: Download reused artifact
+        if: steps.reuse.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHIVE_URL: ${{ steps.reuse.outputs.archive_url }}
+          OUTPUT_DIR: .pio/build/default
+        run: python3 scripts/ci/download_artifact.py
+
       - uses: actions/setup-python@v6
+        if: steps.reuse.outputs.found != 'true'
         with:
           python-version: '3.11'
 
       - name: Install PlatformIO Core
+        if: steps.reuse.outputs.found != 'true'
         run: python -m pip install -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.1.19.zip
 
       - name: Build CrossPoint
+        if: steps.reuse.outputs.found != 'true'
         run: |
           set -euo pipefail
           pio run | tee pio.log
 
       - name: Enforce flash headroom
+        if: steps.reuse.outputs.found != 'true'
         run: |
           python scripts/check_flash_headroom.py \
             --log pio.log \
@@ -217,7 +236,7 @@ jobs:
             --min-headroom-kb 64
 
       - name: Extract firmware stats
-
+        if: steps.reuse.outputs.found != 'true'
         run: |
           set -euo pipefail
           ram_line="$(grep -E "RAM:\\s" -m1 pio.log || true)"
@@ -228,6 +247,15 @@ jobs:
             echo "## Firmware build stats"
             if [ -n "$ram_line" ]; then echo "- ${ram_line}"; else echo "- RAM: not found"; fi
             if [ -n "$flash_line" ]; then echo "- ${flash_line}"; else echo "- Flash: not found"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report reused build
+        if: steps.reuse.outputs.found == 'true'
+        run: |
+          {
+            echo "## Firmware build stats — reused"
+            echo ""
+            echo "Reused artifact from run [#${{ steps.reuse.outputs.source_run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ steps.reuse.outputs.source_run_id }})."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload firmware.bin artifact

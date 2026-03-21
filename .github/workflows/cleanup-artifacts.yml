@@ -1,0 +1,43 @@
+name: Cleanup Old Artifacts
+
+on:
+  schedule:
+    - cron: "30 4 * * 0"  # Weekly on Sunday at 04:30 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview deletions without actually deleting"
+        required: false
+        type: boolean
+        default: true
+      max_age_days:
+        description: "Delete artifacts older than this many days"
+        required: false
+        type: number
+        default: 14
+      min_keep:
+        description: "Always keep at least this many artifacts per name"
+        required: false
+        type: number
+        default: 5
+
+permissions:
+  actions: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: scripts/ci/prune_artifacts.py
+          sparse-checkout-cone-mode: false
+
+      - name: Prune old artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_AGE_DAYS: ${{ inputs.max_age_days || '14' }}
+          MIN_KEEP: ${{ inputs.min_keep || '5' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: python3 scripts/ci/prune_artifacts.py

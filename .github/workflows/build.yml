@@ -73,23 +73,43 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Check for reusable build artifact
+        id: reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: firmware-${{ matrix.profile }}
+        run: python3 scripts/ci/check_reusable_artifact.py
+
+      - name: Download reused artifact
+        if: steps.reuse.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHIVE_URL: ${{ steps.reuse.outputs.archive_url }}
+          OUTPUT_DIR: artifact
+        run: python3 scripts/ci/download_artifact.py
+
       - name: Setup Python
+        if: steps.reuse.outputs.found != 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
       - name: Setup uv
+        if: steps.reuse.outputs.found != 'true'
         uses: astral-sh/setup-uv@v7
 
       - name: Install dependencies
+        if: steps.reuse.outputs.found != 'true'
         run: uv sync --frozen
 
       - name: Ensure pip for PlatformIO
+        if: steps.reuse.outputs.found != 'true'
         run: |
           uv run python -m ensurepip --upgrade || true
           uv run python -m pip --version
 
       - name: Cache PlatformIO
+        if: steps.reuse.outputs.found != 'true'
         uses: actions/cache@v5
         with:
           path: ~/.platformio
@@ -97,21 +117,25 @@ jobs:
           restore-keys: ${{ runner.os }}-platformio-
 
       - name: Generate build configuration
+        if: steps.reuse.outputs.found != 'true'
         run: |
           uv run python scripts/generate_build_config.py --profile "${{ matrix.profile }}"
           cat platformio-custom.ini
 
       - name: Patch version string
+        if: steps.reuse.outputs.found != 'true'
         run: |
           sed -i 's/-custom\\"/${{ matrix.version_suffix }}\\"/g' platformio-custom.ini
           grep CROSSPOINT_VERSION platformio-custom.ini
 
       - name: Build firmware
+        if: steps.reuse.outputs.found != 'true'
         run: |
           set -o pipefail
           uv run pio run -e custom | tee pio.log
 
       - name: Enforce flash headroom
+        if: steps.reuse.outputs.found != 'true'
         run: |
           uv run python scripts/check_flash_headroom.py \
             --log pio.log \
@@ -119,6 +143,7 @@ jobs:
             --min-headroom-kb 64
 
       - name: Extract firmware stats
+        if: steps.reuse.outputs.found != 'true'
         run: |
           set -euo pipefail
           ram_line="$(grep -E "RAM:\\s" -m1 pio.log || true)"
@@ -132,6 +157,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report firmware size
+        if: steps.reuse.outputs.found != 'true'
         run: |
           echo "### Firmware Size (${{ matrix.profile }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -140,10 +166,24 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Prepare artifact
+        if: steps.reuse.outputs.found != 'true'
         run: |
           mkdir -p artifact
           cp .pio/build/custom/firmware.bin artifact/
           cp .pio/build/custom/partitions.bin artifact/
+
+      - name: Report reused build
+        if: steps.reuse.outputs.found == 'true'
+        run: |
+          {
+            echo "### Firmware (${{ matrix.profile }}) — reused"
+            echo ""
+            echo "Reused artifact from run [#${{ steps.reuse.outputs.source_run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ steps.reuse.outputs.source_run_id }})."
+            echo ""
+            echo '```'
+            ls -lh artifact/
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v7
@@ -168,29 +208,6 @@ jobs:
           submodules: recursive
           fetch-depth: 0  # full history needed for accurate commit count
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Install dependencies
-        run: uv sync --frozen
-
-      - name: Ensure pip for PlatformIO
-        run: |
-          uv run python -m ensurepip --upgrade || true
-          uv run python -m pip --version
-
-      - name: Cache PlatformIO
-        uses: actions/cache@v5
-        with:
-          path: ~/.platformio
-          key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
-          restore-keys: ${{ runner.os }}-platformio-
-
       - name: Compute commit count and version
         id: ver
         run: |
@@ -199,12 +216,57 @@ jobs:
           echo "version=${COUNT}-dev" >> $GITHUB_OUTPUT
           echo "GIT_COMMIT_COUNT=${COUNT}" >> $GITHUB_ENV
 
+      - name: Check for reusable build artifact
+        id: reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: firmware-latest
+        run: python3 scripts/ci/check_reusable_artifact.py
+
+      - name: Download reused artifact
+        if: steps.reuse.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHIVE_URL: ${{ steps.reuse.outputs.archive_url }}
+          OUTPUT_DIR: .pio/build/gh_latest
+        run: python3 scripts/ci/download_artifact.py
+
+      - name: Setup Python
+        if: steps.reuse.outputs.found != 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        if: steps.reuse.outputs.found != 'true'
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        if: steps.reuse.outputs.found != 'true'
+        run: uv sync --frozen
+
+      - name: Ensure pip for PlatformIO
+        if: steps.reuse.outputs.found != 'true'
+        run: |
+          uv run python -m ensurepip --upgrade || true
+          uv run python -m pip --version
+
+      - name: Cache PlatformIO
+        if: steps.reuse.outputs.found != 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
+          restore-keys: ${{ runner.os }}-platformio-
+
       - name: Build firmware (gh_latest)
+        if: steps.reuse.outputs.found != 'true'
         run: |
           set -o pipefail
           uv run pio run -e gh_latest | tee pio.log
 
       - name: Enforce flash headroom
+        if: steps.reuse.outputs.found != 'true'
         run: |
           uv run python scripts/check_flash_headroom.py \
             --log pio.log \
@@ -212,6 +274,7 @@ jobs:
             --min-headroom-kb 64
 
       - name: Extract latest firmware stats
+        if: steps.reuse.outputs.found != 'true'
         run: |
           set -euo pipefail
           ram_line="$(grep -E "RAM:\\s" -m1 pio.log || true)"
@@ -222,6 +285,15 @@ jobs:
             if [ -n "$ram_line" ]; then echo "- ${ram_line}"; else echo "- RAM: not found"; fi
             if [ -n "$flash_line" ]; then echo "- ${flash_line}"; else echo "- Flash: not found"; fi
             echo "- Flash headroom threshold: 64 KiB"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report reused build
+        if: steps.reuse.outputs.found == 'true'
+        run: |
+          {
+            echo "### Firmware (gh_latest) — reused"
+            echo ""
+            echo "Reused artifact from run [#${{ steps.reuse.outputs.source_run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ steps.reuse.outputs.source_run_id }})."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload latest firmware artifact

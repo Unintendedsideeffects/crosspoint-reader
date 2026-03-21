@@ -104,105 +104,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ARTIFACT_NAME: ${{ steps.identity.outputs.artifact_name }}
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          import urllib.parse
-          import urllib.request
-
-          repo = os.environ["GITHUB_REPOSITORY"]
-          token = os.environ["GH_TOKEN"]
-          artifact_name = os.environ["ARTIFACT_NAME"]
-          current_run_id = int(os.environ["GITHUB_RUN_ID"])
-          sha = os.environ["GITHUB_SHA"]
-          output_path = os.environ["GITHUB_OUTPUT"]
-
-          url = (
-              f"https://api.github.com/repos/{repo}/actions/artifacts"
-              f"?name={urllib.parse.quote(artifact_name)}&per_page=100"
-          )
-          request = urllib.request.Request(
-              url,
-              headers={
-                  "Authorization": f"Bearer {token}",
-                  "Accept": "application/vnd.github+json",
-                  "X-GitHub-Api-Version": "2022-11-28",
-              },
-          )
-
-          with urllib.request.urlopen(request) as response:
-              payload = json.load(response)
-
-          candidates = []
-          for artifact in payload.get("artifacts", []):
-              if artifact.get("expired"):
-                  continue
-              run = artifact.get("workflow_run") or {}
-              run_id = int(run.get("id", 0))
-              if run_id == current_run_id:
-                  continue
-              if run.get("head_sha") != sha:
-                  continue
-              candidates.append(artifact)
-
-          selected = max(candidates, key=lambda item: item.get("id", 0), default=None)
-
-          with open(output_path, "a", encoding="utf-8") as out:
-              if selected is None:
-                  out.write("found=false\n")
-                  print("No reusable artifact found for this commit and feature set.")
-              else:
-                  run = selected.get("workflow_run") or {}
-                  out.write("found=true\n")
-                  out.write(f"artifact_id={selected['id']}\n")
-                  out.write(f"archive_url={selected['archive_download_url']}\n")
-                  out.write(f"source_run_id={run.get('id', '')}\n")
-                  print(
-                      f"Reusing artifact id={selected['id']} "
-                      f"from run={run.get('id', 'unknown')}"
-                  )
-          PY
+        run: python3 scripts/ci/check_reusable_artifact.py
 
       - name: Reuse existing artifact payload
         if: steps.reuse.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           ARCHIVE_URL: ${{ steps.reuse.outputs.archive_url }}
+          OUTPUT_DIR: dist/reused-artifact
         run: |
-          python - <<'PY'
-          import io
-          import os
+          python3 scripts/ci/download_artifact.py
+
+          # Copy required files to package directory
+          python3 - <<'PY'
           import shutil
-          import urllib.request
-          import zipfile
           from pathlib import Path
-
-          archive_url = os.environ["ARCHIVE_URL"]
-          token = os.environ["GH_TOKEN"]
-          request = urllib.request.Request(
-              archive_url,
-              headers={
-                  "Authorization": f"Bearer {token}",
-                  "Accept": "application/vnd.github+json",
-                  "X-GitHub-Api-Version": "2022-11-28",
-              },
-          )
-
-          with urllib.request.urlopen(request) as response:
-              zip_bytes = response.read()
 
           extract_root = Path("dist/reused-artifact")
           package_root = Path("dist/custom-firmware-package")
-          if extract_root.exists():
-              shutil.rmtree(extract_root)
-          if package_root.exists():
-              shutil.rmtree(package_root)
-          extract_root.mkdir(parents=True, exist_ok=True)
           package_root.mkdir(parents=True, exist_ok=True)
-
-          with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
-              archive.extractall(extract_root)
 
           def first_match(filename: str) -> Path:
               matches = sorted(
