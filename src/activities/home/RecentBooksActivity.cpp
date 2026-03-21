@@ -19,6 +19,7 @@
 #include "fontIds.h"
 #include "util/PokemonBookDataStore.h"
 #include "util/StringUtils.h"
+#include <I18n.h>
 
 namespace {
 constexpr int kPartyMaxBooks = 6;
@@ -105,9 +106,9 @@ void RecentBooksActivity::loadRecentBooks() {
       entry.hasProgress = BookProgressDataStore::loadProgress(entry.book.path, entry.progress);
       if (entry.hasProgress) {
         entry.level = std::max(1, static_cast<int>(std::lround(entry.progress.percent)));
-        entry.progressLabel = "Lv " + std::to_string(entry.level);
+        entry.progressLabel = std::string(tr(STR_PARTY_LV)) + " " + std::to_string(entry.level);
       } else {
-        entry.progressLabel = "Lv 1";
+        entry.progressLabel = std::string(tr(STR_PARTY_LV)) + " 1";
       }
 
       JsonDocument pokemonDoc;
@@ -216,14 +217,15 @@ void RecentBooksActivity::render(RenderLock&&) {
   const auto& metrics = UITheme::getInstance().getMetrics();
 
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight},
-                 partyMode ? "Party" : "Recent Books", partyMode ? "6 recent books with Pokemon progress" : nullptr);
+                 partyMode ? tr(STR_PARTY) : tr(STR_MENU_RECENT_BOOKS),
+                 partyMode ? tr(STR_PARTY_SUBTITLE) : nullptr);
 
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
 
   if (recentBooks.empty()) {
     renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20,
-                      partyMode ? "Open books to build your party" : "No recent books");
+                      partyMode ? tr(STR_PARTY_EMPTY) : tr(STR_NO_RECENT_BOOKS));
   } else if (partyMode) {
     const int slotCount = static_cast<int>(recentBooks.size());
     const int slotGap = 8;
