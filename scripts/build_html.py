@@ -102,6 +102,21 @@ def minify_html(html: str) -> str:
 
     return html.strip()
 
+def sanitize_identifier(name: str) -> str:
+    """Sanitize a filename to create a valid C identifier.
+
+    C identifiers must:
+    - Start with a letter or underscore
+    - Contain only letters, digits, and underscores
+    """
+    # Replace non-alphanumeric characters (including hyphens) with underscores
+    sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+    # Prefix with underscore if starts with a digit
+    if sanitized and sanitized[0].isdigit():
+        sanitized = f"_{sanitized}"
+    return sanitized
+
+
 def resolve_script_dir() -> str:
     script_file = globals().get("__file__")
     if script_file:
@@ -123,26 +138,31 @@ theme_tokens = load_theme_tokens(SCRIPT_DIR)
 
 for root, _, files in os.walk(SRC_DIR):
     for file in files:
-        if file.endswith(".html"):
-            html_path = os.path.join(root, file)
-            with open(html_path, "r", encoding="utf-8") as f:
-                html_content = f.read()
+        if file.endswith(".html") or file.endswith(".js"):
+            file_path = os.path.join(root, file)
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
 
-            html_content = inject_pokedex_cache(html_path, html_content)
-            html_content = inject_theme_tokens(html_content, theme_tokens)
-
-            # minified = regex.sub("\g<1>", html_content)
-            minified = minify_html(html_content)
+            # Only minify and inject for HTML files; JS files are typically pre-minified (e.g., jszip.min.js)
+            if file.endswith(".html"):
+                content = inject_pokedex_cache(file_path, content)
+                content = inject_theme_tokens(content, theme_tokens)
+                processed = minify_html(content)
+            else:
+                processed = content
 
             # Compress with gzip (compresslevel 9 is maximum compression)
             # IMPORTANT: we don't use brotli because Firefox doesn't support brotli with insecured context (only supported on HTTPS)
             # mtime=0 removes timestamp entropy and OS byte is pinned to keep output deterministic across Python versions/platforms.
-            compressed = bytearray(gzip.compress(minified.encode('utf-8'), compresslevel=9, mtime=0))
+            compressed = bytearray(gzip.compress(processed.encode('utf-8'), compresslevel=9, mtime=0))
             if len(compressed) > 9:
                 compressed[9] = 0xFF
             compressed = bytes(compressed)
 
-            base_name = f"{os.path.splitext(file)[0]}Html"
+            # Create valid C identifier from filename
+            # Use appropriate suffix based on file type
+            suffix = "Html" if file.endswith(".html") else "Js"
+            base_name = sanitize_identifier(f"{os.path.splitext(file)[0]}{suffix}")
             header_path = os.path.join(root, f"{base_name}.generated.h")
 
             with open(header_path, "w", encoding="utf-8") as h:
@@ -164,11 +184,11 @@ for root, _, files in os.walk(SRC_DIR):
                 h.write(f"  // clang-format on\n")
                 h.write(f"}};\n\n")
                 h.write(f"constexpr size_t {base_name}CompressedSize = {len(compressed)};\n")
-                h.write(f"constexpr size_t {base_name}OriginalSize = {len(minified)};\n")
+                h.write(f"constexpr size_t {base_name}OriginalSize = {len(processed)};\n")
 
             print(f"Generated: {header_path}")
-            print(f"  Original: {len(html_content)} bytes")
-            print(f"  Minified: {len(minified)} bytes ({100*len(minified)/len(html_content):.1f}%)")
-            print(f"  Compressed: {len(compressed)} bytes ({100*len(compressed)/len(html_content):.1f}%)")
+            print(f"  Original: {len(content)} bytes")
+            print(f"  Minified: {len(processed)} bytes ({100*len(processed)/len(content):.1f}%)")
+            print(f"  Compressed: {len(compressed)} bytes ({100*len(compressed)/len(content):.1f}%)")
 
 update_configurator_tokens(theme_tokens, REPO_ROOT)

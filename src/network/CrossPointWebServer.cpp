@@ -28,6 +28,7 @@
 #include "html/FilesPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
 #include "html/SettingsPageHtml.generated.h"
+#include "html/js/jszip_minJs.generated.h"
 #include "network/BufferedHttpUpload.h"
 #include "network/RecentBookJson.h"
 #include "network/WebUtils.h"
@@ -55,6 +56,8 @@ size_t wsUploadSize = 0;
 size_t wsUploadReceived = 0;
 unsigned long wsUploadStartTime = 0;
 bool wsUploadInProgress = false;
+uint8_t wsUploadClientNum = 255;  // 255 = no active upload client
+size_t wsLastProgressSent = 0;
 String wsLastCompleteName;
 size_t wsLastCompleteSize = 0;
 unsigned long wsLastCompleteAt = 0;
@@ -271,6 +274,7 @@ void CrossPointWebServer::begin() {
   LOG_DBG("WEB", "Setting up routes...");
   server->on("/", HTTP_GET, [this] { handleRoot(); });
   server->on("/files", HTTP_GET, [this] { handleFileList(); });
+  server->on("/js/jszip.min.js", HTTP_GET, [this] { handleJszip(); });
 
   server->on("/api/status", HTTP_GET, [this] { handleStatus(); });
   server->on("/api/plugins", HTTP_GET, [this] { handlePlugins(); });
@@ -349,6 +353,21 @@ void CrossPointWebServer::begin() {
   LOG_DBG("WEB", "[MEM] Free heap after server.begin(): %d bytes", ESP.getFreeHeap());
 }
 
+void CrossPointWebServer::abortWsUpload(const char* tag) {
+  wsUploadFile.close();
+  String filePath = wsUploadPath;
+  if (!filePath.endsWith("/")) filePath += "/";
+  filePath += wsUploadFileName;
+  if (Storage.remove(filePath.c_str())) {
+    LOG_DBG(tag, "Deleted incomplete upload: %s", filePath.c_str());
+  } else {
+    LOG_DBG(tag, "Failed to delete incomplete upload: %s", filePath.c_str());
+  }
+  wsUploadInProgress = false;
+  wsUploadClientNum = 255;
+  wsLastProgressSent = 0;
+}
+
 void CrossPointWebServer::stop() {
   if (!running || !server) {
     LOG_DBG("WEB", "stop() called but already stopped (running=%d, server=%p)", running, server.get());
@@ -360,10 +379,9 @@ void CrossPointWebServer::stop() {
 
   LOG_DBG("WEB", "[MEM] Free heap before stop: %d bytes", ESP.getFreeHeap());
 
-  // Close any in-progress WebSocket upload
+  // Close any in-progress WebSocket upload and remove partial file
   if (wsUploadInProgress && wsUploadFile) {
-    wsUploadFile.close();
-    wsUploadInProgress = false;
+    abortWsUpload("WEB");
   }
   wsUploadOwnerValid = false;
   wsUploadOwnerClient = 0;
@@ -473,6 +491,12 @@ static bool parseStrictSize(const String& token, size_t& outValue) {
 void CrossPointWebServer::handleRoot() const {
   sendPrecompressedHtml(server.get(), HomePageHtml, HomePageHtmlCompressedSize);
   LOG_DBG("WEB", "Served root page");
+}
+
+void CrossPointWebServer::handleJszip() const {
+  server->sendHeader("Content-Encoding", "gzip");
+  server->send_P(200, "application/javascript", jszip_minJs, jszip_minJsCompressedSize);
+  LOG_DBG("WEB", "Served jszip.min.js");
 }
 
 void CrossPointWebServer::handleNotFound() const {
@@ -955,31 +979,49 @@ void CrossPointWebServer::handleDownload() const {
   server->sendHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
   server->send(200, contentType.c_str(), "");
 
-  WiFiClient client = server->client();
-  uint8_t buffer[1024];
-  while (true) {
-    size_t bytesRead = 0;
-    {
-      SpiBusMutex::Guard guard;
-      bytesRead = file.read(buffer, sizeof(buffer));
+  NetworkClient client = server->client();
+  const size_t chunkSize = 4096;
+  uint8_t buffer[chunkSize];
+
+  bool downloadOk = true;
+  while (downloadOk && file.available()) {
+    int result = file.read(buffer, chunkSize);
+    if (result <= 0) break;
+    size_t bytesRead = static_cast<size_t>(result);
+    size_t totalWritten = 0;
+    while (totalWritten < bytesRead) {
+      esp_task_wdt_reset();
+      size_t wrote = client.write(buffer + totalWritten, bytesRead - totalWritten);
+      if (wrote == 0) {
+        downloadOk = false;
+        break;
+      }
+      totalWritten += wrote;
     }
-    if (bytesRead == 0) {
-      break;
-    }
-    const size_t bytesWritten = client.write(buffer, bytesRead);
-    if (bytesWritten != bytesRead) {
-      LOG_WRN("WEB", "Download truncated for %s (wanted %u, wrote %u)", itemPath.c_str(),
-              static_cast<unsigned int>(bytesRead), static_cast<unsigned int>(bytesWritten));
-      break;
-    }
-    yield();
-    esp_task_wdt_reset();
   }
-  {
-    SpiBusMutex::Guard guard;
-    file.close();
-  }
+  client.clear();
+  file.close();
 }
+
+// Diagnostic counters for upload performance analysis
+static unsigned long uploadStartTime = 0;
+static unsigned long totalWriteTime = 0;
+static size_t writeCount = 0;
+
+static bool flushUploadBuffer(CrossPointWebServer::UploadState& state) {
+  if (state.bufferPos > 0 && state.file) {
+    esp_task_wdt_reset();  // Reset watchdog before potentially slow SD write
+    const unsigned long writeStart = millis();
+    const size_t written = state.file.write(state.buffer.data(), state.bufferPos);
+    totalWriteTime += millis() - writeStart;
+    writeCount++;
+    esp_task_wdt_reset();  // Reset watchdog after SD write
+
+    if (written != state.bufferPos) {
+      LOG_DBG("WEB", "[UPLOAD] Buffer flush failed: expected %d, wrote %d", state.bufferPos, written);
+      state.bufferPos = 0;
+      return false;
+    }
 
 void CrossPointWebServer::handleUpload() {
   if (!running || !server) {
@@ -1597,7 +1639,7 @@ void CrossPointWebServer::handleGetSettings() const {
           }
         } else if (s.stringGetter) {
           doc["value"] = s.stringGetter();
-        } else if (s.stringOffset > 0) {
+        } else if (s.stringMaxLen > 0) {
           doc["value"] = reinterpret_cast<const char*>(&SETTINGS) + s.stringOffset;
         }
         break;
@@ -1696,7 +1738,7 @@ void CrossPointWebServer::handlePostSettings() {
         const std::string val = doc[s.key].as<std::string>();
         if (s.stringSetter) {
           s.stringSetter(val);
-        } else if (s.stringOffset > 0 && s.stringMaxLen > 0) {
+        } else if (s.stringMaxLen > 0) {
           char* ptr = reinterpret_cast<char*>(&SETTINGS) + s.stringOffset;
           strncpy(ptr, val.c_str(), s.stringMaxLen - 1);
           ptr[s.stringMaxLen - 1] = '\0';
@@ -2450,13 +2492,28 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       }
       esp_task_wdt_reset();
 
+      // Zero-byte upload: complete immediately without waiting for BIN frames
+      if (wsUploadSize == 0) {
+        wsUploadFile.close();
+        wsLastCompleteName = wsUploadFileName;
+        wsLastCompleteSize = 0;
+        wsLastCompleteAt = millis();
+        LOG_DBG("WS", "Zero-byte upload complete: %s", filePath.c_str());
+        invalidateFeatureCachesIfNeeded(filePath);
+        wsServer->sendTXT(num, "DONE");
+        wsLastProgressSent = 0;
+        wsUploadOwnerClient = 0;
+        wsUploadOwnerValid = false;
+        break;
+      }
+
       wsUploadInProgress = true;
       wsServer->sendTXT(num, "READY");
       break;
     }
 
     case WStype_BIN: {
-      if (!wsUploadInProgress || !wsUploadFile) {
+      if (!wsUploadInProgress || !wsUploadFile || num != wsUploadClientNum) {
         wsServer->sendTXT(num, "ERROR:No upload in progress");
         return;
       }
@@ -2482,6 +2539,12 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       }
 
       // Write binary data directly to file
+      size_t remaining = wsUploadSize - wsUploadReceived;
+      if (length > remaining) {
+        abortWsUpload("WS");
+        wsServer->sendTXT(num, "ERROR:Upload overflow");
+        return;
+      }
       esp_task_wdt_reset();
       size_t written = 0;
       {
@@ -2513,6 +2576,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
           wsUploadFile.close();
         }
         wsUploadInProgress = false;
+        wsUploadClientNum = 255;
 
         wsLastCompleteName = wsUploadFileName;
         wsLastCompleteSize = wsUploadSize;
