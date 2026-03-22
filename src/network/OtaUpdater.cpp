@@ -241,7 +241,7 @@ OtaUpdater::OtaUpdaterError fetchReleaseJson(const char* url, JsonDocument& doc,
 
   esp_http_client_config_t client_config = {
       .url = url,
-      .timeout_ms = 15000,
+      .timeout_ms = 20000,
       .event_handler = event_handler,
       .buffer_size = 8192,
       .buffer_size_tx = 8192,
@@ -280,15 +280,32 @@ OtaUpdater::OtaUpdaterError fetchReleaseJson(const char* url, JsonDocument& doc,
     return OtaUpdater::HTTP_ERROR;
   }
 
+  const int httpStatus = esp_http_client_get_status_code(client_handle);
   esp_err = esp_http_client_cleanup(client_handle);
   if (esp_err != ESP_OK) {
     LOG_ERR("OTA", "esp_http_client_cleanup Failed : %s", esp_err_to_name(esp_err));
     return OtaUpdater::INTERNAL_UPDATE_ERROR;
   }
 
+  if (httpStatus != 200) {
+    LOG_ERR("OTA", "HTTP %d from %s (body: %.120s)", httpStatus, url, httpBuf.data ? httpBuf.data : "");
+    if (httpStatus == 403 || httpStatus == 429) {
+      return OtaUpdater::HTTP_ERROR;  // Rate limited
+    }
+    if (httpStatus == 404) {
+      return OtaUpdater::NO_UPDATE;  // Tag/release doesn't exist
+    }
+    return OtaUpdater::HTTP_ERROR;
+  }
+
+  if (httpBuf.data == nullptr || httpBuf.len == 0) {
+    LOG_ERR("OTA", "Empty response body from %s", url);
+    return OtaUpdater::HTTP_ERROR;
+  }
+
   const DeserializationError error = deserializeJson(doc, httpBuf.data, DeserializationOption::Filter(filter));
   if (error) {
-    LOG_ERR("OTA", "JSON parse failed: %s", error.c_str());
+    LOG_ERR("OTA", "JSON parse failed: %s (body: %.120s)", error.c_str(), httpBuf.data);
     return OtaUpdater::JSON_PARSE_ERROR;
   }
 
@@ -306,7 +323,7 @@ size_t getMaxOtaPartitionSize() {
 String describeCheckForUpdateError(const OtaUpdater::OtaUpdaterError error) {
   switch (error) {
     case OtaUpdater::HTTP_ERROR:
-      return "Unable to reach update server";
+      return "Unable to reach update server (retry later)";
     case OtaUpdater::JSON_PARSE_ERROR:
       return "Invalid update metadata";
     case OtaUpdater::UPDATE_OLDER_ERROR:
@@ -375,9 +392,16 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   filter["assets"][0]["browser_download_url"] = true;
   filter["assets"][0]["size"] = true;
 
+  // Try the primary channel with one retry on transient HTTP errors,
+  // then fall back to the latest channel if the primary tag doesn't exist.
   auto res = fetchReleaseJson(releaseUrl, doc, filter);
+  if (res == HTTP_ERROR) {
+    LOG_WRN("OTA", "First check attempt failed, retrying after 2s");
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    res = fetchReleaseJson(releaseUrl, doc, filter);
+  }
   if (res != OK && releaseUrl == releaseChannelUrl && releaseChannelUrl != latestChannelUrl) {
-    LOG_WRN("OTA", "Release channel unavailable, falling back to latest");
+    LOG_WRN("OTA", "Release channel unavailable (%d), falling back to latest", static_cast<int>(res));
     res = fetchReleaseJson(latestChannelUrl, doc, filter);
   }
   if (res != OK) {
