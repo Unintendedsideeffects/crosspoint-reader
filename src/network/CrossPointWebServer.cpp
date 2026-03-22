@@ -1606,6 +1606,12 @@ void CrossPointWebServer::handleGetSettings() const {
         continue;
     }
 
+    if (s.visibleWhen.key) {
+      JsonObject vis = doc["visibleWhen"].to<JsonObject>();
+      vis["key"] = s.visibleWhen.key;
+      vis["eq"] = static_cast<int>(s.visibleWhen.eq);
+    }
+
     const size_t written = serializeJson(doc, output, outputSize);
     if (written >= outputSize) {
       LOG_DBG("WEB", "Skipping oversized setting JSON for: %s", s.key);

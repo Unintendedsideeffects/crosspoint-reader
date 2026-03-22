@@ -71,37 +71,22 @@
 
 set -e
 
-PERMANENT_EXCLUDES=(
-    --exclude="CrossPointSettings.cpp"
-    --exclude="SleepActivity.cpp"
-    --exclude="OpdsBookBrowserActivity.cpp"
-    --exclude="CrossPointWebServer.cpp"
-    --exclude="OtaWebCheck.cpp"
-    --exclude="UsbSerialProtocol.cpp"
-    --exclude="UsbSerialProtocol.h"
-    --exclude="UserFontManager.cpp"
-    --exclude="UserFontManager.h"
-    --exclude="BleWifiProvisioner.cpp"
-    --exclude="BleWifiProvisioner.h"
-)
+PERMANENT_PATHS_REGEX='^src/(CrossPointSettings\.cpp|network/CrossPointWebServer\.cpp|network/OtaWebCheck\.cpp|network/BleWifiProvisioner\.(cpp|h)|UserFontManager\.(cpp|h)|UsbSerialProtocol\.(cpp|h)|activities/browser/OpdsBookBrowserActivity\.cpp|activities/boot_sleep/SleepActivity\.cpp):'
 
 # TODO: Remove each entry here once its migration PR lands (Category 2 above).
-CLEANUP_DEBT_EXCLUDES=(
-    --exclude="UITheme.cpp"
-    --exclude="BackgroundWebServer.cpp"
-    --exclude="TxtReaderActivity.cpp"
-)
+CLEANUP_DEBT_PATHS_REGEX='^src/(components/UITheme\.cpp|network/BackgroundWebServer\.cpp|activities/reader/TxtReaderActivity\.cpp):'
 
-GREP_CMD=(grep -rEn "^[[:space:]]*#[[:space:]]*if(def)?[[:space:]]+.*ENABLE_" src/
-    --exclude-dir=core
-    --exclude-dir=features
-    "${PERMANENT_EXCLUDES[@]}"
+ALL_MATCHES=$(
+    grep -rEn "^[[:space:]]*#[[:space:]]*if(def)?[[:space:]]+.*ENABLE_" src/ \
+    --exclude-dir=core \
+    --exclude-dir=features \
+    | grep -vE "^[^:]+:[0-9]+:[[:space:]]*//" || true
 )
 
 # Hard-fail on violations outside both exemption categories.
 violations=$(
-    "${GREP_CMD[@]}" "${CLEANUP_DEBT_EXCLUDES[@]}" \
-    | grep -vE "^[^:]+:[0-9]+:[[:space:]]*//" || true
+    echo "$ALL_MATCHES" \
+    | grep -Ev "$PERMANENT_PATHS_REGEX|$CLEANUP_DEBT_PATHS_REGEX" || true
 )
 
 if [ -n "$violations" ]; then
@@ -113,16 +98,13 @@ fi
 # Non-blocking warning for remaining cleanup-debt violations.
 # Each warning here corresponds to a TODO in CLEANUP_DEBT_EXCLUDES above.
 debt_violations=$(
-    "${GREP_CMD[@]}" \
-    | grep -vE "^[^:]+:[0-9]+:[[:space:]]*//" || true
+    echo "$ALL_MATCHES" | grep -E "$CLEANUP_DEBT_PATHS_REGEX" || true
 )
-# Strip lines that are already clean (not in the debt files).
-debt_only=$(echo "$debt_violations" | grep -E "(UITheme|BackgroundWebServer|TxtReaderActivity)" || true)
 
-if [ -n "$debt_only" ]; then
+if [ -n "$debt_violations" ]; then
     echo "⚠ Cleanup-debt ENABLE_* violations still present (non-blocking — remove"
     echo "  exclusions from CLEANUP_DEBT_EXCLUDES when each migration PR lands):"
-    echo "$debt_only"
+    echo "$debt_violations"
 fi
 
 exit 0

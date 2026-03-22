@@ -7,6 +7,7 @@
 #include <Logging.h>
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <memory>
 #include <utility>
@@ -21,16 +22,8 @@ static constexpr int kDefaultThumbHeight = 240;
 
 #include "CrossPointSettings.h"
 #include "SpiBusMutex.h"
-#include "activities/home/RecentBooksActivity.h"
-#include "activities/network/WifiSelectionActivity.h"
-#include "activities/settings/ButtonRemapActivity.h"
-#include "activities/settings/ClearCacheActivity.h"
-#include "activities/settings/FactoryResetActivity.h"
-#include "activities/settings/LanguageSelectActivity.h"
 #include "activities/settings/SettingsActivity.h"
-#include "activities/settings/ValidateSleepImagesActivity.h"
 #include "core/features/FeatureCatalog.h"
-#include "core/registries/HomeActionRegistry.h"
 #include "core/registries/LifecycleRegistry.h"
 #include "core/registries/ReaderRegistry.h"
 #include "core/registries/SettingsActionRegistry.h"
@@ -40,14 +33,8 @@ static constexpr int kDefaultThumbHeight = 240;
 #include "Xtc.h"
 #endif
 
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-#include "activities/browser/OpdsBookBrowserActivity.h"
-#include "activities/settings/CalibreSettingsActivity.h"
-#endif
-
 #if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
 #include "KOReaderCredentialStore.h"
-#include "activities/reader/KOReaderSyncActivity.h"
 #include "activities/settings/KOReaderSettingsActivity.h"
 #endif
 
@@ -63,6 +50,38 @@ static constexpr int kDefaultThumbHeight = 240;
 namespace core {
 
 namespace {
+constexpr size_t toIndex(const Capability capability) { return static_cast<size_t>(capability); }
+
+constexpr std::array<const char*, toIndex(Capability::Count)> kCapabilityFeatureKeys = {{
+    "anki_support",
+    nullptr,
+    "background_server_always",
+    nullptr,
+    "ble_wifi_provisioning",
+    "calibre_sync",
+    "dark_mode",
+    "epub_support",
+    "global_status_bar",
+    "home_media_picker",
+    "koreader_sync",
+    "lyra_theme",
+    "markdown",
+    "ota_updates",
+    "pokemon_party",
+    "remote_keyboard_input",
+    nullptr,
+    nullptr,
+    "todo_planner",
+    "trmnl_switch",
+    "usb_mass_storage",
+    "user_fonts",
+    "visual_cover_picker",
+    "web_pokedex_plugin",
+    "web_wallpaper_plugin",
+    "web_wifi_setup",
+    "xtc_support",
+}};
+
 bool isEpubDocumentPath(const std::string& path) { return FsHelpers::checkFileExtension(path, ".epub"); }
 
 bool isXtcDocumentPath(const std::string& path) {
@@ -84,65 +103,23 @@ std::string fileNameFromPath(const std::string& path) {
 bool FeatureModules::isEnabled(const char* featureKey) { return FeatureCatalog::isEnabled(featureKey); }
 
 bool FeatureModules::hasCapability(const Capability capability) {
-  switch (capability) {
-    case Capability::AnkiSupport:
-      return isEnabled("anki_support");
-    case Capability::BackgroundServer:
-      return isEnabled("background_server") || isEnabled("background_server_on_charge") ||
-             isEnabled("background_server_always");
-    case Capability::BackgroundServerAlways:
-      return isEnabled("background_server_always");
-    case Capability::BackgroundServerOnCharge:
-      return isEnabled("background_server_on_charge") || isEnabled("background_server_always");
-    case Capability::BleWifiProvisioning:
-      return isEnabled("ble_wifi_provisioning");
-    case Capability::CalibreSync:
-      return isEnabled("calibre_sync");
-    case Capability::DarkMode:
-      return isEnabled("dark_mode");
-    case Capability::EpubSupport:
-      return isEnabled("epub_support");
-    case Capability::GlobalStatusBar:
-      return isEnabled("global_status_bar");
-    case Capability::HomeMediaPicker:
-      return isEnabled("home_media_picker");
-    case Capability::KoreaderSync:
-      return isEnabled("koreader_sync");
-    case Capability::LyraTheme:
-      return isEnabled("lyra_theme");
-    case Capability::MarkdownSupport:
-      return isEnabled("markdown");
-    case Capability::OtaUpdates:
-      return isEnabled("ota_updates");
-    case Capability::PokemonParty:
-      return isEnabled("pokemon_party");
-    case Capability::RemoteKeyboardInput:
-      return isEnabled("remote_keyboard_input");
-    case Capability::RemoteOpenBook:
-      return true;
-    case Capability::RemotePageTurn:
-      return true;
-    case Capability::TodoPlanner:
-      return isEnabled("todo_planner");
-    case Capability::TrmnlSwitch:
-      return isEnabled("trmnl_switch");
-    case Capability::UsbMassStorage:
-      return isEnabled("usb_mass_storage");
-    case Capability::UserFonts:
-      return isEnabled("user_fonts");
-    case Capability::VisualCoverPicker:
-      return isEnabled("visual_cover_picker");
-    case Capability::WebPokedexPlugin:
-      return isEnabled("web_pokedex_plugin");
-    case Capability::WebWallpaperPlugin:
-      return isEnabled("web_wallpaper_plugin");
-    case Capability::WebWifiSetup:
-      return isEnabled("web_wifi_setup");
-    case Capability::XtcSupport:
-      return isEnabled("xtc_support");
-    default:
-      return false;
+  if (capability == Capability::BackgroundServer) {
+    return isEnabled("background_server") || hasCapability(Capability::BackgroundServerOnCharge);
   }
+
+  if (capability == Capability::BackgroundServerOnCharge) {
+    return isEnabled("background_server_on_charge") || hasCapability(Capability::BackgroundServerAlways);
+  }
+
+  if (capability == Capability::RemoteOpenBook || capability == Capability::RemotePageTurn) {
+    return true;
+  }
+
+  const char* const featureKey = kCapabilityFeatureKeys[toIndex(capability)];
+  if (featureKey == nullptr) {
+    return false;
+  }
+  return isEnabled(featureKey);
 }
 
 String FeatureModules::getBuildString() { return FeatureCatalog::buildString(); }
@@ -299,89 +276,12 @@ bool FeatureModules::supportsSettingAction(const SettingAction action) {
   return false;
 }
 
-Activity* FeatureModules::createSettingsSubActivity(const SettingAction action, GfxRenderer& renderer,
-                                                    MappedInputManager& mappedInput,
-                                                    const std::function<void()>& onComplete,
-                                                    const std::function<void(bool)>& onCompleteBool) {
-  if (!supportsSettingAction(action)) {
-    return nullptr;
-  }
-
-  switch (action) {
-    case SettingAction::RemapFrontButtons:
-      return new ButtonRemapActivity(renderer, mappedInput);
-    case SettingAction::Network:
-      return new WifiSelectionActivity(renderer, mappedInput, false);
-    case SettingAction::ClearCache:
-      return new ClearCacheActivity(renderer, mappedInput);
-    case SettingAction::FactoryReset:
-      return new FactoryResetActivity(renderer, mappedInput, onComplete);
-    case SettingAction::PokemonParty:
-      return new RecentBooksActivity(renderer, mappedInput);
-    case SettingAction::KOReaderSync:
-    case SettingAction::OPDSBrowser:
-    case SettingAction::CheckForUpdates:
-      return core::SettingsActionRegistry::create(action, renderer, mappedInput, nullptr, nullptr, nullptr);
-    case SettingAction::Language:
-      return new LanguageSelectActivity(renderer, mappedInput);
-    case SettingAction::ValidateSleepImages:
-      return new ValidateSleepImagesActivity(renderer, mappedInput, onComplete);
-    case SettingAction::None:
-      return nullptr;
-  }
-
-  return nullptr;
-}
-
-Activity* FeatureModules::createOpdsBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                                    const std::function<void()>& onBack) {
-#if ENABLE_INTEGRATIONS && ENABLE_CALIBRE_SYNC
-  if (!hasCapability(Capability::CalibreSync)) {
-    return nullptr;
-  }
-  (void)onBack;
-  return new OpdsBookBrowserActivity(renderer, mappedInput);
-#else
-  (void)renderer;
-  (void)mappedInput;
-  (void)onBack;
-  return nullptr;
-#endif
-}
-
 bool FeatureModules::hasKoreaderSyncCredentials() {
   const auto* api = SyncServiceRegistry::getKoreaderApi();
   if (api == nullptr || api->hasCredentials == nullptr) {
     return false;
   }
   return api->hasCredentials();
-}
-
-Activity* FeatureModules::createKoreaderSyncActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                                     const std::shared_ptr<Epub>& epub, const std::string& epubPath,
-                                                     const int currentSpineIndex, const int currentPage,
-                                                     const int totalPagesInSpine, const std::function<void()>& onCancel,
-                                                     const std::function<void(int, int)>& onSyncComplete) {
-#if ENABLE_INTEGRATIONS && ENABLE_KOREADER_SYNC
-  if (!hasKoreaderSyncCredentials()) {
-    return nullptr;
-  }
-  (void)onCancel;
-  (void)onSyncComplete;
-  return new KOReaderSyncActivity(renderer, mappedInput, epub, epubPath, currentSpineIndex, currentPage,
-                                  totalPagesInSpine);
-#else
-  (void)renderer;
-  (void)mappedInput;
-  (void)epub;
-  (void)epubPath;
-  (void)currentSpineIndex;
-  (void)currentPage;
-  (void)totalPagesInSpine;
-  (void)onCancel;
-  (void)onSyncComplete;
-  return nullptr;
-#endif
 }
 
 Activity* FeatureModules::createTodoPlannerActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
@@ -592,38 +492,6 @@ bool FeatureModules::tryGetDocumentCoverPath(const String& documentPath, std::st
   outCoverPath.clear();
   return false;
 #endif
-}
-bool FeatureModules::shouldExposeHomeAction(const HomeOptionalAction action, const bool hasOpdsUrl) {
-  const core::HomeActionEntry::HomeActionContext ctx{hasOpdsUrl};
-  switch (action) {
-    case HomeOptionalAction::AnkiSupport:
-      return core::HomeActionRegistry::shouldExpose("anki", ctx);
-    case HomeOptionalAction::OpdsBrowser:
-      return core::HomeActionRegistry::shouldExpose("opds_browser", ctx);
-    case HomeOptionalAction::TodoPlanner:
-      return core::HomeActionRegistry::shouldExpose("todo_planner", ctx);
-  }
-  return false;
-}
-
-bool FeatureModules::shouldRegisterWebRoute(const WebOptionalRoute route) {
-  switch (route) {
-    case WebOptionalRoute::PokedexPluginPage:
-      return hasCapability(Capability::WebPokedexPlugin);
-    case WebOptionalRoute::PokemonPartyApi:
-      return hasCapability(Capability::PokemonParty);
-    case WebOptionalRoute::WallpaperPluginPage:
-      return hasCapability(Capability::WebWallpaperPlugin);
-    case WebOptionalRoute::AnkiPluginPage:
-      return isEnabled("anki_support");
-    case WebOptionalRoute::UserFontsApi:
-      return hasCapability(Capability::UserFonts);
-    case WebOptionalRoute::WebWifiSetupApi:
-      return hasCapability(Capability::WebWifiSetup);
-    case WebOptionalRoute::OtaApi:
-      return hasCapability(Capability::OtaUpdates);
-  }
-  return false;
 }
 
 }  // namespace core

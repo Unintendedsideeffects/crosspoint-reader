@@ -58,6 +58,19 @@ struct SettingInfo {
   std::function<std::string()> stringGetter;
   std::function<void(const std::string&)> stringSetter;
 
+  // Visibility condition: show this setting only when another setting has a specific value.
+  // Both fields are lightweight (const char* + uint8_t) — no heap allocation.
+  struct VisibleWhen {
+    const char* key = nullptr;  // Key of the controlling setting (null = always visible)
+    uint8_t eq = 0;             // Required value of the controlling setting
+  };
+  VisibleWhen visibleWhen;
+
+  SettingInfo& withVisibleWhen(const char* dependsOnKey, uint8_t requiredValue) {
+    visibleWhen = {dependsOnKey, requiredValue};
+    return *this;
+  }
+
   SettingInfo& withObfuscated() {
     obfuscated = true;
     return *this;

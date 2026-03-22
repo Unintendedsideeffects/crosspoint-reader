@@ -62,12 +62,15 @@ inline std::vector<SettingInfo> getSettingsList() {
                         StrId::STR_CAT_DISPLAY),
       SettingInfo::Enum(StrId::STR_SLEEP_SOURCE, &CrossPointSettings::sleepScreenSource,
                         {StrId::STR_SLEEP, StrId::STR_POKEDEX, StrId::STR_ALL}, "sleepScreenSource",
-                        StrId::STR_CAT_DISPLAY),
+                        StrId::STR_CAT_DISPLAY)
+          .withVisibleWhen("sleepScreen", CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM),
       SettingInfo::Enum(StrId::STR_SLEEP_COVER_MODE, &CrossPointSettings::sleepScreenCoverMode,
-                        {StrId::STR_FIT, StrId::STR_CROP}, "sleepScreenCoverMode", StrId::STR_CAT_DISPLAY),
+                        {StrId::STR_FIT, StrId::STR_CROP}, "sleepScreenCoverMode", StrId::STR_CAT_DISPLAY)
+          .withVisibleWhen("sleepScreen", CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM),
       SettingInfo::Enum(StrId::STR_SLEEP_COVER_FILTER, &CrossPointSettings::sleepScreenCoverFilter,
                         {StrId::STR_NONE_OPT, StrId::STR_FILTER_CONTRAST, StrId::STR_INVERTED},
-                        "sleepScreenCoverFilter", StrId::STR_CAT_DISPLAY),
+                        "sleepScreenCoverFilter", StrId::STR_CAT_DISPLAY)
+          .withVisibleWhen("sleepScreen", CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM),
       SettingInfo::Action(StrId::STR_VALIDATE_SLEEP_IMAGES, SettingAction::ValidateSleepImages),
       SettingInfo::Toggle(StrId::STR_CHAPTER_PAGE_COUNT, &CrossPointSettings::statusBarChapterPageCount,
                           "statusBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR),

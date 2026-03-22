@@ -61,6 +61,49 @@ Top-level activity groups:
 - `src/activities/network/`: WiFi selection, AP/STA mode, file transfer server
 - `src/activities/boot_sleep/`: boot and sleep transitions
 
+## Core Registries
+
+The firmware utilizes a registry-based system in `src/core/registries/` to manage extensibility:
+
+- **ReaderRegistry**: Handles registration of different document readers (EPUB, TXT, etc.).
+- **WebRouteRegistry**: Manages endpoints for the internal web server.
+- **HomeActionRegistry**: Defines actions available from the home screen.
+- **LifecycleRegistry**: Hooks into the boot, sleep, and wake cycles.
+- **SyncServiceRegistry**: Manages background synchronization services (e.g., Anki, KOReader).
+- **SettingsActionRegistry**: Registers custom actions for the settings menu.
+
+## Feature Modules
+
+Modular functionality is organized in `src/features/`. There are currently 22 feature modules, each encapsulating specific logic (e.g., `anki`, `koreader_sync`, `ota_updates`, `usb_mass_storage`). These modules often interact with the core registries to extend system behavior.
+
+## HAL Layer
+
+The Hardware Abstraction Layer (HAL) resides in `lib/hal/` and provides a consistent interface for hardware-specific operations:
+
+- **HalDisplay**: Low-level e-ink display control and buffering.
+- **HalGPIO**: Button input and LED management.
+- **HalPowerManager**: Battery monitoring and deep sleep control.
+- **HalStorage**: Thread-safe SD card and filesystem access.
+- **HalSystem**: Basic system utilities (heap/stack monitoring).
+
+## Activity Lifecycle
+
+Activities (derived from `Activity.h`) manage the application state and UI. The core lifecycle methods are:
+
+- **`onEnter()`**: Called when the activity is pushed onto the stack. Use for initialization.
+- **`loop()`**: Called once per main loop iteration. Handle input and state updates here.
+- **`onExit()`**: Called when the activity is popped from the stack. Use for cleanup.
+
+## Core Singletons
+
+The following singletons provide global access to system-wide state and services:
+
+- **`SETTINGS`**: `CrossPointSettings` instance for user preferences.
+- **`APP_STATE`**: `CrossPointState` instance for persistent session data.
+- **`GUI`**: Current `UITheme` and theme metrics (via `src/components/UITheme.h`).
+- **`Storage`**: `HalStorage` instance for filesystem operations.
+- **`I18N`**: `I18n` instance for localized string lookup (via `tr()` macro).
+
 ## Reader and content pipeline
 
 Reader orchestration starts in `src/activities/reader/ReaderActivity.h` and dispatches to format-specific readers.

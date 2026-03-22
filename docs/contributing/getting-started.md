@@ -4,68 +4,64 @@ This guide helps you build and run CrossPoint locally.
 
 ## Prerequisites
 
-- PlatformIO Core (`pio`) or VS Code + PlatformIO IDE
-- Python 3.8+
-- `clang-format` 21+ in your `PATH` (CI uses clang-format 21)
-- USB-C cable
-- Xteink X4 device for hardware testing
+- **PlatformIO**: PlatformIO Core (`pio`) or VS Code + PlatformIO IDE.
+- **Microcontroller**: Target hardware is **ESP32-C3** with **C++20** support.
+- **Python**: Python 3.8+ for utility scripts.
+- **Clang-format**: `clang-format` 21+ in your `PATH` (CI uses clang-format 21).
+- **USB-C cable**: For flashing and serial monitoring.
+- **Hardware**: Xteink X4 device for physical testing.
 
-If `./bin/clang-format-fix` fails with either of these errors, install clang-format 21:
+### Installing clang-format 21
 
-- `clang-format: No such file or directory`
-- `.clang-format: error: unknown key 'AlignFunctionDeclarations'`
-
-Examples:
+If `./bin/clang-format-fix` fails with version errors, install clang-format 21:
 
 ```sh
 # Debian/Ubuntu (try this first)
 sudo apt-get update && sudo apt-get install -y clang-format-21
 
-# If the package is unavailable, add LLVM apt repo and retry
-wget https://apt.llvm.org/llvm.sh
-chmod +x llvm.sh
-sudo ./llvm.sh 21
-sudo apt-get update
-sudo apt-get install -y clang-format-21
-
 # macOS (Homebrew)
 brew install clang-format
 ```
 
-Then verify:
+Verify version: `clang-format-21 --version`. The reported major version must be 21 or newer.
+
+## Clone and Initialize
+
+Clone the repository and its **submodules** (important!) using the **`fork-drift`** branch:
 
 ```sh
-clang-format-21 --version
-```
-
-The reported major version must be 21 or newer.
-
-## Clone and initialize
-
-```sh
-git clone --recursive https://github.com/crosspoint-reader/crosspoint-reader
+git clone --recursive https://github.com/Unintendedsideeffects/crosspoint-reader --branch fork-drift
 cd crosspoint-reader
 ```
 
-If you already cloned without submodules:
+If you already cloned without submodules or are on a different branch:
 
 ```sh
+git checkout fork-drift
 git submodule update --init --recursive
 ```
 
-## Build
+## Local Configuration
+
+If you need to customize your build (e.g., set custom serial ports or build flags), you can create a `platformio.local.ini` file. This file is ignored by git and can be used to override settings in `platformio.ini` without modifying the shared project configuration.
+
+## Build and Flash
+
+### Build
 
 ```sh
 pio run
 ```
 
-## Flash
+### Flash
 
 ```sh
 pio run --target upload
 ```
 
 ## First checks before opening a PR
+
+Before submitting any changes, ensure your code passes these local checks:
 
 ```sh
 ./bin/clang-format-fix

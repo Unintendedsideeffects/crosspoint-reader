@@ -126,7 +126,8 @@ Each channel publishes five firmware variants plus one shared partitions file:
 CrossPoint uses PlatformIO for building and flashing the firmware. To get started, clone the repository:
 
 ```
-git clone --recursive https://github.com/crosspoint-reader/crosspoint-reader
+# Clone the fork-drift branch (active development)
+git clone --recursive --branch fork-drift https://github.com/Unintendedsideeffects/crosspoint-reader
 
 # Or, if you've already cloned without --recursive:
 git submodule update --init --recursive

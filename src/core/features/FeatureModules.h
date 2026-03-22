@@ -3,7 +3,6 @@
 #include <Arduino.h>
 
 #include <cstddef>
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,22 +16,6 @@ class WebServer;
 enum class SettingAction;
 
 namespace core {
-
-enum class WebOptionalRoute {
-  PokedexPluginPage,
-  PokemonPartyApi,
-  WallpaperPluginPage,
-  AnkiPluginPage,
-  UserFontsApi,
-  WebWifiSetupApi,
-  OtaApi,
-};
-
-enum class HomeOptionalAction {
-  AnkiSupport,
-  OpdsBrowser,
-  TodoPlanner,
-};
 
 enum class Capability {
   AnkiSupport,
@@ -62,6 +45,7 @@ enum class Capability {
   WebWallpaperPlugin,
   WebWifiSetup,
   XtcSupport,
+  Count,
 };
 
 class FeatureModules {
@@ -89,18 +73,7 @@ class FeatureModules {
   static HomeCardDataResult resolveHomeCardData(const std::string& path, int thumbHeight);
   static RecentBookDataResult resolveRecentBookData(const std::string& path);
   static bool isSupportedLibraryFile(const std::string& path);
-
-  static Activity* createSettingsSubActivity(SettingAction action, GfxRenderer& renderer,
-                                             MappedInputManager& mappedInput, const std::function<void()>& onComplete,
-                                             const std::function<void(bool)>& onCompleteBool);
-  static Activity* createOpdsBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                             const std::function<void()>& onBack);
   static bool hasKoreaderSyncCredentials();
-  static Activity* createKoreaderSyncActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                              const std::shared_ptr<Epub>& epub, const std::string& epubPath,
-                                              int currentSpineIndex, int currentPage, int totalPagesInSpine,
-                                              const std::function<void()>& onCancel,
-                                              const std::function<void(int, int)>& onSyncComplete);
   static Activity* createTodoPlannerActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                              std::string filePath, std::string dateTitle, void* onBackCtx,
                                              void (*onBack)(void*));
@@ -112,9 +85,6 @@ class FeatureModules {
   static void onUploadCompleted(const String& uploadPath, const String& uploadFileName);
   static void onWebFileChanged(const String& filePath);
   static bool tryGetDocumentCoverPath(const String& documentPath, std::string& outCoverPath);
-
-  static bool shouldRegisterWebRoute(WebOptionalRoute route);
-  static bool shouldExposeHomeAction(HomeOptionalAction action, bool hasOpdsUrl);
 
   static std::string getKoreaderUsername();
   static std::string getKoreaderPassword();

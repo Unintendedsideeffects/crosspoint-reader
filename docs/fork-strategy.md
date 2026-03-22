@@ -25,7 +25,7 @@ The `master` branch is the stable base of this repository. It is intended to rem
 
 ### `fork-drift`
 The `fork-drift` branch is the primary active development branch for this fork. It contains:
--   **Active Bug Fixes:** Patches for issues currently being tracked in [issues.md](../issues.md).
+-   **Active Bug Fixes:** Patches for issues currently being tracked on [GitHub Issues](https://github.com/Unintendedsideeffects/crosspoint-reader/issues).
 -   **New Features:** Experimental plugins and UI enhancements (e.g., `home_media_picker`).
 -   **Drifting Changes:** Modifications that deviate from upstream to support specific fork-only capabilities like the web configurator integration.
 
@@ -37,7 +37,7 @@ If you would like to contribute to this fork:
 
 1.  **Target the `fork-drift` branch:** All new features and bug fixes should be submitted as Pull Requests against the `fork-drift` branch.
 2.  **Synchronize with Upstream:** If your change is a general improvement intended for all CrossPoint users, we will work with you to prepare it for upstreaming after it has been validated in `fork-drift`.
-3.  **Issue Tracking:** Please refer to [issues.md](../issues.md) for current priorities and known regressions being addressed in this fork.
+3.  **Issue Tracking:** Please refer to [GitHub Issues](https://github.com/Unintendedsideeffects/crosspoint-reader/issues) for current priorities and known regressions being addressed in this fork.
 
 ## Behavioral Drifts
 

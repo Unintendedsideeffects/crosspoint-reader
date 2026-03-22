@@ -305,10 +305,16 @@ same JSON object.
     "max":      100.0,
     "step":     1.0,
     "category": "Display",
-    "hasValue": true
+    "hasValue": true,
+    "visibleWhen": {"key": "sleepScreen", "eq": 2}
   }
 ]
 ```
+
+**Fields:**
+- `visibleWhen` (optional): When present, the setting should only be displayed if the
+  setting identified by `visibleWhen.key` currently has the value `visibleWhen.eq`.
+  Omitted for settings that are always visible.
 
 **Current status:** ✅ Firmware returns this format from `handleGetSettings()`.
 

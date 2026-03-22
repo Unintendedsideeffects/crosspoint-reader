@@ -1,11 +1,25 @@
-# Contributing Docs
+# Contributing to CrossPoint Reader
 
-This section is a lightweight contributor guide for CrossPoint Reader.
-It is written for software developers who may be new to embedded development.
+Welcome! This guide helps you get started with contributing to CrossPoint Reader. Whether you are fixing a bug, adding a new feature, or improving documentation, we appreciate your help.
 
-- [Getting Started](./getting-started.md)
-- [Architecture Overview](./architecture.md)
-- [Development Workflow](./development-workflow.md)
-- [Testing and Debugging](./testing-debugging.md)
+## Onboarding Guide
 
-If you are new, start with [Getting Started](./getting-started.md).
+If you are new to the project, we recommend following this reading order to build a solid understanding of the system:
+
+1.  **[Getting Started](./getting-started.md)**: Set up your local environment, clone the repository, and build the firmware.
+2.  **[Architecture Overview](./architecture.md)**: Understand the high-level design, the activity model, and how different components interact.
+3.  **[Development Workflow](./development-workflow.md)**: Learn about our branching strategy, commit conventions, and the process for submitting Pull Requests.
+4.  **[Testing and Debugging](./testing-debugging.md)**: Discover tools and techniques for verifying your changes and troubleshooting issues.
+
+## Important Note on Branches
+
+All Pull Requests should be targeted at the **`fork-drift`** branch. This is our active development branch where new features and fixes are integrated before being merged into `master`.
+
+## Additional Resources
+
+- **[Project Scope](../../SCOPE.md)**: What is and isn't in scope for CrossPoint Reader.
+- **[Governance](../../GOVERNANCE.md)**: How the project is managed and how decisions are made.
+- **[Architecture (Detailed)](../../ARCHITECTURE.md)**: More technical details on specific subsystems.
+- **[User Guide](../../USER_GUIDE.md)**: Documentation for end-users, useful for understanding intended behavior.
+
+We look forward to your contributions!
