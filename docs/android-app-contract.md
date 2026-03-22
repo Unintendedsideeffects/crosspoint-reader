@@ -306,7 +306,7 @@ same JSON object.
     "step":     1.0,
     "category": "Display",
     "hasValue": true,
-    "visibleWhen": {"key": "sleepScreen", "eq": 2}
+    "visibleWhen": {"key": "sleepScreen", "eq": 3}
   }
 ]
 ```

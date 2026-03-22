@@ -57,20 +57,39 @@ inline void setBackgroundServerModeSettingIndex(const uint8_t index) {
 inline std::vector<SettingInfo> getSettingsList() {
   std::vector<SettingInfo> list = {
       // --- Display ---
-      SettingInfo::Enum(StrId::STR_SLEEP_SCREEN, &CrossPointSettings::sleepScreen,
-                        {StrId::STR_DARK, StrId::STR_LIGHT, StrId::STR_FOLLOW_THEME, StrId::STR_CUSTOM, StrId::STR_TRANSPARENT}, "sleepScreen",
-                        StrId::STR_CAT_DISPLAY),
+      // Sleep screen uses DynamicEnum with explicit value mapping so display order
+      // (Dark, Light, Follow Theme, Custom, Transparent) is independent of the
+      // SLEEP_SCREEN_MODE enum values (DARK=0, LIGHT=1, CUSTOM=2, TRANSPARENT=3, FOLLOW_THEME=4).
+      [] {
+        using M = CrossPointSettings::SLEEP_SCREEN_MODE;
+        const std::vector<StrId> ids = {StrId::STR_DARK, StrId::STR_LIGHT, StrId::STR_FOLLOW_THEME,
+                                        StrId::STR_CUSTOM, StrId::STR_TRANSPARENT};
+        const std::vector<uint8_t> vals = {M::DARK, M::LIGHT, M::FOLLOW_THEME, M::CUSTOM, M::TRANSPARENT};
+        return SettingInfo::DynamicEnum(
+            StrId::STR_SLEEP_SCREEN, ids,
+            [vals] {
+              const uint8_t cur = SETTINGS.sleepScreen;
+              for (size_t i = 0; i < vals.size(); i++) {
+                if (vals[i] == cur) return static_cast<uint8_t>(i);
+              }
+              return uint8_t{0};
+            },
+            [vals](uint8_t idx) {
+              if (idx < vals.size()) SETTINGS.sleepScreen = vals[idx];
+            },
+            "sleepScreen", StrId::STR_CAT_DISPLAY);
+      }(),
       SettingInfo::Enum(StrId::STR_SLEEP_SOURCE, &CrossPointSettings::sleepScreenSource,
                         {StrId::STR_SLEEP, StrId::STR_POKEDEX, StrId::STR_ALL}, "sleepScreenSource",
                         StrId::STR_CAT_DISPLAY)
-          .withVisibleWhen("sleepScreen", CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM),
+          .withVisibleWhen("sleepScreen", 3),  // display index of "Custom" in sleep screen options
       SettingInfo::Enum(StrId::STR_SLEEP_COVER_MODE, &CrossPointSettings::sleepScreenCoverMode,
                         {StrId::STR_FIT, StrId::STR_CROP}, "sleepScreenCoverMode", StrId::STR_CAT_DISPLAY)
-          .withVisibleWhen("sleepScreen", CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM),
+          .withVisibleWhen("sleepScreen", 3),  // display index of "Custom" in sleep screen options
       SettingInfo::Enum(StrId::STR_SLEEP_COVER_FILTER, &CrossPointSettings::sleepScreenCoverFilter,
                         {StrId::STR_NONE_OPT, StrId::STR_FILTER_CONTRAST, StrId::STR_INVERTED},
                         "sleepScreenCoverFilter", StrId::STR_CAT_DISPLAY)
-          .withVisibleWhen("sleepScreen", CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM),
+          .withVisibleWhen("sleepScreen", 3),  // display index of "Custom" in sleep screen options
       SettingInfo::Action(StrId::STR_VALIDATE_SLEEP_IMAGES, SettingAction::ValidateSleepImages),
       SettingInfo::Toggle(StrId::STR_CHAPTER_PAGE_COUNT, &CrossPointSettings::statusBarChapterPageCount,
                           "statusBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR),
