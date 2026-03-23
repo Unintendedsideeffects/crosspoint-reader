@@ -3023,6 +3023,13 @@
                       <option value="2">Inverted</option>
                     </select>
                   </div>
+                  <div class="form-group" id="row-sleepCycleMode">
+                    <label class="form-label" for="s-sleepCycleMode">Image Cycle Mode</label>
+                    <select class="form-select" id="s-sleepCycleMode">
+                      <option value="0" selected>Random</option>
+                      <option value="1">Sequential</option>
+                    </select>
+                  </div>
                   <div class="form-group" id="row-darkMode">
                     <label class="form-label" for="s-darkMode">Dark Mode</label>
                     <select class="form-select" id="s-darkMode">
@@ -5263,7 +5270,7 @@
           embeddedStyle: 1, hyphenationEnabled: 0, orientation: 0, extraParagraphSpacing: 1,
           textAntiAliasing: 1, imageRendering: 0,
           frontButtonLayout: 0, frontButtonBack: 0, frontButtonConfirm: 1, frontButtonLeft: 2, frontButtonRight: 3,
-          sleepScreen: 0, sleepScreenSource: 0, sleepScreenCoverMode: 0, sleepScreenCoverFilter: 0,
+          sleepScreen: 0, sleepScreenSource: 0, sleepScreenCoverMode: 0, sleepScreenCoverFilter: 0, sleepCycleMode: 0,
           sleepPinnedPath: '',
           darkMode: 0, hideBatteryPercentage: 0, uiTheme: 1, refreshFrequency: 3,
           fadingFix: 0, globalStatusBar: 0, globalStatusBarPosition: 0,
@@ -5431,6 +5438,7 @@
             normalized.sleepScreenSource = DEFAULTS.sleepScreenSource;
             normalized.sleepScreenCoverMode = DEFAULTS.sleepScreenCoverMode;
             normalized.sleepScreenCoverFilter = DEFAULTS.sleepScreenCoverFilter;
+            normalized.sleepCycleMode = DEFAULTS.sleepCycleMode;
             normalized.sleepPinnedPath = DEFAULTS.sleepPinnedPath;
           }
 
@@ -5576,6 +5584,8 @@
           if (rowSleepCoverMode) rowSleepCoverMode.classList.toggle('settings-row-hidden', !customSleepActive);
           const rowSleepCoverFilter = document.getElementById('row-sleepScreenCoverFilter');
           if (rowSleepCoverFilter) rowSleepCoverFilter.classList.toggle('settings-row-hidden', !customSleepActive);
+          const rowSleepCycleMode = document.getElementById('row-sleepCycleMode');
+          if (rowSleepCycleMode) rowSleepCycleMode.classList.toggle('settings-row-hidden', !customSleepActive);
           const rowSleepPinnedPath = document.getElementById('row-sleepPinnedPath');
           if (rowSleepPinnedPath) rowSleepPinnedPath.classList.toggle('settings-row-hidden', !customSleepActive);
           const rowSleepStudioAction = document.getElementById('row-sleepStudioAction');

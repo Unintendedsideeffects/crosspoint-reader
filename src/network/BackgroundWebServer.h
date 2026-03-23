@@ -9,6 +9,9 @@
 
 class CrossPointWebServer;
 
+// TODO: Add configurable long-press button activation — hold a user-configured
+// button for ~1s to start the background web server for ~1 minute, allowing the
+// Android app to push ticket images and other data to the device.
 class BackgroundWebServer {
  public:
   static BackgroundWebServer& getInstance();

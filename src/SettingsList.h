@@ -90,6 +90,9 @@ inline std::vector<SettingInfo> getSettingsList() {
                         {StrId::STR_NONE_OPT, StrId::STR_FILTER_CONTRAST, StrId::STR_INVERTED},
                         "sleepScreenCoverFilter", StrId::STR_CAT_DISPLAY)
           .withVisibleWhen("sleepScreen", 3),  // display index of "Custom" in sleep screen options
+      SettingInfo::Enum(StrId::STR_SLEEP_CYCLE_MODE, &CrossPointSettings::sleepCycleMode,
+                        {StrId::STR_RANDOM, StrId::STR_SEQUENTIAL}, "sleepCycleMode", StrId::STR_CAT_DISPLAY)
+          .withVisibleWhen("sleepScreen", 3),
       SettingInfo::Action(StrId::STR_VALIDATE_SLEEP_IMAGES, SettingAction::ValidateSleepImages),
       SettingInfo::Toggle(StrId::STR_CHAPTER_PAGE_COUNT, &CrossPointSettings::statusBarChapterPageCount,
                           "statusBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR),

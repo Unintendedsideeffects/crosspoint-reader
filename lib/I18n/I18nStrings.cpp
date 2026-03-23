@@ -1184,6 +1184,9 @@ const char* const STRINGS_EN[] = {
     "[ON]",
     "OK",
     "Sleep Screen Cover Filter",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Contrast",
     "Customise Status Bar",
     "Chapter Page Count",
@@ -1724,6 +1727,9 @@ const char* const STRINGS_ES[] = {
     "Filtro de pantalla de suspensi\xC3"
     "\xB3"
     "n",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Contraste",
     "Personalizar barra de estado",
     "Contador de p\xC3"
@@ -2572,6 +2578,9 @@ const char* const STRINGS_FR[] = {
     "Filtre \xC3"
     "\xA9"
     "cran de veille",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Contraste",
     "Personnaliser la barre d'\xC3"
     "\xA9"
@@ -3165,6 +3174,9 @@ const char* const STRINGS_DE[] = {
     "[ON]",
     "OK",
     "Standby-Coverfilter",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Kontrast",
     "Statusleiste anpassen",
     "Kapitel-Seitenanzahl",
@@ -4376,6 +4388,9 @@ const char* const STRINGS_CS[] = {
     "Filtr obrazovky sp\xC3"
     "\xA1"
     "nku",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Kontrast",
     "P\xC5"
     "\x99"
@@ -5300,6 +5315,9 @@ const char* const STRINGS_PO[] = {
     "[ON]",
     "OK",
     "Filtro capa tela repouso",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Contraste",
     "Personalizar barra de estado",
     "P\xC3"
@@ -10472,6 +10490,9 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB0"
     "",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "\xD0"
     "\x9A"
     "\xD0"
@@ -13493,6 +13514,9 @@ const char* const STRINGS_SV[] = {
     "Vilosk\xC3"
     "\xA4"
     "rmens omslagsfilter",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Kontrast",
     "Anpassa statusf\xC3"
     "\xA4"
@@ -14405,6 +14429,9 @@ const char* const STRINGS_RO[] = {
     "[ON]",
     "OK",
     "Filtru ecran de repaus",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Contrast",
     "Customiza\xC5"
     "\xA3"
@@ -15137,6 +15164,9 @@ const char* const STRINGS_CA[] = {
     "Filtre de pantalla de rep\xC3"
     "\xB2"
     "s",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Contrast",
     "Personalitza la barra d'estat",
     "Comptador de p\xC3"
@@ -21035,6 +21065,9 @@ const char* const STRINGS_UK[] = {
     "\xD1"
     "\x83"
     "",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "\xD0"
     "\x9A"
     "\xD0"
@@ -28947,6 +28980,9 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x83"
     "",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "\xD0"
     "\x9A"
     "\xD0"
@@ -31701,6 +31737,9 @@ const char* const STRINGS_IT[] = {
     "Filtro copertina modalit\xC3"
     "\xA0"
     " sleep",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Contrasto",
     "Personalizza barra di stato",
     "Pagine del capitolo",
@@ -32511,6 +32550,9 @@ const char* const STRINGS_PL[] = {
     "Filtr ok\xC5"
     "\x82"
     "adek wygaszacza",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Kontrast",
     "Dostosowanie paska statusu",
     "Strona rozdzia\xC5"
@@ -33377,6 +33419,9 @@ const char* const STRINGS_FI[] = {
     "yt\xC3"
     "\xB6"
     "n kansisuodatin",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Kontrasti",
     "Muokkaa tilapalkkia",
     "Kappaleen sivum\xC3"
@@ -34049,6 +34094,9 @@ const char* const STRINGS_DA[] = {
     "Hvile-sk\xC3"
     "\xA6"
     "rm omslag-filter",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Kontrast",
     "Tilpas statuslinje",
     "Kapitel sidetal",
@@ -34489,6 +34537,9 @@ const char* const STRINGS_NL[] = {
     "[ON]",
     "OK",
     "Slaapscherm omslag-filter",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Contrast",
     "Statusbalk aanpassen",
     "Paginanummering hoofdstuk",
@@ -35503,6 +35554,9 @@ const char* const STRINGS_TR[] = {
     "Uyku Ekran\xC4"
     "\xB1"
     " Kapak Filtresi",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "Kontrast",
     "Durum \xC3"
     "\x87"
@@ -40971,6 +41025,9 @@ const char* const STRINGS_KK[] = {
     "\xD1"
     "\x96"
     "",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
     "\xD0"
     "\x9A"
     "\xD0"

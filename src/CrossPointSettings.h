@@ -44,6 +44,7 @@ class CrossPointSettings {
     SLEEP_SOURCE_ALL = 2,
     SLEEP_SCREEN_SOURCE_COUNT
   };
+  enum SLEEP_CYCLE_MODE { SLEEP_CYCLE_RANDOM = 0, SLEEP_CYCLE_SEQUENTIAL = 1, SLEEP_CYCLE_MODE_COUNT };
 
   // Status bar display type enum
   enum STATUS_BAR_MODE {
@@ -180,6 +181,8 @@ class CrossPointSettings {
   uint8_t sleepScreenCoverFilter = NO_FILTER;
   // Sleep screen custom-image source
   uint8_t sleepScreenSource = SLEEP_SOURCE_SLEEP;
+  // Sleep image cycle mode (random or sequential)
+  uint8_t sleepCycleMode = SLEEP_CYCLE_RANDOM;
   // Pinned sleep cover path — if non-empty and sleepScreen==CUSTOM, always use this image.
   char sleepPinnedPath[256] = "";
   // Status bar settings (statusBar retained for migration only)

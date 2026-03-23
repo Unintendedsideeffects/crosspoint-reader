@@ -404,19 +404,23 @@ void SleepActivity::renderCustomSleepScreen() const {
   validateSleepImagesOnce();
   const auto numFiles = sleepImageCache.validFiles.size();
   if (numFiles > 0) {
-    // Generate a random number between 0 and numFiles-1
-    auto randomFileIndex = random(numFiles);
-    // If we picked the same image as last time, pick the next one
-    if (numFiles > 1 && randomFileIndex == APP_STATE.lastSleepImage) {
-      randomFileIndex = (randomFileIndex + 1) % numFiles;
+    size_t fileIndex;
+    if (SETTINGS.sleepCycleMode == CrossPointSettings::SLEEP_CYCLE_SEQUENTIAL) {
+      // Sequential: advance to the next image in order
+      fileIndex = (numFiles > 1) ? (APP_STATE.lastSleepImage + 1) % numFiles : 0;
+    } else {
+      // Random: pick a random image, avoiding the last one shown
+      fileIndex = random(numFiles);
+      if (numFiles > 1 && fileIndex == APP_STATE.lastSleepImage) {
+        fileIndex = (fileIndex + 1) % numFiles;
+      }
     }
-    // Only save to file if the selection actually changed
-    const bool selectionChanged = (APP_STATE.lastSleepImage != randomFileIndex);
-    APP_STATE.lastSleepImage = randomFileIndex;
+    const bool selectionChanged = (APP_STATE.lastSleepImage != fileIndex);
+    APP_STATE.lastSleepImage = fileIndex;
     if (selectionChanged) {
       APP_STATE.saveToFile();
     }
-    const auto& filename = sleepImageCache.validFiles[randomFileIndex];
+    const auto& filename = sleepImageCache.validFiles[fileIndex];
     LOG_INF("SLP", "Loading: %s", filename.c_str());
 
     if (isBmpFile(filename)) {
