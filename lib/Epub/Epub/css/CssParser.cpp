@@ -171,6 +171,29 @@ bool extractNextRule(const std::string& css, size_t& pos, std::string& selector,
   return true;
 }
 
+std::string_view stripTrailingImportant(std::string_view value) {
+  constexpr std::string_view IMPORTANT = "!important";
+
+  while (!value.empty() && isCssWhitespace(value.back())) {
+    value.remove_suffix(1);
+  }
+
+  if (value.size() < IMPORTANT.size()) {
+    return value;
+  }
+
+  const size_t suffixPos = value.size() - IMPORTANT.size();
+  if (value.substr(suffixPos) != IMPORTANT) {
+    return value;
+  }
+
+  value.remove_suffix(IMPORTANT.size());
+  while (!value.empty() && isCssWhitespace(value.back())) {
+    value.remove_suffix(1);
+  }
+  return value;
+}
+
 }  // anonymous namespace
 
 CssParser::CssParser(const std::string& cacheDir) : cacheFilePath_(cacheDir + "/css_rules.bin") {}
@@ -369,6 +392,93 @@ int8_t CssParser::interpretSpacing(const std::string& val) {
 }
 
 // Declaration parsing
+
+void CssParser::parseDeclarationIntoStyle(const std::string& decl, CssStyle& style, std::string& propNameBuf,
+                                          std::string& propValueBuf) {
+  const size_t colonPos = decl.find(':');
+  if (colonPos == std::string::npos || colonPos == 0) return;
+
+  normalizedInto(decl.substr(0, colonPos), propNameBuf);
+  normalizedInto(decl.substr(colonPos + 1), propValueBuf);
+
+  if (propNameBuf.empty() || propValueBuf.empty()) return;
+
+  if (propNameBuf == "text-align") {
+    style.textAlign = interpretAlignment(propValueBuf);
+    style.defined.textAlign = 1;
+  } else if (propNameBuf == "font-style") {
+    style.fontStyle = interpretFontStyle(propValueBuf);
+    style.defined.fontStyle = 1;
+  } else if (propNameBuf == "font-weight") {
+    style.fontWeight = interpretFontWeight(propValueBuf);
+    style.defined.fontWeight = 1;
+  } else if (propNameBuf == "text-decoration" || propNameBuf == "text-decoration-line") {
+    style.textDecoration = interpretDecoration(propValueBuf);
+    style.defined.textDecoration = 1;
+  } else if (propNameBuf == "text-indent") {
+    style.textIndent = interpretLength(propValueBuf);
+    style.defined.textIndent = 1;
+  } else if (propNameBuf == "margin-top") {
+    style.marginTop = interpretLength(propValueBuf);
+    style.defined.marginTop = 1;
+  } else if (propNameBuf == "margin-bottom") {
+    style.marginBottom = interpretLength(propValueBuf);
+    style.defined.marginBottom = 1;
+  } else if (propNameBuf == "margin-left") {
+    style.marginLeft = interpretLength(propValueBuf);
+    style.defined.marginLeft = 1;
+  } else if (propNameBuf == "margin-right") {
+    style.marginRight = interpretLength(propValueBuf);
+    style.defined.marginRight = 1;
+  } else if (propNameBuf == "margin") {
+    const auto values = splitWhitespace(propValueBuf);
+    if (!values.empty()) {
+      style.marginTop = interpretLength(values[0]);
+      style.marginRight = values.size() >= 2 ? interpretLength(values[1]) : style.marginTop;
+      style.marginBottom = values.size() >= 3 ? interpretLength(values[2]) : style.marginTop;
+      style.marginLeft = values.size() >= 4 ? interpretLength(values[3]) : style.marginRight;
+      style.defined.marginTop = style.defined.marginRight = style.defined.marginBottom = style.defined.marginLeft = 1;
+    }
+  } else if (propNameBuf == "padding-top") {
+    style.paddingTop = interpretLength(propValueBuf);
+    style.defined.paddingTop = 1;
+  } else if (propNameBuf == "padding-bottom") {
+    style.paddingBottom = interpretLength(propValueBuf);
+    style.defined.paddingBottom = 1;
+  } else if (propNameBuf == "padding-left") {
+    style.paddingLeft = interpretLength(propValueBuf);
+    style.defined.paddingLeft = 1;
+  } else if (propNameBuf == "padding-right") {
+    style.paddingRight = interpretLength(propValueBuf);
+    style.defined.paddingRight = 1;
+  } else if (propNameBuf == "padding") {
+    const auto values = splitWhitespace(propValueBuf);
+    if (!values.empty()) {
+      style.paddingTop = interpretLength(values[0]);
+      style.paddingRight = values.size() >= 2 ? interpretLength(values[1]) : style.paddingTop;
+      style.paddingBottom = values.size() >= 3 ? interpretLength(values[2]) : style.paddingTop;
+      style.paddingLeft = values.size() >= 4 ? interpretLength(values[3]) : style.paddingRight;
+      style.defined.paddingTop = style.defined.paddingRight = style.defined.paddingBottom = style.defined.paddingLeft =
+          1;
+    }
+  } else if (propNameBuf == "height") {
+    CssLength len;
+    if (tryInterpretLength(propValueBuf, len)) {
+      style.imageHeight = len;
+      style.defined.imageHeight = 1;
+    }
+  } else if (propNameBuf == "width") {
+    CssLength len;
+    if (tryInterpretLength(propValueBuf, len)) {
+      style.imageWidth = len;
+      style.defined.imageWidth = 1;
+    }
+  } else if (propNameBuf == "display") {
+    const std::string_view displayValue = stripTrailingImportant(propValueBuf);
+    style.display = (displayValue == "none") ? CssDisplay::None : CssDisplay::Block;
+    style.defined.display = 1;
+  }
+}
 
 CssStyle CssParser::parseDeclarations(const std::string& declBlock) {
   CssStyle style;
@@ -625,6 +735,9 @@ bool CssParser::saveToCache(FsFile& file) const {
     writeLength(style.paddingBottom);
     writeLength(style.paddingLeft);
     writeLength(style.paddingRight);
+    writeLength(style.imageHeight);
+    writeLength(style.imageWidth);
+    file.write(static_cast<uint8_t>(style.display));
 
     // Write defined flags as uint16_t
     uint16_t definedBits = 0;
@@ -641,6 +754,9 @@ bool CssParser::saveToCache(FsFile& file) const {
     if (style.defined.paddingBottom) definedBits |= 1 << 10;
     if (style.defined.paddingLeft) definedBits |= 1 << 11;
     if (style.defined.paddingRight) definedBits |= 1 << 12;
+    if (style.defined.imageHeight) definedBits |= 1 << 13;
+    if (style.defined.imageWidth) definedBits |= 1 << 14;
+    if (style.defined.display) definedBits |= 1 << 15;
     file.write(reinterpret_cast<const uint8_t*>(&definedBits), sizeof(definedBits));
   }
 
@@ -669,12 +785,40 @@ bool CssParser::loadFromCache(FsFile& file) {
     return false;
   }
 
+  if (ruleCount > MAX_RULES) {
+    LOG_DBG("CSS", "Invalid cache rule count (%u > %zu)", ruleCount, MAX_RULES);
+    rulesBySelector_.clear();
+    file.close();
+    return false;
+  }
+
+  auto hasRemainingBytes = [&file](const size_t neededBytes) -> bool {
+    return static_cast<size_t>(file.available()) >= neededBytes;
+  };
+
+  constexpr size_t CSS_LENGTH_FIELD_COUNT = 11;
+  constexpr size_t CSS_LENGTH_BYTES = sizeof(float) + sizeof(uint8_t);
+  constexpr size_t CSS_FIXED_STYLE_BYTES =
+      4 * sizeof(uint8_t) + (CSS_LENGTH_FIELD_COUNT * CSS_LENGTH_BYTES) + sizeof(uint8_t) + sizeof(uint16_t);
+
   // Read each rule
   for (uint16_t i = 0; i < ruleCount; ++i) {
     // Read selector string
     uint16_t selectorLen = 0;
+    if (!hasRemainingBytes(sizeof(selectorLen))) {
+      rulesBySelector_.clear();
+      file.close();
+      return false;
+    }
     if (file.read(&selectorLen, sizeof(selectorLen)) != sizeof(selectorLen)) {
       rulesBySelector_.clear();
+      return false;
+    }
+
+    if (selectorLen == 0 || selectorLen > MAX_SELECTOR_LENGTH || !hasRemainingBytes(selectorLen)) {
+      LOG_DBG("CSS", "Invalid selector length in cache: %u", selectorLen);
+      rulesBySelector_.clear();
+      file.close();
       return false;
     }
 
@@ -682,6 +826,13 @@ bool CssParser::loadFromCache(FsFile& file) {
     selector.resize(selectorLen);
     if (file.read(&selector[0], selectorLen) != selectorLen) {
       rulesBySelector_.clear();
+      return false;
+    }
+
+    if (!hasRemainingBytes(CSS_FIXED_STYLE_BYTES)) {
+      LOG_DBG("CSS", "Truncated CSS cache while reading style payload");
+      rulesBySelector_.clear();
+      file.close();
       return false;
     }
 
@@ -733,6 +884,15 @@ bool CssParser::loadFromCache(FsFile& file) {
       return false;
     }
 
+    // Read display value
+    uint8_t displayVal;
+    if (file.read(&displayVal, 1) != 1) {
+      rulesBySelector_.clear();
+      file.close();
+      return false;
+    }
+    style.display = static_cast<CssDisplay>(displayVal);
+
     // Read defined flags
     uint16_t definedBits = 0;
     if (file.read(&definedBits, sizeof(definedBits)) != sizeof(definedBits)) {
@@ -752,6 +912,9 @@ bool CssParser::loadFromCache(FsFile& file) {
     style.defined.paddingBottom = (definedBits & 1 << 10) != 0;
     style.defined.paddingLeft = (definedBits & 1 << 11) != 0;
     style.defined.paddingRight = (definedBits & 1 << 12) != 0;
+    style.defined.imageHeight = (definedBits & 1 << 13) != 0;
+    style.defined.imageWidth = (definedBits & 1 << 14) != 0;
+    style.defined.display = (definedBits & 1 << 15) != 0;
 
     rulesBySelector_[selector] = style;
   }
