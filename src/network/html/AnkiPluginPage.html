@@ -11,25 +11,42 @@
     .stats { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #007bff; }
     .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: #fff; text-decoration: none; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; margin-right: 10px; }
     .btn:hover { background: #0056b3; }
+    .btn-sm { padding: 6px 12px; font-size: 0.85rem; margin-right: 6px; }
     .btn-danger { background: #dc3545; }
     .btn-danger:hover { background: #a71d2a; }
+    .btn-outline { background: transparent; color: #007bff; border: 1px solid #007bff; }
+    .btn-outline:hover { background: #007bff; color: #fff; }
+    .btn-save { background: #28a745; }
+    .btn-save:hover { background: #1e7e34; }
     .actions { margin-top: 20px; }
     code { background: #eee; padding: 2px 4px; border-radius: 4px; }
+    .card-list { margin-top: 24px; }
+    .anki-card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 12px; background: #fff; }
+    .anki-card .front { font-weight: bold; font-size: 1.05rem; margin-bottom: 8px; }
+    .anki-card .back-label { color: #666; font-size: 0.85rem; margin-bottom: 4px; }
+    .anki-card .back { color: #333; margin-bottom: 8px; }
+    .anki-card .back.empty { color: #999; font-style: italic; }
+    .anki-card .context { color: #888; font-size: 0.85rem; margin-bottom: 10px; }
+    .anki-card .card-actions { display: flex; gap: 8px; align-items: center; }
+    .back-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; margin-bottom: 8px; box-sizing: border-box; }
+    .empty-state { text-align: center; color: #999; padding: 40px 20px; }
   </style>
 </head>
 <body>
   <h1>Anki Support</h1>
-  
+
   <div class="card">
     <div id="status" class="stats">Checking cards...</div>
-    
-    <p>You can add new cards while reading by selecting <strong>Notes</strong> (Anki) in the reader menu. The first 10 words of the current page will be added as the front of the card.</p>
-    
+
+    <p>Add cards while reading via the reader menu. The first 10 words of the current page become the card front. You can edit card backs below or in Anki Desktop after export.</p>
+
     <div class="actions">
       <a href="/api/anki/cards" class="btn" download="anki_cards.json">Export JSON</a>
       <button onclick="clearCards()" class="btn btn-danger">Clear All Cards</button>
     </div>
   </div>
+
+  <div class="card-list" id="card-list"></div>
 
   <div style="margin-top: 40px;">
     <h3>How to sync with Anki (Desktop)</h3>
@@ -41,31 +58,123 @@
   </div>
 
   <script>
-    async function updateStatus() {
+    let cards = [];
+
+    async function loadCards() {
       try {
         const response = await fetch('/api/anki/cards');
-        const cards = await response.json();
+        cards = await response.json();
         document.getElementById('status').textContent = `You have ${cards.length} card(s) saved on your device.`;
+        renderCards();
       } catch (e) {
-        document.getElementById('status').textContent = 'Error loading card count.';
+        document.getElementById('status').textContent = 'Error loading cards.';
+      }
+    }
+
+    function renderCards() {
+      const list = document.getElementById('card-list');
+      if (cards.length === 0) {
+        list.innerHTML = '<div class="empty-state">No cards yet. Add cards from the reader menu while reading.</div>';
+        return;
+      }
+      list.innerHTML = cards.map((card, i) => `
+        <div class="anki-card" id="card-${i}">
+          <div class="front">${esc(card.front)}</div>
+          ${card.context ? `<div class="context">Source: ${esc(card.context)}</div>` : ''}
+          <div class="back-label">Back:</div>
+          <div class="back ${card.back ? '' : 'empty'}" id="back-display-${i}"
+               onclick="startEdit(${i})">${card.back ? esc(card.back) : 'Click to add definition...'}</div>
+          <div id="back-edit-${i}" style="display:none">
+            <input class="back-input" id="back-input-${i}" value="${esc(card.back || '')}"
+                   placeholder="Type the definition or answer..."
+                   onkeydown="if(event.key==='Enter')saveBack(${i});if(event.key==='Escape')cancelEdit(${i})" />
+            <button class="btn btn-sm btn-save" onclick="saveBack(${i})">Save</button>
+            <button class="btn btn-sm btn-outline" onclick="cancelEdit(${i})">Cancel</button>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-sm btn-outline" onclick="startEdit(${i})">Edit Back</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteCard(${i})">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function startEdit(i) {
+      document.getElementById(`back-display-${i}`).style.display = 'none';
+      document.getElementById(`back-edit-${i}`).style.display = 'block';
+      const input = document.getElementById(`back-input-${i}`);
+      input.focus();
+      input.select();
+    }
+
+    function cancelEdit(i) {
+      document.getElementById(`back-display-${i}`).style.display = '';
+      document.getElementById(`back-edit-${i}`).style.display = 'none';
+    }
+
+    async function saveBack(i) {
+      const input = document.getElementById(`back-input-${i}`);
+      const back = input.value.trim();
+      try {
+        const response = await fetch('/api/anki/update', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({index: i, back: back})
+        });
+        if (response.ok) {
+          cards[i].back = back;
+          renderCards();
+        } else {
+          alert('Failed to update card.');
+        }
+      } catch (e) {
+        alert('Failed to update card.');
+      }
+    }
+
+    async function deleteCard(i) {
+      const front = cards[i].front;
+      const preview = front.length > 40 ? front.substring(0, 40) + '...' : front;
+      if (!confirm(`Delete card "${preview}"?`)) return;
+      try {
+        const response = await fetch('/api/anki/delete', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({index: i})
+        });
+        if (response.ok) {
+          cards.splice(i, 1);
+          document.getElementById('status').textContent = `You have ${cards.length} card(s) saved on your device.`;
+          renderCards();
+        } else {
+          alert('Failed to delete card.');
+        }
+      } catch (e) {
+        alert('Failed to delete card.');
       }
     }
 
     async function clearCards() {
       if (!confirm('Are you sure you want to delete ALL cards from your device?')) return;
-      
       try {
         const response = await fetch('/api/anki/clear', { method: 'POST' });
         if (response.ok) {
-          updateStatus();
-          alert('All cards cleared.');
+          cards = [];
+          document.getElementById('status').textContent = 'You have 0 card(s) saved on your device.';
+          renderCards();
         }
       } catch (e) {
         alert('Failed to clear cards.');
       }
     }
 
-    updateStatus();
+    loadCards();
   </script>
 </body>
 </html>

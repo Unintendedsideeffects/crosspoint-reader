@@ -125,6 +125,14 @@ void AnkiStore::removeCard(size_t index) {
   xSemaphoreGive(mutex_);
 }
 
+void AnkiStore::updateCardBack(size_t index, const std::string& back) {
+  xSemaphoreTake(mutex_, portMAX_DELAY);
+  if (index < cards.size()) {
+    cards[index].back = back;
+  }
+  xSemaphoreGive(mutex_);
+}
+
 void AnkiStore::clear() {
   xSemaphoreTake(mutex_, portMAX_DELAY);
   cards.clear();

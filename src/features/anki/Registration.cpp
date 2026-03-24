@@ -1,5 +1,6 @@
 #include "features/anki/Registration.h"
 
+#include <ArduinoJson.h>
 #include <FeatureFlags.h>
 #include <Logging.h>
 #include <WebServer.h>
@@ -35,6 +36,54 @@ static void mountAnkiRoutes(WebServer* server) {
   server->on("/api/anki/clear", HTTP_POST, [server] {
     util::AnkiStore::getInstance().clear();
     util::AnkiStore::getInstance().save();
+    server->send(200, "application/json", "{\"status\":\"ok\"}");
+  });
+  server->on("/api/anki/delete", HTTP_POST, [server] {
+    if (!server->hasArg("plain")) {
+      server->send(400, "application/json", "{\"error\":\"missing body\"}");
+      return;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, server->arg("plain"))) {
+      server->send(400, "application/json", "{\"error\":\"invalid json\"}");
+      return;
+    }
+    const int index = doc["index"] | -1;
+    if (index < 0) {
+      server->send(400, "application/json", "{\"error\":\"missing index\"}");
+      return;
+    }
+    auto& store = util::AnkiStore::getInstance();
+    if (static_cast<size_t>(index) >= store.count()) {
+      server->send(404, "application/json", "{\"error\":\"out of range\"}");
+      return;
+    }
+    store.removeCard(static_cast<size_t>(index));
+    store.save();
+    server->send(200, "application/json", "{\"status\":\"ok\"}");
+  });
+  server->on("/api/anki/update", HTTP_POST, [server] {
+    if (!server->hasArg("plain")) {
+      server->send(400, "application/json", "{\"error\":\"missing body\"}");
+      return;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, server->arg("plain"))) {
+      server->send(400, "application/json", "{\"error\":\"invalid json\"}");
+      return;
+    }
+    const int index = doc["index"] | -1;
+    if (index < 0 || !doc.containsKey("back")) {
+      server->send(400, "application/json", "{\"error\":\"missing index or back\"}");
+      return;
+    }
+    auto& store = util::AnkiStore::getInstance();
+    if (static_cast<size_t>(index) >= store.count()) {
+      server->send(404, "application/json", "{\"error\":\"out of range\"}");
+      return;
+    }
+    store.updateCardBack(static_cast<size_t>(index), doc["back"] | "");
+    store.save();
     server->send(200, "application/json", "{\"status\":\"ok\"}");
   });
 }

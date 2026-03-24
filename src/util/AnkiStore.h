@@ -33,6 +33,7 @@ class AnkiStore {
   // Mutators — thread-safe but do NOT auto-save. Callers must call save() explicitly.
   void addCard(const AnkiCard& card);
   void removeCard(size_t index);
+  void updateCardBack(size_t index, const std::string& back);
   void clear();
 
   size_t count() const;

@@ -2088,6 +2088,17 @@
                 <div class="card-toggle"><span class="toggle-box"></span></div>
               </label>
 
+              <label class="skill-card" data-feature="anki_support" data-node-id="anki_support">
+                <input type="checkbox" id="anki_support" data-feature="anki_support" />
+                <div class="card-icon"><span>&#x2660;</span></div>
+                <div class="card-body">
+                  <div class="card-name">Anki Support</div>
+                  <div class="card-size"></div>
+                  <div class="card-desc">Flashcard creation from the reader menu with web UI management and JSON export</div>
+                </div>
+                <div class="card-toggle"><span class="toggle-box"></span></div>
+              </label>
+
             </div>
           </div>
         </section>
@@ -3381,6 +3392,11 @@
           flag: "ENABLE_TODO_PLANNER",
           default: false,
         },
+        anki_support: {
+          sizeKb: 8,
+          flag: "ENABLE_ANKI_SUPPORT",
+          default: false,
+        },
         dark_mode: {
           sizeKb: 0,
           flag: "ENABLE_DARK_MODE",
@@ -3436,6 +3452,7 @@
         ota_updates: "Over-the-air firmware updates via the Background Server's web UI. Streams the binary directly to flash without a USB cable. Includes a verification step before commit; safe to enable in all builds.",
         remote_keyboard_input: "Turns the Android companion app or any phone browser into a keyboard for device text-entry prompts (WiFi passwords, search fields). Prefers the Android app; falls back to a QR-code web page; can start a local hotspot if no WiFi is available.",
         todo_planner: "A minimal to-do list accessible from the nav bar. Items persist to the SD card. Useful for reading notes, wish lists, or errand reminders without leaving the device. Adds ~10 KB.",
+        anki_support: "Flashcard creation from the reader menu — captures the first 10 words of the current page as the card front. Browse, edit, and export cards from the web UI. JSON export for import into Anki Desktop. Adds ~8 KB.",
         dark_mode: "Inverts the display for night reading — white-on-black instead of black-on-paper. Toggle from the settings menu. Negligible binary cost; the flag controls whether the option is exposed at all.",
         visual_cover_picker: "Lets you choose cover art for books that lack an embedded thumbnail. Opens a scrollable image browser pointed at a configurable folder on the SD card. Requires Home Media Picker.",
         ble_wifi_provisioning: "Configure WiFi credentials by scanning a QR code or using the companion app over Bluetooth LE — no need to type a password on the device keyboard. Large binary cost (~673 KB) due to the BLE stack.",
@@ -3471,7 +3488,7 @@
       };
 
       const HUB_FEATURES = {
-        reader_hub: ["markdown", "xtc_support", "epub_support", "book_images", "hyphenation", "todo_planner"],
+        reader_hub: ["markdown", "xtc_support", "epub_support", "book_images", "hyphenation", "todo_planner", "anki_support"],
         interface_hub: ["opendyslexic_fonts", "notosans_fonts", "bookerly_fonts", "home_media_picker", "lyra_theme", "visual_cover_picker", "image_sleep", "web_pokedex_plugin", "pokemon_party", "dark_mode", "user_fonts"],
         network_hub: ["background_server", "background_server_on_charge", "background_server_always", "web_wifi_setup", "ble_wifi_provisioning", "ota_updates", "remote_keyboard_input", "integrations", "koreader_sync", "calibre_sync"],
         storage_hub: ["usb_mass_storage"],
@@ -3518,6 +3535,7 @@
           ota_updates: true,
           remote_keyboard_input: true,
           todo_planner: true,
+          anki_support: true,
           background_server: true,
           background_server_on_charge: true,
           background_server_always: true,
