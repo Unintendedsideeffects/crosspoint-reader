@@ -214,7 +214,7 @@ jobs:
         run: |
           set -euo pipefail
           # Find all first-party source files (exclude lib/ third-party code)
-          find src -name '*.cpp' -o -name '*.h' | sort | while read -r f; do
+          find src \( -name '*.cpp' -o -name '*.h' \) | sort | while read -r f; do
             echo "::group::$f"
             clang-tidy -p .pio/build/default "$f" --quiet 2>&1 || true
             echo "::endgroup::"
