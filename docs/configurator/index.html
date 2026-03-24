@@ -2567,6 +2567,7 @@
         <button class="drawer-item" data-tab="fonts">Fonts</button>
         <button class="drawer-item" data-tab="studio">Studio</button>
         <button class="drawer-item" data-tab="preview">Preview</button>
+        <button class="drawer-item" data-tab="plugins">Plugins</button>
       </div><!-- /.sidebar-drawer -->
 
       <!-- Active folder pane (row 2, full width) -->
@@ -2859,6 +2860,50 @@
             <div class="preview-meta" id="preview-meta"></div>
           </div>
           </div><!-- /.folder-pane#tab-preview -->
+
+          <!-- tab: plugins -->
+          <div class="folder-pane" id="tab-plugins">
+          <div class="panel">
+            <div class="panel-heading">Plugin Modules</div>
+
+            <div class="companion-row" id="plugin-anki">
+              <div style="flex: 1">
+                <div class="companion-title">Anki Flashcards</div>
+                <div class="companion-desc">
+                  Create flashcards while reading — the reader menu captures the first 10 words of the current page
+                  as the card front. Browse, edit card backs, and manage your deck from the device web UI at
+                  <code>/plugins/anki</code>. Export as JSON for import into Anki Desktop.
+                </div>
+                <div class="companion-desc" style="margin-top: 8px; font-size: 0.85rem; color: #888;">
+                  Requires <code>anki_support</code> in the feature grid. Cards are stored on the SD card
+                  at <code>/.crosspoint/anki_cards.json</code>.
+                </div>
+                <div class="actions" style="margin-top: 12px;">
+                  <a class="btn btn-outline" id="open-anki-plugin" data-device-link-path="/plugins/anki" href="http://crosspoint.local/plugins/anki" target="_blank" rel="noopener">Open on Device</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="companion-row" style="margin-top: 14px;" id="plugin-pokedex">
+              <div style="flex: 1">
+                <div class="companion-title">Pokédex Wallpaper</div>
+                <div class="companion-desc">
+                  Generate Pokémon wallpapers for sleep screens. The browser-side generator lives in the
+                  <strong>Studio</strong> tab; the device-side plugin is at <code>/plugins/pokedex</code>.
+                </div>
+                <div class="companion-desc" style="margin-top: 8px; font-size: 0.85rem; color: #888;">
+                  Requires <code>web_pokedex_plugin</code> in the feature grid. Enable <code>pokemon_party</code>
+                  for per-book party assignments.
+                </div>
+                <div class="actions" style="margin-top: 12px;">
+                  <a class="btn btn-outline" href="../plugins/x4-pokedex-grayscale/" target="_blank" rel="noopener">Open Generator</a>
+                  <a class="btn btn-outline" data-device-link-path="/plugins/pokedex" href="http://crosspoint.local/plugins/pokedex" target="_blank" rel="noopener">Open on Device</a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          </div><!-- /.folder-pane#tab-plugins -->
 
           <!-- tab: wifi -->
           <div class="folder-pane" id="tab-wifi">
