@@ -21,23 +21,26 @@ if [ ! -d "$ARDUINOJSON_DIR" ]; then
   exit 1
 fi
 
-gcc -c "$ROOT_DIR/lib/md4c/md4c.c" -I"$ROOT_DIR/lib/md4c" -o "$BUILD_DIR/md4c.o"
-gcc -c "$ROOT_DIR/lib/md4c/entity.c" -I"$ROOT_DIR/lib/md4c" -o "$BUILD_DIR/entity.o"
+gcc -c "$ROOT_DIR/lib/third_party/md4c/md4c.c" -I"$ROOT_DIR/lib/third_party/md4c" -o "$BUILD_DIR/md4c.o"
+gcc -c "$ROOT_DIR/lib/third_party/md4c/entity.c" -I"$ROOT_DIR/lib/third_party/md4c" -o "$BUILD_DIR/entity.o"
 
 # Enable the web pokedex/pokemon party routes so host tests compile and exercise them.
 g++ -std=c++20 -O2 -Wno-narrowing \
+  -fsanitize=address,undefined \
+  -fno-omit-frame-pointer \
   -DENABLE_WEB_POKEDEX_PLUGIN=1 \
   -DENABLE_POKEMON_PARTY=1 \
   -I"$ROOT_DIR" \
+  -I"$ROOT_DIR/test" \
   -I"$ROOT_DIR/test/mock" \
   -I"$ROOT_DIR/lib/FsHelpers" \
   -I"$ROOT_DIR/lib/Markdown" \
-  -I"$ROOT_DIR/lib/md4c" \
+  -I"$ROOT_DIR/lib/third_party/md4c" \
   -I"$ROOT_DIR/lib/Serialization" \
   -I"$ROOT_DIR/include" \
   -I"$ROOT_DIR/src" \
   -I"$ARDUINOJSON_DIR" \
-  "$ROOT_DIR/test/HostTests.cpp" \
+  "$ROOT_DIR/test/host/"*.cpp \
   "$ROOT_DIR/lib/FsHelpers/FsHelpers.cpp" \
   "$ROOT_DIR/lib/Markdown/MarkdownParser.cpp" \
   "$ROOT_DIR/src/core/features/FeatureCatalog.cpp" \
@@ -56,4 +59,8 @@ g++ -std=c++20 -O2 -Wno-narrowing \
   "$BUILD_DIR/entity.o" \
   -o "$BUILD_DIR/HostTests"
 
+export ASAN_OPTIONS="detect_leaks=1:halt_on_error=1"
+export UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
+
 "$BUILD_DIR/HostTests"
+"$BUILD_DIR/HostTests" --reporters=junit --out="$BUILD_DIR/results.xml"

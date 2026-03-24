@@ -6,7 +6,7 @@
 #include <string>
 
 #include "MappedInputManager.h"
-#include "ScreenComponents.h"
+#include "components/ScreenComponents.h"
 #include "activities/TaskShutdown.h"
 #include "fontIds.h"
 

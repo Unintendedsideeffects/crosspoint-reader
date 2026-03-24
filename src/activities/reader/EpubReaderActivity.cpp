@@ -21,7 +21,7 @@
 #include "MappedInputManager.h"
 #include "QrDisplayActivity.h"
 #include "ReaderUtils.h"
-#include "RecentBooksStore.h"
+#include "util/RecentBooksStore.h"
 #include "SpiBusMutex.h"
 #include "components/UITheme.h"
 #include "fontIds.h"

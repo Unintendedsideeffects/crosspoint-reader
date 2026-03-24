@@ -6,6 +6,7 @@
 #include <Logging.h>
 
 #include "MappedInputManager.h"
+#include "ScopedBuffer.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -30,17 +31,17 @@ void NotesActivity::loadNotes() {
 
   // Heap-allocate read buffer to stay within stack limits
   constexpr size_t BUF_SIZE = 4096;
-  auto* buf = static_cast<char*>(malloc(BUF_SIZE));
+  ScopedBuffer buf(BUF_SIZE);
   if (!buf) {
     LOG_ERR("NOTES", "malloc failed for notes read");
     return;
   }
 
-  const size_t bytesRead = Storage.readFileToBuffer(NOTES_FILE, buf, BUF_SIZE);
+  const size_t bytesRead = Storage.readFileToBuffer(NOTES_FILE, reinterpret_cast<char*>(buf.data()), BUF_SIZE);
   if (bytesRead > 0) {
     notes.reserve(16);
-    const char* p = buf;
-    const char* end = buf + bytesRead;
+    const char* p = reinterpret_cast<const char*>(buf.data());
+    const char* end = p + bytesRead;
     while (p < end && static_cast<int>(notes.size()) < MAX_NOTES) {
       const char* lineEnd = p;
       while (lineEnd < end && *lineEnd != '\n' && *lineEnd != '\r') {
@@ -56,7 +57,6 @@ void NotesActivity::loadNotes() {
     }
   }
 
-  free(buf);
   LOG_DBG("NOTES", "Loaded %zu notes", notes.size());
 }
 

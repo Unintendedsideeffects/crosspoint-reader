@@ -60,8 +60,7 @@ When disabled features are accessed, the system shows user-friendly errors:
 ### 4. Runtime Observability
 
 The core feature API (`core::FeatureCatalog`) provides runtime observability and
-dependency validation. `FeatureManifest` remains as a compatibility wrapper for
-existing call sites.
+dependency validation.
 
 ```cpp
 #include "core/features/FeatureCatalog.h"
@@ -266,33 +265,20 @@ FEATURE_METADATA = {
 }
 ```
 
-### Step 5: Update Feature Manifest
+### Step 5: Update Feature Catalog
 
-Add to `src/FeatureManifest.h`:
+Add to `src/core/features/FeatureCatalog.cpp`:
 
-```cpp
-#ifndef ENABLE_MY_FEATURE
-#define ENABLE_MY_FEATURE 1
-#endif
+1. Define dependencies if any:
+   ```cpp
+   constexpr const char* kRequiresMyFeatureAll[] = {"other_feature"};
+   ```
 
-class FeatureManifest {
-  // ... existing methods ...
-  static constexpr bool hasMyFeature() { return ENABLE_MY_FEATURE != 0; }
-
-  // Update toJson():
-  static String toJson() {
-    // ... existing fields ...
-    json += ",\"my_feature\":" + String(hasMyFeature() ? "true" : "false");
-    // ...
-  }
-
-  // Update printToSerial():
-  static void printToSerial() {
-    // ... existing output ...
-    Serial.printf("  My Feature:        %s\n", hasMyFeature() ? "ENABLED " : "DISABLED");
-  }
-};
-```
+2. Add to `kFeatureCatalog` array:
+   ```cpp
+   {"my_feature", "My Feature Name", ENABLE_MY_FEATURE != 0, kRequiresMyFeatureAll,
+    sizeof(kRequiresMyFeatureAll) / sizeof(kRequiresMyFeatureAll[0]), nullptr, 0},
+   ```
 
 ### Step 6: Add Tests
 
@@ -461,6 +447,6 @@ python scripts/measure_feature_sizes.py
 
 ---
 
-**Last Updated:** 2026-02-05
+**Last Updated:** 2026-03-24
 **Status:** Production-Ready (P0+P1 items complete)
 **Next Review:** Monthly (measure sizes, update docs)

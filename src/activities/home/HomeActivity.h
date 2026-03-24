@@ -4,7 +4,7 @@
 
 #include "../Activity.h"
 #include "./MyLibraryActivity.h"
-#include "RecentBooksStore.h"
+#include "util/RecentBooksStore.h"
 #include "util/ButtonNavigator.h"
 
 struct Rect;

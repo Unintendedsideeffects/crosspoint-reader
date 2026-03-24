@@ -10,8 +10,8 @@
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "KOReaderCredentialStore.h"
-#include "RecentBooksStore.h"
-#include "WifiCredentialStore.h"
+#include "util/RecentBooksStore.h"
+#include "util/WifiCredentialStore.h"
 
 // ---- CrossPointState ----
 

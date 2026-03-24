@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "RecentBooksStore.h"
+#include "util/RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "components/icons/book.h"
 #include "components/icons/book24.h"

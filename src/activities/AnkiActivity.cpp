@@ -4,7 +4,7 @@
 #include <I18n.h>
 #include <Logging.h>
 
-#include "ScreenComponents.h"
+#include "components/ScreenComponents.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 

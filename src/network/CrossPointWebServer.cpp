@@ -16,7 +16,7 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
-#include "RecentBooksStore.h"
+#include "util/RecentBooksStore.h"
 #include "SettingsList.h"
 #include "SpiBusMutex.h"
 #include "WebDAVHandler.h"
@@ -2543,4 +2543,4 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
   }
 }
 
-#include "WifiCredentialStore.h"
+#include "util/WifiCredentialStore.h"

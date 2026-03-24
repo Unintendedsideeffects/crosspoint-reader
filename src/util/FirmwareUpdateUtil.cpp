@@ -5,6 +5,7 @@
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Logging.h>
+#include <ScopedBuffer.h>
 #include <SpiBusMutex.h>
 
 // cppcheck-suppress missingInclude
@@ -63,7 +64,7 @@ bool FirmwareUpdateUtil::performLocalUpdate(GfxRenderer& renderer) {
   }
 
   const size_t bufferSize = 4096;
-  uint8_t* buffer = static_cast<uint8_t*>(malloc(bufferSize));
+  ScopedBuffer buffer(bufferSize);
   if (!buffer) {
     LOG_ERR("FWUPD", "Failed to allocate buffer");
     esp_ota_abort(updateHandle);
@@ -79,15 +80,14 @@ bool FirmwareUpdateUtil::performLocalUpdate(GfxRenderer& renderer) {
     size_t bytesRead;
     {
       SpiBusMutex::Guard guard;
-      bytesRead = firmwareFile.read(buffer, bufferSize);
+      bytesRead = firmwareFile.read(buffer.data(), bufferSize);
     }
 
     if (bytesRead == 0) break;
 
-    err = esp_ota_write(updateHandle, buffer, bytesRead);
+    err = esp_ota_write(updateHandle, buffer.data(), bytesRead);
     if (err != ESP_OK) {
       LOG_ERR("FWUPD", "esp_ota_write failed: %s", esp_err_to_name(err));
-      free(buffer);
       esp_ota_abort(updateHandle);
       SpiBusMutex::Guard guard;
       firmwareFile.close();
@@ -120,7 +120,6 @@ bool FirmwareUpdateUtil::performLocalUpdate(GfxRenderer& renderer) {
     }
   }
 
-  free(buffer);
   {
     SpiBusMutex::Guard guard;
     firmwareFile.close();

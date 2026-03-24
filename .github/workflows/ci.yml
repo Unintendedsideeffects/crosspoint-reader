@@ -190,6 +190,36 @@ jobs:
       - name: Run cppcheck
         run: pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high
 
+  clang-tidy:
+    # Non-blocking: intentionally NOT in test-status.needs during rollout.
+    # Produces warnings visible in the Actions tab without failing PRs.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO Core
+        run: python -m pip install -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.1.19.zip
+
+      - name: Generate compile_commands.json
+        run: pio run -t compiledb
+
+      - name: Run clang-tidy on src/
+        run: |
+          set -euo pipefail
+          # Find all first-party source files (exclude lib/ third-party code)
+          find src -name '*.cpp' -o -name '*.h' | sort | while read -r f; do
+            echo "::group::$f"
+            clang-tidy -p .pio/build/default "$f" --quiet 2>&1 || true
+            echo "::endgroup::"
+          done
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -243,6 +273,8 @@ jobs:
           flash_line="$(grep -E "Flash:\\s" -m1 pio.log || true)"
           echo "ram_line=${ram_line}" >> "$GITHUB_OUTPUT"
           echo "flash_line=${flash_line}" >> "$GITHUB_OUTPUT"
+          if [ -z "$ram_line" ]; then echo "::warning::RAM usage not found in build log — PlatformIO output format may have changed"; fi
+          if [ -z "$flash_line" ]; then echo "::warning::Flash usage not found in build log — PlatformIO output format may have changed"; fi
           {
             echo "## Firmware build stats"
             if [ -n "$ram_line" ]; then echo "- ${ram_line}"; else echo "- RAM: not found"; fi

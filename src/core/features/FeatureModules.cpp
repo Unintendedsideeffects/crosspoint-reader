@@ -39,7 +39,7 @@ static constexpr int kDefaultThumbHeight = 240;
 #endif
 
 #if ENABLE_USER_FONTS
-#include "UserFontManager.h"
+#include "util/UserFontManager.h"
 #endif
 
 #if ENABLE_TODO_PLANNER

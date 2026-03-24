@@ -12,7 +12,7 @@
 
 #include "CrossPointSettings.h"
 #include "SpiBusMutex.h"
-#include "UserFontManager.h"
+#include "util/UserFontManager.h"
 #include "core/features/FeatureCatalog.h"
 #include "core/registries/LifecycleRegistry.h"
 #include "core/registries/WebRouteRegistry.h"

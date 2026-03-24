@@ -21,15 +21,13 @@ This repository maintains a close relationship with the [official upstream repos
 ## Branch Strategy
 
 ### `master`
-The `master` branch is the stable base of this repository. It is intended to remain in sync with the upstream project. Use this branch if you want the most stable experience equivalent to the official release.
+The `master` branch is the stable release branch of this fork. While it incorporates upstream stability, it also includes the core "Fork Drift" capabilities (configurator, modular flags, etc.) that have been validated in `fork-drift`. Use this branch for a stable, feature-complete Fork Drift experience.
 
 ### `fork-drift`
-The `fork-drift` branch is the primary active development branch for this fork. It contains:
--   **Active Bug Fixes:** Patches for issues currently being tracked on [GitHub Issues](https://github.com/Unintendedsideeffects/crosspoint-reader/issues).
--   **New Features:** Experimental plugins and UI enhancements (e.g., `home_media_picker`).
--   **Drifting Changes:** Modifications that deviate from upstream to support specific fork-only capabilities like the web configurator integration.
-
-**Note:** The `fork-drift` branch may experience frequent changes and is where most active development occurs.
+The `fork-drift` branch is the primary active development branch for this fork. It contains experimental features and rapid iterations before they are merged into `master`.
+...
+---
+**Last Updated:** 2026-03-24
 
 ## Contribution Workflow
 

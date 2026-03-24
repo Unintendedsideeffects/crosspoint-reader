@@ -1,0 +1,11 @@
+{
+  "name": "md4c",
+  "version": "0.5.2",
+  "description": "Markdown parser for C (CommonMark compliant)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mity/md4c.git"
+  },
+  "frameworks": "*",
+  "platforms": "*"
+}

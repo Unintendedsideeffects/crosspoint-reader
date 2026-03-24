@@ -12,8 +12,8 @@
 
 #include "../util/ConfirmationActivity.h"
 #include "MappedInputManager.h"
-#include "RecentBooksStore.h"
-#include "ScreenComponents.h"
+#include "util/RecentBooksStore.h"
+#include "components/ScreenComponents.h"
 #include "SpiBusMutex.h"
 #include "activities/TaskShutdown.h"
 #include "components/UITheme.h"

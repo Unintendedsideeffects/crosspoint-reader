@@ -9,7 +9,7 @@
 #include <map>
 
 #include "MappedInputManager.h"
-#include "WifiCredentialStore.h"
+#include "util/WifiCredentialStore.h"
 #include "activities/TaskShutdown.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"

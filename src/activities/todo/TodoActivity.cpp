@@ -9,7 +9,7 @@
 
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
-#include "ScreenComponents.h"
+#include "components/ScreenComponents.h"
 #include "SpiBusMutex.h"
 #include "activities/TaskShutdown.h"
 #include "activities/util/KeyboardEntryActivity.h"

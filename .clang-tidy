@@ -1,0 +1,33 @@
+---
+# Clang-tidy configuration for crosspoint-reader (ESP32-C3 embedded C++20)
+#
+# Intentionally conservative check set for embedded:
+# - bugprone-*: catch common logic errors
+# - performance-*: avoid unnecessary copies/allocations (critical at 380KB RAM)
+# - modernize-use-nullptr: prefer nullptr over NULL/0
+# - readability-redundant-*: remove dead code noise
+#
+# Excluded modernize checks that are too opinionated for embedded:
+# - modernize-use-auto (explicit types aid review in constrained code)
+# - modernize-use-trailing-return-type (noise, no benefit)
+# - modernize-avoid-c-arrays (C arrays are idiomatic in embedded)
+
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  performance-*,
+  modernize-use-nullptr,
+  readability-redundant-control-flow,
+  readability-redundant-declaration,
+  readability-redundant-string-cstr
+
+# Treat warnings as non-fatal (CI job is non-blocking during rollout)
+WarningsAsErrors: ''
+
+HeaderFilterRegex: 'src/.*\.h$'
+
+CheckOptions:
+  - key: bugprone-argument-comment.StrictMode
+    value: false

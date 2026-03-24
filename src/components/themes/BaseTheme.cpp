@@ -10,7 +10,7 @@
 #include <string>
 
 #include "I18n.h"
-#include "RecentBooksStore.h"
+#include "util/RecentBooksStore.h"
 #include "SpiBusMutex.h"
 #include "components/UITheme.h"
 #include "fontIds.h"

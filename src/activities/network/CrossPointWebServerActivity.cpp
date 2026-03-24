@@ -14,7 +14,7 @@
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "NetworkModeSelectionActivity.h"
-#include "ScreenComponents.h"
+#include "components/ScreenComponents.h"
 #include "WifiSelectionActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"

@@ -26,7 +26,7 @@ Because the ESP32-C3 has limited flash and RAM, the configurator lets you choose
 Compared with `upstream/master`, this branch adds fork-specific user-facing capabilities:
 
 - Web Build Configurator UI (`docs/configurator`) for custom firmware composition
-- Modular compile-time feature flag system (`include/FeatureFlags.h`, `src/FeatureManifest.h`)
+- Modular compile-time feature flag system (`include/FeatureFlags.h`, `src/core/features/FeatureCatalog.h`)
 - Markdown/Obsidian reader pipeline (`lib/Markdown`, `MarkdownReaderActivity`)
 - TODO planner activities and daily storage flow (`src/activities/todo`)
 - Background web server runtime modes (`src/network/BackgroundWebServer.*`)
@@ -38,14 +38,13 @@ Compared with `upstream/master`, this branch adds fork-specific user-facing capa
 - Fork release-channel/configuration docs and OTA catalog metadata (`docs/ota`, configurator docs)
 - **Captive portal in AP/hotspot mode** — when the device creates a hotspot, any unrecognised HTTP request is redirected to the home page (302) rather than returning 404, triggering the OS "Sign in to network" notification on iOS, Android, and Windows automatically (see [`docs/fork-strategy.md`](./docs/fork-strategy.md#behavioral-drifts))
 
-For full branch intent and maintenance model, see [`docs/fork-strategy.md`](./docs/fork-strategy.md).
-
 ## Fork Branch Strategy
 
-This repository tracks upstream while keeping dedicated branches for specific goals:
+This repository maintains dedicated branches for its goals:
 
-- `master`: Synchronized with upstream `crosspoint-reader/master`.
-- `fork-drift`: Active development for experimental and fork-specific capabilities (configurator, plugins, and UI drift).
+- `master`: Stable release branch for the **Fork Drift** firmware.
+- `fork-drift`: Active development for experimental features and rapid iteration.
+- `upstream-sync`: (Internal) Maintains direct parity with `crosspoint-reader/master` for merge-back flows.
 
 For the full rationale, see [`docs/fork-strategy.md`](./docs/fork-strategy.md).
 

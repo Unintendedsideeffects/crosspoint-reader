@@ -14,7 +14,7 @@
 
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
-#include "RecentBooksStore.h"
+#include "util/RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/PokemonBookDataStore.h"

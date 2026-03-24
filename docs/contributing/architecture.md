@@ -71,6 +71,7 @@ The firmware utilizes a registry-based system in `src/core/registries/` to manag
 - **LifecycleRegistry**: Hooks into the boot, sleep, and wake cycles.
 - **SyncServiceRegistry**: Manages background synchronization services (e.g., Anki, KOReader).
 - **SettingsActionRegistry**: Registers custom actions for the settings menu.
+- **FeatureCatalog**: Discovery mechanism for compile-time enabled features and their metadata.
 
 ## Feature Modules
 

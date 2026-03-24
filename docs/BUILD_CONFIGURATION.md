@@ -40,7 +40,7 @@ uv run pio run -e custom --target upload
 ### Extended Fonts
 
 **Flag:** `ENABLE_EXTENDED_FONTS`
-**Size Impact:** ~2.5MB
+**Size Impact:** ~1.9MB
 **Default:** Enabled
 
 Includes additional Bookerly and Noto Sans font sizes.
@@ -65,7 +65,7 @@ Includes additional Bookerly and Noto Sans font sizes.
 ### OpenDyslexic Font Pack
 
 **Flag:** `ENABLE_OPENDYSLEXIC_FONTS`
-**Size Impact:** ~1.0MB
+**Size Impact:** ~2.6MB
 **Default:** Disabled
 **Depends on:** `ENABLE_EXTENDED_FONTS`
 
@@ -124,7 +124,7 @@ Controls inline image rendering inside EPUB and Markdown books.
 ### Markdown/Obsidian
 
 **Flag:** `ENABLE_MARKDOWN`
-**Size Impact:** ~158KB
+**Size Impact:** ~240KB
 **Default:** Enabled
 
 Full Markdown rendering with Obsidian vault compatibility.
@@ -331,7 +331,7 @@ with reading progress driving level and evolution state.
 
 ### Lean Profile
 
-**Size:** ~2.6MB (~3.8MB savings from full profile)
+**Size:** ~2.3MB (~3.7MB savings from full profile)
 
 ```bash
 uv run python scripts/generate_build_config.py --profile lean
@@ -356,7 +356,7 @@ uv run python scripts/generate_build_config.py --profile lean
 
 ### Standard Profile (Recommended)
 
-**Size:** ~6.2MB
+**Size:** ~5.5MB
 
 ```bash
 uv run python scripts/generate_build_config.py --profile standard
@@ -384,7 +384,7 @@ uv run python scripts/generate_build_config.py --profile standard
 
 ### Full Profile
 
-**Size:** ~6.4MB (feature-rich build, tight fit)
+**Size:** ~6.0MB (feature-rich build, tight fit)
 
 ```bash
 uv run python scripts/generate_build_config.py --profile full
@@ -531,9 +531,9 @@ The ESP32-C3 in the Xteink X4 has:
 
 | Build Type | Size | Flash Usage | Books Space |
 |------------|------|-------------|-------------|
-| Lean | ~2.6MB | 41% | Maximum |
-| Standard | ~6.2MB | 97% | Good |
-| Full | ~6.4MB | 99-100% | Tight |
+| Lean | ~2.3MB | 36% | Maximum |
+| Standard | ~5.5MB | 86% | Good |
+| Full | ~6.0MB | 94% | Tight |
 
 *Note: Full build currently fits, but leaves very little headroom. Test before deploying.
 
@@ -723,3 +723,7 @@ Incompatible bundles are shown in the picker with a warning and cannot be select
 ### Catalog Location
 
 The catalog JSON is stored at `docs/ota/feature-store-catalog.json` in the repository and served from the GitHub releases page at runtime.
+
+---
+
+**Last Updated:** 2026-03-24

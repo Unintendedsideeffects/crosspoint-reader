@@ -28,7 +28,7 @@ pushd "$ROOT_DIR" >/dev/null
   -Ilib/EpdFont \
   -Ilib/EpdFont/builtinFonts \
   -Ilib/InflateReader \
-  -Ilib/uzlib/src \
+  -Ilib/third_party/uzlib/src \
   -Ilib/Utf8 \
   -Ilib/Logging \
   -Ilib/Serialization \
@@ -50,7 +50,7 @@ pushd "$ROOT_DIR" >/dev/null
   lib/Logging/Logging.cpp \
   lib/hal/HalDisplay.cpp \
   open-x4-sdk/libs/display/EInkDisplay/src/EInkDisplay.cpp \
-  -x c lib/uzlib/src/tinflate.c \
+  -x c lib/third_party/uzlib/src/tinflate.c \
   -o "$BIN_PATH"
 
 "$BIN_PATH" "$OUT_DIR"

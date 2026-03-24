@@ -148,6 +148,8 @@ jobs:
           set -euo pipefail
           ram_line="$(grep -E "RAM:\\s" -m1 pio.log || true)"
           flash_line="$(grep -E "Flash:\\s" -m1 pio.log || true)"
+          if [ -z "$ram_line" ]; then echo "::warning::RAM usage not found in build log — PlatformIO output format may have changed"; fi
+          if [ -z "$flash_line" ]; then echo "::warning::Flash usage not found in build log — PlatformIO output format may have changed"; fi
           {
             echo "### Firmware Stats (${{ matrix.profile }})"
             echo ""
@@ -279,6 +281,8 @@ jobs:
           set -euo pipefail
           ram_line="$(grep -E "RAM:\\s" -m1 pio.log || true)"
           flash_line="$(grep -E "Flash:\\s" -m1 pio.log || true)"
+          if [ -z "$ram_line" ]; then echo "::warning::RAM usage not found in build log — PlatformIO output format may have changed"; fi
+          if [ -z "$flash_line" ]; then echo "::warning::Flash usage not found in build log — PlatformIO output format may have changed"; fi
           {
             echo "### Firmware Stats (gh_latest)"
             echo ""

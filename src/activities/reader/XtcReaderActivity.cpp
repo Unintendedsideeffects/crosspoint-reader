@@ -13,9 +13,10 @@
 #include <Logging.h>
 
 #include "CrossPointSettings.h"
+#include "ScopedBuffer.h"
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
-#include "RecentBooksStore.h"
+#include "util/RecentBooksStore.h"
 #include "SpiBusMutex.h"
 #include "XtcReaderChapterSelectionActivity.h"
 #include "activities/TaskShutdown.h"
@@ -161,7 +162,7 @@ void XtcReaderActivity::renderPage() {
   }
 
   // Allocate page buffer
-  uint8_t* pageBuffer = static_cast<uint8_t*>(malloc(pageBufferSize));
+  ScopedBuffer pageBuffer(pageBufferSize);
   if (!pageBuffer) {
     LOG_ERR("XTR", "Failed to allocate page buffer (%lu bytes)", pageBufferSize);
     renderer.clearScreen();
@@ -171,10 +172,9 @@ void XtcReaderActivity::renderPage() {
   }
 
   // Load page data
-  size_t bytesRead = xtc->loadPage(currentPage, pageBuffer, pageBufferSize);
+  size_t bytesRead = xtc->loadPage(currentPage, pageBuffer.data(), pageBufferSize);
   if (bytesRead == 0) {
     LOG_ERR("XTR", "Failed to load page %lu", currentPage);
-    free(pageBuffer);
     renderer.clearScreen();
     renderer.drawCenteredText(UI_12_FONT_ID, 300, "Page load error", true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
@@ -197,8 +197,8 @@ void XtcReaderActivity::renderPage() {
     // - Grayscale: 0=White, 1=Dark Grey, 2=Light Grey, 3=Black
 
     const size_t planeSize = (static_cast<size_t>(pageWidth) * pageHeight + 7) / 8;
-    const uint8_t* plane1 = pageBuffer;              // Bit1 plane
-    const uint8_t* plane2 = pageBuffer + planeSize;  // Bit2 plane
+    const uint8_t* plane1 = pageBuffer.data();              // Bit1 plane
+    const uint8_t* plane2 = pageBuffer.data() + planeSize;  // Bit2 plane
     const size_t colBytes = (pageHeight + 7) / 8;    // Bytes per column (100 for 800 height)
 
     // Lambda to get pixel value at (x, y)
@@ -284,8 +284,6 @@ void XtcReaderActivity::renderPage() {
     // Cleanup grayscale buffers with current frame buffer
     renderer.cleanupGrayscaleWithFrameBuffer();
 
-    free(pageBuffer);
-
     LOG_INF("XTR", "Rendered page %lu/%lu (2-bit grayscale)", currentPage + 1, xtc->getPageCount());
     return;
   } else {
@@ -299,7 +297,7 @@ void XtcReaderActivity::renderPage() {
         // Read source pixel (MSB first, bit 7 = leftmost pixel)
         const size_t srcByte = srcRowStart + srcX / 8;
         const size_t srcBit = 7 - (srcX % 8);
-        const bool isBlack = !((pageBuffer[srcByte] >> srcBit) & 1);  // XTC: 0 = black, 1 = white
+        const bool isBlack = !((pageBuffer.data()[srcByte] >> srcBit) & 1);  // XTC: 0 = black, 1 = white
 
         if (isBlack) {
           renderer.drawPixel(srcX, srcY, true);
@@ -308,8 +306,6 @@ void XtcReaderActivity::renderPage() {
     }
   }
   // White pixels are already cleared by clearScreen()
-
-  free(pageBuffer);
 
   // XTC pages already have status bar pre-rendered, no need to add our own
 

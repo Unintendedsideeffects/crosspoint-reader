@@ -10,7 +10,7 @@
 #include <string>
 
 #include "CrossPointSettings.h"
-#include "RecentBooksStore.h"
+#include "util/RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "components/icons/cover.h"
 #include "components/icons/folder.h"

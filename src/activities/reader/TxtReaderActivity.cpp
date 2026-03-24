@@ -12,8 +12,9 @@
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "ReaderUtils.h"
-#include "RecentBooksStore.h"
-#include "ScreenComponents.h"
+#include "util/RecentBooksStore.h"
+#include "ScopedBuffer.h"
+#include "components/ScreenComponents.h"
 #include "SpiBusMutex.h"
 #include "activities/TaskShutdown.h"
 #include "components/UITheme.h"
@@ -180,7 +181,7 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<StyledLine>&
   outLines.clear();
   size_t fileSize = 0;
   size_t chunkSize = 0;
-  auto* buffer = static_cast<uint8_t*>(malloc(CHUNK_SIZE + 1));
+  ScopedBuffer buffer(CHUNK_SIZE + 1);
   if (!buffer) {
     LOG_ERR("TRS", "Failed to allocate %zu bytes", chunkSize);
     return false;
@@ -190,18 +191,16 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<StyledLine>&
     SpiBusMutex::Guard guard;
     fileSize = txt->getFileSize();
     if (offset >= fileSize) {
-      free(buffer);
       return false;
     }
 
     // Read a chunk from file
     chunkSize = std::min(CHUNK_SIZE, fileSize - offset);
-    if (!txt->readContent(buffer, offset, chunkSize)) {
-      free(buffer);
+    if (!txt->readContent(buffer.data(), offset, chunkSize)) {
       return false;
     }
   }
-  buffer[chunkSize] = '\0';
+  buffer.data()[chunkSize] = '\0';
 
   // Parse lines from buffer
   size_t pos = 0;
@@ -209,7 +208,7 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<StyledLine>&
   while (pos < chunkSize && static_cast<int>(outLines.size()) < linesPerPage) {
     // Find end of line
     size_t lineEnd = pos;
-    while (lineEnd < chunkSize && buffer[lineEnd] != '\n') {
+    while (lineEnd < chunkSize && buffer.data()[lineEnd] != '\n') {
       lineEnd++;
     }
 
@@ -225,11 +224,11 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<StyledLine>&
     size_t lineContentLen = lineEnd - pos;
 
     // Check for carriage return
-    bool hasCR = (lineContentLen > 0 && buffer[pos + lineContentLen - 1] == '\r');
+    bool hasCR = (lineContentLen > 0 && buffer.data()[pos + lineContentLen - 1] == '\r');
     size_t displayLen = hasCR ? lineContentLen - 1 : lineContentLen;
 
     // Extract raw line content (without CR/LF)
-    std::string rawLine(reinterpret_cast<char*>(buffer + pos), displayLen);
+    std::string rawLine(reinterpret_cast<char*>(buffer.data() + pos), displayLen);
 
     // Apply markdown block-level preprocessing if needed.
     // Inline markers (**, *, `code`, etc.) are left in the text here and stripped at render
@@ -320,8 +319,6 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<StyledLine>&
   if (nextOffset > fileSize) {
     nextOffset = fileSize;
   }
-
-  free(buffer);
 
   return !outLines.empty();
 }

@@ -7,7 +7,7 @@
 #include <WiFi.h>
 
 #include "SpiBusMutex.h"
-#include "WifiCredentialStore.h"
+#include "util/WifiCredentialStore.h"
 #include "core/features/FeatureCatalog.h"
 #include "core/registries/WebRouteRegistry.h"
 

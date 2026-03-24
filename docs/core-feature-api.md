@@ -8,7 +8,7 @@ bootstrapping from compile-time feature wiring.
 - Keep core boot logic stable even when feature flags evolve.
 - Expose one runtime catalog for feature observability (`/api/plugins`, logs).
 - Validate feature dependencies in a single place.
-- Preserve existing `FeatureManifest` call sites for compatibility.
+- Centralize all runtime feature queries in `FeatureCatalog`.
 
 ## Components
 
@@ -27,9 +27,9 @@ bootstrapping from compile-time feature wiring.
 - `src/core/CoreBootstrap.h/.cpp`
   - Initializes and validates the feature system from core setup.
   - Stores initialization status for future startup policies.
-- `src/FeatureManifest.h`
-  - Keeps `hasX()` compile-time helpers.
-  - Delegates runtime methods to `core::FeatureCatalog`.
+- `include/FeatureFlags.h`
+  - Compile-time feature toggles (`ENABLE_*` macros).
+  - Used by `FeatureCatalog` descriptors and `#if` guards in Registration units.
 
 ## Startup Integration
 
@@ -55,5 +55,5 @@ across `main.cpp`.
 2. Add the descriptor entry in `FeatureCatalog.cpp`.
 3. Add dependency metadata (`requiresAll` / `requiresAny`) if needed.
 4. Add startup behavior to the appropriate `FeatureLifecycle` hook.
-5. Add/update `FeatureManifest::hasX()` compatibility helper.
+5. Register the feature in `CoreBootstrap.cpp` (`registerFeature()` call).
 6. Update tests in `test/HostTests.cpp`.

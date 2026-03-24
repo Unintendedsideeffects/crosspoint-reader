@@ -1,0 +1,2 @@
+Third-party vendored libraries. See library.json in each directory for version info.
+Do not modify these files — apply patches via PlatformIO extra_scripts instead.

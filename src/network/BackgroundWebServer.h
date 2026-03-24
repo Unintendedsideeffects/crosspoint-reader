@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "WifiCredentialStore.h"
+#include "util/WifiCredentialStore.h"
 
 class CrossPointWebServer;
 
