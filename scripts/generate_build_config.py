@@ -148,6 +148,12 @@ FEATURES = {
         size_kb=6,
         description='Standalone daily TODO/agenda planner with .md/.txt fallback and web quick-entry'
     ),
+    'anki_support': Feature(
+        name='Anki Support',
+        flag='ENABLE_ANKI_SUPPORT',
+        size_kb=8,
+        description='Flashcard creation from the reader menu — captures the first 10 words of the current page as the card front. Browse, edit, and export cards from the web UI. JSON export for import into Anki Desktop.'
+    ),
     'dark_mode': Feature(
         name='Dark Mode',
         flag='ENABLE_DARK_MODE',
@@ -354,6 +360,13 @@ FEATURE_METADATA = {
         conflicts=[],
         recommends=['markdown']
     ),
+    'anki_support': FeatureMetadata(
+        implemented=True,
+        stable=True,
+        requires=[],
+        conflicts=[],
+        recommends=[]
+    ),
     'dark_mode': FeatureMetadata(
         implemented=True,
         stable=True,
@@ -535,6 +548,7 @@ PROFILES = {
             'lyra_theme': True,
             'ota_updates': True,
             'todo_planner': True,
+            'anki_support': True,
             'background_server': True,
             'background_server_on_charge': True,
             'background_server_always': True,

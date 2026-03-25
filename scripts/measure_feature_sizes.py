@@ -51,6 +51,7 @@ FEATURES = [
     'lyra_theme',
     'ota_updates',
     'todo_planner',
+    'anki_support',
     'remote_keyboard_input',
     'dark_mode',
     'visual_cover_picker',
