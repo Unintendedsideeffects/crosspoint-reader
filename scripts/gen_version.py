@@ -90,7 +90,13 @@ def get_git_short_sha() -> str:
 
 
 def get_base_version() -> str:
-    project_dir = env.get("PROJECT_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # noqa: F821
+    project_dir = env.get("PROJECT_DIR")  # noqa: F821
+    if not project_dir:
+        script_path = globals().get("__file__")
+        if script_path:
+            project_dir = os.path.dirname(os.path.dirname(os.path.abspath(script_path)))
+        else:
+            project_dir = os.getcwd()
     ini_path = os.path.join(project_dir, "platformio.ini")
     if not os.path.isfile(ini_path):
         return "0.0.0"
