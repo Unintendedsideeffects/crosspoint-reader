@@ -151,7 +151,7 @@ FEATURES = {
     'anki_support': Feature(
         name='Anki Support',
         flag='ENABLE_ANKI_SUPPORT',
-        size_kb=8,
+        size_kb=10,
         description='Flashcard creation from the reader menu — captures the first 10 words of the current page as the card front. Browse, edit, and export cards from the web UI. JSON export for import into Anki Desktop.'
     ),
     'dark_mode': Feature(
