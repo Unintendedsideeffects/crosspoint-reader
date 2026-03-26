@@ -15,6 +15,23 @@ import zipfile
 from pathlib import Path
 
 
+class _NoAuthOnRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Strip Authorization header before following cross-origin redirects.
+
+    GitHub's artifact zip endpoint redirects to Azure Blob Storage with a
+    pre-signed SAS URL. Azure rejects requests that carry a Bearer token
+    alongside its own SAS query-param auth, returning HTTP 401.
+    """
+
+    def redirect_request(
+        self, req, fp, code, msg, headers, newurl
+    ):
+        new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_req is not None:
+            new_req.remove_header("Authorization")
+        return new_req
+
+
 def main() -> None:
     archive_url = os.environ["ARCHIVE_URL"]
     token = os.environ["GH_TOKEN"]
@@ -29,7 +46,8 @@ def main() -> None:
         },
     )
 
-    with urllib.request.urlopen(request) as response:
+    opener = urllib.request.build_opener(_NoAuthOnRedirectHandler)
+    with opener.open(request) as response:
         zip_bytes = response.read()
 
     dest = Path(output_dir)
