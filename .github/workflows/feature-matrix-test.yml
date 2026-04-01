@@ -136,7 +136,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: firmware-${{ matrix.id }}
+          name: profile-test-${{ matrix.id }}
           path: |
             .pio-${{ matrix.id }}/custom/firmware.bin
             platformio-custom.ini
