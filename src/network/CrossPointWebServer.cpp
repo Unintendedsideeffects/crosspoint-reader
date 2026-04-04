@@ -354,11 +354,19 @@ void CrossPointWebServer::begin() {
 }
 
 void CrossPointWebServer::abortWsUpload(const char* tag) {
-  wsUploadFile.close();
+  {
+    SpiBusMutex::Guard guard;
+    wsUploadFile.close();
+  }
   String filePath = wsUploadPath;
   if (!filePath.endsWith("/")) filePath += "/";
   filePath += wsUploadFileName;
-  if (Storage.remove(filePath.c_str())) {
+  bool removed = false;
+  {
+    SpiBusMutex::Guard guard;
+    removed = Storage.remove(filePath.c_str());
+  }
+  if (removed) {
     LOG_DBG(tag, "Deleted incomplete upload: %s", filePath.c_str());
   } else {
     LOG_DBG(tag, "Failed to delete incomplete upload: %s", filePath.c_str());
@@ -984,8 +992,13 @@ void CrossPointWebServer::handleDownload() const {
   uint8_t buffer[chunkSize];
 
   bool downloadOk = true;
-  while (downloadOk && file.available()) {
-    int result = file.read(buffer, chunkSize);
+  while (downloadOk) {
+    int result = 0;
+    {
+      SpiBusMutex::Guard guard;
+      if (!file.available()) break;
+      result = file.read(buffer, chunkSize);
+    }
     if (result <= 0) break;
     size_t bytesRead = static_cast<size_t>(result);
     size_t totalWritten = 0;
@@ -1000,28 +1013,11 @@ void CrossPointWebServer::handleDownload() const {
     }
   }
   client.clear();
-  file.close();
+  {
+    SpiBusMutex::Guard guard;
+    file.close();
+  }
 }
-
-// Diagnostic counters for upload performance analysis
-static unsigned long uploadStartTime = 0;
-static unsigned long totalWriteTime = 0;
-static size_t writeCount = 0;
-
-static bool flushUploadBuffer(CrossPointWebServer::UploadState& state) {
-  if (state.bufferPos > 0 && state.file) {
-    esp_task_wdt_reset();  // Reset watchdog before potentially slow SD write
-    const unsigned long writeStart = millis();
-    const size_t written = state.file.write(state.buffer.data(), state.bufferPos);
-    totalWriteTime += millis() - writeStart;
-    writeCount++;
-    esp_task_wdt_reset();  // Reset watchdog after SD write
-
-    if (written != state.bufferPos) {
-      LOG_DBG("WEB", "[UPLOAD] Buffer flush failed: expected %d, wrote %d", state.bufferPos, written);
-      state.bufferPos = 0;
-      return false;
-    }
 
 void CrossPointWebServer::handleUpload() {
   if (!running || !server) {
@@ -2462,6 +2458,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
       wsUploadReceived = 0;
       wsLastProgressSent = 0;
       wsUploadStartTime = millis();
+      wsUploadClientNum = num;
       wsUploadOwnerClient = num;
       wsUploadOwnerValid = true;
 
