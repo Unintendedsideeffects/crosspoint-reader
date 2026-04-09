@@ -71,13 +71,13 @@ void EpdFont::getTextBounds(const char* string, const int startX, const int star
     return;
   }
 
-  int32_t cursorXFP = fp4::fromPixel(startX);
-  int averageAdvanceX = 0;
-  bool averageAdvanceComputed = false;
   int lastBaseX = startX;
   int lastBaseAdvanceFP = 0;
   int lastBaseTop = 0;
   bool hasBaseGlyph = false;
+  int32_t prevAdvanceFP = 0;  // 12.4 fixed-point: prev glyph's advance + next kern for snap
+  int averageAdvanceX = 0;
+  bool averageAdvanceComputed = false;
   constexpr int MIN_COMBINING_GAP_PX = 1;
   uint32_t cp;
   uint32_t prevCp = 0;
@@ -95,8 +95,11 @@ void EpdFont::getTextBounds(const char* string, const int startX, const int star
       }
       LOG_WRN("EPF", "Missing glyph U+%04lX; advancing by %dpx", static_cast<unsigned long>(cp), averageAdvanceX);
       if (!isCombining) {
-        cursorXFP += fp4::fromPixel(averageAdvanceX);
+        lastBaseX += fp4::toPixel(prevAdvanceFP);
+        lastBaseX += averageAdvanceX;
         prevCp = 0;
+        prevAdvanceFP = 0;
+        hasBaseGlyph = false;
       }
       continue;
     }
@@ -110,12 +113,12 @@ void EpdFont::getTextBounds(const char* string, const int startX, const int star
     }
 
     if (!isCombining && prevCp != 0) {
-      cursorXFP += getKerning(prevCp, cp);
+      const auto kernFP = getKerning(prevCp, cp);  // 4.4 fixed-point kern
+      lastBaseX += fp4::toPixel(prevAdvanceFP + kernFP);
     }
 
-    const int cursorXPixels = fp4::toPixel(cursorXFP);
-    const int glyphBaseX =
-        (isCombining && hasBaseGlyph) ? (lastBaseX + fp4::toPixel(lastBaseAdvanceFP / 2)) : cursorXPixels;
+    const int glyphBaseX = (isCombining && hasBaseGlyph) ? (lastBaseX + fp4::toPixel(lastBaseAdvanceFP / 2))
+                                                         : lastBaseX;
     const int glyphBaseY = startY - raiseBy;
 
     *minX = std::min(*minX, glyphBaseX + glyph->left);
@@ -124,11 +127,10 @@ void EpdFont::getTextBounds(const char* string, const int startX, const int star
     *maxY = std::max(*maxY, glyphBaseY + glyph->top);
 
     if (!isCombining) {
-      lastBaseX = cursorXPixels;
       lastBaseAdvanceFP = glyph->advanceX;
       lastBaseTop = glyph->top;
       hasBaseGlyph = true;
-      cursorXFP += glyph->advanceX;
+      prevAdvanceFP = lastBaseAdvanceFP;
       prevCp = cp;
     }
   }

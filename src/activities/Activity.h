@@ -26,6 +26,8 @@ class Activity {
   ActivityResultHandler resultHandler;
   ActivityResult result;
 
+  void onGoHome() { activityManager.goHome(); }
+
   bool isRenderPending() const { return renderPending.load(); }
 
  private:

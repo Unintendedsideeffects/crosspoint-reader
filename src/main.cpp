@@ -39,8 +39,6 @@
 #include "util/ScreenshotUtil.h"
 #include "util/UsbMscPrompt.h"
 
-HalDisplay display;
-HalGPIO gpio;
 MappedInputManager mappedInputManager(gpio);
 GfxRenderer renderer(display);
 ActivityManager activityManager(renderer, mappedInputManager);
@@ -244,7 +242,6 @@ void verifyPowerButtonDuration() {
     powerManager.startDeepSleep(gpio);
   }
 }
-
 void waitForPowerRelease() {
   gpio.update();
   while (gpio.isPressed(HalGPIO::BTN_POWER)) {
@@ -286,7 +283,6 @@ void enterDeepSleep() {
   activityManager.goToSleep();
 
   display.deepSleep();
-  LOG_DBG("MAIN", "Power button press calibration value: %lu ms", t2 - t1);
   LOG_DBG("MAIN", "Entering deep sleep");
 
   powerManager.startDeepSleep(gpio);
@@ -334,14 +330,18 @@ void setup() {
   powerManager.begin();
 
   const bool usbConnectedAtBoot = gpio.isUsbConnected();
+#ifdef ENABLE_SERIAL_LOG
   if (usbConnectedAtBoot) {
     Serial.begin(115200);
-    unsigned long start = millis();
-    while (!Serial && (millis() - start) < 3000) {
+    const unsigned long start = millis();
+    while (!Serial && (millis() - start) < 500) {
       delay(10);
     }
   }
+#endif
   core::CoreBootstrap::initializeFeatureSystem(usbConnectedAtBoot);
+
+  LOG_INF("MAIN", "Hardware detect: %s", gpio.deviceIsX3() ? "X3" : "X4");
 
   if (!Storage.begin()) {
     LOG_ERR("MAIN", "SD card initialization failed");
@@ -372,12 +372,13 @@ void setup() {
   UITheme::getInstance().reload();
   ButtonNavigator::setMappedInputManager(mappedInputManager);
 
-  const bool wokeFromSleep = (gpio.getWakeupReason() == HalGPIO::WakeupReason::PowerButton);
-
-  switch (gpio.getWakeupReason()) {
+  const auto wakeupReason = gpio.getWakeupReason();
+  const bool wokeFromSleep = (wakeupReason == HalGPIO::WakeupReason::PowerButton);
+  switch (wakeupReason) {
     case HalGPIO::WakeupReason::PowerButton:
       LOG_DBG("MAIN", "Verifying power button press duration");
-      verifyPowerButtonDuration();
+      gpio.verifyPowerButtonWakeup(SETTINGS.getPowerButtonDuration(),
+                                   SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SLEEP);
       break;
     case HalGPIO::WakeupReason::AfterUSBPower:
       // USB power connected: stay awake so user can access the file server
@@ -481,9 +482,10 @@ void loop() {
       String cmd = line.substring(4);
       cmd.trim();
       if (cmd == "SCREENSHOT") {
-        logSerial.printf("SCREENSHOT_START:%d\n", HalDisplay::BUFFER_SIZE);
+        const uint32_t bufferSize = display.getBufferSize();
+        logSerial.printf("SCREENSHOT_START:%d\n", bufferSize);
         uint8_t* buf = display.getFrameBuffer();
-        logSerial.write(buf, HalDisplay::BUFFER_SIZE);
+        logSerial.write(buf, bufferSize);
         logSerial.printf("SCREENSHOT_END\n");
       }
     }

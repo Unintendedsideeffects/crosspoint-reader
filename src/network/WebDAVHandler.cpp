@@ -329,7 +329,7 @@ void WebDAVHandler::handleGet(WebServer& s) {
   s.setContentLength(file.size());
   s.send(200, contentType.c_str(), "");
 
-  NetworkClient client = s.client();
+  WiFiClient client = s.client();
   client.write(file);
   file.close();
 }

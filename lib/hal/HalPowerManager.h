@@ -1,8 +1,10 @@
 #pragma once
 
 #include <Arduino.h>
+#include <BatteryMonitor.h>
 #include <InputManager.h>
 #include <Logging.h>
+#include <Wire.h>
 #include <freertos/semphr.h>
 
 #include <cassert>
@@ -17,11 +19,17 @@ class HalPowerManager {
   bool isLowPower = false;
 
   int lockCount = 0;
-  SemaphoreHandle_t modeMutex = nullptr;  // Protect access to lockCount
+
+  // I2C fuel gauge configuration for X3 battery monitoring
+  bool _batteryUseI2C = false;                   // True if using I2C fuel gauge (X3), false for ADC (X4)
+  mutable int _batteryCachedPercent = 0;         // Last read battery percentage (0-100)
+  mutable unsigned long _batteryLastPollMs = 0;  // Timestamp of last battery read in milliseconds
+  SemaphoreHandle_t modeMutex = nullptr;         // Protect access to power state / lockCount
 
  public:
   static constexpr int LOW_POWER_FREQ = 10;                    // MHz
   static constexpr unsigned long IDLE_POWER_SAVING_MS = 3000;  // ms
+  static constexpr unsigned long BATTERY_POLL_MS = 1500;       // ms
 
   void begin();
 

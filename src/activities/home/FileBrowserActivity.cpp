@@ -127,6 +127,10 @@ void FileBrowserActivity::clearFileMetadata(const std::string& fullPath) {
   }
 }
 
+void FileBrowserActivity::onSelectBook(const std::string& fullPath) { activityManager.goToReader(fullPath); }
+
+void FileBrowserActivity::onGoHome() { activityManager.goHome(); }
+
 void FileBrowserActivity::loop() {
   // Long press BACK (1s+) goes to root folder
   if (mappedInput.isPressed(MappedInputManager::Button::Back) && mappedInput.getHeldTime() >= GO_HOME_MS &&
@@ -237,7 +241,7 @@ void FileBrowserActivity::loop() {
   });
 }
 
-std::string getFileName(std::string filename) {
+static std::string getFileName(std::string filename) {
   if (filename.back() == '/') {
     filename.pop_back();
     if (!UITheme::getInstance().getTheme().showsFileIcons()) {
@@ -247,6 +251,14 @@ std::string getFileName(std::string filename) {
   }
   const auto pos = filename.rfind('.');
   return filename.substr(0, pos);
+}
+
+static std::string getFileExtension(std::string filename) {
+  if (filename.back() == '/') {
+    return "";
+  }
+  const auto pos = filename.rfind('.');
+  return filename.substr(pos);
 }
 
 void FileBrowserActivity::render(RenderLock&&) {
@@ -267,7 +279,8 @@ void FileBrowserActivity::render(RenderLock&&) {
     GUI.drawList(
         renderer, Rect{0, contentTop, pageWidth, contentHeight}, files.size(), selectorIndex,
         [this](int index) { return getFileName(files[index]); }, nullptr,
-        [this](int index) { return UITheme::getFileIcon(files[index]); });
+        [this](int index) { return UITheme::getFileIcon(files[index]); },
+        [this](int index) { return getFileExtension(files[index]); }, false);
   }
 
   // Help text

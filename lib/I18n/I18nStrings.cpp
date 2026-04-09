@@ -111,6 +111,10 @@ const char* const LANGUAGE_NAMES[] = {
     "\xD0"
     "\xB0"
     "",
+    "Magyar",
+    "Lietuvi\xC5"
+    "\xB3"
+    "",
 };
 
 // Character sets for each language
@@ -418,8 +422,6 @@ const char* const CHARACTER_SETS[] = {
     "\xC5"
     "\xA3"
     "\xC8"
-    "\x99"
-    "\xC8"
     "\x9B"
     "",  // Română
     "\n !\"%'()*+,-./0123456:=?ABCDEFGHIJKLMNOPQRSTUVWX[]abcdefghijklmnopqrstuvwxyz|\xC2"
@@ -606,6 +608,8 @@ const char* const CHARACTER_SETS[] = {
     "\xA3"
     "\xD0"
     "\xA4"
+    "\xD0"
+    "\xA5"
     "\xD0"
     "\xA6"
     "\xD0"
@@ -912,6 +916,68 @@ const char* const CHARACTER_SETS[] = {
     "\xD3"
     "\xA9"
     "",  // Қазақша
+    "\n !\"%'()*+,-./0123456:=?ABCDEFGHIJKLMNOPQRSTUVWX[]abcdefghijklmnopqrstuvwxyz|\xC2"
+    "\xAB"
+    "\xC3"
+    "\x81"
+    "\xC3"
+    "\x8D"
+    "\xC3"
+    "\x9A"
+    "\xC3"
+    "\x9C"
+    "\xC3"
+    "\xA1"
+    "\xC3"
+    "\xA9"
+    "\xC3"
+    "\xAD"
+    "\xC3"
+    "\xB3"
+    "\xC3"
+    "\xB6"
+    "\xC3"
+    "\xBA"
+    "\xC3"
+    "\xBC"
+    "\xC5"
+    "\x91"
+    "\xC5"
+    "\xB1"
+    "",  // Magyar
+    "\n !%'()*+,-./0123456:=?ABCDEFGHIJKLMNOPQRSTUVWX[]abcdefghijklmnopqrstuvwxyz|\xC2"
+    "\xAB"
+    "\xC4"
+    "\x85"
+    "\xC4"
+    "\x8D"
+    "\xC4"
+    "\x97"
+    "\xC4"
+    "\x99"
+    "\xC4"
+    "\xAE"
+    "\xC4"
+    "\xAF"
+    "\xC5"
+    "\xA0"
+    "\xC5"
+    "\xA1"
+    "\xC5"
+    "\xAB"
+    "\xC5"
+    "\xB3"
+    "\xC5"
+    "\xBD"
+    "\xC5"
+    "\xBE"
+    "\xE2"
+    "\x80"
+    "\x9C"
+    "\xE2"
+    "\x80"
+    "\x9E"
+    "",  // Lietuvių
 };
 
 namespace i18n_strings {
@@ -1493,7 +1559,7 @@ const char* const STRINGS_ES[] = {
     "Auto suspensi\xC3"
     "\xB3"
     "n",
-    "Show Hidden Files",
+    "Mostrar archivos ocultos",
     "Frecuencia de refresco",
     "Calibre Settings",
     "Sincronizaci\xC3"
@@ -2221,10 +2287,14 @@ const char* const STRINGS_FR[] = {
     "Espacement des paragraphes",
     "Lissage du texte",
     "Images",
-    "Display",
-    "Placeholder",
-    "Suppress",
-    "Appui court bout. alim.",
+    "Affichage",
+    "Espace r\xC3"
+    "\xA9"
+    "serv\xC3"
+    "\xA9"
+    "",
+    "Masquer",
+    "Appui court alim.",
     "Orientation de lecture",
     "Disposition des boutons avant",
     "Disposition des boutons lat\xC3"
@@ -2254,17 +2324,19 @@ const char* const STRINGS_FR[] = {
     "C\xC3"
     "\xA9"
     "sure",
-    "Mise en veille automatique",
-    "Show Hidden Files",
+    "Mise en veille auto",
+    "Afficher les fichiers cach\xC3"
+    "\xA9"
+    "s",
     "Fr\xC3"
     "\xA9"
-    "quence de rafra\xC3"
+    "quence rafra\xC3"
     "\xAE"
     "chissement",
     "R\xC3"
     "\xA9"
     "glages Calibre",
-    "Synchronisation KOReader",
+    "Synchro KOReader",
     "Mise \xC3"
     "\xA0"
     " jour",
@@ -2544,7 +2616,11 @@ const char* const STRINGS_FR[] = {
     "\xAB"
     " Sauver",
     "OK",
-    "Selected",
+    "S\xC3"
+    "\xA9"
+    "lectionn\xC3"
+    "\xA9"
+    "",
     "Modifier",
     "Confirmer",
     "Annuler",
@@ -2585,17 +2661,17 @@ const char* const STRINGS_FR[] = {
     "Personnaliser la barre d'\xC3"
     "\xA9"
     "tat",
-    "Pages du chapitre",
-    "Pourcentage de progression du livre",
+    "Nombre de pages du chapitre",
+    "Pourcentage de progression",
     "Barre de progression",
     "\xC3"
     "\x89"
-    "paisseur de la barre de progression",
+    "paisseur de la barre",
     "Fine",
-    "Moyen",
+    "Moyenne",
     "\xC3"
     "\x89"
-    "pais",
+    "paisse",
     "Livre",
     "Chapitre",
     "Chapitre 21",
@@ -2607,10 +2683,7 @@ const char* const STRINGS_FR[] = {
     "Batterie",
     "Th\xC3"
     "\xA8"
-    "me de l\xE2"
-    "\x80"
-    "\x99"
-    "interface",
+    "me interface",
     "Classique",
     "Lyra",
     "Lyra Extended",
@@ -2695,7 +2768,7 @@ const char* const STRINGS_FR[] = {
     "Synchro progression",
     "Supprimer cache livre",
     "Supprimer",
-    "Afficher page en QR",
+    "Afficher la page en QR",
     "Chapitre : ",
     " pages  |  ",
     "Livre : ",
@@ -2769,7 +2842,7 @@ const char* const STRINGS_FR[] = {
     "gr\xC3"
     "\xA9"
     "",
-    "URL du serveur OPDS",
+    "URL serveur OPDS",
     "Dark Mode",
     "Background Server",
     "Background Server on Charge",
@@ -2778,12 +2851,14 @@ const char* const STRINGS_FR[] = {
     "Always keeps WiFi on while awake.",
     "Valider les images de veille",
     "Device Name",
-    "Footnotes",
-    "No footnotes on this page",
-    "[link]",
-    "Take screenshot",
-    "Auto Turn Enabled: ",
-    "Auto Turn (Pages Per Minute)",
+    "Notes de bas de page",
+    "Aucune note sur cette page",
+    "[lien]",
+    "Capture d'\xC3"
+    "\xA9"
+    "cran",
+    "Tourne-page auto : ",
+    "Tourne-page auto (pages par minute)",
     "Transparent",
     "Notes",
     "No notes yet. Add one below.",
@@ -2838,9 +2913,9 @@ const char* const STRINGS_DE[] = {
     "\xA6"
     "",
     "Laden",
-    "Failed to load XTC",
+    "XTC-Datei konnte nicht geladen werden",
     "Failed to load TXT",
-    "Failed to load EPUB",
+    "EPUB-Datei konnte nicht geladen werden",
     "SD card error",
     "WLAN-Netzwerke",
     "Kein WLAN gefunden",
@@ -2926,10 +3001,12 @@ const char* const STRINGS_DE[] = {
     "Schriftgl\xC3"
     "\xA4"
     "ttung",
-    "Images",
-    "Display",
-    "Placeholder",
-    "Suppress",
+    "Bilder",
+    "Darstellung",
+    "Platzhalter",
+    "Unterdr\xC3"
+    "\xBC"
+    "cken",
     "An-Taste kurz dr\xC3"
     "\xBC"
     "cken",
@@ -2959,7 +3036,7 @@ const char* const STRINGS_DE[] = {
     "Lese-Absatzausrichtung",
     "Silbentrennung",
     "Standby nach",
-    "Show Hidden Files",
+    "Versteckte Dateien anzeigen",
     "Anti-Ghosting nach",
     "Calibre Settings",
     "KOReader-Synchr.",
@@ -3211,7 +3288,7 @@ const char* const STRINGS_DE[] = {
     "Vordere Tasten belegen",
     "OPDS-Browser",
     "Umschlag + Eigenes",
-    "Recents",
+    "Zuletzt",
     "Zuletzt gelesen",
     "Keine B\xC3"
     "\xBC"
@@ -7347,10 +7424,76 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB0"
     "",
-    "Images",
-    "Display",
-    "Placeholder",
-    "Suppress",
+    "\xD0"
+    "\x98"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB6"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    "",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x83"
+    "\xD1"
+    "\x88"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB8"
+    "",
+    "\xD0"
+    "\xA1"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8B"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    "",
     "\xD0"
     "\x9A"
     "\xD0"
@@ -7702,7 +7845,47 @@ const char* const STRINGS_RU[] = {
     "\xD0"
     "\xB7"
     "",
-    "Show Hidden Files",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    " \xD1"
+    "\x81"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x8B"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xB5"
+    " \xD1"
+    "\x84"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB9"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8B"
+    "",
     "\xD0"
     "\xA7"
     "\xD0"
@@ -10012,7 +10195,7 @@ const char* const STRINGS_RU[] = {
     "\x82"
     "\xD1"
     "\x8C"
-    ":",
+    ": ",
     "IP-\xD0"
     "\xB0"
     "\xD0"
@@ -10023,7 +10206,7 @@ const char* const STRINGS_RU[] = {
     "\xB5"
     "\xD1"
     "\x81"
-    ":",
+    ": ",
     "or scan QR code with your phone to connect to Wifi.",
     "\xD0"
     "\x9E"
@@ -11933,14 +12116,14 @@ const char* const STRINGS_RU[] = {
     "\xB2"
     "\xD0"
     "\xB0"
-    ":",
-    "\xD1"
+    ": ",
+    " \xD1"
     "\x81"
     "\xD1"
     "\x82"
     "\xD1"
     "\x80"
-    ".  |",
+    ". | ",
     "\xD0"
     "\x9A"
     "\xD0"
@@ -11951,7 +12134,7 @@ const char* const STRINGS_RU[] = {
     "\xB3"
     "\xD0"
     "\xB0"
-    ":",
+    ": ",
     "shift",
     "SHIFT",
     "LOCK",
@@ -12766,7 +12949,7 @@ const char* const STRINGS_RU[] = {
     "\xB5"
     "\xD0"
     "\xBB"
-    "",
+    " ",
     "\xD0"
     "\x9E"
     "\xD1"
@@ -12907,12 +13090,224 @@ const char* const STRINGS_RU[] = {
     "\xB0"
     "",
     "Device Name",
-    "Footnotes",
-    "No footnotes on this page",
-    "[link]",
-    "Take screenshot",
-    "Auto Turn Enabled: ",
-    "Auto Turn (Pages Per Minute)",
+    "\xD0"
+    "\x9F"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x87"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\x9D"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xB4"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB9"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x86"
+    "\xD0"
+    "\xB5"
+    " \xD0"
+    "\xBD"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x82"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x87"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB9"
+    "",
+    "[\xD1"
+    "\x81"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "]",
+    "\xD0"
+    "\xA1"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8C"
+    " \xD1"
+    "\x81"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    " \xD1"
+    "\x8D"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\x90"
+    "\xD0"
+    "\xB2"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBF"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB5"
+    ": ",
+    "\xD0"
+    "\x90"
+    "\xD0"
+    "\xB2"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBF"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xB5"
+    " (\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD1"
+    "\x80"
+    "./\xD0"
+    "\xBC"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBD"
+    ")",
     "Transparent",
     "Notes",
     "No notes yet. Add one below.",
@@ -13214,14 +13609,14 @@ const char* const STRINGS_SV[] = {
     "rmmarginal",
     "Eboksl\xC3"
     "\xA4"
-    "sarens paragraflinjeplacering",
+    "sarens paragrafjustering",
     "Avstavning",
     "Tid f\xC3"
     "\xB6"
     "r att g\xC3"
     "\xA5"
     " i vila",
-    "Show Hidden Files",
+    "Visa dolda filer",
     "Uppdateringsfrekvens",
     "Calibre Settings",
     "KOReader-synkronisering",
@@ -13367,11 +13762,7 @@ const char* const STRINGS_SV[] = {
     "Smal",
     "Normal",
     "Bred",
-    "R\xC3"
-    "\xA4"
-    "ttf\xC3"
-    "\xA4"
-    "rdiga",
+    "Justerad",
     "V\xC3"
     "\xA4"
     "nster",
@@ -13546,7 +13937,9 @@ const char* const STRINGS_SV[] = {
     "nssnittstema",
     "Klassisk",
     "Lyra",
-    "Lyra Extended",
+    "Lyra ut\xC3"
+    "\xB6"
+    "kad",
     "Fork Drift",
     "Pokemon Party",
     "Party",
@@ -13796,8 +14189,8 @@ const char* const STRINGS_RO[] = {
     "Books",
     "Nu s-au g\xC4"
     "\x83"
-    "sit fi\xC8"
-    "\x99"
+    "sit fi\xC5"
+    "\x9F"
     "iere",
     "Selecta\xC5"
     "\xA3"
@@ -14002,10 +14395,12 @@ const char* const STRINGS_RO[] = {
     "\xAE"
     "ntre paragrafe",
     "Anti-Aliasing text",
-    "Images",
-    "Display",
-    "Placeholder",
-    "Suppress",
+    "Imagini",
+    "Afi\xC5"
+    "\x9F"
+    "are",
+    "Substituent",
+    "Suprimare",
     "Ap\xC4"
     "\x83"
     "sare scurt\xC4"
@@ -14057,7 +14452,13 @@ const char* const STRINGS_RO[] = {
     "n\xC4"
     "\x83"
     " la repaus",
-    "Show Hidden Files",
+    "Afi\xC5"
+    "\x9F"
+    "eaz\xC4"
+    "\x83"
+    " fi\xC5"
+    "\x9F"
+    "ierele ascunse",
     "Frecven\xC5"
     "\xA3"
     "\xC4"
@@ -14409,8 +14810,8 @@ const char* const STRINGS_RO[] = {
     "ncercare",
     "Da",
     "Nu",
-    "Afi\xC8"
-    "\x99"
+    "Afi\xC5"
+    "\x9F"
     "eaz\xC4"
     "\x83"
     "",
@@ -14561,8 +14962,8 @@ const char* const STRINGS_RO[] = {
     "terge\xC8"
     "\x9B"
     "i",
-    "Afi\xC8"
-    "\x99"
+    "Afi\xC5"
+    "\x9F"
     "a\xC8"
     "\x9B"
     "i pagina ca cod QR",
@@ -14912,7 +15313,7 @@ const char* const STRINGS_CA[] = {
     "Temps per entrar en rep\xC3"
     "\xB2"
     "s",
-    "Show Hidden Files",
+    "Mostra fitxers ocults",
     "Freq\xC3"
     "\xBC"
     "\xC3"
@@ -17464,10 +17865,80 @@ const char* const STRINGS_UK[] = {
     "\xD1"
     "\x83"
     "",
-    "Images",
-    "Display",
-    "Placeholder",
-    "Suppress",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB6"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB8"
+    "",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x83"
+    "\xD1"
+    "\x88"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x85"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB8"
+    "",
     "\xD0"
     "\x9A"
     "\xD0"
@@ -17919,7 +18390,51 @@ const char* const STRINGS_UK[] = {
     "\xD1"
     "\x83"
     "",
-    "Show Hidden Files",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB8"
+    " \xD0"
+    "\xBF"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB8"
+    "\xD1"
+    "\x85"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x96"
+    " \xD1"
+    "\x84"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB9"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xB8"
+    "",
     "\xD0"
     "\xA7"
     "\xD0"
@@ -23705,13 +24220,17 @@ const char* const STRINGS_UK[] = {
     "",
     "Device Name",
     "\xD0"
-    "\x97"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xBE"
+    "\x9F"
     "\xD1"
-    "\x81"
+    "\x80"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBC"
+    "\xD1"
+    "\x96"
+    "\xD1"
+    "\x82"
     "\xD0"
     "\xBA"
     "\xD0"
@@ -23754,13 +24273,17 @@ const char* const STRINGS_UK[] = {
     "\xD1"
     "\x94"
     " \xD0"
-    "\xB7"
-    "\xD0"
-    "\xBD"
-    "\xD0"
-    "\xBE"
+    "\xBF"
     "\xD1"
-    "\x81"
+    "\x80"
+    "\xD0"
+    "\xB8"
+    "\xD0"
+    "\xBC"
+    "\xD1"
+    "\x96"
+    "\xD1"
+    "\x82"
     "\xD0"
     "\xBE"
     "\xD0"
@@ -25775,10 +26298,74 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x83"
     "",
-    "Images",
-    "Display",
-    "Placeholder",
-    "Suppress",
+    "\xD0"
+    "\x92"
+    "\xD1"
+    "\x8B"
+    "\xD1"
+    "\x8F"
+    "\xD0"
+    "\xB2"
+    "\xD1"
+    "\x8B"
+    "",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    "",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBF"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x9E"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8C"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBA"
+    "",
+    "\xD0"
+    "\xA5"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    "",
     "\xD0"
     "\x9A"
     "\xD0"
@@ -26148,7 +26735,51 @@ const char* const STRINGS_BE[] = {
     "\xD0"
     "\xB7"
     "",
-    "Show Hidden Files",
+    "\xD0"
+    "\x9F"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB7"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x85"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x8B"
+    "\xD1"
+    "\x8F"
+    " \xD1"
+    "\x84"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB9"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x8B"
+    "",
     "\xD0"
     "\xA7"
     "\xD0"
@@ -28714,7 +29345,21 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x8C"
     "",
-    "Selected",
+    "\xD0"
+    "\x92"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xB1"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    "",
     "\xD0"
     "\x92"
     "\xD1"
@@ -30339,7 +30984,23 @@ const char* const STRINGS_BE[] = {
     "\xD1"
     "\x96"
     "",
-    "Delete",
+    "\xD0"
+    "\x92"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xB4"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x96"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    "",
     "\xD0"
     "\x9F"
     "\xD0"
@@ -30930,7 +31591,17 @@ const char* const STRINGS_BE[] = {
     "\xBA"
     "\xD0"
     "\xB0"
-    " %d/%d",
+    " %d/%d, %.2f%% \xD1"
+    "\x83"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x8F"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBE"
+    "",
     "\xD0"
     "\x90"
     "\xD0"
@@ -31419,12 +32090,230 @@ const char* const STRINGS_BE[] = {
     "\x83"
     "",
     "Device Name",
-    "Footnotes",
-    "No footnotes on this page",
-    "[link]",
-    "Take screenshot",
-    "Auto Turn Enabled: ",
-    "Auto Turn (Pages Per Minute)",
+    "\xD0"
+    "\x97"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x96"
+    "",
+    "\xD0"
+    "\x9D"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xB3"
+    "\xD1"
+    "\x8D"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB9"
+    " \xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8B"
+    " \xD0"
+    "\xBD"
+    "\xD1"
+    "\x8F"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xB0"
+    " \xD0"
+    "\xB7"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    "",
+    "[\xD1"
+    "\x81"
+    "\xD0"
+    "\xBF"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x81"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xBB"
+    "\xD0"
+    "\xBA"
+    "\xD0"
+    "\xB0"
+    "]",
+    "\xD0"
+    "\x97"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB1"
+    "\xD1"
+    "\x96"
+    "\xD1"
+    "\x86"
+    "\xD1"
+    "\x8C"
+    " \xD0"
+    "\xB7"
+    "\xD0"
+    "\xB4"
+    "\xD1"
+    "\x8B"
+    "\xD0"
+    "\xBC"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    " \xD1"
+    "\x8D"
+    "\xD0"
+    "\xBA"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    "",
+    "\xD0"
+    "\x90"
+    "\xD1"
+    "\x9E"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBF"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB5"
+    ": ",
+    "\xD0"
+    "\x90"
+    "\xD1"
+    "\x9E"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBF"
+    "\xD0"
+    "\xB5"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBE"
+    "\xD1"
+    "\x80"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB2"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB5"
+    " (\xD1"
+    "\x81"
+    "\xD1"
+    "\x82"
+    "\xD0"
+    "\xB0"
+    "\xD1"
+    "\x80"
+    "\xD0"
+    "\xBE"
+    "\xD0"
+    "\xBD"
+    "\xD0"
+    "\xB0"
+    "\xD0"
+    "\xBA"
+    " \xD0"
+    "\xB7"
+    "\xD0"
+    "\xB0"
+    " \xD1"
+    "\x85"
+    "\xD0"
+    "\xB2"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBB"
+    "\xD1"
+    "\x96"
+    "\xD0"
+    "\xBD"
+    "\xD1"
+    "\x83"
+    ")",
     "Transparent",
     "Notes",
     "No notes yet. Add one below.",
@@ -32164,7 +33053,9 @@ const char* const STRINGS_PL[] = {
     "Czas do u\xC5"
     "\x9B"
     "pienia",
-    "Show Hidden Files",
+    "Poka\xC5"
+    "\xBC"
+    " ukryte pliki",
     "Cz\xC4"
     "\x99"
     "stotliwo\xC5"
@@ -33831,10 +34722,10 @@ const char* const STRINGS_DA[] = {
     "Skjul batteri %",
     "Ekstra afsnitsafstand",
     "Tekst Anti-Aliasing",
-    "Images",
-    "Display",
-    "Placeholder",
-    "Suppress",
+    "Billeder",
+    "Vis",
+    "Pladsholder",
+    "Skjul",
     "Kort tryk p\xC3"
     "\xA5"
     " t\xC3"
@@ -33856,9 +34747,9 @@ const char* const STRINGS_DA[] = {
     "External Reader Font",
     "Reader Font",
     "UI Font",
-    "Brugergr\xC3"
+    "L\xC3"
     "\xA6"
-    "nseflade skriftst\xC3"
+    "ser skriftst\xC3"
     "\xB8"
     "rrelse",
     "Linjeafstand",
@@ -33872,7 +34763,7 @@ const char* const STRINGS_DA[] = {
     "Afsnitsjustering",
     "Orddeling",
     "Tid til hvile",
-    "Show Hidden Files",
+    "Vis skjulte filer",
     "Opdateringsfrekvens",
     "Calibre Settings",
     "KOReader Sync",
@@ -34058,7 +34949,7 @@ const char* const STRINGS_DA[] = {
     "V\xC3"
     "\xA6"
     "lg",
-    "Selected",
+    "Valgt",
     "Skift",
     "Bekr\xC3"
     "\xA6"
@@ -34099,14 +34990,12 @@ const char* const STRINGS_DA[] = {
     "Sequential",
     "Kontrast",
     "Tilpas statuslinje",
-    "Kapitel sidetal",
+    "Kapitelsidet\xC3"
+    "\xA6"
+    "ller",
     "Bogfremskridtsprocent",
-    "Fremdriftsbj\xC3"
-    "\xA6"
-    "lke",
-    "Fremdriftsbj\xC3"
-    "\xA6"
-    "lkens tykkelse",
+    "Fremskridtslinje",
+    "Fremskridtslinjens tykkelse",
     "Tynd",
     "Mellem",
     "Tyk",
@@ -34183,7 +35072,7 @@ const char* const STRINGS_DA[] = {
     " til start",
     "Synkroniser fremskridt",
     "Slet bogcache",
-    "Delete",
+    "Slet",
     "Vis side som QR",
     "Kapitel: ",
     " sider  |  ",
@@ -34235,14 +35124,16 @@ const char* const STRINGS_DA[] = {
     "Always keeps WiFi on while awake.",
     "Valider hvile-billeder",
     "Device Name",
-    "Footnotes",
-    "No footnotes on this page",
+    "Fodnoter",
+    "Ingen fodnoter p\xC3"
+    "\xA5"
+    " denne side",
     "[link]",
     "Tag sk\xC3"
     "\xA6"
     "rmbillede",
-    "Auto Turn Enabled: ",
-    "Auto Turn (Pages Per Minute)",
+    "Automatisk sidevendning aktiveret: ",
+    "Automatisk vending (sider per minut)",
     "Transparent",
     "Notes",
     "No notes yet. Add one below.",
@@ -34356,10 +35247,10 @@ const char* const STRINGS_NL[] = {
     "Batterij % verbergen",
     "Extra regelafstand alinea",
     "Tekst Anti-Aliasing",
-    "Images",
-    "Display",
+    "Afbeeldingen",
+    "Weergave",
     "Placeholder",
-    "Suppress",
+    "Verbergen",
     "Korte klik aan/uit-knop",
     "Leesstand",
     "Front Button Layout",
@@ -34379,7 +35270,7 @@ const char* const STRINGS_NL[] = {
     "Uitlijning alinea lezer",
     "Woordafbreking",
     "Tijd tot slaapstand",
-    "Show Hidden Files",
+    "Toon verborgen bestanden",
     "Verversingsfrequentie",
     "Calibre Settings",
     "KOReader Sync",
@@ -34513,7 +35404,7 @@ const char* const STRINGS_NL[] = {
     "\xAB"
     " Save",
     "Kies",
-    "Selected",
+    "Geselecteerd",
     "Wissel",
     "Bevestig",
     "Annuleer",
@@ -34594,7 +35485,7 @@ const char* const STRINGS_NL[] = {
     "Naar Home",
     "Voortgang synchroniseren",
     "Boekcache verwijderen",
-    "Delete",
+    "Verwijder",
     "Pagina als QR tonen",
     "Hoofdstuk: ",
     " pagina's  |  ",
@@ -34642,8 +35533,8 @@ const char* const STRINGS_NL[] = {
     "Geen voetnoten op deze pagina",
     "[link]",
     "Screenshot maken",
-    "Auto Turn Enabled: ",
-    "Auto Turn (Pages Per Minute)",
+    "Automatisch omslaan ingeschakeld: ",
+    "Autom. omslaan (pagina's per minuut)",
     "Transparent",
     "Notes",
     "No notes yet. Add one below.",
@@ -35062,7 +35953,11 @@ const char* const STRINGS_TR[] = {
     "me S\xC3"
     "\xBC"
     "resi",
-    "Show Hidden Files",
+    "Gizli Dosyalar\xC4"
+    "\xB1"
+    " G\xC3"
+    "\xB6"
+    "ster",
     "Yenileme S\xC4"
     "\xB1"
     "kl\xC4"
@@ -43752,6 +44647,2228 @@ const char* const STRINGS_KK[] = {
     "Hotspot",
 };
 
+const char* const STRINGS_HU[] = {
+    "CrossPoint",
+    "IND\xC3"
+    "\x8D"
+    "T\xC3"
+    "\x81"
+    "S",
+    "ALV\xC3"
+    "\x81"
+    "S",
+    "Alv\xC3"
+    "\xA1"
+    "s...",
+    "F\xC3"
+    "\xA1"
+    "jlok b\xC3"
+    "\xB6"
+    "ng\xC3"
+    "\xA9"
+    "sz\xC3"
+    "\xA9"
+    "se",
+    "F\xC3"
+    "\xA1"
+    "jl\xC3"
+    "\xA1"
+    "tvitel",
+    "Be\xC3"
+    "\xA1"
+    "ll\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "sok",
+    "Calibre Library",
+    "Olvas\xC3"
+    "\xA1"
+    "s folytat\xC3"
+    "\xA1"
+    "sa",
+    "Nincs nyitott k\xC3"
+    "\xB6"
+    "nyv",
+    "Kezdj el olvasni lentebb",
+    "Books",
+    "Nem tal\xC3"
+    "\xA1"
+    "lhat\xC3"
+    "\xB3"
+    "k f\xC3"
+    "\xA1"
+    "jlok",
+    "Fejezet kiv\xC3"
+    "\xA1"
+    "laszt\xC3"
+    "\xA1"
+    "sa",
+    "Nincsenek fejezetek",
+    "A k\xC3"
+    "\xB6"
+    "nyv v\xC3"
+    "\xA9"
+    "ge",
+    "\xC3"
+    "\x9C"
+    "res fejezet",
+    "Indexel\xC3"
+    "\xA9"
+    "s",
+    "Mem\xC3"
+    "\xB3"
+    "riahiba",
+    "Lapbet\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "si hiba",
+    "\xC3"
+    "\x9C"
+    "res f\xC3"
+    "\xA1"
+    "jl",
+    "Hat\xC3"
+    "\xA1"
+    "ron k\xC3"
+    "\xAD"
+    "v\xC3"
+    "\xBC"
+    "l",
+    "Bet\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "s...",
+    "Bet\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "s",
+    "Failed to load XTC",
+    "Failed to load TXT",
+    "Failed to load EPUB",
+    "SD card error",
+    "WiFi h\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zatok",
+    "Nem tal\xC3"
+    "\xA1"
+    "lhat\xC3"
+    "\xB3"
+    " h\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zat",
+    "%zu h\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zat tal\xC3"
+    "\xA1"
+    "lhat\xC3"
+    "\xB3"
+    "",
+    "Keres\xC3"
+    "\xA9"
+    "s...",
+    "Kapcsol\xC3"
+    "\xB3"
+    "d\xC3"
+    "\xA1"
+    "s...",
+    "Kapcsol\xC3"
+    "\xB3"
+    "dva!",
+    "A kapcsolat sikertelen",
+    "Connection timeout",
+    "H\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zat elfelejt\xC3"
+    "\xA9"
+    "se?",
+    "Jelsz\xC3"
+    "\xB3"
+    " ment\xC3"
+    "\xA9"
+    "se legk\xC3"
+    "\xB6"
+    "zelebb?",
+    "Remove saved password?",
+    "Nyomj OK-t az \xC3"
+    "\xBA"
+    "jraellen\xC5"
+    "\x91"
+    "rz\xC3"
+    "\xA9"
+    "shez",
+    "Press any button to continue",
+    "LEFT/RIGHT: Select | OK: Confirm",
+    "How would you like to connect?",
+    "Csatlakoz\xC3"
+    "\xA1"
+    "s h\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zathoz",
+    "Hotspot l\xC3"
+    "\xA9"
+    "trehoz\xC3"
+    "\xA1"
+    "sa",
+    "Csatlakoz\xC3"
+    "\xA1"
+    "s megl\xC3"
+    "\xA9"
+    "v\xC5"
+    "\x91"
+    " WiFi h\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zathoz",
+    "WiFi h\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zat l\xC3"
+    "\xA9"
+    "trehoz\xC3"
+    "\xA1"
+    "sa m\xC3"
+    "\xA1"
+    "soknak",
+    "Hotspot ind\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "sa...",
+    "Hotspot m\xC3"
+    "\xB3"
+    "d",
+    "Csatlakoztasd az eszk\xC3"
+    "\xB6"
+    "z\xC3"
+    "\xB6"
+    "d ehhez a WiFi h\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zathoz",
+    "Nyisd meg ezt az URL-t a b\xC3"
+    "\xB6"
+    "ng\xC3"
+    "\xA9"
+    "sz\xC5"
+    "\x91"
+    "dben",
+    "vagy http://",
+    "vagy olvasd be a QR-k\xC3"
+    "\xB3"
+    "dot a telefonoddal:",
+    "Calibre Wireless",
+    "Calibre Web URL",
+    "Connect as Wireless Device",
+    "* = Titkos\xC3"
+    "\xAD"
+    "tott | + = Mentett",
+    "MAC-c\xC3"
+    "\xAD"
+    "m:",
+    "WiFi ellen\xC5"
+    "\x91"
+    "rz\xC3"
+    "\xA9"
+    "se...",
+    "Add meg a WiFi jelsz\xC3"
+    "\xB3"
+    "t",
+    "Enter Text",
+    "- ",
+    "Discovering Calibre...",
+    "Connecting to ",
+    "Connected to ",
+    "Waiting for commands...",
+    "(Connection failed, retrying)",
+    "Calibre disconnected",
+    "Waiting for transfer...",
+    "If transfer fails, enable\n'Ignore free space' in Calibre's\nSmartDevice plugin settings.",
+    "Fogad\xC3"
+    "\xA1"
+    "s: ",
+    "Fogadva: ",
+    "Waiting for more...",
+    "Failed to create file",
+    "Password required",
+    "Transfer interrupted",
+    "1) Telep\xC3"
+    "\xAD"
+    "tsd a CrossPoint Reader plugint",
+    "2) Ugyanazon a WiFi h\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zaton l\xC3"
+    "\xA9"
+    "gy",
+    "3) Calibre-ben: \"K\xC3"
+    "\xBC"
+    "ld\xC3"
+    "\xA9"
+    "s az eszk\xC3"
+    "\xB6"
+    "zre\"",
+    "\"Tartsd nyitva a k\xC3"
+    "\xA9"
+    "perny\xC5"
+    "\x91"
+    "t k\xC3"
+    "\xBC"
+    "ld\xC3"
+    "\xA9"
+    "s k\xC3"
+    "\xB6"
+    "zben\"",
+    "Megjelen\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s",
+    "Olvas\xC3"
+    "\xB3"
+    "",
+    "Vez\xC3"
+    "\xA9"
+    "rl\xC5"
+    "\x91"
+    "k",
+    "Rendszer",
+    "Alv\xC3"
+    "\xA1"
+    "sk\xC3"
+    "\xA9"
+    "perny\xC5"
+    "\x91"
+    "",
+    "Alv\xC3"
+    "\xA1"
+    "sk\xC3"
+    "\xA9"
+    "perny\xC5"
+    "\x91"
+    " bor\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    "m\xC3"
+    "\xB3"
+    "d",
+    "Status Bar",
+    "Akkumul\xC3"
+    "\xA1"
+    "tor % elrejt\xC3"
+    "\xA9"
+    "se",
+    "Extra bekezd\xC3"
+    "\xA9"
+    "sk\xC3"
+    "\xB6"
+    "z",
+    "Sz\xC3"
+    "\xB6"
+    "veg \xC3"
+    "\xA9"
+    "lsim\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "s",
+    "K\xC3"
+    "\xA9"
+    "pek",
+    "Megjelen\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s",
+    "Hely\xC5"
+    "\x91"
+    "rz\xC5"
+    "\x91"
+    "",
+    "Elnyom\xC3"
+    "\xA1"
+    "s",
+    "R\xC3"
+    "\xB6"
+    "vid bekapcsol\xC3"
+    "\xB3"
+    "gomb nyom\xC3"
+    "\xA1"
+    "s",
+    "Olvas\xC3"
+    "\xA1"
+    "si ir\xC3"
+    "\xA1"
+    "ny",
+    "Front Button Layout",
+    "Oldals\xC3"
+    "\xB3"
+    " gomb elrendez\xC3"
+    "\xA9"
+    "s (olvas\xC3"
+    "\xB3"
+    ")",
+    "Hossz\xC3"
+    "\xBA"
+    " nyom\xC3"
+    "\xA1"
+    "s - fejezet ugr\xC3"
+    "\xA1"
+    "s",
+    "Olvas\xC3"
+    "\xB3"
+    " bet\xC5"
+    "\xB1"
+    "k\xC3"
+    "\xA9"
+    "szlet",
+    "External Reader Font",
+    "Reader Font",
+    "UI Font",
+    "Olvas\xC3"
+    "\xB3"
+    " bet\xC5"
+    "\xB1"
+    "m\xC3"
+    "\xA9"
+    "ret",
+    "Olvas\xC3"
+    "\xB3"
+    " sork\xC3"
+    "\xB6"
+    "z",
+    "ASCII Letter Spacing",
+    "ASCII Digit Spacing",
+    "CJK Spacing",
+    "Color Mode",
+    "Olvas\xC3"
+    "\xB3"
+    " marg\xC3"
+    "\xB3"
+    "",
+    "Olvas\xC3"
+    "\xB3"
+    " sz\xC3"
+    "\xB6"
+    "vegigaz\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "s",
+    "Elv\xC3"
+    "\xA1"
+    "laszt\xC3"
+    "\xA1"
+    "s",
+    "Alv\xC3"
+    "\xB3"
+    " m\xC3"
+    "\xB3"
+    "d aktiv\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xA1"
+    "sa",
+    "Rejtett f\xC3"
+    "\xA1"
+    "jlok megjelen\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "se",
+    "Friss\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "si frekvencia",
+    "Calibre Settings",
+    "KOReader szinkroniz\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xA1"
+    "s",
+    "Friss\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "sek keres\xC3"
+    "\xA9"
+    "se",
+    "Nyelv",
+    "Select Wallpaper",
+    "Factory Reset",
+    "Switch to TRMNL",
+    "Olvas\xC3"
+    "\xA1"
+    "si gyors\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    "t\xC3"
+    "\xA1"
+    "r t\xC3"
+    "\xB6"
+    "rl\xC3"
+    "\xA9"
+    "se",
+    "Calibre",
+    "Felhaszn\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "n\xC3"
+    "\xA9"
+    "v",
+    "Jelsz\xC3"
+    "\xB3"
+    "",
+    "Szinkroniz\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xA1"
+    "s szerver URL",
+    "Dokumentum egyeztet\xC3"
+    "\xA9"
+    "s",
+    "Hiteles\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s",
+    "KOReader felhaszn\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "n\xC3"
+    "\xA9"
+    "v",
+    "KOReader jelsz\xC3"
+    "\xB3"
+    "",
+    "F\xC3"
+    "\xA1"
+    "jln\xC3"
+    "\xA9"
+    "v",
+    "Bin\xC3"
+    "\xA1"
+    "ris",
+    "El\xC5"
+    "\x91"
+    "sz\xC3"
+    "\xB6"
+    "r add meg az adatokat",
+    "WiFi kapcsolat sikertelen",
+    "Hiteles\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s...",
+    "Sikeres hiteles\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s!",
+    "KOReader hiteles\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s",
+    "KOReader szinkroniz\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xA1"
+    "s k\xC3"
+    "\xA9"
+    "sz",
+    "Hiteles\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s sikertelen",
+    "K\xC3"
+    "\xA9"
+    "sz",
+    "Ez t\xC3"
+    "\xB6"
+    "rli az \xC3"
+    "\xB6"
+    "sszes gyors\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    "t\xC3"
+    "\xA1"
+    "razott k\xC3"
+    "\xB6"
+    "nyv adatot.",
+    "Minden olvas\xC3"
+    "\xA1"
+    "si el\xC5"
+    "\x91"
+    "rehalad\xC3"
+    "\xA1"
+    "s elv\xC3"
+    "\xA9"
+    "sz!",
+    "A k\xC3"
+    "\xB6"
+    "nyveket \xC3"
+    "\xBA"
+    "jra kell indexelni",
+    "megnyit\xC3"
+    "\xA1"
+    "skor.",
+    "Gyors\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    "t\xC3"
+    "\xA1"
+    "r t\xC3"
+    "\xB6"
+    "rl\xC3"
+    "\xA9"
+    "se...",
+    "Gyors\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    "t\xC3"
+    "\xA1"
+    "r t\xC3"
+    "\xB6"
+    "r\xC3"
+    "\xB6"
+    "lve",
+    "elem elt\xC3"
+    "\xA1"
+    "vol\xC3"
+    "\xAD"
+    "tva",
+    "sikertelen",
+    "Gyors\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    "t\xC3"
+    "\xA1"
+    "r t\xC3"
+    "\xB6"
+    "rl\xC3"
+    "\xA9"
+    "se sikertelen",
+    "Ellen\xC5"
+    "\x91"
+    "rizd a soros kimenetet",
+    "S\xC3"
+    "\xB6"
+    "t\xC3"
+    "\xA9"
+    "t",
+    "Vil\xC3"
+    "\xA1"
+    "gos",
+    "Follow Theme",
+    "Egy\xC3"
+    "\xA9"
+    "ni",
+    "Image Source",
+    "Pokedex",
+    "All",
+    "Bor\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    "",
+    "Egyik sem",
+    "Illeszt\xC3"
+    "\xA9"
+    "s",
+    "K\xC3"
+    "\xB6"
+    "rbev\xC3"
+    "\xA1"
+    "g\xC3"
+    "\xA1"
+    "s",
+    "No Progress",
+    "Full",
+    "Soha",
+    "Olvas\xC3"
+    "\xB3"
+    "ban",
+    "Mindig",
+    "Mell\xC5"
+    "\x91"
+    "z\xC3"
+    "\xA9"
+    "s",
+    "Alv\xC3"
+    "\xA1"
+    "s",
+    "Lapoz\xC3"
+    "\xA1"
+    "s",
+    "\xC3"
+    "\x81"
+    "ll\xC3"
+    "\xB3"
+    "",
+    "Fekv\xC5"
+    "\x91"
+    " jobbra",
+    "Ford\xC3"
+    "\xAD"
+    "tott",
+    "Fekv\xC5"
+    "\x91"
+    " balra",
+    "Bck, Cnfrm, Lft, Rght",
+    "Lft, Rght, Bck, Cnfrm",
+    "Lft, Bck, Cnfrm, Rght",
+    "El\xC5"
+    "\x91"
+    "z\xC5"
+    "\x91"
+    "/K\xC3"
+    "\xB6"
+    "vetkez\xC5"
+    "\x91"
+    "",
+    "K\xC3"
+    "\xB6"
+    "vetkez\xC5"
+    "\x91"
+    "/El\xC5"
+    "\x91"
+    "z\xC5"
+    "\x91"
+    "",
+    "Bookerly",
+    "Noto Sans",
+    "Open Dyslexic",
+    "Kicsi",
+    "K\xC3"
+    "\xB6"
+    "zepes",
+    "Nagy",
+    "Nagyon nagy",
+    "Szoros",
+    "Norm\xC3"
+    "\xA1"
+    "l",
+    "Sz\xC3"
+    "\xA9"
+    "les",
+    "Sorkiz\xC3"
+    "\xA1"
+    "r\xC3"
+    "\xA1"
+    "s",
+    "Bal",
+    "K\xC3"
+    "\xB6"
+    "z\xC3"
+    "\xA9"
+    "p",
+    "Jobb",
+    "1 perc",
+    "5 perc",
+    "10 perc",
+    "15 perc",
+    "30 perc",
+    "1 oldal",
+    "5 oldal",
+    "10 oldal",
+    "15 oldal",
+    "30 oldal",
+    "Friss\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s",
+    "Friss\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s keres\xC3"
+    "\xA9"
+    "se...",
+    "\xC3"
+    "\x9A"
+    "j friss\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s el\xC3"
+    "\xA9"
+    "rhet\xC5"
+    "\x91"
+    "!",
+    "Jelenlegi verzi\xC3"
+    "\xB3"
+    ": ",
+    "\xC3"
+    "\x9A"
+    "j verzi\xC3"
+    "\xB3"
+    ": ",
+    "Friss\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s...",
+    "Nincs el\xC3"
+    "\xA9"
+    "rhet\xC5"
+    "\x91"
+    " friss\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s",
+    "Friss\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s sikertelen",
+    "Friss\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s k\xC3"
+    "\xA9"
+    "sz",
+    "Tartsd nyomva a bekapcsol\xC3"
+    "\xB3"
+    "gombot a bekapcsol\xC3"
+    "\xA1"
+    "shoz",
+    "External Font",
+    "Built-in (Disabled)",
+    "Nem tal\xC3"
+    "\xA1"
+    "lhat\xC3"
+    "\xB3"
+    " bejegyz\xC3"
+    "\xA9"
+    "s",
+    "Let\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "s...",
+    "Let\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "s sikertelen",
+    "Hiba:",
+    "N\xC3"
+    "\xA9"
+    "vtelen",
+    "Nincs konfigur\xC3"
+    "\xA1"
+    "lt szerver URL",
+    "H\xC3"
+    "\xAD"
+    "rcsatorna bet\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "se sikertelen",
+    "H\xC3"
+    "\xAD"
+    "rcsatorna feldolgoz\xC3"
+    "\xA1"
+    "sa sikertelen",
+    "H\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zat: ",
+    "IP-c\xC3"
+    "\xAD"
+    "m: ",
+    "or scan QR code with your phone to connect to Wifi.",
+    "Hiba: \xC3"
+    "\x81"
+    "ltal\xC3"
+    "\xA1"
+    "nos hiba",
+    "Hiba: H\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zat nem tal\xC3"
+    "\xA1"
+    "lhat\xC3"
+    "\xB3"
+    "",
+    "Hiba: Kapcsolat id\xC5"
+    "\x91"
+    "t\xC3"
+    "\xBA"
+    "ll\xC3"
+    "\xA9"
+    "p\xC3"
+    "\xA9"
+    "s",
+    "SD k\xC3"
+    "\xA1"
+    "rtya",
+    "\xC2"
+    "\xAB"
+    " Vissza",
+    "\xC2"
+    "\xAB"
+    " Kil\xC3"
+    "\xA9"
+    "p\xC3"
+    "\xA9"
+    "s",
+    "\xC2"
+    "\xAB"
+    " F\xC5"
+    "\x91"
+    "oldal",
+    "\xC2"
+    "\xAB"
+    " Save",
+    "Kiv\xC3"
+    "\xA1"
+    "laszt\xC3"
+    "\xA1"
+    "s",
+    "Kiv\xC3"
+    "\xA1"
+    "lasztva",
+    "V\xC3"
+    "\xA1"
+    "lt\xC3"
+    "\xA1"
+    "s",
+    "Meger\xC5"
+    "\x91"
+    "s\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s",
+    "M\xC3"
+    "\xA9"
+    "gse",
+    "Csatlakoz\xC3"
+    "\xA1"
+    "s",
+    "Megnyit\xC3"
+    "\xA1"
+    "s",
+    "Let\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "s",
+    "\xC3"
+    "\x9A"
+    "jra",
+    "Igen",
+    "Nem",
+    "Megjelen\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s",
+    "Elrejt\xC3"
+    "\xA9"
+    "s",
+    "BE",
+    "KI",
+    "Nincs be\xC3"
+    "\xA1"
+    "ll\xC3"
+    "\xAD"
+    "tva",
+    "Bal",
+    "Jobb",
+    "Fel",
+    "Le",
+    "CAPS",
+    "caps",
+    "[ON]",
+    "OK",
+    "Alv\xC3"
+    "\xA1"
+    "sk\xC3"
+    "\xA9"
+    "perny\xC5"
+    "\x91"
+    " bor\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    "sz\xC5"
+    "\xB1"
+    "r\xC5"
+    "\x91"
+    "",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
+    "Kontraszt",
+    "\xC3"
+    "\x81"
+    "llapots\xC3"
+    "\xA1"
+    "v testreszab\xC3"
+    "\xA1"
+    "sa",
+    "Fejezet oldalsz\xC3"
+    "\xA1"
+    "m",
+    "K\xC3"
+    "\xB6"
+    "nyv halad\xC3"
+    "\xA1"
+    "s sz\xC3"
+    "\xA1"
+    "zal\xC3"
+    "\xA9"
+    "ka",
+    "Halad\xC3"
+    "\xA1"
+    "ss\xC3"
+    "\xA1"
+    "v",
+    "Halad\xC3"
+    "\xA1"
+    "ss\xC3"
+    "\xA1"
+    "v vastags\xC3"
+    "\xA1"
+    "ga",
+    "V\xC3"
+    "\xA9"
+    "kony",
+    "K\xC3"
+    "\xB6"
+    "zepes",
+    "Vastag",
+    "K\xC3"
+    "\xB6"
+    "nyv",
+    "Fejezet",
+    "21. fejezet",
+    "K\xC3"
+    "\xB6"
+    "nyv c\xC3"
+    "\xAD"
+    "me",
+    "El\xC5"
+    "\x91"
+    "n\xC3"
+    "\xA9"
+    "zet",
+    "C\xC3"
+    "\xAD"
+    "m",
+    "Akkumul\xC3"
+    "\xA1"
+    "tor",
+    "Felhaszn\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "i fel\xC3"
+    "\xBC"
+    "let t\xC3"
+    "\xA9"
+    "ma",
+    "Klasszikus",
+    "Lyra",
+    "Lyra Extended",
+    "Fork Drift",
+    "Pokemon Party",
+    "Party",
+    "6 recent books with Pokemon progress",
+    "Open books to build your party",
+    "Lv",
+    "Napf\xC3"
+    "\xA9"
+    "ny halv\xC3"
+    "\xA1"
+    "nyul\xC3"
+    "\xA1"
+    "s jav\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "s",
+    "El\xC3"
+    "\xBC"
+    "ls\xC5"
+    "\x91"
+    " gombok \xC3"
+    "\xA1"
+    "t\xC3"
+    "\xA1"
+    "ll\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "sa",
+    "OPDS b\xC3"
+    "\xB6"
+    "ng\xC3"
+    "\xA9"
+    "sz\xC5"
+    "\x91"
+    "",
+    "Bor\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    " + Egy\xC3"
+    "\xA9"
+    "ni",
+    "Recents",
+    "Legut\xC3"
+    "\xB3"
+    "bbi k\xC3"
+    "\xB6"
+    "nyvek",
+    "Nincsenek legut\xC3"
+    "\xB3"
+    "bbi k\xC3"
+    "\xB6"
+    "nyvek",
+    "Calibre wireless eszk\xC3"
+    "\xB6"
+    "z \xC3"
+    "\xA1"
+    "tvitel haszn\xC3"
+    "\xA1"
+    "lata",
+    "H\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xB3"
+    "zat elfelejt\xC3"
+    "\xA9"
+    "se \xC3"
+    "\xA9"
+    "s mentett jelsz\xC3"
+    "\xB3"
+    " t\xC3"
+    "\xB6"
+    "rl\xC3"
+    "\xA9"
+    "se?",
+    "Elfelejt\xC3"
+    "\xA9"
+    "s",
+    "Calibre ind\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "sa...",
+    "Be\xC3"
+    "\xA1"
+    "ll\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "s",
+    "\xC3"
+    "\x81"
+    "llapot",
+    "T\xC3"
+    "\xB6"
+    "rl\xC3"
+    "\xA9"
+    "s",
+    "Alap\xC3"
+    "\xA9"
+    "rtelmezett",
+    "Nyomj meg egy el\xC3"
+    "\xBC"
+    "ls\xC5"
+    "\x91"
+    " gombot minden szerephez",
+    "Hozz\xC3"
+    "\xA1"
+    " nem rendelt",
+    "M\xC3"
+    "\xA1"
+    "r hozz\xC3"
+    "\xA1"
+    " van rendelve",
+    "Oldals\xC3"
+    "\xB3"
+    " gomb fel: Vissza\xC3"
+    "\xA1"
+    "ll\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "s alap\xC3"
+    "\xA9"
+    "rtelmezettre",
+    "Oldals\xC3"
+    "\xB3"
+    " gomb le: \xC3"
+    "\x81"
+    "t\xC3"
+    "\xA1"
+    "ll\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "s megszak\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "sa",
+    "Vissza (1. gomb)",
+    "Meger\xC5"
+    "\x91"
+    "s\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "s (2. gomb)",
+    "Bal (3. gomb)",
+    "Jobb (4. gomb)",
+    "Ugr\xC3"
+    "\xA1"
+    "s %-ra",
+    "F\xC5"
+    "\x91"
+    "oldalra",
+    "Halad\xC3"
+    "\xA1"
+    "s szinkroniz\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xA1"
+    "sa",
+    "K\xC3"
+    "\xB6"
+    "nyv gyors\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xB3"
+    "t\xC3"
+    "\xA1"
+    "r t\xC3"
+    "\xB6"
+    "rl\xC3"
+    "\xA9"
+    "se",
+    "T\xC3"
+    "\xB6"
+    "rl\xC3"
+    "\xA9"
+    "s",
+    "Oldal megjelen\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "se QR-k\xC3"
+    "\xA9"
+    "nt",
+    "Fejezet: ",
+    " oldal  |  ",
+    "K\xC3"
+    "\xB6"
+    "nyv: ",
+    "shift",
+    "SHIFT",
+    "LOCK",
+    "Calibre eset\xC3"
+    "\xA9"
+    "n adj /opds-t az URL-hez",
+    "Bal/Jobb: 1%  Fel/Le: 10%",
+    "Id\xC5"
+    "\x91"
+    " szinkroniz\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xA1"
+    "sa...",
+    "Dokumentum hash kisz\xC3"
+    "\xA1"
+    "m\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "sa...",
+    "Dokumentum hash kisz\xC3"
+    "\xA1"
+    "m\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "sa sikertelen",
+    "T\xC3"
+    "\xA1"
+    "voli halad\xC3"
+    "\xA1"
+    "s lek\xC3"
+    "\xA9"
+    "r\xC3"
+    "\xA9"
+    "se...",
+    "Halad\xC3"
+    "\xA1"
+    "s felt\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "se...",
+    "Nincsenek be\xC3"
+    "\xA1"
+    "ll\xC3"
+    "\xAD"
+    "tva hiteles\xC3"
+    "\xAD"
+    "t\xC5"
+    "\x91"
+    " adatok",
+    "\xC3"
+    "\x81"
+    "ll\xC3"
+    "\xAD"
+    "tsd be a KOReader fi\xC3"
+    "\xB3"
+    "kot a Be\xC3"
+    "\xA1"
+    "ll\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA1"
+    "sokban",
+    "Halad\xC3"
+    "\xA1"
+    "s megtal\xC3"
+    "\xA1"
+    "lva!",
+    "T\xC3"
+    "\xA1"
+    "voli:",
+    "Helyi:",
+    "%d. oldal, %.2f%% \xC3"
+    "\xB6"
+    "sszesen",
+    "%d/%d. oldal, %.2f%% \xC3"
+    "\xB6"
+    "sszesen",
+    "  Forr\xC3"
+    "\xA1"
+    "s: %s",
+    "T\xC3"
+    "\xA1"
+    "voli halad\xC3"
+    "\xA1"
+    "s alkalmaz\xC3"
+    "\xA1"
+    "sa",
+    "Helyi halad\xC3"
+    "\xA1"
+    "s felt\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "se",
+    "Nem tal\xC3"
+    "\xA1"
+    "lhat\xC3"
+    "\xB3"
+    " t\xC3"
+    "\xA1"
+    "voli halad\xC3"
+    "\xA1"
+    "s",
+    "Jelenlegi poz\xC3"
+    "\xAD"
+    "ci\xC3"
+    "\xB3"
+    " felt\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "se?",
+    "Halad\xC3"
+    "\xA1"
+    "s felt\xC3"
+    "\xB6"
+    "ltve!",
+    "Szinkroniz\xC3"
+    "\xA1"
+    "l\xC3"
+    "\xA1"
+    "s sikertelen",
+    "Szakasz ",
+    "Felt\xC3"
+    "\xB6"
+    "lt\xC3"
+    "\xA9"
+    "s",
+    "K\xC3"
+    "\xB6"
+    "nyv st\xC3"
+    "\xAD"
+    "lusa",
+    "Be\xC3"
+    "\xA1"
+    "gyazott st\xC3"
+    "\xAD"
+    "lus",
+    "OPDS szerver URL",
+    "Dark Mode",
+    "Background Server",
+    "Background Server on Charge",
+    "Only on Charge",
+    "Much More Battery Use",
+    "Always keeps WiFi on while awake.",
+    "Validate Sleep Images",
+    "Device Name",
+    "L\xC3"
+    "\xA1"
+    "bjegyzetek",
+    "Nincsenek l\xC3"
+    "\xA1"
+    "bjegyzetek ezen az oldalon",
+    "[link]",
+    "K\xC3"
+    "\xA9"
+    "perny\xC5"
+    "\x91"
+    "k\xC3"
+    "\xA9"
+    "p k\xC3"
+    "\xA9"
+    "sz\xC3"
+    "\xAD"
+    "t\xC3"
+    "\xA9"
+    "se",
+    "Automatikus lapoz\xC3"
+    "\xA1"
+    "s bekapcsolva: ",
+    "Automatikus lapoz\xC3"
+    "\xA1"
+    "s (oldal/perc)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
+    "Global Status Bar",
+    "Status Bar Position",
+    "Top",
+    "Bottom",
+    "No WiFi",
+    "Hotspot",
+};
+
+const char* const STRINGS_LT[] = {
+    "CrossPoint",
+    "KRAUNASI",
+    "MIEGA",
+    "U\xC5"
+    "\xBE"
+    "miegama",
+    "Failai",
+    "Si\xC5"
+    "\xB3"
+    "sti failus",
+    "Nustatymai",
+    "Calibre Library",
+    "T\xC4"
+    "\x99"
+    "sti skaitym\xC4"
+    "\x85"
+    "",
+    "N\xC4"
+    "\x97"
+    "ra atidarytos knygos",
+    "Prad\xC4"
+    "\x97"
+    "kite skaityti \xC5"
+    "\xBE"
+    "emiau",
+    "Books",
+    "Fail\xC5"
+    "\xB3"
+    " nerasta",
+    "Rinktis skyri\xC5"
+    "\xB3"
+    "",
+    "Skyri\xC5"
+    "\xB3"
+    " n\xC4"
+    "\x97"
+    "ra",
+    "Knygos pabaiga",
+    "Tu\xC5"
+    "\xA1"
+    "\xC4"
+    "\x8D"
+    "ias skyrius",
+    "Indeksuojama",
+    "Atminties klaida",
+    "Puslapio klaida",
+    "Tu\xC5"
+    "\xA1"
+    "\xC4"
+    "\x8D"
+    "ias failas",
+    "U\xC5"
+    "\xBE"
+    " rib\xC5"
+    "\xB3"
+    "",
+    "Kraunama...",
+    "Kraunama",
+    "Failed to load XTC",
+    "Failed to load TXT",
+    "Failed to load EPUB",
+    "SD card error",
+    "WiFi tinklai",
+    "Tinkl\xC5"
+    "\xB3"
+    " nerasta",
+    "Rasta: %zu",
+    "Ie\xC5"
+    "\xA1"
+    "koma...",
+    "Jungiamasi...",
+    "Prisijungta!",
+    "Klaida jungiantis",
+    "Connection timeout",
+    "Pamir\xC5"
+    "\xA1"
+    "ti tinkl\xC4"
+    "\x85"
+    "?",
+    "I\xC5"
+    "\xA1"
+    "saugoti slapta\xC5"
+    "\xBE"
+    "od\xC4"
+    "\xAF"
+    "?",
+    "Remove saved password?",
+    "Ie\xC5"
+    "\xA1"
+    "koti i\xC5"
+    "\xA1"
+    " naujo (OK)",
+    "Press any button to continue",
+    "LEFT/RIGHT: Select | OK: Confirm",
+    "How would you like to connect?",
+    "Prisijungti",
+    "Sukurti prieig\xC4"
+    "\x85"
+    "",
+    "Jungtis prie esamo WiFi",
+    "Sukurti WiFi kitiems",
+    "Kuriamas ry\xC5"
+    "\xA1"
+    "ys...",
+    "Prieigos re\xC5"
+    "\xBE"
+    "imas",
+    "Prijunkite \xC4"
+    "\xAF"
+    "rengin\xC4"
+    "\xAF"
+    " prie \xC5"
+    "\xA1"
+    "io WiFi",
+    "Atidarykite \xC5"
+    "\xA1"
+    "\xC4"
+    "\xAF"
+    " adres\xC4"
+    "\x85"
+    " nar\xC5"
+    "\xA1"
+    "ykl\xC4"
+    "\x97"
+    "je",
+    "arba http://",
+    "arba nuskaitykite QR kod\xC4"
+    "\x85"
+    ":",
+    "Calibre belaidis",
+    "Calibre Web URL",
+    "Connect as Wireless Device",
+    "* = U\xC5"
+    "\xBE"
+    "\xC5"
+    "\xA1"
+    "ifruota | + = I\xC5"
+    "\xA1"
+    "saugota",
+    "MAC adresas:",
+    "Tikrinamas WiFi...",
+    "WiFi slapta\xC5"
+    "\xBE"
+    "odis",
+    "Enter Text",
+    "\xC4"
+    "\xAF"
+    " ",
+    "Discovering Calibre...",
+    "Connecting to ",
+    "Connected to ",
+    "Waiting for commands...",
+    "(Connection failed, retrying)",
+    "Calibre disconnected",
+    "Waiting for transfer...",
+    "If transfer fails, enable\n'Ignore free space' in Calibre's\nSmartDevice plugin settings.",
+    "Gaunama: ",
+    "Gauta: ",
+    "Waiting for more...",
+    "Failed to create file",
+    "Password required",
+    "Transfer interrupted",
+    "1) \xC4"
+    "\xAE"
+    "diekite CrossPoint \xC4"
+    "\xAF"
+    "skiep\xC4"
+    "\xAF"
+    "",
+    "2) Naudokite t\xC4"
+    "\x85"
+    " pat\xC4"
+    "\xAF"
+    " WiFi",
+    "3) Calibre: \xE2"
+    "\x80"
+    "\x9E"
+    "Send to device\xE2"
+    "\x80"
+    "\x9C"
+    "",
+    "Nei\xC5"
+    "\xA1"
+    "junkite \xC5"
+    "\xA1"
+    "io ekrano",
+    "Ekranas",
+    "Skaitytuvas",
+    "Valdymas",
+    "Sistema",
+    "Miego ekranas",
+    "Vir\xC5"
+    "\xA1"
+    "elio re\xC5"
+    "\xBE"
+    "imas",
+    "Status Bar",
+    "Sl\xC4"
+    "\x97"
+    "pti baterijos %",
+    "Tarpai tarp pastraip\xC5"
+    "\xB3"
+    "",
+    "Teksto glotninimas",
+    "Paveiksl\xC4"
+    "\x97"
+    "liai",
+    "Rodyti",
+    "Vieta\xC5"
+    "\xBE"
+    "enklis",
+    "Sl\xC4"
+    "\x97"
+    "pti",
+    "Trumpas \xC4"
+    "\xAF"
+    "jungimo pasp.",
+    "Orientacija",
+    "Front Button Layout",
+    "\xC5"
+    "\xA0"
+    "oniniai mygtukai",
+    "Praleisti skyri\xC5"
+    "\xB3"
+    " (ilgai)",
+    "\xC5"
+    "\xA0"
+    "riftas",
+    "External Reader Font",
+    "Reader Font",
+    "UI Font",
+    "\xC5"
+    "\xA0"
+    "rifto dydis",
+    "Tarpai tarp eilu\xC4"
+    "\x8D"
+    "i\xC5"
+    "\xB3"
+    "",
+    "ASCII Letter Spacing",
+    "ASCII Digit Spacing",
+    "CJK Spacing",
+    "Color Mode",
+    "Ekrano para\xC5"
+    "\xA1"
+    "t\xC4"
+    "\x97"
+    "s",
+    "Lygiavimas",
+    "Skiemenuoti",
+    "U\xC5"
+    "\xBE"
+    "migti po",
+    "Rod. pasl\xC4"
+    "\x97"
+    "ptus failus",
+    "Atnaujinimo da\xC5"
+    "\xBE"
+    "nis",
+    "Calibre Settings",
+    "KOReader sinchr.",
+    "Atnaujinimai",
+    "Kalba",
+    "Select Wallpaper",
+    "Factory Reset",
+    "Switch to TRMNL",
+    "Valyti talpykl\xC4"
+    "\x85"
+    "",
+    "Calibre",
+    "Vartotojas",
+    "Slapta\xC5"
+    "\xBE"
+    "odis",
+    "Serverio URL",
+    "Atpa\xC5"
+    "\xBE"
+    "inimas",
+    "Prisijungti",
+    "KOReader vartotojas",
+    "KOReader slapta\xC5"
+    "\xBE"
+    "odis",
+    "Failas",
+    "Dvejetainis",
+    "Nustatykite duomenis",
+    "WiFi ry\xC5"
+    "\xA1"
+    "ys nutr\xC5"
+    "\xAB"
+    "ko",
+    "Jungiamasi...",
+    "Prisijungta!",
+    "KOReader Login",
+    "Sinchronizacija paruo\xC5"
+    "\xA1"
+    "ta",
+    "Prisijungti nepavyko",
+    "Baigta",
+    "I\xC5"
+    "\xA1"
+    "trins vis\xC4"
+    "\x85"
+    " knyg\xC5"
+    "\xB3"
+    " talpykl\xC4"
+    "\x85"
+    ".",
+    "Progresas bus prarastas!",
+    "Knygas reik\xC4"
+    "\x97"
+    "s",
+    "perindeksuoti.",
+    "Valoma...",
+    "I\xC5"
+    "\xA1"
+    "valyta",
+    "pa\xC5"
+    "\xA1"
+    "alinta",
+    "nepavyko",
+    "Nepavyko i\xC5"
+    "\xA1"
+    "valyti",
+    "\xC5"
+    "\xBD"
+    "r. \xE2"
+    "\x80"
+    "\x9E"
+    "serial\xE2"
+    "\x80"
+    "\x9C"
+    " i\xC5"
+    "\xA1"
+    "vest\xC4"
+    "\xAF"
+    "",
+    "Tamsi",
+    "\xC5"
+    "\xA0"
+    "viesi",
+    "Follow Theme",
+    "Kita",
+    "Image Source",
+    "Pokedex",
+    "All",
+    "Vir\xC5"
+    "\xA1"
+    "elis",
+    "N\xC4"
+    "\x97"
+    "ra",
+    "Talpinti",
+    "Kirpti",
+    "No Progress",
+    "Full",
+    "Niekada",
+    "Skaitytuve",
+    "Visada",
+    "Nepaisyti",
+    "Miegas",
+    "Versti psl.",
+    "Sta\xC4"
+    "\x8D"
+    "ias",
+    "Guls\xC4"
+    "\x8D"
+    "ias (P)",
+    "Apverstas",
+    "Guls\xC4"
+    "\x8D"
+    "ias (A)",
+    "Bck, Cnfrm, Lft, Rght",
+    "Lft, Rght, Bck, Cnfrm",
+    "Lft, Bck, Cnfrm, Rght",
+    "Atgal/Pirmyn",
+    "Pirmyn/Atgal",
+    "Bookerly",
+    "Noto Sans",
+    "O. Dyslexic",
+    "Ma\xC5"
+    "\xBE"
+    "as",
+    "Vidut.",
+    "Didelis",
+    "X Didelis",
+    "Siaura",
+    "Norm.",
+    "Platu",
+    "Abipusis",
+    "Kair\xC4"
+    "\x97"
+    "",
+    "Centras",
+    "De\xC5"
+    "\xA1"
+    "in\xC4"
+    "\x97"
+    "",
+    "1 min",
+    "5 min",
+    "10 min",
+    "15 min",
+    "30 min",
+    "1 psl.",
+    "5 psl.",
+    "10 psl.",
+    "15 psl.",
+    "30 psl.",
+    "Atnaujinti",
+    "Ie\xC5"
+    "\xA1"
+    "koma...",
+    "Rastas naujinimas!",
+    "Esama: ",
+    "Nauja: ",
+    "Atnaujinama...",
+    "Naujinim\xC5"
+    "\xB3"
+    " n\xC4"
+    "\x97"
+    "ra",
+    "Klaida",
+    "Baigta",
+    "Laikykite Power mygtuk\xC4"
+    "\x85"
+    " \xC4"
+    "\xAF"
+    "jungimui",
+    "External Font",
+    "Built-in (Disabled)",
+    "\xC4"
+    "\xAE"
+    "ra\xC5"
+    "\xA1"
+    "\xC5"
+    "\xB3"
+    " n\xC4"
+    "\x97"
+    "ra",
+    "Siun\xC4"
+    "\x8D"
+    "iama...",
+    "Nepavyko",
+    "Klaida:",
+    "Bevardis",
+    "N\xC4"
+    "\x97"
+    "ra serverio URL",
+    "Nepavyko gauti duomen\xC5"
+    "\xB3"
+    "",
+    "Apdorojimo klaida",
+    "Tinklas: ",
+    "IP: ",
+    "or scan QR code with your phone to connect to Wifi.",
+    "Bendra klaida",
+    "Tinklas nerastas",
+    "Baig\xC4"
+    "\x97"
+    "si laikas",
+    "SD kortel\xC4"
+    "\x97"
+    "",
+    "\xC2"
+    "\xAB"
+    " Atgal",
+    "\xC2"
+    "\xAB"
+    " I\xC5"
+    "\xA1"
+    "eiti",
+    "\xC2"
+    "\xAB"
+    " Prad\xC5"
+    "\xBE"
+    "ia",
+    "\xC2"
+    "\xAB"
+    " Save",
+    "Rinktis",
+    "Pasirinkta",
+    "Keisti",
+    "Gerai",
+    "At\xC5"
+    "\xA1"
+    "aukti",
+    "Jungtis",
+    "Atidaryti",
+    "Si\xC5"
+    "\xB3"
+    "stis",
+    "V\xC4"
+    "\x97"
+    "l",
+    "Taip",
+    "Ne",
+    "Rodyti",
+    "Sl\xC4"
+    "\x97"
+    "pti",
+    "\xC4"
+    "\xAE"
+    "J.",
+    "I\xC5"
+    "\xA0"
+    "J.",
+    "N\xC4"
+    "\x97"
+    "ra",
+    "Kair\xC4"
+    "\x97"
+    "",
+    "De\xC5"
+    "\xA1"
+    "in\xC4"
+    "\x97"
+    "",
+    "Vir\xC5"
+    "\xA1"
+    "us",
+    "Apa\xC4"
+    "\x8D"
+    "ia",
+    "CAPS",
+    "caps",
+    "[ON]",
+    "OK",
+    "Vir\xC5"
+    "\xA1"
+    "elio filtras",
+    "Image Cycle Mode",
+    "Random",
+    "Sequential",
+    "Kontrastas",
+    "B\xC5"
+    "\xAB"
+    "senos juosta",
+    "Skyriaus psl.",
+    "Progresas %",
+    "Progreso juosta",
+    "Juostos storis",
+    "Plona",
+    "Vidut.",
+    "Stora",
+    "Knyga",
+    "Skyrius",
+    "21 skyrius",
+    "Knygos pavadinimas",
+    "Per\xC5"
+    "\xBE"
+    "i\xC5"
+    "\xAB"
+    "ra",
+    "Pavadinimas",
+    "Baterija",
+    "UI tema",
+    "Klasikin\xC4"
+    "\x97"
+    "",
+    "Lyra",
+    "Lyra Ext.",
+    "Fork Drift",
+    "Pokemon Party",
+    "Party",
+    "6 recent books with Pokemon progress",
+    "Open books to build your party",
+    "Lv",
+    "Bly\xC5"
+    "\xA1"
+    "kumo pataisa",
+    "Keisti mygtukus",
+    "OPDS nar\xC5"
+    "\xA1"
+    "ykl\xC4"
+    "\x97"
+    "",
+    "Vir\xC5"
+    "\xA1"
+    "elis + Kita",
+    "Recents",
+    "Paskutin\xC4"
+    "\x97"
+    "s",
+    "Paskutini\xC5"
+    "\xB3"
+    " n\xC4"
+    "\x97"
+    "ra",
+    "Calibre belaidis ry\xC5"
+    "\xA1"
+    "ys",
+    "Pamir\xC5"
+    "\xA1"
+    "ti tinkl\xC4"
+    "\x85"
+    "?",
+    "Pamir\xC5"
+    "\xA1"
+    "ti",
+    "Paleid\xC5"
+    "\xBE"
+    "iama...",
+    "S\xC4"
+    "\x85"
+    "ranka",
+    "B\xC5"
+    "\xAB"
+    "sena",
+    "Valyti",
+    "Numatytasis",
+    "Spauskite mygtuk\xC4"
+    "\x85"
+    " kiekvienai funkcijai",
+    "Nepriskirta",
+    "Jau priskirta",
+    "\xC5"
+    "\xA0"
+    "oninis Vir\xC5"
+    "\xA1"
+    "us: Atstatyti",
+    "\xC5"
+    "\xA0"
+    "oninis Apa\xC4"
+    "\x8D"
+    "ia: At\xC5"
+    "\xA1"
+    "aukti",
+    "Atgal (1 mygt.)",
+    "Gerai (2 mygt.)",
+    "Kair\xC4"
+    "\x97"
+    " (3 mygt.)",
+    "De\xC5"
+    "\xA1"
+    "in\xC4"
+    "\x97"
+    " (4 mygt.)",
+    "Eiti \xC4"
+    "\xAF"
+    " %",
+    "Prad\xC5"
+    "\xBE"
+    "ia",
+    "Sinchr. progres\xC4"
+    "\x85"
+    "",
+    "Trinti talpykl\xC4"
+    "\x85"
+    "",
+    "Trinti",
+    "QR kodas",
+    "Sk: ",
+    " psl. | ",
+    "Kn: ",
+    "shift",
+    "SHIFT",
+    "LOCK",
+    "Prid\xC4"
+    "\x97"
+    "kite /opds prie URL",
+    "K/D: 1% | V/A: 10%",
+    "Sinchr. laikas...",
+    "Skai\xC4"
+    "\x8D"
+    "iuojama mai\xC5"
+    "\xA1"
+    "a...",
+    "Mai\xC5"
+    "\xA1"
+    "os klaida",
+    "Gaunamas progresas...",
+    "\xC4"
+    "\xAE"
+    "keliamas progresas...",
+    "N\xC4"
+    "\x97"
+    "ra duomen\xC5"
+    "\xB3"
+    "",
+    "Sutvarkykite KOReader paskyr\xC4"
+    "\x85"
+    "",
+    "Rastas progresas!",
+    "Nuotol.:",
+    "Vietinis:",
+    "Psl %d, %.2f%% bendrai",
+    "Psl %d/%d, %.2f%% bendrai",
+    " I\xC5"
+    "\xA1"
+    ": %s",
+    "Taikyti nuotolin\xC4"
+    "\xAF"
+    "",
+    "\xC4"
+    "\xAE"
+    "kelti vietin\xC4"
+    "\xAF"
+    "",
+    "Progres\xC5"
+    "\xB3"
+    " nerasta",
+    "\xC4"
+    "\xAE"
+    "kelti pozicij\xC4"
+    "\x85"
+    "?",
+    "\xC4"
+    "\xAE"
+    "kelta!",
+    "Nepavyko",
+    "Dalis ",
+    "\xC4"
+    "\xAE"
+    "kelti",
+    "Knygos stilius",
+    "Integruotas stilius",
+    "OPDS URL",
+    "Dark Mode",
+    "Background Server",
+    "Background Server on Charge",
+    "Only on Charge",
+    "Much More Battery Use",
+    "Always keeps WiFi on while awake.",
+    "Validate Sleep Images",
+    "Device Name",
+    "I\xC5"
+    "\xA1"
+    "na\xC5"
+    "\xA1"
+    "os",
+    "\xC5"
+    "\xA0"
+    "iame psl. i\xC5"
+    "\xA1"
+    "na\xC5"
+    "\xA1"
+    "\xC5"
+    "\xB3"
+    " n\xC4"
+    "\x97"
+    "ra",
+    "[nuoroda]",
+    "Ekrano nuotrauka",
+    "Auto-vertimas: ",
+    "Auto-vertimas (psl/min)",
+    "Transparent",
+    "Notes",
+    "No notes yet. Add one below.",
+    "+ Add Note",
+    "WiFi Auto-Connect",
+    "Add to Anki",
+    "Anki Cards",
+    "No cards found.",
+    "Add cards from the reader menu.",
+    "FRONT",
+    "BACK",
+    "Source: %s",
+    "Saved!",
+    "Press OK to save card",
+    "Global Status Bar",
+    "Status Bar Position",
+    "Top",
+    "Bottom",
+    "No WiFi",
+    "Hotspot",
+};
+
 }  // namespace i18n_strings
 
 // Compile-time validation of array sizes
@@ -43812,3 +46929,9 @@ static_assert(sizeof(i18n_strings::STRINGS_TR) / sizeof(i18n_strings::STRINGS_TR
 static_assert(sizeof(i18n_strings::STRINGS_KK) / sizeof(i18n_strings::STRINGS_KK[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_KK size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_HU) / sizeof(i18n_strings::STRINGS_HU[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_HU size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_LT) / sizeof(i18n_strings::STRINGS_LT[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_LT size mismatch");

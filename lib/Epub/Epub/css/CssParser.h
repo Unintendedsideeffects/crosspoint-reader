@@ -103,11 +103,14 @@ class CssParser {
  private:
   // Storage: maps normalized selector -> style properties
   std::unordered_map<std::string, CssStyle> rulesBySelector_;
-  std::string cacheFilePath_;
+  std::string cacheDir_;
 
   // Internal parsing helpers
   void processRuleBlock(const std::string& selectorGroup, const std::string& declarations);
+  void processRuleBlockWithStyle(const std::string& selectorGroup, const CssStyle& style);
   static CssStyle parseDeclarations(const std::string& declBlock);
+  static void parseDeclarationIntoStyle(const std::string& decl, CssStyle& style, std::string& propNameBuf,
+                                        std::string& propValueBuf);
 
   // Individual property value parsers
   static CssTextAlign interpretAlignment(const std::string& val);
@@ -115,10 +118,14 @@ class CssParser {
   static CssFontWeight interpretFontWeight(const std::string& val);
   static CssTextDecoration interpretDecoration(const std::string& val);
   static CssLength interpretLength(const std::string& val);
+  static bool tryInterpretLength(const std::string& val, CssLength& out);
   static int8_t interpretSpacing(const std::string& val);
 
   // String utilities
   static std::string normalized(const std::string& s);
+  static void normalizedInto(const std::string& s, std::string& out);
   static std::vector<std::string> splitOnChar(const std::string& s, char delimiter);
   static std::vector<std::string> splitWhitespace(const std::string& s);
+
+  void deleteCache() const;
 };
