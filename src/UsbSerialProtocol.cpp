@@ -18,6 +18,7 @@
 #include "activities/todo/TodoPlannerStorage.h"
 #include "core/features/FeatureModules.h"
 #include "network/RemoteKeyboardSession.h"
+#include "network/RemoteControlApi.h"
 #include "esp_ota_ops.h"
 #include "util/BookProgressDataStore.h"
 #include "util/DateUtils.h"
@@ -170,28 +171,12 @@ static void handlePlugins() {
 }
 
 static void handleOpenBook(const char* path) {
-  if (!core::FeatureModules::hasCapability(core::Capability::RemoteOpenBook)) {
-    sendError("remote_open_book disabled");
+  const auto decision = network::evaluateOpenBookPath(path);
+  if (!decision.ok()) {
+    sendError(network::toUsbError(decision.error));
     return;
   }
-  if (!path || path[0] == '\0') {
-    sendError("missing path");
-    return;
-  }
-  if (!PathUtils::isValidSdPath(String(path))) {
-    sendError("invalid path");
-    return;
-  }
-  bool exists = false;
-  {
-    SpiBusMutex::Guard guard;
-    exists = Storage.exists(path);
-  }
-  if (!exists) {
-    sendError("file not found");
-    return;
-  }
-  APP_STATE.pendingOpenPath = path;
+  APP_STATE.pendingOpenPath = decision.path;
   sendOk();
 }
 
@@ -217,20 +202,12 @@ static void handleWifiStatus() {
 }
 
 static void handleRemoteButton(const char* btn) {
-  if (!core::FeatureModules::hasCapability(core::Capability::RemotePageTurn)) {
-    sendError("remote_page_turn disabled");
+  const auto decision = network::evaluateRemoteButton(btn);
+  if (!decision.ok()) {
+    sendError(network::toUsbError(decision.error));
     return;
   }
-  int8_t pageTurn = 0;
-  if (strcmp(btn, "page_forward") == 0 || strcmp(btn, "next") == 0) {
-    pageTurn = 1;
-  } else if (strcmp(btn, "page_back") == 0 || strcmp(btn, "prev") == 0 || strcmp(btn, "previous") == 0) {
-    pageTurn = -1;
-  } else {
-    sendError("unknown button; use page_forward or page_back");
-    return;
-  }
-  APP_STATE.pendingPageTurn = pageTurn;
+  APP_STATE.pendingPageTurn = decision.pageTurn;
   sendOk();
 }
 

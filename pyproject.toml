@@ -9,4 +9,34 @@ requires-python = ">=3.11"
 dependencies = [
     "clang-format>=21.1.8",
     "platformio>=6.1.18",
+    "vulture>=2.14",
+]
+
+[tool.ruff]
+exclude = [
+    ".venv",
+    ".venv.stale-20260325",
+    "docs/configurator/node_modules",
+]
+
+[tool.vulture]
+exclude = [
+    ".venv/",
+    ".venv.stale-20260325/",
+    "docs/configurator/node_modules/",
+]
+ignore_names = [
+    "SCREEN_WIDTH",
+    "SCREEN_HEIGHT",
+    "chapter_title",
+    "draw_text_wrapped",
+    "dtr",
+    "do_DELETE",
+    "do_GET",
+    "do_POST",
+    "do_PUT",
+    "log_message",
+    "parse_workflow_cmd_enables",
+    "parse_workflow_inputs",
+    "rts",
 ]

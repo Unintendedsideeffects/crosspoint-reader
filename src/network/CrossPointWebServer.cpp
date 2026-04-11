@@ -31,6 +31,7 @@
 #include "html/js/jszip_minJs.generated.h"
 #include "network/BufferedHttpUpload.h"
 #include "network/RecentBookJson.h"
+#include "network/RemoteControlApi.h"
 #include "network/WebUtils.h"
 #include "util/BookProgressDataStore.h"
 #include "util/DateUtils.h"
@@ -2161,68 +2162,19 @@ void CrossPointWebServer::handleSleepCoverPin() {
 }
 
 void CrossPointWebServer::handleOpenBook() {
-  if (!core::FeatureCatalog::isEnabled("remote_open_book")) {
-    server->send(404, "text/plain", "Remote open-book disabled");
-    return;
+  const auto result = network::parseOpenBookHttpRequest(server->hasArg("plain"), server->arg("plain"));
+  if (result.statusCode == 202) {
+    APP_STATE.pendingOpenPath = result.path;
   }
-  if (!server->hasArg("plain")) {
-    server->send(400, "text/plain", "Missing JSON body");
-    return;
-  }
-  JsonDocument doc;
-  const auto err = deserializeJson(doc, server->arg("plain"));
-  if (err) {
-    server->send(400, "text/plain", "Invalid JSON");
-    return;
-  }
-  const char* path = doc["path"] | "";
-  if (!path || path[0] == '\0') {
-    server->send(400, "text/plain", "Missing path");
-    return;
-  }
-  if (!PathUtils::isValidSdPath(String(path))) {
-    server->send(400, "text/plain", "Invalid path");
-    return;
-  }
-  bool exists = false;
-  {
-    SpiBusMutex::Guard guard;
-    exists = Storage.exists(path);
-  }
-  if (!exists) {
-    server->send(404, "text/plain", "File not found");
-    return;
-  }
-  APP_STATE.pendingOpenPath = path;
-  server->send(202, "application/json", "{\"status\":\"opening\"}");
+  server->send(result.statusCode, result.contentType, result.body);
 }
 
 void CrossPointWebServer::handleRemoteButton() {
-  if (!core::FeatureCatalog::isEnabled("remote_page_turn")) {
-    server->send(404, "text/plain", "Remote page turn disabled");
-    return;
+  const auto result = network::parseRemoteButtonHttpRequest(server->hasArg("plain"), server->arg("plain"));
+  if (result.statusCode == 202) {
+    APP_STATE.pendingPageTurn = result.pageTurn;
   }
-  if (!server->hasArg("plain")) {
-    server->send(400, "text/plain", "Missing JSON body");
-    return;
-  }
-  JsonDocument doc;
-  if (deserializeJson(doc, server->arg("plain"))) {
-    server->send(400, "text/plain", "Invalid JSON");
-    return;
-  }
-  const char* btn = doc["button"] | "";
-  int8_t pageTurn = 0;
-  if (strcmp(btn, "page_forward") == 0 || strcmp(btn, "next") == 0) {
-    pageTurn = 1;
-  } else if (strcmp(btn, "page_back") == 0 || strcmp(btn, "prev") == 0 || strcmp(btn, "previous") == 0) {
-    pageTurn = -1;
-  } else {
-    server->send(400, "text/plain", "Unknown button; use page_forward or page_back");
-    return;
-  }
-  APP_STATE.pendingPageTurn = pageTurn;
-  server->send(202, "application/json", "{\"status\":\"ok\"}");
+  server->send(result.statusCode, result.contentType, result.body);
 }
 
 void CrossPointWebServer::handleScreenshot() {

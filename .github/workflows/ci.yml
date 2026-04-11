@@ -86,6 +86,41 @@ jobs:
       - name: Validate published HTTP contract
         run: python3 scripts/validate_contract_server.py
 
+  cleanup-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Ensure pip for PlatformIO
+        run: |
+          uv run python -m ensurepip --upgrade || true
+          uv run python -m pip --version
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v5
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
+          restore-keys: ${{ runner.os }}-platformio-
+
+      - name: Run cleanup checks
+        run: |
+          uv run vulture scripts
+          bash scripts/check_feature_boundaries.sh
+          uv run pio check -e default
+
   hardware-patterns:
     runs-on: ubuntu-latest
     steps:

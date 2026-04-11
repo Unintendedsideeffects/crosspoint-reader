@@ -44,6 +44,7 @@ g++ -std=c++20 -O2 -Wno-narrowing \
   "$ROOT_DIR/lib/FsHelpers/FsHelpers.cpp" \
   "$ROOT_DIR/lib/Markdown/MarkdownParser.cpp" \
   "$ROOT_DIR/src/core/features/FeatureCatalog.cpp" \
+  "$ROOT_DIR/src/network/RemoteControlApi.cpp" \
   "$ROOT_DIR/src/features/pokemon_party/Registration.cpp" \
   "$ROOT_DIR/src/features/remote_keyboard_input/Registration.cpp" \
   "$ROOT_DIR/src/network/RemoteKeyboardSession.cpp" \
