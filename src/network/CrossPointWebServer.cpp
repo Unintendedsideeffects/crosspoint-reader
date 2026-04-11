@@ -232,6 +232,17 @@ CrossPointWebServer::CrossPointWebServer() {}
 
 CrossPointWebServer::~CrossPointWebServer() { stop(); }
 
+void CrossPointWebServer::setApRedirectPath(std::string path) {
+  if (path.empty()) {
+    apRedirectPath = "/";
+    return;
+  }
+  if (path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  apRedirectPath = std::move(path);
+}
+
 void CrossPointWebServer::begin() {
   if (running) {
     LOG_DBG("WEB", "Web server already running");
@@ -516,8 +527,8 @@ void CrossPointWebServer::handleNotFound() const {
     // A 302 to the raw AP IP triggers the "Sign in to network" notification on every
     // major OS; we use the IP rather than the .local hostname because mDNS is blocked
     // on clients until after they dismiss the captive portal.
-    const String homeUrl = "http://" + WiFi.softAPIP().toString() + "/";
-    server->sendHeader("Location", homeUrl);
+    const String redirectUrl = "http://" + WiFi.softAPIP().toString() + apRedirectPath.c_str();
+    server->sendHeader("Location", redirectUrl);
     server->send(302, "text/plain", "");
     return;
   }

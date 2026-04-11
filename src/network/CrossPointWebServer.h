@@ -66,11 +66,15 @@ class CrossPointWebServer {
   // Returns true if any push/pull API request was received since the server started
   bool hadApiActivity() const { return requestCount > 0; }
 
+  // Override the AP-mode captive-portal redirect target. Defaults to "/".
+  void setApRedirectPath(std::string path);
+
  private:
   std::unique_ptr<WebServer> server = nullptr;
   std::unique_ptr<WebSocketsServer> wsServer = nullptr;
   bool running = false;
   bool apMode = false;  // true when running in AP mode, false for STA mode
+  std::string apRedirectPath = "/";
   uint16_t port = 80;
   uint16_t wsPort = 81;               // WebSocket port
   mutable uint32_t requestCount = 0;  // Incremented on status/upload/download

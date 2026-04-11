@@ -358,6 +358,7 @@ void RemoteKeyboardManager::runHotspotTask() {
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
   dnsServer.start(DNS_PORT, "*", apIp);
 
+  server.setApRedirectPath("/remote-input");
   server.begin();
   if (!server.isRunning()) {
     LOG_ERR("RKB", "Failed to start remote keyboard web server");

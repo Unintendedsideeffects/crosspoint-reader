@@ -1,5 +1,7 @@
 #pragma once
 
+#include <DNSServer.h>
+
 #include <memory>
 #include <string>
 
@@ -30,6 +32,7 @@ class RemoteKeyboardNetworkSession {
   bool startAccessPointAndServer();
 
   std::unique_ptr<CrossPointWebServer> ownedServer;
+  std::unique_ptr<DNSServer> dnsServer;
   State state;
   bool startedAp = false;
 };

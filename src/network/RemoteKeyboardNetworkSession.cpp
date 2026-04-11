@@ -11,6 +11,7 @@
 namespace {
 constexpr uint8_t kApChannel = 1;
 constexpr uint8_t kApMaxConnections = 4;
+constexpr uint16_t kDnsPort = 53;
 
 bool hasStaWifiConnection() {
   const wifi_mode_t wifiMode = WiFi.getMode();
@@ -34,12 +35,20 @@ bool RemoteKeyboardNetworkSession::begin() {
 }
 
 void RemoteKeyboardNetworkSession::loop() {
+  if (dnsServer) {
+    dnsServer->processNextRequest();
+  }
   if (ownedServer && ownedServer->isRunning()) {
     ownedServer->handleClient();
   }
 }
 
 void RemoteKeyboardNetworkSession::end() {
+  if (dnsServer) {
+    dnsServer->stop();
+    dnsServer.reset();
+  }
+
   if (ownedServer) {
     ownedServer->stop();
     ownedServer.reset();
@@ -92,6 +101,11 @@ bool RemoteKeyboardNetworkSession::startAccessPointAndServer() {
   WiFi.mode(WIFI_AP);
   delay(100);
 
+  const IPAddress apLocalIp(192, 168, 4, 1);
+  const IPAddress apGateway(192, 168, 4, 1);
+  const IPAddress apSubnet(255, 255, 255, 0);
+  WiFi.softAPConfig(apLocalIp, apGateway, apSubnet);
+
   char apSsid[40];
   NetworkNames::getApSsid(apSsid, sizeof(apSsid));
   if (!WiFi.softAP(apSsid, nullptr, kApChannel, false, kApMaxConnections)) {
@@ -106,7 +120,12 @@ bool RemoteKeyboardNetworkSession::startAccessPointAndServer() {
   state.ip = WiFi.softAPIP().toString().c_str();
   state.url = "http://" + state.ip + "/remote-input";
 
+  dnsServer = std::make_unique<DNSServer>();
+  dnsServer->setErrorReplyCode(DNSReplyCode::NoError);
+  dnsServer->start(kDnsPort, "*", WiFi.softAPIP());
+
   ownedServer = std::make_unique<CrossPointWebServer>();
+  ownedServer->setApRedirectPath("/remote-input");
   ownedServer->begin();
   if (!ownedServer->isRunning()) {
     end();

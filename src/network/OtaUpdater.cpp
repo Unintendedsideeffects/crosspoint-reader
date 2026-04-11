@@ -17,14 +17,14 @@
 #include "esp_wifi.h"
 
 namespace {
-constexpr char releaseChannelUrl[] =
+constexpr char stableReleaseUrl[] =
+    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/latest";
+constexpr char stableTagUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/stable";
 constexpr char nightlyChannelUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/nightly";
 constexpr char latestChannelUrl[] =
     "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/latest";
-constexpr char resetChannelUrl[] =
-    "https://api.github.com/repos/Unintendedsideeffects/crosspoint-reader/releases/tags/reset";
 // Override at build time via -DFEATURE_STORE_CATALOG_URL='"..."' in platformio.ini build_flags.
 #ifndef FEATURE_STORE_CATALOG_URL
 #define FEATURE_STORE_CATALOG_URL                                                                  \
@@ -208,6 +208,39 @@ struct HttpBuf {
   size_t len = 0;
 };
 
+struct ReleaseFetchResult {
+  OtaUpdater::OtaUpdaterError error = OtaUpdater::OK;
+  int httpStatus = 0;
+  esp_err_t espError = ESP_OK;
+  String message;
+};
+
+struct ChannelFetchCandidate {
+  const char* url;
+  const char* label;
+};
+
+struct ChannelResolution {
+  const char* channelName;
+  const ChannelFetchCandidate* candidates;
+  size_t candidateCount;
+  bool factoryResetOnInstall = false;
+};
+
+String summarizeHttpBody(const char* body) {
+  if (body == nullptr || body[0] == '\0') {
+    return "";
+  }
+
+  String summary;
+  for (size_t i = 0; body[i] != '\0' && summary.length() < 120; ++i) {
+    const char ch = body[i];
+    summary += (ch == '\r' || ch == '\n' || ch == '\t') ? ' ' : ch;
+  }
+  summary.trim();
+  return summary;
+}
+
 esp_err_t http_client_set_header_cb(esp_http_client_handle_t http_client) {
   return esp_http_client_set_header(http_client, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
 }
@@ -236,7 +269,7 @@ esp_err_t event_handler(esp_http_client_event_t* event) {
  * Fetch JSON from a URL into ArduinoJson doc.
  * Returns OtaUpdater::OK on success, or an error code.
  */
-OtaUpdater::OtaUpdaterError fetchReleaseJson(const char* url, JsonDocument& doc, const JsonDocument& filter) {
+ReleaseFetchResult fetchReleaseJson(const char* url, JsonDocument& doc, const JsonDocument& filter) {
   HttpBuf httpBuf;
 
   esp_http_client_config_t client_config = {
@@ -263,53 +296,76 @@ OtaUpdater::OtaUpdaterError fetchReleaseJson(const char* url, JsonDocument& doc,
   esp_http_client_handle_t client_handle = esp_http_client_init(&client_config);
   if (!client_handle) {
     LOG_ERR("OTA", "HTTP Client Handle Failed");
-    return OtaUpdater::INTERNAL_UPDATE_ERROR;
+    return {OtaUpdater::INTERNAL_UPDATE_ERROR, 0, ESP_FAIL, String("Failed to initialize HTTP client for ") + url};
   }
 
   esp_err_t esp_err = esp_http_client_set_header(client_handle, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
   if (esp_err != ESP_OK) {
     LOG_ERR("OTA", "esp_http_client_set_header Failed : %s", esp_err_to_name(esp_err));
     esp_http_client_cleanup(client_handle);
-    return OtaUpdater::INTERNAL_UPDATE_ERROR;
+    return {OtaUpdater::INTERNAL_UPDATE_ERROR,
+            0,
+            esp_err,
+            String("Failed to prepare OTA request for ") + url + ": " + esp_err_to_name(esp_err)};
   }
 
   esp_err = esp_http_client_perform(client_handle);
   if (esp_err != ESP_OK) {
     LOG_ERR("OTA", "esp_http_client_perform Failed : %s", esp_err_to_name(esp_err));
     esp_http_client_cleanup(client_handle);
-    return OtaUpdater::HTTP_ERROR;
+    return {OtaUpdater::HTTP_ERROR,
+            0,
+            esp_err,
+            String("Request to ") + url + " failed: " + esp_err_to_name(esp_err)};
   }
 
   const int httpStatus = esp_http_client_get_status_code(client_handle);
   esp_err = esp_http_client_cleanup(client_handle);
   if (esp_err != ESP_OK) {
     LOG_ERR("OTA", "esp_http_client_cleanup Failed : %s", esp_err_to_name(esp_err));
-    return OtaUpdater::INTERNAL_UPDATE_ERROR;
+    return {OtaUpdater::INTERNAL_UPDATE_ERROR,
+            httpStatus,
+            esp_err,
+            String("Failed to close OTA request for ") + url + ": " + esp_err_to_name(esp_err)};
   }
 
   if (httpStatus != 200) {
     LOG_ERR("OTA", "HTTP %d from %s (body: %.120s)", httpStatus, url, httpBuf.data ? httpBuf.data : "");
+    const String bodySummary = summarizeHttpBody(httpBuf.data);
     if (httpStatus == 403 || httpStatus == 429) {
-      return OtaUpdater::HTTP_ERROR;  // Rate limited
+      String message = String("GitHub API rate-limited OTA check (HTTP ") + httpStatus + ") for " + url;
+      if (!bodySummary.isEmpty()) {
+        message += ": ";
+        message += bodySummary;
+      }
+      return {OtaUpdater::HTTP_ERROR, httpStatus, ESP_OK, message};
     }
     if (httpStatus == 404) {
-      return OtaUpdater::NO_UPDATE;  // Tag/release doesn't exist
+      return {OtaUpdater::NO_UPDATE, httpStatus, ESP_OK, String("No release found at ") + url + " (HTTP 404)"};
     }
-    return OtaUpdater::HTTP_ERROR;
+    String message = String("OTA server returned HTTP ") + httpStatus + " for " + url;
+    if (!bodySummary.isEmpty()) {
+      message += ": ";
+      message += bodySummary;
+    }
+    return {OtaUpdater::HTTP_ERROR, httpStatus, ESP_OK, message};
   }
 
   if (httpBuf.data == nullptr || httpBuf.len == 0) {
     LOG_ERR("OTA", "Empty response body from %s", url);
-    return OtaUpdater::HTTP_ERROR;
+    return {OtaUpdater::HTTP_ERROR, httpStatus, ESP_OK, String("Empty response body from ") + url};
   }
 
   const DeserializationError error = deserializeJson(doc, httpBuf.data, DeserializationOption::Filter(filter));
   if (error) {
     LOG_ERR("OTA", "JSON parse failed: %s (body: %.120s)", error.c_str(), httpBuf.data);
-    return OtaUpdater::JSON_PARSE_ERROR;
+    return {OtaUpdater::JSON_PARSE_ERROR,
+            httpStatus,
+            ESP_OK,
+            String("Invalid OTA metadata from ") + url + ": " + error.c_str()};
   }
 
-  return OtaUpdater::OK;
+  return {OtaUpdater::OK, httpStatus, ESP_OK, ""};
 }
 
 size_t getMaxOtaPartitionSize() {
@@ -323,7 +379,7 @@ size_t getMaxOtaPartitionSize() {
 String describeCheckForUpdateError(const OtaUpdater::OtaUpdaterError error) {
   switch (error) {
     case OtaUpdater::HTTP_ERROR:
-      return "Unable to reach update server (retry later)";
+      return "OTA request failed";
     case OtaUpdater::JSON_PARSE_ERROR:
       return "Invalid update metadata";
     case OtaUpdater::UPDATE_OLDER_ERROR:
@@ -373,16 +429,26 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     return INTERNAL_UPDATE_ERROR;
   }
 
-  // Fall back to channel-based OTA
-  const char* releaseUrl = releaseChannelUrl;
+  static constexpr ChannelFetchCandidate stableCandidates[] = {
+      {stableReleaseUrl, "stable release"},
+      {stableTagUrl, "stable tag"},
+  };
+  static constexpr ChannelFetchCandidate nightlyCandidates[] = {
+      {nightlyChannelUrl, "nightly channel"},
+  };
+  static constexpr ChannelFetchCandidate latestCandidates[] = {
+      {latestChannelUrl, "latest channel"},
+  };
+
+  ChannelResolution channel{"stable", stableCandidates, sizeof(stableCandidates) / sizeof(stableCandidates[0]), false};
   if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_NIGHTLY) {
-    releaseUrl = nightlyChannelUrl;
+    channel = {"nightly", nightlyCandidates, sizeof(nightlyCandidates) / sizeof(nightlyCandidates[0]), false};
   } else if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL) {
-    releaseUrl = latestChannelUrl;
+    channel = {"latest", latestCandidates, sizeof(latestCandidates) / sizeof(latestCandidates[0]), false};
   } else if (SETTINGS.releaseChannel == CrossPointSettings::RELEASE_LATEST_SUCCESSFUL_FACTORY_RESET) {
-    releaseUrl = resetChannelUrl;
-    factoryResetOnInstall = true;
+    channel = {"latest-factory-reset", latestCandidates, sizeof(latestCandidates) / sizeof(latestCandidates[0]), true};
   }
+  factoryResetOnInstall = channel.factoryResetOnInstall;
 
   JsonDocument filter;
   JsonDocument doc;
@@ -392,21 +458,27 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   filter["assets"][0]["browser_download_url"] = true;
   filter["assets"][0]["size"] = true;
 
-  // Try the primary channel with one retry on transient HTTP errors,
-  // then fall back to the latest channel if the primary tag doesn't exist.
-  auto res = fetchReleaseJson(releaseUrl, doc, filter);
-  if (res == HTTP_ERROR) {
-    LOG_WRN("OTA", "First check attempt failed, retrying after 2s");
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    res = fetchReleaseJson(releaseUrl, doc, filter);
+  ReleaseFetchResult fetchResult;
+  for (size_t i = 0; i < channel.candidateCount; ++i) {
+    const auto& candidate = channel.candidates[i];
+    doc.clear();
+    fetchResult = fetchReleaseJson(candidate.url, doc, filter);
+    if (fetchResult.error == HTTP_ERROR) {
+      LOG_WRN("OTA", "%s check failed, retrying after 2s: %s", candidate.label, fetchResult.message.c_str());
+      vTaskDelay(2000 / portTICK_PERIOD_MS);
+      doc.clear();
+      fetchResult = fetchReleaseJson(candidate.url, doc, filter);
+    }
+    if (fetchResult.error == OK) {
+      LOG_DBG("OTA", "Resolved %s OTA metadata from %s", channel.channelName, candidate.url);
+      break;
+    }
+    LOG_WRN("OTA", "%s candidate failed: %s", candidate.label, fetchResult.message.c_str());
   }
-  if (res != OK && releaseUrl == releaseChannelUrl && releaseChannelUrl != latestChannelUrl) {
-    LOG_WRN("OTA", "Release channel unavailable (%d), falling back to latest", static_cast<int>(res));
-    res = fetchReleaseJson(latestChannelUrl, doc, filter);
-  }
-  if (res != OK) {
-    lastError = describeCheckForUpdateError(res);
-    return res;
+
+  if (fetchResult.error != OK) {
+    lastError = fetchResult.message.length() > 0 ? fetchResult.message : describeCheckForUpdateError(fetchResult.error);
+    return fetchResult.error;
   }
 
   if (!doc["tag_name"].is<std::string>()) {
@@ -462,9 +534,9 @@ bool OtaUpdater::loadFeatureStoreCatalog() {
   filter["bundles"][0]["checksum"] = true;
   filter["bundles"][0]["binarySize"] = true;
 
-  const auto res = fetchReleaseJson(featureStoreCatalogUrl, doc, filter);
-  if (res != OK) {
-    lastError = CATALOG_UNAVAILABLE_ERROR;
+  const auto fetchResult = fetchReleaseJson(featureStoreCatalogUrl, doc, filter);
+  if (fetchResult.error != OK) {
+    lastError = fetchResult.message.length() > 0 ? fetchResult.message : CATALOG_UNAVAILABLE_ERROR;
     return false;
   }
 
