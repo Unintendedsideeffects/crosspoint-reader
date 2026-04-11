@@ -55,7 +55,7 @@ FEATURES = {
     'markdown': Feature(
         name='Markdown/Obsidian',
         flag='ENABLE_MARKDOWN',
-        size_kb=240,
+        size_kb=241,
         description='Markdown and Obsidian vault reading support'
     ),
     'integrations': Feature(
@@ -115,13 +115,13 @@ FEATURES = {
     'epub_support': Feature(
         name='EPUB Support',
         flag='ENABLE_EPUB_SUPPORT',
-        size_kb=199,
+        size_kb=202,
         description='EPUB e-book reader with CSS and chapter navigation'
     ),
     'hyphenation': Feature(
         name='Hyphenation',
         flag='ENABLE_HYPHENATION',
-        size_kb=511,
+        size_kb=514,
         description='Language-aware hyphenation for justified EPUB text'
     ),
     'xtc_support': Feature(
@@ -145,7 +145,7 @@ FEATURES = {
     'todo_planner': Feature(
         name='Todo Planner',
         flag='ENABLE_TODO_PLANNER',
-        size_kb=6,
+        size_kb=5,
         description='Standalone daily TODO/agenda planner with .md/.txt fallback and web quick-entry'
     ),
     'anki_support': Feature(
@@ -584,7 +584,7 @@ def resolve_profile_name(profile_name: str) -> str:
 
 def calculate_size(enabled_features: Dict[str, bool]) -> float:
     """Calculate estimated firmware size in MB."""
-    base_size_mb = 2.32  # Lean profile size baseline (measured)
+    base_size_mb = 2.42  # Lean profile size baseline (measured)
 
     for feature_key, enabled in enabled_features.items():
         if enabled:
