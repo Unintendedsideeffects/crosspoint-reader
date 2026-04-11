@@ -1,8 +1,13 @@
-# Android Companion App — Firmware Contract
+# Consumer Transport Contract
 
-This file defines exactly what the Android companion app (ForkDriftApp) expects
-from the firmware. It is the authoritative reference for closing gaps between
-the two codebases. Keep it up to date when either side changes.
+This file defines the stable transport contract that `crosspoint-reader/fork-drift`
+publishes to external consumers. ForkDriftApp is the reference client today, but
+the same transport rules are intended for any consumer integrating with the
+firmware.
+
+Use this file as the umbrella contract for all supported transports. For the
+machine-readable HTTP surface, see [docs/http-api.openapi.yaml](./http-api.openapi.yaml).
+Keep both documents up to date when either side changes.
 
 ---
 
@@ -15,7 +20,6 @@ the two codebases. Keep it up to date when either side changes.
 | USB mass storage | `UsbMassStorageTransport` | Implemented both sides (libaums) |
 | BLE provisioning | `BleTransport` | Implemented both sides |
 
-For the machine-readable HTTP contract, see [docs/http-api.openapi.yaml](./http-api.openapi.yaml).
 This document remains the umbrella transport contract for HTTP, UDP discovery,
 USB serial JSON-RPC, BLE provisioning, and other non-OpenAPI surfaces.
 
@@ -606,6 +610,20 @@ Success response:
 
 **Current status:** ✅ Implemented. Returns HTTP `202` on success and `400` for
 unknown button values.
+
+### POST /api/screenshot
+
+Consumers can request a deferred screenshot capture:
+```json
+{}
+```
+
+Success response:
+```json
+{"status":"ok"}
+```
+
+**Current status:** ✅ Implemented. Returns HTTP `202` when the request is queued.
 
 ---
 

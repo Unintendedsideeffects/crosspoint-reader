@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: CrossPoint Reader HTTP API
-  version: 1.0.0-draft
+  version: 1.0.0
   license:
     name: MIT
     url: https://opensource.org/license/mit
@@ -17,6 +17,10 @@ info:
     `/api/features` before calling feature-gated endpoints. Operations with
     `x-crosspoint-feature-gates` may return `404` when the route is disabled or
     not registered in the active firmware build.
+
+    This contract documents the stable wire format consumers should rely on.
+    Firmware may add extra JSON fields over time; consumers should ignore
+    unknown properties unless an endpoint explicitly says otherwise.
 externalDocs:
   description: Umbrella consumer transport contract
   url: ./android-app-contract.md
@@ -954,6 +958,18 @@ paths:
           $ref: '#/components/responses/BadRequestText'
         '404':
           $ref: '#/components/responses/NotFoundText'
+  /api/screenshot:
+    post:
+      tags: [control]
+      operationId: triggerScreenshot
+      summary: Queue a screenshot capture on the device
+      responses:
+        '202':
+          description: Screenshot request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkStatusResponse'
   /api/ota/check:
     get:
       tags: [ota]
@@ -1171,7 +1187,7 @@ components:
         type: boolean
     FileEntry:
       type: object
-      required: [name, size, isDirectory, isEpub]
+      required: [name, size, isDirectory]
       properties:
         name:
           type: string
@@ -1180,8 +1196,13 @@ components:
           minimum: 0
         isDirectory:
           type: boolean
+        modified:
+          type: integer
+          minimum: 0
+          description: Optional modification timestamp when available; missing values should be treated as unknown.
         isEpub:
           type: boolean
+          description: Optional EPUB hint. Consumers should not require it.
     RenameRequest:
       type: object
       required: [from, to]
@@ -1201,9 +1222,17 @@ components:
           allOf:
             - $ref: '#/components/schemas/DevicePath'
           description: Absolute destination directory
+    VisibleWhen:
+      type: object
+      required: [key, eq]
+      properties:
+        key:
+          type: string
+        eq:
+          type: integer
     SettingEntry:
       type: object
-      required: [key, name, category, type]
+      required: [key, category, type]
       properties:
         key:
           type: string
@@ -1221,17 +1250,19 @@ components:
           items:
             type: string
         min:
-          type: integer
+          type: number
         max:
-          type: integer
+          type: number
         step:
-          type: integer
+          type: number
         hasValue:
           type: boolean
+        visibleWhen:
+          $ref: '#/components/schemas/VisibleWhen'
     SettingValue:
       anyOf:
         - type: boolean
-        - type: integer
+        - type: number
         - type: string
     SettingMutationRequest:
       type: object
@@ -1298,7 +1329,7 @@ components:
             trigger: use-item
     RecentBook:
       type: object
-      required: [path, title, author, last_position, last_opened, hasCover, progress]
+      required: [path, title, author, last_position, last_opened]
       properties:
         path:
           $ref: '#/components/schemas/DevicePath'
@@ -1312,6 +1343,7 @@ components:
           type: integer
         hasCover:
           type: boolean
+          description: Optional cover-availability hint. Consumers should treat missing values as unknown.
         progress:
           type: object
           allOf:

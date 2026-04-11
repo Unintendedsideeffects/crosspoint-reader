@@ -36,6 +36,7 @@ Firmware endpoints implemented:
     POST /api/wifi/forget      (JSON: {ssid})
     POST /api/open-book        (JSON: {path})
     POST /api/remote/button    (JSON: {button})
+    POST /api/screenshot
     POST /api/ota/check
     GET  /api/ota/check
     POST /api/todo/entry       (form: type, text)
@@ -135,6 +136,7 @@ def _default_state():
         "wifiNetworks": [],
         "todoToday": _default_todo_today(),
         "otaStatus": _default_ota(),
+        "userFontScan": {"families": 0, "activeLoaded": True},
         "remoteKeyboardSession": None,
         # path → base64-encoded bytes (for cover/download endpoints)
         "binaryFiles": {},
@@ -153,6 +155,7 @@ def _default_mutations():
         "wifiForgets": [],         # list[str]
         "openBookRequests": [],    # list[str]
         "remoteButtonRequests": [],# list[str]
+        "screenshotRequests": [],  # list[true]
         "remoteKeyboardClaims": [],# list[str]
         "remoteKeyboardSubmissions": [], # list[str]
         "deletedPaths": [],        # list[list[str]]
@@ -443,7 +446,7 @@ class ContractHandler(BaseHTTPRequestHandler):
                 _mutations["todoEntries"].append(
                     [form.get("type", ""), form.get("text", "")]
                 )
-                self._text("Added")
+                self._json_response({"ok": True})
 
             elif base == "/api/todo/today":
                 body = self._parse_json(raw)
@@ -476,6 +479,10 @@ class ContractHandler(BaseHTTPRequestHandler):
             elif base == "/api/remote/button":
                 body = self._parse_json(raw)
                 _mutations["remoteButtonRequests"].append(body.get("button", ""))
+                self._json_response({"status": "ok"}, 202)
+
+            elif base == "/api/screenshot":
+                _mutations["screenshotRequests"].append(True)
                 self._json_response({"status": "ok"}, 202)
 
             elif base == "/api/remote-keyboard/claim":
@@ -524,8 +531,13 @@ class ContractHandler(BaseHTTPRequestHandler):
                     _state["otaStatus"]["status"] = "checking"
                     self._json_response({"status": "checking"}, 202)
 
-            elif base in ("/api/user-fonts/upload", "/api/user-fonts/rescan"):
-                self._text()
+            elif base == "/api/user-fonts/rescan":
+                self._json_response(dict(_state["userFontScan"]))
+
+            elif base == "/api/user-fonts/upload":
+                response = dict(_state["userFontScan"])
+                response["ok"] = True
+                self._json_response(response)
 
             elif base == "/_test/reset":
                 _state.clear()
